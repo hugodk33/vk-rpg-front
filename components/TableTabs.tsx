@@ -1,0 +1,72 @@
+import Link from "next/link";
+
+interface TableTabsProps {
+  tableId: string;
+  role?: "narrator" | "player";
+  active?: "act" | "timeline" | "character";
+  characterUrl?: string;
+  characterHref?: string;
+}
+
+const dropdownLink =
+  "block px-4 py-2 text-zinc-300 hover:text-amber-400 hover:bg-zinc-700/50 text-sm";
+
+function tabClass(active: boolean): string {
+  return `px-4 py-2.5 text-sm font-medium transition-colors border-b-2 ${
+    active
+      ? "text-zinc-200 border-amber-500"
+      : "text-zinc-400 hover:text-zinc-200 border-transparent"
+  }`;
+}
+
+export default function TableTabs({ tableId, role = "narrator", active, characterUrl, characterHref }: TableTabsProps) {
+  const prefix = role === "player" ? "/jogador" : "";
+
+  return (
+    <div className="flex gap-1 border-b border-zinc-700/50 mb-6">
+      <Link href={`${prefix}/mesa/${tableId}`} className={tabClass(active === "act")}>
+        Act
+      </Link>
+      <Link href={`${prefix}/mesa/${tableId}/cenas`} className={tabClass(active === "timeline")}>
+        Timeline
+      </Link>
+      {role === "narrator" ? (
+        <Link
+          href={`/personagem/novo?table_id=${tableId}`}
+          className="px-4 py-2.5 text-sm font-medium transition-colors text-zinc-400 hover:text-zinc-200 border-b-2 border-transparent"
+        >
+          New Character
+        </Link>
+      ) : null}
+      <details className="relative">
+        <summary className="px-4 py-2.5 text-sm font-medium text-zinc-400 hover:text-zinc-200 border-b-2 border-transparent cursor-pointer list-none flex items-center gap-1">
+          Table
+          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+          </svg>
+        </summary>
+        <div className="absolute top-full left-0 mt-1 w-48 bg-zinc-800 border border-zinc-700 rounded-lg shadow-xl py-1 z-50">
+          <Link href={`${prefix}/mesa/${tableId}/itens`} className={dropdownLink}>Items</Link>
+          <Link href={`${prefix}/mesa/${tableId}/vantagens`} className={dropdownLink}>Advantages</Link>
+          <Link href={`${prefix}/mesa/${tableId}/desvantagens`} className={dropdownLink}>Disadvantages</Link>
+          <Link href={`${prefix}/mesa/${tableId}/habilidades`} className={dropdownLink}>Skills</Link>
+          <Link href={`${prefix}/mesa/${tableId}/personagens`} className={dropdownLink}>Characters</Link>
+          <Link href={`${prefix}/mesa/${tableId}/locais`} className={dropdownLink}>Locations</Link>
+        </div>
+      </details>
+      {active === "character" && characterHref ? (
+        <Link href={characterHref} className={tabClass(true)}>
+          Character
+        </Link>
+      ) : null}
+      {role === "player" && characterUrl && active !== "character" ? (
+        <Link
+          href={characterUrl}
+          className="px-4 py-2.5 text-sm font-medium transition-colors text-zinc-400 hover:text-zinc-200 border-b-2 border-transparent"
+        >
+          Character
+        </Link>
+      ) : null}
+    </div>
+  );
+}
