@@ -52,10 +52,12 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
     iq: initial?.character?.sheet?.iq ?? 10,
     ht: initial?.character?.sheet?.ht ?? 10,
   });
-  const [pecLines, setPecLines] = useState(
-    (initial?.peculiarities ?? [])
-      .map((p) => `${p.name || ""}: ${p.cost_points ?? 0}: ${p.effect || ""}`)
-      .join("\n")
+  const [quirks, setQuirks] = useState<Array<{ name: string; cost_points: string; effect: string }>>(
+    (initial?.peculiarities ?? []).map((p) => ({
+      name: p.name || "",
+      cost_points: p.cost_points != null ? String(p.cost_points) : "",
+      effect: p.effect || "",
+    }))
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -176,18 +178,33 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
     }
   }
 
-  const peculiarities = pecLines
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .map((line) => {
-      const parts = line.split(":").map((s) => s.trim());
-      return { name: parts[0] || "", cost_points: parseInt(parts[1], 10) || 0, effect: parts[2] || "" };
-    });
+  const MAX_QUIRKS = 5;
+
+  function addQuirk() {
+    setQuirks((prev) =>
+      prev.length >= MAX_QUIRKS ? prev : [...prev, { name: "", cost_points: "", effect: "" }]
+    );
+  }
+
+  function updateQuirk(index: number, field: "name" | "cost_points" | "effect", value: string) {
+    setQuirks((prev) => prev.map((q, i) => (i === index ? { ...q, [field]: value } : q)));
+  }
+
+  function removeQuirk(index: number) {
+    setQuirks((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  const peculiarities = quirks
+    .filter((q) => q.name.trim() !== "")
+    .map((q) => ({
+      name: q.name.trim(),
+      cost_points: parseInt(q.cost_points, 10) || 0,
+      effect: q.effect.trim(),
+    }));
 
   async function doSave() {
     if (!currentTableId) {
-      setError("Selecione a mesa.");
+      setError("Select the table.");
       return;
     }
     setSaving(true);
@@ -244,7 +261,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
       }
       router.refresh();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Falha ao salvar o personagem.");
+      setError(err instanceof Error ? err.message : "Failed to save the character.");
       setSaving(false);
     }
   }
@@ -276,9 +293,9 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
       <div className="flex items-center justify-between mb-6 mt-6">
         <div>
           <h1 className="text-2xl font-bold text-amber-100">
-            {isEdit ? "Editar Personagem" : "Novo Personagem"}
+            {isEdit ? "Edit Character" : "New Character"}
           </h1>
-          <p className="text-zinc-400 text-sm">{isEdit ? "Salvar alterações" : "Crie um personagem para a mesa"}</p>
+          <p className="text-zinc-400 text-sm">{isEdit ? "Save changes" : "Create a character for this table"}</p>
         </div>
         {isEdit ? (
           <button
@@ -286,7 +303,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
             disabled={saving}
             className={`${submitCls} disabled:opacity-50`}
           >
-            {saving ? "Salvando..." : "Salvar Alterações"}
+            {saving ? "Saving..." : "Save Changes"}
           </button>
         ) : null}
       </div>
@@ -294,11 +311,11 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-5">
-            <h2 className="text-lg font-semibold text-amber-100 mb-4">Identidade</h2>
+            <h2 className="text-lg font-semibold text-amber-100 mb-4">Identity</h2>
 
             {!isEdit && !tableId ? (
               <div className="mb-4">
-                <label className={labelCls}>Mesa</label>
+                <label className={labelCls}>Table</label>
                 <select
                   value={currentTableId}
                   onChange={(e) => setCurrentTableId(e.target.value)}
@@ -306,7 +323,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                   className={inputCls}
                 >
                   <option value="" disabled>
-                    Selecione a mesa
+                    Select a table
                   </option>
                   {(tables ?? []).map((t) => (
                     <option key={t.id} value={t.id}>
@@ -319,7 +336,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className={labelCls}>Nome</label>
+                <label className={labelCls}>Name</label>
                 <input value={name} onChange={(e) => setName(e.target.value)} required className={inputCls} />
               </div>
               <div>
@@ -328,14 +345,14 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
               </div>
             </div>
             <div className="mt-3">
-              <label className={labelCls}>História</label>
+              <label className={labelCls}>Backstory</label>
               <textarea value={backstory} onChange={(e) => setBackstory(e.target.value)} rows={2} className={inputCls} />
             </div>
 
             {!isEdit ? (
               <>
                 <div className="mt-4 pt-4 border-t border-zinc-700/40">
-                  <label className={`${labelCls} mb-2`}>Tipo</label>
+                  <label className={`${labelCls} mb-2`}>Type</label>
                   <div className="flex gap-4">
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input
@@ -346,7 +363,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                         onChange={() => setCharType("pc")}
                         className="w-4 h-4 border-zinc-600 text-amber-500 focus:ring-amber-500 bg-zinc-900"
                       />
-                      <span className="text-zinc-200 text-sm">Personagem Jogador</span>
+                      <span className="text-zinc-200 text-sm">Player Character</span>
                     </label>
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input
@@ -363,9 +380,9 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                 </div>
                 {charType === "pc" ? (
                   <div className="mt-3">
-                    <label className={labelCls}>Atribuir a jogador</label>
+                    <label className={labelCls}>Assign to Player</label>
                     <select value={userId} onChange={(e) => setUserId(e.target.value)} className={inputCls}>
-                      <option value="">Selecione um jogador</option>
+                      <option value="">Select a player</option>
                       {users
                         .filter((u) => u.type !== 2)
                         .map((u) => (
@@ -381,7 +398,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
           </div>
 
           <div className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-5">
-            <h2 className="text-lg font-semibold text-amber-100 mb-4">Atributos</h2>
+            <h2 className="text-lg font-semibold text-amber-100 mb-4">Attributes</h2>
             <div className="grid grid-cols-2 gap-y-5 gap-x-6">
               {ATTR_NAMES.map(({ key, label }) => (
                 <div key={key} className="flex flex-col items-center">
@@ -419,8 +436,8 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
           <div className="space-y-6">
             <section className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-5">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-amber-100">Vantagens</h2>
-                <span className="text-sm text-zinc-500">{selAdv.length} selecionadas</span>
+                <h2 className="text-lg font-semibold text-amber-100">Advantages</h2>
+                <span className="text-sm text-zinc-500">{selAdv.length} selected</span>
               </div>
               <div className="space-y-2 max-h-60 overflow-y-auto">
                 {available.advantages.map((a) => {
@@ -439,7 +456,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                         className="w-4 h-4 rounded border-zinc-600 text-amber-500 focus:ring-amber-500 bg-zinc-900"
                       />
                       <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium text-zinc-200 truncate">{a.name || "Sem nome"}</div>
+                        <div className="text-sm font-medium text-zinc-200 truncate">{a.name || "Unnamed"}</div>
                         {a.description ? <div className="text-xs text-zinc-500 truncate">{a.description}</div> : null}
                       </div>
                       <span className="text-xs font-mono text-zinc-400 shrink-0">
@@ -449,15 +466,15 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                   );
                 })}
                 {available.advantages.length === 0 ? (
-                  <p className="text-zinc-600 text-sm">Nenhuma vantagem cadastrada nesta mesa.</p>
+                  <p className="text-zinc-600 text-sm">No advantages registered for this table.</p>
                 ) : null}
               </div>
             </section>
 
             <section className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-5">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-amber-100">Itens</h2>
-                <span className="text-sm text-zinc-500">{selItems.length} selecionados</span>
+                <h2 className="text-lg font-semibold text-amber-100">Items</h2>
+                <span className="text-sm text-zinc-500">{selItems.length} selected</span>
               </div>
               <div className="space-y-2 max-h-60 overflow-y-auto">
                 {available.items.map((item) => {
@@ -476,7 +493,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                         className="w-4 h-4 rounded border-zinc-600 text-amber-500 focus:ring-amber-500 bg-zinc-900"
                       />
                       <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium text-zinc-200 truncate">{item.name || "Sem nome"}</div>
+                        <div className="text-sm font-medium text-zinc-200 truncate">{item.name || "Unnamed"}</div>
                         <div className="text-xs text-zinc-500 truncate">
                           {item.category || ""}
                           {item.weight != null ? ` · ${item.weight} kg` : ""}
@@ -486,7 +503,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                   );
                 })}
                 {available.items.length === 0 ? (
-                  <p className="text-zinc-600 text-sm">Nenhum item cadastrado nesta mesa.</p>
+                  <p className="text-zinc-600 text-sm">No items registered for this table.</p>
                 ) : null}
               </div>
             </section>
@@ -495,8 +512,8 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
           <div className="space-y-6">
             <section className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-5">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-amber-100">Desvantagens</h2>
-                <span className="text-sm text-zinc-500">{selDis.length} selecionadas</span>
+                <h2 className="text-lg font-semibold text-amber-100">Disadvantages</h2>
+                <span className="text-sm text-zinc-500">{selDis.length} selected</span>
               </div>
               <div className="space-y-2 max-h-60 overflow-y-auto">
                 {available.disadvantages.map((d) => {
@@ -515,7 +532,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                         className="w-4 h-4 rounded border-zinc-600 text-amber-500 focus:ring-amber-500 bg-zinc-900"
                       />
                       <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium text-zinc-200 truncate">{d.name || "Sem nome"}</div>
+                        <div className="text-sm font-medium text-zinc-200 truncate">{d.name || "Unnamed"}</div>
                         {d.description ? <div className="text-xs text-zinc-500 truncate">{d.description}</div> : null}
                       </div>
                       <span className="text-xs font-mono text-zinc-400 shrink-0">
@@ -525,15 +542,15 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                   );
                 })}
                 {available.disadvantages.length === 0 ? (
-                  <p className="text-zinc-600 text-sm">Nenhuma desvantagem cadastrada nesta mesa.</p>
+                  <p className="text-zinc-600 text-sm">No disadvantages registered for this table.</p>
                 ) : null}
               </div>
             </section>
 
             <section className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-5">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-amber-100">Habilidades</h2>
-                <span className="text-sm text-zinc-500">{selSkills.length} selecionadas</span>
+                <h2 className="text-lg font-semibold text-amber-100">Skills</h2>
+                <span className="text-sm text-zinc-500">{selSkills.length} selected</span>
               </div>
               <div className="space-y-2 max-h-60 overflow-y-auto">
                 {available.skills.map((sk) => {
@@ -552,7 +569,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                         className="w-4 h-4 rounded border-zinc-600 text-amber-500 focus:ring-amber-500 bg-zinc-900"
                       />
                       <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium text-zinc-200">{sk.name || "Sem nome"}</div>
+                        <div className="text-sm font-medium text-zinc-200">{sk.name || "Unnamed"}</div>
                         <div className="text-xs text-zinc-500">
                           {sk.predefinition_type || ""}
                           {sk.predefinition_difficulty ? ` · ${sk.predefinition_difficulty}` : ""}
@@ -579,23 +596,74 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                   );
                 })}
                 {available.skills.length === 0 ? (
-                  <p className="text-zinc-600 text-sm">Nenhuma habilidade cadastrada nesta mesa.</p>
+                  <p className="text-zinc-600 text-sm">No skills registered for this table.</p>
                 ) : null}
               </div>
             </section>
 
             <section className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-5">
-              <h2 className="text-lg font-semibold text-amber-100 mb-3">Peculiaridades</h2>
-              <p className="text-xs text-zinc-500 mb-2">
-                Uma por linha. Formato: <code>Nome: custo: efeito</code>
-              </p>
-              <textarea
-                value={pecLines}
-                onChange={(e) => setPecLines(e.target.value)}
-                rows={4}
-                placeholder={"Mal Humor: -5: -2 em testes de reação.\nCoruja Noturna: -5: +1 de alerta após a meia-noite."}
-                className={`${inputCls} font-mono text-sm`}
-              />
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-amber-100">Quirks</h2>
+                <span className="text-sm text-zinc-500">
+                  {quirks.length} / {MAX_QUIRKS}
+                </span>
+              </div>
+              <div className="space-y-3">
+                {quirks.map((q, index) => (
+                  <div key={index} className="rounded-lg border border-zinc-700/50 bg-zinc-900/50 p-3 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-mono text-zinc-500">#{index + 1}</span>
+                      <button
+                        type="button"
+                        onClick={() => removeQuirk(index)}
+                        className="ml-auto text-zinc-500 hover:text-red-400 text-xs transition-colors"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                    <div>
+                      <label className={labelCls}>Name</label>
+                      <input
+                        value={q.name}
+                        onChange={(e) => updateQuirk(index, "name", e.target.value)}
+                        className={inputCls}
+                        placeholder="ex: Night Owl"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className={labelCls}>Cost (points)</label>
+                        <input
+                          type="number"
+                          value={q.cost_points}
+                          onChange={(e) => updateQuirk(index, "cost_points", e.target.value)}
+                          className={inputCls}
+                        />
+                      </div>
+                      <div>
+                        <label className={labelCls}>Effect</label>
+                        <input
+                          value={q.effect}
+                          onChange={(e) => updateQuirk(index, "effect", e.target.value)}
+                          className={inputCls}
+                          placeholder="ex: -5: +1 alertness after midnight"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                {quirks.length === 0 ? (
+                  <p className="text-zinc-600 text-sm">No quirks added yet.</p>
+                ) : null}
+              </div>
+              <button
+                type="button"
+                onClick={addQuirk}
+                disabled={quirks.length >= MAX_QUIRKS}
+                className="mt-4 w-full bg-zinc-700 hover:bg-zinc-600 disabled:opacity-40 disabled:cursor-not-allowed text-zinc-200 text-sm font-semibold px-4 py-2 rounded-lg transition-colors"
+              >
+                + Add Quirk
+              </button>
             </section>
           </div>
         </div>
@@ -605,7 +673,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
         {!isEdit ? (
           <div className="flex items-center gap-3 pt-2 pb-8">
             <button type="submit" disabled={saving} className={`${submitCls} disabled:opacity-50`}>
-              {saving ? "Salvando..." : "Criar Personagem"}
+              {saving ? "Saving..." : "Create Character"}
             </button>
             <a href={currentTableId ? `/mesa/${currentTableId}/personagens` : "/narrator"} className="text-zinc-400 hover:text-zinc-300 text-sm transition-colors">
               Cancel
