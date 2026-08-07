@@ -32,6 +32,7 @@ const ATTR_NAMES: Array<{ key: "st" | "dx" | "iq" | "ht"; label: string }> = [
   { key: "iq", label: "IQ" },
   { key: "ht", label: "HT" },
 ];
+const ENCUMBRANCE_LABELS = ["None", "Light", "Medium", "Heavy", "Extra-Heavy"];
 
 export default function CharacterForm({ tableId, tables, initial }: CharacterFormProps) {
   const router = useRouter();
@@ -129,7 +130,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
     const advCost = selAdv.reduce((s, a) => s + (a.cost_points || 0), 0);
     const disCost = selDis.reduce((s, d) => s + (d.cost_points || 0), 0);
     const skCost = selSkills.reduce((s, sk) => s + (sk.cost_points || 0), 0);
-    return attrCost + advCost + disCost + skCost;
+    return attrCost + advCost - disCost + skCost;
   }, [attrs, selAdv, selDis, selSkills]);
 
   function adjAttr(key: "st" | "dx" | "iq" | "ht", delta: number) {
@@ -201,6 +202,25 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
       cost_points: parseInt(q.cost_points, 10) || 0,
       effect: q.effect.trim(),
     }));
+
+  const basicSpeed = (attrs.dx + attrs.ht) / 4;
+  const itemsWeight = selItems.reduce((sum, s) => {
+    const item = available.items.find((i) => i.id === s.id);
+    return sum + (item?.weight ?? 0);
+  }, 0);
+  const encumbranceValue =
+    itemsWeight <= attrs.st * 2
+      ? 0
+      : itemsWeight <= attrs.st * 4
+        ? 1
+        : itemsWeight <= attrs.st * 6
+          ? 2
+          : itemsWeight <= attrs.st * 12
+            ? 3
+            : itemsWeight <= attrs.st * 20
+              ? 4
+              : 0;
+  const move = basicSpeed - encumbranceValue;
 
   async function doSave() {
     if (!currentTableId) {
@@ -310,7 +330,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-5">
+          <div className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-5 lg:col-span-2">
             <h2 className="text-lg font-semibold text-amber-100 mb-4">Identity</h2>
 
             {!isEdit && !tableId ? (
@@ -335,11 +355,11 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
             ) : null}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
+              <div className="md:col-span-2">
                 <label className={labelCls}>Name</label>
                 <input value={name} onChange={(e) => setName(e.target.value)} required className={inputCls} />
               </div>
-              <div>
+              <div className="md:col-span-2">
                 <label className={labelCls}>Bio</label>
                 <input value={bio} onChange={(e) => setBio(e.target.value)} className={inputCls} />
               </div>
@@ -397,9 +417,9 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
             ) : null}
           </div>
 
-          <div className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-5">
+          <div className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-5 lg:col-span-2">
             <h2 className="text-lg font-semibold text-amber-100 mb-4">Attributes</h2>
-            <div className="grid grid-cols-2 gap-y-5 gap-x-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-y-5 gap-x-6">
               {ATTR_NAMES.map(({ key, label }) => (
                 <div key={key} className="flex flex-col items-center">
                   <label className="text-zinc-400 text-xs font-semibold uppercase tracking-wider mb-1.5">{label}</label>
@@ -423,20 +443,33 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                 </div>
               ))}
             </div>
-            <div className="mt-4 pt-4 border-t border-zinc-700/40">
-              <label className={labelCls}>HP</label>
-              <div className="bg-zinc-900 border border-zinc-600 rounded-lg px-4 py-2.5 text-zinc-400 font-mono text-center">
-                {attrs.ht}
+            <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-zinc-700/40">
+              <div>
+                <label className={labelCls}>HP</label>
+                <div className="bg-zinc-700/40 rounded-lg px-4 py-2.5 text-zinc-300 font-mono text-center">
+                  {attrs.ht}
+                </div>
+              </div>
+              <div>
+                <label className={labelCls}>Basic Speed</label>
+                <div className="bg-zinc-700/40 rounded-lg px-4 py-2.5 text-zinc-300 font-mono text-center">
+                  {basicSpeed.toFixed(2)}
+                </div>
+              </div>
+              <div>
+                <label className={labelCls}>Move</label>
+                <div className="bg-zinc-700/40 rounded-lg px-4 py-2.5 text-zinc-300 font-mono text-center">
+                  {move.toFixed(2)}
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="space-y-6">
-            <section className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-5">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-amber-100">Advantages</h2>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <section className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-amber-100">Advantages</h2>
                 <span className="text-sm text-zinc-500">{selAdv.length} selected</span>
               </div>
               <div className="space-y-2 max-h-60 overflow-y-auto">
@@ -473,45 +506,6 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
 
             <section className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-5">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-amber-100">Items</h2>
-                <span className="text-sm text-zinc-500">{selItems.length} selected</span>
-              </div>
-              <div className="space-y-2 max-h-60 overflow-y-auto">
-                {available.items.map((item) => {
-                  const isSelected = selItems.some((s) => s.id === item.id);
-                  return (
-                    <label
-                      key={item.id}
-                      className={`flex items-center gap-3 p-2 rounded-lg hover:bg-zinc-700/30 cursor-pointer ${
-                        isSelected ? "bg-zinc-700/40 border border-amber-500/30" : "border border-transparent"
-                      }`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={(e) => toggleItem({ id: item.id, name: item.name }, e.target.checked)}
-                        className="w-4 h-4 rounded border-zinc-600 text-amber-500 focus:ring-amber-500 bg-zinc-900"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium text-zinc-200 truncate">{item.name || "Unnamed"}</div>
-                        <div className="text-xs text-zinc-500 truncate">
-                          {item.category || ""}
-                          {item.weight != null ? ` · ${item.weight} kg` : ""}
-                        </div>
-                      </div>
-                    </label>
-                  );
-                })}
-                {available.items.length === 0 ? (
-                  <p className="text-zinc-600 text-sm">No items registered for this table.</p>
-                ) : null}
-              </div>
-            </section>
-          </div>
-
-          <div className="space-y-6">
-            <section className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-5">
-              <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-semibold text-amber-100">Disadvantages</h2>
                 <span className="text-sm text-zinc-500">{selDis.length} selected</span>
               </div>
@@ -543,60 +537,6 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                 })}
                 {available.disadvantages.length === 0 ? (
                   <p className="text-zinc-600 text-sm">No disadvantages registered for this table.</p>
-                ) : null}
-              </div>
-            </section>
-
-            <section className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-5">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-amber-100">Skills</h2>
-                <span className="text-sm text-zinc-500">{selSkills.length} selected</span>
-              </div>
-              <div className="space-y-2 max-h-60 overflow-y-auto">
-                {available.skills.map((sk) => {
-                  const sel = selSkills.find((s) => s.id === sk.id);
-                  return (
-                    <div
-                      key={sk.id}
-                      className={`flex items-center gap-3 p-2 rounded-lg hover:bg-zinc-700/30 ${
-                        sel ? "bg-zinc-700/40 border border-amber-500/30" : "border border-transparent"
-                      }`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={!!sel}
-                        onChange={(e) => toggleSkill({ id: sk.id, name: sk.name }, e.target.checked)}
-                        className="w-4 h-4 rounded border-zinc-600 text-amber-500 focus:ring-amber-500 bg-zinc-900"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium text-zinc-200">{sk.name || "Unnamed"}</div>
-                        <div className="text-xs text-zinc-500">
-                          {sk.predefinition_type || ""}
-                          {sk.predefinition_difficulty ? ` · ${sk.predefinition_difficulty}` : ""}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={() => adjSkill(sk.id, -1)}
-                          className="w-6 h-6 rounded bg-zinc-700 hover:bg-zinc-600 text-zinc-300 text-xs font-bold flex items-center justify-center"
-                        >
-                          −
-                        </button>
-                        <span className="text-sm font-mono text-amber-400 w-6 text-center">{sel?.cost_points ?? 0}</span>
-                        <button
-                          type="button"
-                          onClick={() => adjSkill(sk.id, 1)}
-                          className="w-6 h-6 rounded bg-zinc-700 hover:bg-zinc-600 text-zinc-300 text-xs font-bold flex items-center justify-center"
-                        >
-                          +
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-                {available.skills.length === 0 ? (
-                  <p className="text-zinc-600 text-sm">No skills registered for this table.</p>
                 ) : null}
               </div>
             </section>
@@ -665,7 +605,124 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                 + Add Quirk
               </button>
             </section>
+        </div>
+
+        <div className="border-t border-zinc-700/40 pt-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold text-amber-100">Skills</h2>
+            <span className="text-sm text-zinc-500">{selSkills.length} selected</span>
           </div>
+          <section className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-5">
+            <div className="space-y-2 max-h-60 overflow-y-auto">
+              {available.skills.map((sk) => {
+                const sel = selSkills.find((s) => s.id === sk.id);
+                return (
+                  <div
+                    key={sk.id}
+                    className={`flex items-center gap-3 p-2 rounded-lg hover:bg-zinc-700/30 ${
+                      sel ? "bg-zinc-700/40 border border-amber-500/30" : "border border-transparent"
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={!!sel}
+                      onChange={(e) => toggleSkill({ id: sk.id, name: sk.name }, e.target.checked)}
+                      className="w-4 h-4 rounded border-zinc-600 text-amber-500 focus:ring-amber-500 bg-zinc-900"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium text-zinc-200">{sk.name || "Unnamed"}</div>
+                      <div className="text-xs text-zinc-500">
+                        {sk.predefinition_type || ""}
+                        {sk.predefinition_difficulty ? ` · ${sk.predefinition_difficulty}` : ""}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => adjSkill(sk.id, -1)}
+                        className="w-6 h-6 rounded bg-zinc-700 hover:bg-zinc-600 text-zinc-300 text-xs font-bold flex items-center justify-center"
+                      >
+                        −
+                      </button>
+                      <span className="text-sm font-mono text-amber-400 w-6 text-center">{sel?.cost_points ?? 0}</span>
+                      <button
+                        type="button"
+                        onClick={() => adjSkill(sk.id, 1)}
+                        className="w-6 h-6 rounded bg-zinc-700 hover:bg-zinc-600 text-zinc-300 text-xs font-bold flex items-center justify-center"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+              {available.skills.length === 0 ? (
+                <p className="text-zinc-600 text-sm">No skills registered for this table.</p>
+              ) : null}
+            </div>
+          </section>
+        </div>
+
+        <div className="border-t border-zinc-700/40 pt-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold text-amber-100">Items</h2>
+            <span className="text-sm text-zinc-500">{selItems.length} selected</span>
+          </div>
+          <section className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-80 overflow-y-auto">
+              {available.items.map((item) => {
+                const isSelected = selItems.some((s) => s.id === item.id);
+                return (
+                  <label
+                    key={item.id}
+                    className={`flex items-center gap-3 p-2 rounded-lg hover:bg-zinc-700/30 cursor-pointer ${
+                      isSelected ? "bg-zinc-700/40 border border-amber-500/30" : "border border-transparent"
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={(e) => toggleItem({ id: item.id, name: item.name }, e.target.checked)}
+                      className="w-4 h-4 rounded border-zinc-600 text-amber-500 focus:ring-amber-500 bg-zinc-900"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium text-zinc-200 truncate">{item.name || "Unnamed"}</div>
+                      <div className="text-xs text-zinc-500 truncate">
+                        {item.category || ""}
+                        {item.weight != null ? ` · ${item.weight} kg` : ""}
+                      </div>
+                    </div>
+                  </label>
+                );
+              })}
+              {available.items.length === 0 ? (
+                <p className="col-span-full text-zinc-600 text-sm">No items registered for this table.</p>
+              ) : null}
+            </div>
+          </section>
+
+          <section className="mt-4">
+            <label className={labelCls}>
+              Encumbrance — {ENCUMBRANCE_LABELS[encumbranceValue]} ({itemsWeight.toFixed(1)} kg carried)
+            </label>
+            <div className="mt-2 grid grid-cols-5 gap-1">
+              {ENCUMBRANCE_LABELS.map((label, i) => {
+                const threshold = attrs.st * [2, 4, 6, 12, 20][i];
+                const active = i === encumbranceValue;
+                return (
+                  <div
+                    key={label}
+                    className={`text-center text-xs rounded-lg px-2 py-1.5 ${
+                      active ? "bg-amber-500/20 text-amber-200" : "bg-zinc-700/30 text-zinc-500"
+                    }`}
+                  >
+                    {label}
+                    <div className="text-[10px] text-zinc-500">{i === 0 ? "0" : `>${threshold} kg`}</div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
         </div>
 
         {error && <p className="text-red-400 text-sm">{error}</p>}
