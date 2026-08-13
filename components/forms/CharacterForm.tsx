@@ -534,7 +534,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                         {d.description ? <div className="text-xs text-zinc-500 truncate">{d.description}</div> : null}
                       </div>
                       <span className="text-xs font-mono text-zinc-400 shrink-0">
-                        {d.cost_points != null ? (d.cost_points >= 0 ? "+" : "") + d.cost_points : "±0"}
+                        {d.cost_points != null ? (d.cost_points > 0 ? `-${d.cost_points}` : String(d.cost_points)) : "±0"}
                       </span>
                     </label>
                   );
