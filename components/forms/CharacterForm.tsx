@@ -16,6 +16,7 @@ interface Selection {
   id: string;
   name: string;
   cost_points: number;
+  level?: number;
 }
 
 interface UserOption {
@@ -33,6 +34,75 @@ const ATTR_NAMES: Array<{ key: "st" | "dx" | "iq" | "ht"; label: string }> = [
   { key: "ht", label: "HT" },
 ];
 const ENCUMBRANCE_LABELS = ["None", "Light", "Medium", "Heavy", "Extra-Heavy"];
+
+type SkillType = "Physical" | "Mental";
+type SkillDifficulty = "Easy" | "Medium" | "Hard" | "Very Hard";
+
+const SKILL_COST: Record<SkillType, Partial<Record<SkillDifficulty, Record<number, number>>>> = {
+  Physical: {
+    Easy: { [-1]: 0.5, [0]: 1, [1]: 2, [2]: 4, [3]: 8, [4]: 16, [5]: 24 },
+    Medium: { [-2]: 0.5, [-1]: 1, [0]: 2, [1]: 4, [2]: 8, [3]: 16, [4]: 24, [5]: 32 },
+    Hard: { [-3]: 0.5, [-2]: 1, [-1]: 2, [0]: 4, [1]: 8, [2]: 16, [3]: 24, [4]: 32, [5]: 40 },
+  },
+  Mental: {
+    Easy: { [-1]: 0.5, [0]: 1, [1]: 2, [2]: 4, [3]: 6, [4]: 8, [5]: 10 },
+    Medium: { [-2]: 0.5, [-1]: 1, [0]: 2, [1]: 4, [2]: 6, [3]: 8, [4]: 10, [5]: 12 },
+    Hard: { [-3]: 0.5, [-2]: 1, [-1]: 2, [0]: 4, [1]: 6, [2]: 8, [3]: 10, [4]: 12, [5]: 14 },
+    "Very Hard": { [-4]: 0.5, [-3]: 1, [-2]: 2, [-1]: 4, [0]: 8, [1]: 12, [2]: 16, [3]: 20, [4]: 24, [5]: 28 },
+  },
+};
+
+const MIN_LEVEL: Record<SkillDifficulty, number> = { Easy: -1, Medium: -2, Hard: -3, "Very Hard": -4 };
+const MAX_LEVEL = 5;
+
+function skillTypeOf(sk: { predefinition_type?: string }): SkillType {
+  return sk.predefinition_type === "Physical" ? "Physical" : "Mental";
+}
+
+function skillDifficultyOf(sk: { predefinition_difficulty?: string }): SkillDifficulty {
+  const d = sk.predefinition_difficulty;
+  if (d === "Easy" || d === "Hard" || d === "Very Hard") return d;
+  return "Medium";
+}
+
+function skillCostFor(sk: { predefinition_type?: string; predefinition_difficulty?: string }, level: number): number {
+  return SKILL_COST[skillTypeOf(sk)][skillDifficultyOf(sk)]?.[level] ?? 0;
+}
+
+function skillLevelForCost(sk: { predefinition_type?: string; predefinition_difficulty?: string }, cost: number): number {
+  const table = SKILL_COST[skillTypeOf(sk)][skillDifficultyOf(sk)] ?? {};
+  for (const [level, c] of Object.entries(table)) {
+    if (Math.abs(c - cost) < 0.001) return Number(level);
+  }
+  return 0;
+}
+
+function formatPoints(points: number): string {
+  return points % 1 === 0 ? String(points) : points.toFixed(1);
+}
+
+interface SkillPredef {
+  attr: string;
+  mod: number;
+}
+
+function skillPredefs(sk: { predefinition?: SkillItem["predefinition"] }): SkillPredef[] {
+  return (sk.predefinition ?? [])
+    .map((p) => p.depends_on_skill_for_others_attributes)
+    .filter((f): f is string => !!f)
+    .map((formula) => {
+      const m = formula.trim().toLowerCase().match(/^([a-z]+)\s*([+-])\s*(\d+)$/);
+      if (!m) return null;
+      return { attr: m[1].toUpperCase(), mod: (m[2] === "-" ? -1 : 1) * Number(m[3]) };
+    })
+    .filter((p): p is SkillPredef => !!p);
+}
+
+function skillPredefLabel(sk: { predefinition?: SkillItem["predefinition"] }): string {
+  return skillPredefs(sk)
+    .map((p) => `${p.attr}${p.mod > 0 ? `+${p.mod}` : p.mod}`)
+    .join(" / ");
+}
 
 export default function CharacterForm({ tableId, tables, initial }: CharacterFormProps) {
   const router = useRouter();
@@ -53,12 +123,8 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
     iq: initial?.character?.sheet?.iq ?? 10,
     ht: initial?.character?.sheet?.ht ?? 10,
   });
-  const [quirks, setQuirks] = useState<Array<{ name: string; cost_points: string; effect: string }>>(
-    (initial?.peculiarities ?? []).map((p) => ({
-      name: p.name || "",
-      cost_points: p.cost_points != null ? String(p.cost_points) : "",
-      effect: p.effect || "",
-    }))
+  const [quirks, setQuirks] = useState<Array<{ name: string }>>(
+    (initial?.peculiarities ?? []).map((p) => ({ name: p.name || "" }))
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -86,11 +152,15 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
     }))
   );
   const [selSkills, setSelSkills] = useState<Selection[]>(
-    (initial?.character?.skills ?? []).map((s) => ({
-      id: s.skill_id || s.id,
-      name: s.skill_name || s.name || "",
-      cost_points: s.cost_points ?? 0,
-    }))
+    (initial?.character?.skills ?? []).map((s) => {
+      const cost = s.cost_points ?? 0;
+      return {
+        id: s.skill_id || s.id,
+        name: s.skill_name || s.name || "",
+        cost_points: cost,
+        level: skillLevelForCost(s, cost),
+      };
+    })
   );
   const [selItems, setSelItems] = useState<Selection[]>(
     (initial?.character?.items ?? []).map((i) => ({ id: i.item_id || i.id, name: i.name, cost_points: 0 }))
@@ -125,13 +195,18 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
     };
   }, [currentTableId]);
 
+  const peculiarities = quirks
+    .filter((q) => q.name.trim() !== "")
+    .map((q) => ({ name: q.name.trim(), cost_points: -1, effect: "" }));
+
   const spent = useMemo(() => {
     const attrCost = ATTR_NAMES.reduce((sum, { key }) => sum + (attrs[key] - 10) * ATTR_COSTS[key], 0);
     const advCost = selAdv.reduce((s, a) => s + (a.cost_points || 0), 0);
     const disCost = selDis.reduce((s, d) => s + (d.cost_points || 0), 0);
     const skCost = selSkills.reduce((s, sk) => s + (sk.cost_points || 0), 0);
-    return attrCost + advCost - disCost + skCost;
-  }, [attrs, selAdv, selDis, selSkills]);
+    const quirkCost = peculiarities.length;
+    return attrCost + advCost - disCost + skCost - quirkCost;
+  }, [attrs, selAdv, selDis, selSkills, peculiarities]);
 
   function adjAttr(key: "st" | "dx" | "iq" | "ht", delta: number) {
     if (delta > 0 && spent + ATTR_COSTS[key] > totalPoints) return;
@@ -155,8 +230,13 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
 
   function toggleSkill(item: { id: string; name: string }, checked: boolean) {
     if (checked) {
+      const sk = available.skills.find((s) => s.id === item.id);
+      const predefs = skillPredefs(sk ?? {});
+      const level = predefs.length > 0 ? predefs[0].mod : 0;
       setSelSkills((prev) =>
-        prev.some((s) => s.id === item.id) ? prev : [...prev, { id: item.id, name: item.name, cost_points: 1 }]
+        prev.some((s) => s.id === item.id)
+          ? prev
+          : [...prev, { id: item.id, name: item.name, cost_points: predefs.length > 0 ? 0 : skillCostFor(sk ?? {}, level), level }]
       );
     } else {
       setSelSkills((prev) => prev.filter((s) => s.id !== item.id));
@@ -164,8 +244,20 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
   }
 
   function adjSkill(id: string, delta: number) {
+    const sk = available.skills.find((s) => s.id === id);
+    const diff = skillDifficultyOf(sk ?? {});
+    const tableMin = MIN_LEVEL[diff];
+    const predefs = skillPredefs(sk ?? {});
+    const floor = predefs.length > 0 ? Math.min(predefs[0].mod, tableMin) : tableMin;
     setSelSkills((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, cost_points: Math.max(0, (s.cost_points || 0) + delta) } : s))
+      prev.map((s) => {
+        if (s.id !== id) return s;
+        const level = s.level ?? 0;
+        let next: number;
+        if (delta > 0) next = level < tableMin ? tableMin : Math.min(MAX_LEVEL, level + 1);
+        else next = level <= tableMin ? floor : level - 1;
+        return { ...s, level: next, cost_points: skillCostFor(sk ?? {}, next) };
+      })
     );
   }
 
@@ -182,26 +274,16 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
   const MAX_QUIRKS = 5;
 
   function addQuirk() {
-    setQuirks((prev) =>
-      prev.length >= MAX_QUIRKS ? prev : [...prev, { name: "", cost_points: "", effect: "" }]
-    );
+    setQuirks((prev) => (prev.length >= MAX_QUIRKS ? prev : [...prev, { name: "" }]));
   }
 
-  function updateQuirk(index: number, field: "name" | "cost_points" | "effect", value: string) {
-    setQuirks((prev) => prev.map((q, i) => (i === index ? { ...q, [field]: value } : q)));
+  function updateQuirk(index: number, value: string) {
+    setQuirks((prev) => prev.map((q, i) => (i === index ? { ...q, name: value } : q)));
   }
 
   function removeQuirk(index: number) {
     setQuirks((prev) => prev.filter((_, i) => i !== index));
   }
-
-  const peculiarities = quirks
-    .filter((q) => q.name.trim() !== "")
-    .map((q) => ({
-      name: q.name.trim(),
-      cost_points: parseInt(q.cost_points, 10) || 0,
-      effect: q.effect.trim(),
-    }));
 
   const basicSpeed = (attrs.dx + attrs.ht) / 4;
   const itemsWeight = selItems.reduce((sum, s) => {
@@ -567,31 +649,14 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                     </div>
                     <div>
                       <label className={labelCls}>Name</label>
-                      <input
-                        value={q.name}
-                        onChange={(e) => updateQuirk(index, "name", e.target.value)}
-                        className={inputCls}
-                        placeholder="ex: Night Owl"
-                      />
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className={labelCls}>Cost (points)</label>
+                      <div className="flex items-center gap-2">
                         <input
-                          type="number"
-                          value={q.cost_points}
-                          onChange={(e) => updateQuirk(index, "cost_points", e.target.value)}
+                          value={q.name}
+                          onChange={(e) => updateQuirk(index, e.target.value)}
                           className={inputCls}
+                          placeholder="ex: Night Owl"
                         />
-                      </div>
-                      <div>
-                        <label className={labelCls}>Effect</label>
-                        <input
-                          value={q.effect}
-                          onChange={(e) => updateQuirk(index, "effect", e.target.value)}
-                          className={inputCls}
-                          placeholder="ex: -5: +1 alertness after midnight"
-                        />
+                        <span className="text-xs font-mono text-amber-400 shrink-0">-1</span>
                       </div>
                     </div>
                   </div>
@@ -612,14 +677,29 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
         </div>
 
         <div className="border-t border-zinc-700/40 pt-6">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-1">
             <h2 className="text-xl font-semibold text-amber-100">Skills</h2>
             <span className="text-sm text-zinc-500">{selSkills.length} selected</span>
           </div>
+          <p className="text-xs text-zinc-500 mb-4">
+            Points follow the GURPS skill cost table by difficulty. Selecting a skill without spending points keeps its default level (the
+            predefinition, shown under the name); use − / + to raise or lower the level — points are derived automatically.
+          </p>
           <section className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-5">
+            <div className="flex items-center justify-between px-2 pb-2 text-xs font-medium text-zinc-500 border-b border-zinc-700/40 mb-1">
+              <span>Skill</span>
+              <div className="flex items-center gap-4">
+                <span className="w-32 text-center">Skill Level</span>
+                <span className="w-16 text-right">Points</span>
+              </div>
+            </div>
             <div className="space-y-2 max-h-60 overflow-y-auto">
               {available.skills.map((sk) => {
                 const sel = selSkills.find((s) => s.id === sk.id);
+                const base = skillTypeOf(sk) === "Physical" ? "DX" : "IQ";
+                const level = sel?.level ?? 0;
+                const abs = (skillTypeOf(sk) === "Physical" ? attrs.dx : attrs.iq) + level;
+                const rel = level === 0 ? base : level > 0 ? `${base}+${level}` : `${base}${level}`;
                 return (
                   <div
                     key={sk.id}
@@ -639,23 +719,33 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                         {sk.predefinition_type || ""}
                         {sk.predefinition_difficulty ? ` · ${sk.predefinition_difficulty}` : ""}
                       </div>
+                      <div className="text-xs text-zinc-500">
+                        {skillPredefLabel(sk) ? `Default: ${skillPredefLabel(sk)}` : "Default: none"}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <button
-                        type="button"
-                        onClick={() => adjSkill(sk.id, -1)}
-                        className="w-6 h-6 rounded bg-zinc-700 hover:bg-zinc-600 text-zinc-300 text-xs font-bold flex items-center justify-center"
-                      >
-                        −
-                      </button>
-                      <span className="text-sm font-mono text-amber-400 w-6 text-center">{sel?.cost_points ?? 0}</span>
-                      <button
-                        type="button"
-                        onClick={() => adjSkill(sk.id, 1)}
-                        className="w-6 h-6 rounded bg-zinc-700 hover:bg-zinc-600 text-zinc-300 text-xs font-bold flex items-center justify-center"
-                      >
-                        +
-                      </button>
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-1 w-32 justify-center">
+                        <button
+                          type="button"
+                          onClick={() => adjSkill(sk.id, -1)}
+                          className="w-6 h-6 rounded bg-zinc-700 hover:bg-zinc-600 text-zinc-300 text-xs font-bold flex items-center justify-center"
+                        >
+                          −
+                        </button>
+                        <span className="text-sm font-mono text-amber-400 text-center">
+                          {sel ? `${rel} (${abs})` : "—"}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => adjSkill(sk.id, 1)}
+                          className="w-6 h-6 rounded bg-zinc-700 hover:bg-zinc-600 text-zinc-300 text-xs font-bold flex items-center justify-center"
+                        >
+                          +
+                        </button>
+                      </div>
+                      <span className="text-sm font-mono text-zinc-300 w-16 text-right">
+                        {sel ? formatPoints(sel.cost_points) : "0"}
+                      </span>
                     </div>
                   </div>
                 );
