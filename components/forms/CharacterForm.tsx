@@ -227,6 +227,10 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
       setError("Select the table.");
       return;
     }
+    if (charType === "pc" && !userId) {
+      setError("Select a player.");
+      return;
+    }
     setSaving(true);
     setError(null);
 
@@ -251,14 +255,14 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
       if (isEdit && initial) {
         await submitJson<{ success?: boolean }>("/api/game-table-character", "PUT", {
           id: initial.character.id,
-          user_id: charType === "npc" ? "" : userId,
+          user_id: charType === "npc" ? null : userId,
           table_id: currentTableId,
         });
         router.push(`/personagem/${initial.character.id}`);
       } else if (charType === "npc") {
         const result = await submitJson<{ character_id: string }>("/api/game-table-npc", "POST", {
           table_id: currentTableId,
-          user_id: "",
+          user_id: null,
           status: "Alive",
           sheet,
           advantages,
@@ -401,7 +405,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                 {charType === "pc" ? (
                   <div className="mt-3">
                     <label className={labelCls}>Assign to Player</label>
-                    <select value={userId} onChange={(e) => setUserId(e.target.value)} className={inputCls}>
+                    <select value={userId} onChange={(e) => setUserId(e.target.value)} required className={inputCls}>
                       <option value="">Select a player</option>
                       {users
                         .filter((u) => u.type !== 2)

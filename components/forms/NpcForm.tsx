@@ -54,7 +54,7 @@ export default function NpcForm({ tableId, tables, initial }: NpcFormProps) {
     setError(null);
     const payload = {
       table_id: currentTableId,
-      user_id: "",
+      user_id: null,
       status,
       sheet: {
         name,

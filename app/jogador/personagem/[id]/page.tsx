@@ -15,7 +15,7 @@ export default async function PlayerCharacterViewerPage({
   const { id } = await params;
   const { moment } = await searchParams;
   const qs = moment ? `?moment=${moment}` : "";
-  const data = await api<CharacterViewer>(`/game-table-character-viewer/${id}${qs}`);
+  const data = await api<CharacterViewer>(`/game-table-character/${id}${qs}`);
   const basePath = `/jogador/personagem/${id}`;
 
   return (
