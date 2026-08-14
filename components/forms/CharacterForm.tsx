@@ -27,11 +27,16 @@ interface UserOption {
 }
 
 const ATTR_COSTS: Record<"st" | "dx" | "iq" | "ht", number> = { st: 10, dx: 20, iq: 20, ht: 10 };
-const ATTR_NAMES: Array<{ key: "st" | "dx" | "iq" | "ht"; label: string }> = [
-  { key: "st", label: "ST" },
-  { key: "dx", label: "DX" },
-  { key: "iq", label: "IQ" },
-  { key: "ht", label: "HT" },
+const ATTR_NAMES: Array<{ key: "st" | "dx" | "iq" | "ht"; label: string; color: string; svg: string }> = [
+  { key: "st", label: "ST", color: "text-red-400", svg: "M13 10V3L4 14h7v7l9-11h-7z" },
+  { key: "dx", label: "DX", color: "text-emerald-400", svg: "M13 5l7 7-7 7M5 5l7 7-7 7" },
+  {
+    key: "iq",
+    label: "IQ",
+    color: "text-blue-400",
+    svg: "M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z",
+  },
+  { key: "ht", label: "HT", color: "text-purple-400", svg: "M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" },
 ];
 const ENCUMBRANCE_LABELS = ["None", "Light", "Medium", "Heavy", "Extra-Heavy"];
 
@@ -253,9 +258,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
       prev.map((s) => {
         if (s.id !== id) return s;
         const level = s.level ?? 0;
-        let next: number;
-        if (delta > 0) next = level < tableMin ? tableMin : Math.min(MAX_LEVEL, level + 1);
-        else next = level <= tableMin ? floor : level - 1;
+        const next = Math.min(MAX_LEVEL, Math.max(floor, level + delta));
         return { ...s, level: next, cost_points: skillCostFor(sk ?? {}, next) };
       })
     );
@@ -416,11 +419,29 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-5 lg:col-span-2">
-            <h2 className="text-lg font-semibold text-amber-100 mb-4">Identity</h2>
+          <div className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-5">
+            <h2 className="text-lg font-semibold text-amber-100 mb-3">Identity</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+              <div>
+                <label className={labelCls}>Name</label>
+                <input value={name} onChange={(e) => setName(e.target.value)} required className={inputCls} />
+              </div>
+              <div>
+                <label className={labelCls}>Bio</label>
+                <input value={bio} onChange={(e) => setBio(e.target.value)} className={inputCls} />
+              </div>
+            </div>
+            <div>
+              <label className={labelCls}>Backstory</label>
+              <textarea value={backstory} onChange={(e) => setBackstory(e.target.value)} rows={2} className={inputCls} />
+            </div>
+          </div>
+
+          <div className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-5">
+            <h2 className="text-lg font-semibold text-amber-100 mb-3">Character</h2>
 
             {!isEdit && !tableId ? (
-              <div className="mb-4">
+              <div className="mb-3">
                 <label className={labelCls}>Table</label>
                 <select
                   value={currentTableId}
@@ -440,26 +461,11 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
               </div>
             ) : null}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="md:col-span-2">
-                <label className={labelCls}>Name</label>
-                <input value={name} onChange={(e) => setName(e.target.value)} required className={inputCls} />
-              </div>
-              <div className="md:col-span-2">
-                <label className={labelCls}>Bio</label>
-                <input value={bio} onChange={(e) => setBio(e.target.value)} className={inputCls} />
-              </div>
-            </div>
-            <div className="mt-3">
-              <label className={labelCls}>Backstory</label>
-              <textarea value={backstory} onChange={(e) => setBackstory(e.target.value)} rows={2} className={inputCls} />
-            </div>
-
             {!isEdit ? (
               <>
-                <div className="mt-4 pt-4 border-t border-zinc-700/40">
+                <div>
                   <label className={`${labelCls} mb-2`}>Type</label>
-                  <div className="flex gap-4">
+                  <div className="flex gap-4 mb-3">
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input
                         type="radio"
@@ -485,7 +491,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                   </div>
                 </div>
                 {charType === "pc" ? (
-                  <div className="mt-3">
+                  <div>
                     <label className={labelCls}>Assign to Player</label>
                     <select value={userId} onChange={(e) => setUserId(e.target.value)} required className={inputCls}>
                       <option value="">Select a player</option>
@@ -504,24 +510,29 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
           </div>
 
           <div className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-5 lg:col-span-2">
-            <h2 className="text-lg font-semibold text-amber-100 mb-4">Attributes</h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-y-5 gap-x-6">
-              {ATTR_NAMES.map(({ key, label }) => (
-                <div key={key} className="flex flex-col items-center">
-                  <label className="text-zinc-400 text-xs font-semibold uppercase tracking-wider mb-1.5">{label}</label>
-                  <div className="flex items-center gap-2">
+            <h2 className="text-lg font-semibold text-amber-100 mb-6">Attributes</h2>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-8">
+              {ATTR_NAMES.map(({ key, label, color, svg }) => (
+                <div key={key} className="flex flex-col items-center gap-2">
+                  <div className="flex items-center gap-1.5">
+                    <svg className={`w-5 h-5 ${color}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={svg} />
+                    </svg>
+                    <label className="text-zinc-400 text-xs font-semibold uppercase tracking-wider">{label}</label>
+                  </div>
+                  <div className="flex items-center gap-1">
                     <button
                       type="button"
                       onClick={() => adjAttr(key, -1)}
-                      className="w-8 h-8 rounded bg-zinc-700 hover:bg-zinc-600 text-zinc-300 text-lg font-bold flex items-center justify-center leading-none"
+                      className="w-8 h-8 rounded bg-amber-500 hover:bg-amber-400 text-zinc-900 text-lg font-bold flex items-center justify-center leading-none"
                     >
                       −
                     </button>
-                    <span className="w-10 text-center text-lg font-bold text-amber-100">{attrs[key]}</span>
+                    <span className="w-10 text-center text-xl font-bold text-amber-400">{attrs[key]}</span>
                     <button
                       type="button"
                       onClick={() => adjAttr(key, 1)}
-                      className="w-8 h-8 rounded bg-zinc-700 hover:bg-zinc-600 text-zinc-300 text-lg font-bold flex items-center justify-center leading-none"
+                      className="w-8 h-8 rounded bg-amber-500 hover:bg-amber-400 text-zinc-900 text-lg font-bold flex items-center justify-center leading-none"
                     >
                       +
                     </button>
@@ -529,22 +540,22 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                 </div>
               ))}
             </div>
-            <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-zinc-700/40">
+            <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-zinc-700/40">
               <div>
                 <label className={labelCls}>HP</label>
-                <div className="bg-zinc-700/40 rounded-lg px-4 py-2.5 text-zinc-300 font-mono text-center">
+                <div className="bg-zinc-700/40 rounded-lg px-4 py-2.5 text-amber-400 font-bold font-mono text-center">
                   {attrs.ht}
                 </div>
               </div>
               <div>
                 <label className={labelCls}>Basic Speed</label>
-                <div className="bg-zinc-700/40 rounded-lg px-4 py-2.5 text-zinc-300 font-mono text-center">
+                <div className="bg-zinc-700/40 rounded-lg px-4 py-2.5 text-amber-400 font-bold font-mono text-center">
                   {basicSpeed.toFixed(2)}
                 </div>
               </div>
               <div>
                 <label className={labelCls}>Move</label>
-                <div className="bg-zinc-700/40 rounded-lg px-4 py-2.5 text-zinc-300 font-mono text-center">
+                <div className="bg-zinc-700/40 rounded-lg px-4 py-2.5 text-amber-400 font-bold font-mono text-center">
                   {move.toFixed(2)}
                 </div>
               </div>
@@ -558,7 +569,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
               <h2 className="text-lg font-semibold text-amber-100">Advantages</h2>
                 <span className="text-sm text-zinc-500">{selAdv.length} selected</span>
               </div>
-              <div className="space-y-2 max-h-60 overflow-y-auto">
+              <div className="space-y-2 max-h-60 overflow-y-auto scroll-thin pr-2">
                 {available.advantages.map((a) => {
                   const isSelected = selAdv.some((s) => s.id === a.id);
                   return (
@@ -578,7 +589,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                         <div className="text-sm font-medium text-zinc-200 truncate">{a.name || "Unnamed"}</div>
                         {a.description ? <div className="text-xs text-zinc-500 truncate">{a.description}</div> : null}
                       </div>
-                      <span className="text-xs font-mono text-zinc-400 shrink-0">
+                      <span className="text-xs font-mono text-amber-400 font-bold shrink-0">
                         {a.cost_points != null ? (a.cost_points >= 0 ? "+" : "") + a.cost_points : "±0"}
                       </span>
                     </label>
@@ -595,7 +606,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                 <h2 className="text-lg font-semibold text-amber-100">Disadvantages</h2>
                 <span className="text-sm text-zinc-500">{selDis.length} selected</span>
               </div>
-              <div className="space-y-2 max-h-60 overflow-y-auto">
+              <div className="space-y-2 max-h-60 overflow-y-auto scroll-thin pr-2">
                 {available.disadvantages.map((d) => {
                   const isSelected = selDis.some((s) => s.id === d.id);
                   return (
@@ -615,7 +626,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                         <div className="text-sm font-medium text-zinc-200 truncate">{d.name || "Unnamed"}</div>
                         {d.description ? <div className="text-xs text-zinc-500 truncate">{d.description}</div> : null}
                       </div>
-                      <span className="text-xs font-mono text-zinc-400 shrink-0">
+                      <span className="text-xs font-mono text-amber-400 font-bold shrink-0">
                         {d.cost_points != null ? (d.cost_points > 0 ? `-${d.cost_points}` : String(d.cost_points)) : "±0"}
                       </span>
                     </label>
@@ -656,7 +667,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                           className={inputCls}
                           placeholder="ex: Night Owl"
                         />
-                        <span className="text-xs font-mono text-amber-400 shrink-0">-1</span>
+                        <span className="text-xs font-mono text-amber-400 font-bold shrink-0">-1</span>
                       </div>
                     </div>
                   </div>
@@ -682,18 +693,19 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
             <span className="text-sm text-zinc-500">{selSkills.length} selected</span>
           </div>
           <p className="text-xs text-zinc-500 mb-4">
-            Points follow the GURPS skill cost table by difficulty. Selecting a skill without spending points keeps its default level (the
-            predefinition, shown under the name); use − / + to raise or lower the level — points are derived automatically.
+            Points follow the GURPS skill cost table by difficulty. Selecting a skill keeps its default level: the predefinition (attribute minus the
+            predef value, shown under the name) costs 0 points. Each + fills one level toward the attribute and beyond; − lowers it back. Points are
+            derived automatically.
           </p>
           <section className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-5">
             <div className="flex items-center justify-between px-2 pb-2 text-xs font-medium text-zinc-500 border-b border-zinc-700/40 mb-1">
               <span>Skill</span>
-              <div className="flex items-center gap-4">
-                <span className="w-32 text-center">Skill Level</span>
-                <span className="w-16 text-right">Points</span>
+              <div className="flex items-center gap-3">
+                <span className="w-24 text-center">Skill Level</span>
+                <span className="w-10 text-right">Pts</span>
               </div>
             </div>
-            <div className="space-y-2 max-h-60 overflow-y-auto">
+            <div className="space-y-2 max-h-60 overflow-y-auto scroll-thin pr-2">
               {available.skills.map((sk) => {
                 const sel = selSkills.find((s) => s.id === sk.id);
                 const base = skillTypeOf(sk) === "Physical" ? "DX" : "IQ";
@@ -703,7 +715,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                 return (
                   <div
                     key={sk.id}
-                    className={`flex items-center gap-3 p-2 rounded-lg hover:bg-zinc-700/30 ${
+                    className={`flex flex-wrap items-center gap-x-2 gap-y-1 p-2 rounded-lg hover:bg-zinc-700/30 ${
                       sel ? "bg-zinc-700/40 border border-amber-500/30" : "border border-transparent"
                     }`}
                   >
@@ -714,36 +726,36 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                       className="w-4 h-4 rounded border-zinc-600 text-amber-500 focus:ring-amber-500 bg-zinc-900"
                     />
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium text-zinc-200">{sk.name || "Unnamed"}</div>
-                      <div className="text-xs text-zinc-500">
+                      <div className="text-sm font-medium text-zinc-200 truncate">{sk.name || "Unnamed"}</div>
+                      <div className="text-xs text-zinc-500 truncate">
                         {sk.predefinition_type || ""}
                         {sk.predefinition_difficulty ? ` · ${sk.predefinition_difficulty}` : ""}
                       </div>
-                      <div className="text-xs text-zinc-500">
+                      <div className="text-xs text-zinc-500 truncate">
                         {skillPredefLabel(sk) ? `Default: ${skillPredefLabel(sk)}` : "Default: none"}
                       </div>
                     </div>
-                    <div className="flex items-center gap-4">
-                      <div className="flex items-center gap-1 w-32 justify-center">
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-1">
                         <button
                           type="button"
                           onClick={() => adjSkill(sk.id, -1)}
-                          className="w-6 h-6 rounded bg-zinc-700 hover:bg-zinc-600 text-zinc-300 text-xs font-bold flex items-center justify-center"
+                          className="w-6 h-6 shrink-0 rounded bg-zinc-700 hover:bg-zinc-600 text-zinc-300 text-xs font-bold flex items-center justify-center"
                         >
                           −
                         </button>
-                        <span className="text-sm font-mono text-amber-400 text-center">
+                        <span className="text-xs font-mono text-amber-400 font-bold text-center whitespace-nowrap w-20">
                           {sel ? `${rel} (${abs})` : "—"}
                         </span>
                         <button
                           type="button"
                           onClick={() => adjSkill(sk.id, 1)}
-                          className="w-6 h-6 rounded bg-zinc-700 hover:bg-zinc-600 text-zinc-300 text-xs font-bold flex items-center justify-center"
+                          className="w-6 h-6 shrink-0 rounded bg-zinc-700 hover:bg-zinc-600 text-zinc-300 text-xs font-bold flex items-center justify-center"
                         >
                           +
                         </button>
                       </div>
-                      <span className="text-sm font-mono text-zinc-300 w-16 text-right">
+                      <span className="text-xs font-mono text-amber-400 font-bold w-10 text-right whitespace-nowrap">
                         {sel ? formatPoints(sel.cost_points) : "0"}
                       </span>
                     </div>
@@ -763,7 +775,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
             <span className="text-sm text-zinc-500">{selItems.length} selected</span>
           </div>
           <section className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-5">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-80 overflow-y-auto">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-80 overflow-y-auto scroll-thin pr-2">
               {available.items.map((item) => {
                 const isSelected = selItems.some((s) => s.id === item.id);
                 return (
