@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { submitJson } from "./submit";
 import { inputCls, labelCls, submitCls } from "./formStyles";
+import SearchModal from "./SearchModal";
 import type { Advantage, CharacterViewer, Disadvantage, GameTableAdvantages, GameTableDisadvantages, GameTableItems, GameTableSkills, Item, SkillItem } from "@/lib/types";
 
 export interface CharacterFormProps {
@@ -133,6 +134,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [searchFor, setSearchFor] = useState<null | "advantages" | "disadvantages" | "skills">(null);
 
   const [users, setUsers] = useState<UserOption[]>([]);
   const [available, setAvailable] = useState<{
@@ -524,7 +526,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                     <button
                       type="button"
                       onClick={() => adjAttr(key, -1)}
-                      className="w-8 h-8 rounded bg-amber-500 hover:bg-amber-400 text-zinc-900 text-lg font-bold flex items-center justify-center leading-none"
+                      className="w-8 h-8 rounded bg-zinc-700 hover:bg-zinc-600 text-zinc-300 text-lg font-bold flex items-center justify-center leading-none"
                     >
                       −
                     </button>
@@ -532,7 +534,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                     <button
                       type="button"
                       onClick={() => adjAttr(key, 1)}
-                      className="w-8 h-8 rounded bg-amber-500 hover:bg-amber-400 text-zinc-900 text-lg font-bold flex items-center justify-center leading-none"
+                      className="w-8 h-8 rounded bg-zinc-700 hover:bg-zinc-600 text-zinc-300 text-lg font-bold flex items-center justify-center leading-none"
                     >
                       +
                     </button>
@@ -566,7 +568,19 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <section className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-5">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-amber-100">Advantages</h2>
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg font-semibold text-amber-100">Advantages</h2>
+                <button
+                  type="button"
+                  onClick={() => setSearchFor("advantages")}
+                  className="flex items-center gap-1.5 text-xs font-semibold bg-zinc-700 hover:bg-zinc-600 text-zinc-200 px-2.5 py-1.5 rounded-lg transition-colors"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-4.35-4.35M17 10.5a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z" />
+                  </svg>
+                  Search
+                </button>
+              </div>
                 <span className="text-sm text-zinc-500">{selAdv.length} selected</span>
               </div>
               <div className="space-y-2 max-h-60 overflow-y-auto scroll-thin pr-2">
@@ -603,7 +617,19 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
 
             <section className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-5">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-amber-100">Disadvantages</h2>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-lg font-semibold text-amber-100">Disadvantages</h2>
+                  <button
+                    type="button"
+                    onClick={() => setSearchFor("disadvantages")}
+                    className="flex items-center gap-1.5 text-xs font-semibold bg-zinc-700 hover:bg-zinc-600 text-zinc-200 px-2.5 py-1.5 rounded-lg transition-colors"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-4.35-4.35M17 10.5a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z" />
+                    </svg>
+                    Search
+                  </button>
+                </div>
                 <span className="text-sm text-zinc-500">{selDis.length} selected</span>
               </div>
               <div className="space-y-2 max-h-60 overflow-y-auto scroll-thin pr-2">
@@ -689,7 +715,19 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
 
         <div className="border-t border-zinc-700/40 pt-6">
           <div className="flex items-center justify-between mb-1">
-            <h2 className="text-xl font-semibold text-amber-100">Skills</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-xl font-semibold text-amber-100">Skills</h2>
+              <button
+                type="button"
+                onClick={() => setSearchFor("skills")}
+                className="flex items-center gap-1.5 text-xs font-semibold bg-zinc-700 hover:bg-zinc-600 text-zinc-200 px-2.5 py-1.5 rounded-lg transition-colors"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-4.35-4.35M17 10.5a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z" />
+                </svg>
+                Search
+              </button>
+            </div>
             <span className="text-sm text-zinc-500">{selSkills.length} selected</span>
           </div>
           <p className="text-xs text-zinc-500 mb-4">
@@ -698,10 +736,15 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
             derived automatically.
           </p>
           <section className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-5">
-            <div className="flex items-center justify-between px-2 pb-2 text-xs font-medium text-zinc-500 border-b border-zinc-700/40 mb-1">
-              <span>Skill</span>
+            <div className="flex flex-wrap items-center gap-x-2 p-2 pb-2 pr-2 text-xs font-medium text-zinc-500 border-b border-zinc-700/40 mb-1">
+              <div className="w-4 shrink-0" />
+              <div className="flex-1 min-w-0">Skill</div>
               <div className="flex items-center gap-3">
-                <span className="w-24 text-center">Skill Level</span>
+                <div className="flex items-center gap-1">
+                  <div className="w-6 shrink-0" />
+                  <span className="w-20 text-center">Skill Level</span>
+                  <div className="w-6 shrink-0" />
+                </div>
                 <span className="w-10 text-right">Pts</span>
               </div>
             </div>
@@ -844,6 +887,50 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
           </div>
         ) : null}
       </form>
+
+      {searchFor ? (
+        <SearchModal
+          title={
+            searchFor === "advantages"
+              ? "Search Advantages"
+              : searchFor === "disadvantages"
+                ? "Search Disadvantages"
+                : "Search Skills"
+          }
+          items={
+            searchFor === "advantages"
+              ? available.advantages.map((a) => ({ id: a.id, name: a.name, description: a.description }))
+              : searchFor === "disadvantages"
+                ? available.disadvantages.map((d) => ({ id: d.id, name: d.name, description: d.description }))
+                : available.skills.map((sk) => ({
+                    id: sk.id,
+                    name: sk.name,
+                    meta: `${sk.predefinition_type || ""}${sk.predefinition_difficulty ? ` · ${sk.predefinition_difficulty}` : ""}`,
+                    description: sk.description,
+                  }))
+          }
+          isSelected={(id) =>
+            searchFor === "advantages"
+              ? selAdv.some((s) => s.id === id)
+              : searchFor === "disadvantages"
+                ? selDis.some((s) => s.id === id)
+                : selSkills.some((s) => s.id === id)
+          }
+          onToggle={(id, checked) => {
+            if (searchFor === "advantages") {
+              const a = available.advantages.find((x) => x.id === id);
+              if (a) toggleSelection("advantages", { id: a.id, name: a.name, cost_points: a.cost_points }, checked);
+            } else if (searchFor === "disadvantages") {
+              const d = available.disadvantages.find((x) => x.id === id);
+              if (d) toggleSelection("disadvantages", { id: d.id, name: d.name, cost_points: d.cost_points }, checked);
+            } else {
+              const sk = available.skills.find((x) => x.id === id);
+              if (sk) toggleSkill({ id: sk.id, name: sk.name }, checked);
+            }
+          }}
+          onClose={() => setSearchFor(null)}
+        />
+      ) : null}
     </div>
   );
 }
