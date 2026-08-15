@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { inputCls } from "./formStyles";
+import InfoTooltip from "./InfoTooltip";
 
 export interface SearchModalItem {
   id: string;
@@ -10,27 +11,36 @@ export interface SearchModalItem {
   meta?: string;
 }
 
+export interface SearchFilter {
+  label: string;
+  options: Array<{ value: string; label: string }>;
+}
+
 interface SearchModalProps {
   title: string;
   items: SearchModalItem[];
   isSelected: (id: string) => boolean;
   onToggle: (id: string, checked: boolean) => void;
   onClose: () => void;
+  filters?: SearchFilter[];
 }
 
-export default function SearchModal({ title, items, isSelected, onToggle, onClose }: SearchModalProps) {
+export default function SearchModal({ title, items, isSelected, onToggle, onClose, filters = [] }: SearchModalProps) {
   const [query, setQuery] = useState("");
+  const [appliedQuery, setAppliedQuery] = useState("");
+  const [appliedFilters, setAppliedFilters] = useState<string[]>(() => filters.map(() => ""));
 
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return items;
-    return items.filter(
-      (i) =>
-        i.name.toLowerCase().includes(q) ||
-        (i.description?.toLowerCase().includes(q) ?? false) ||
-        (i.meta?.toLowerCase().includes(q) ?? false)
-    );
-  }, [items, query]);
+    const q = appliedQuery.trim().toLowerCase();
+    return items.filter((i) => {
+      if (q && !i.name.toLowerCase().includes(q) && !(i.description?.toLowerCase().includes(q) ?? false) && !(i.meta?.toLowerCase().includes(q) ?? false)) {
+        return false;
+      }
+      return appliedFilters.every((value) => {
+        if (!value) return true;
+        return i.meta?.toLowerCase().includes(value.toLowerCase()) ?? false;
+      });    });
+  }, [items, appliedQuery, appliedFilters]);
 
   return (
     <div
@@ -52,14 +62,53 @@ export default function SearchModal({ title, items, isSelected, onToggle, onClos
           </button>
         </div>
         <div className="px-6 pb-3">
-          <input
-            autoFocus
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search..."
-            className={inputCls}
-          />
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              setAppliedQuery(query);
+            }}
+            className="flex gap-2"
+          >
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search..."
+              className={inputCls}
+            />
+            <button
+              type="submit"
+              className="flex items-center gap-1.5 shrink-0 text-xs font-semibold bg-amber-600 hover:bg-amber-500 text-white px-4 py-2.5 rounded-lg transition-colors"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-4.35-4.35M17 10.5a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z" />
+              </svg>
+              Search
+            </button>
+          </form>
+          {filters.length > 0 ? (
+            <div className="flex flex-wrap gap-2 mt-3">
+              {filters.map((f, idx) => (
+                <select
+                  key={f.label}
+                  value={appliedFilters[idx]}
+                  onChange={(e) => {
+                    const next = [...appliedFilters];
+                    next[idx] = e.target.value;
+                    setAppliedFilters(next);
+                  }}
+                  className={`${inputCls} !w-auto !px-3 !py-1.5 text-sm`}
+                >
+                  <option value="">{f.label}: All</option>
+                  {f.options.map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
+              ))}
+            </div>
+          ) : null}
         </div>
         <div className="px-2 pb-6 overflow-y-auto scroll-thin space-y-1">
           {filtered.length === 0 ? (
@@ -68,24 +117,31 @@ export default function SearchModal({ title, items, isSelected, onToggle, onClos
             filtered.map((i) => {
               const selected = isSelected(i.id);
               return (
-                <label
+                <InfoTooltip
                   key={i.id}
-                  className={`flex items-center gap-3 p-2 rounded-lg hover:bg-zinc-700/30 cursor-pointer ${
-                    selected ? "bg-zinc-700/40 border border-amber-500/30" : "border border-transparent"
-                  }`}
+                  rows={[
+                    { label: "Meta", value: i.meta },
+                    { label: "Description", value: i.description },
+                  ]}
                 >
-                  <input
-                    type="checkbox"
-                    checked={selected}
-                    onChange={(e) => onToggle(i.id, e.target.checked)}
-                    className="w-4 h-4 rounded border-zinc-600 text-amber-500 focus:ring-amber-500 bg-zinc-900"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium text-zinc-200 truncate">{i.name || "Unnamed"}</div>
-                    {i.meta ? <div className="text-xs text-zinc-500 truncate">{i.meta}</div> : null}
-                    {i.description ? <div className="text-xs text-zinc-500 truncate">{i.description}</div> : null}
-                  </div>
-                </label>
+                  <label
+                    className={`flex items-center gap-3 p-2 rounded-lg hover:bg-zinc-700/30 cursor-pointer ${
+                      selected ? "bg-zinc-700/40 border border-amber-500/30" : "border border-transparent"
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selected}
+                      onChange={(e) => onToggle(i.id, e.target.checked)}
+                      className="w-4 h-4 rounded border-zinc-600 text-amber-500 focus:ring-amber-500 bg-zinc-900"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium text-zinc-200 truncate">{i.name || "Unnamed"}</div>
+                      {i.meta ? <div className="text-xs text-zinc-500 truncate">{i.meta}</div> : null}
+                      {i.description ? <div className="text-xs text-zinc-500 truncate">{i.description}</div> : null}
+                    </div>
+                  </label>
+                </InfoTooltip>
               );
             })
           )}
