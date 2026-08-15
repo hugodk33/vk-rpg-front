@@ -738,14 +738,14 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
           <section className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-5">
             <div className="flex flex-wrap items-center gap-x-2 p-2 pb-2 pr-2 text-xs font-medium text-zinc-500 border-b border-zinc-700/40 mb-1">
               <div className="w-4 shrink-0" />
-              <div className="flex-1 min-w-0">Skill</div>
+              <div className="flex-1 min-w-0" style={{maxWidth: "Calc(100% - 240px)"}}>Skill</div>
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-1">
                   <div className="w-6 shrink-0" />
                   <span className="w-20 text-center">Skill Level</span>
                   <div className="w-6 shrink-0" />
                 </div>
-                <span className="w-10 text-right">Pts</span>
+                <span className="w-10 text-center">Pts</span>
               </div>
             </div>
             <div className="space-y-2 max-h-60 overflow-y-auto scroll-thin pr-2">
@@ -798,7 +798,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                           +
                         </button>
                       </div>
-                      <span className="text-xs font-mono text-amber-400 font-bold w-10 text-right whitespace-nowrap">
+                      <span className="text-md font-mono text-amber-400 font-bold w-10 text-center whitespace-nowrap">
                         {sel ? formatPoints(sel.cost_points) : "0"}
                       </span>
                     </div>
