@@ -42,7 +42,8 @@ const ATTR_NAMES: Array<{ key: "st" | "dx" | "iq" | "ht"; label: string; color: 
   },
   { key: "ht", label: "HT", color: "text-purple-400", svg: "M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" },
 ];
-const ENCUMBRANCE_LABELS = ["None", "Light", "Medium", "Heavy", "Extra-Heavy"];
+  const ENCUMBRANCE_LABELS = ["None", "Light", "Medium", "Heavy", "Extra-Heavy"];
+  const BODY_LOCATIONS = ["Head", "Torso", "Arms", "Legs", "Full Body"];
 
 type SkillType = "Physical" | "Mental";
 type SkillDifficulty = "Easy" | "Medium" | "Hard" | "Very Hard";
@@ -148,10 +149,13 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [searchFor, setSearchFor] = useState<null | "advantages" | "disadvantages" | "skills">(null);
+  const [searchFor, setSearchFor] = useState<null | "advantages" | "disadvantages" | "skills" | "items">(null);
   const [splitAdv, setSplitAdv] = useState(false);
   const [splitDis, setSplitDis] = useState(false);
   const [splitSkills, setSplitSkills] = useState(false);
+  const [splitItems, setSplitItems] = useState(false);
+  const [activeTab, setActiveTab] = useState<"bio" | "sheet" | "items">("bio");
+  const [equipped, setEquipped] = useState<Record<string, { fit?: string; dr?: number }>>({});
 
   const [users, setUsers] = useState<UserOption[]>([]);
   const [available, setAvailable] = useState<{
@@ -319,13 +323,25 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
           description: d.description,
         }));
       }
-      const data = await api<GameTableSkills>(path);
-      return (data?.skills ?? []).map((sk: SkillItem) => ({
-        id: sk.id,
-        name: sk.name,
-        meta: `${sk.predefinition_type || ""}${sk.predefinition_difficulty ? ` · ${sk.predefinition_difficulty}` : ""}`,
-        description: sk.description,
-      }));
+      if (searchFor === "skills") {
+        const data = await api<GameTableSkills>(path);
+        return (data?.skills ?? []).map((sk: SkillItem) => ({
+          id: sk.id,
+          name: sk.name,
+          meta: `${sk.predefinition_type || ""}${sk.predefinition_difficulty ? ` · ${sk.predefinition_difficulty}` : ""}`,
+          description: sk.description,
+        }));
+      }
+      if (searchFor === "items") {
+        const data = await api<GameTableItems>(path);
+        return (data?.items ?? []).map((item: Item) => ({
+          id: item.id,
+          name: item.name,
+          meta: [item.category, item.type != null ? `Type #${item.type}` : null, item.weight != null ? `${item.weight} kg` : null].filter(Boolean).join(" · ") || undefined,
+          description: item.description,
+        }));
+      }
+      return [];
     },
     [currentTableId, searchFor]
   );
@@ -473,10 +489,28 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
         ) : null}
       </div>
 
+      <div className="flex items-center gap-1 border-b border-zinc-700/50 mb-6">
+        {([["bio", "Bio"], ["sheet", "Sheet"], ["items", "Items"]] as const).map(([key, label]) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => setActiveTab(key)}
+            className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 -mb-px ${
+              activeTab === key
+                ? "border-amber-400 text-amber-400"
+                : "border-transparent text-zinc-400 hover:text-zinc-200"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
       <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-5">
-            <h2 className="text-lg font-semibold text-amber-100 mb-3">Identity</h2>
+        {activeTab === "bio" && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-5">
+              <h2 className="text-lg font-semibold text-amber-100 mb-3">Identity</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
               <div>
                 <label className={labelCls}>Name</label>
@@ -564,8 +598,12 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
               </>
             ) : null}
           </div>
+        </div>
+        )}
 
-          <div className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-5 lg:col-span-2">
+        {activeTab === "sheet" && (
+        <>
+          <div className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-5">
             <h2 className="text-lg font-semibold text-amber-100 mb-6">Attributes</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-8">
               {ATTR_NAMES.map(({ key, label, color, svg }) => (
@@ -617,27 +655,46 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
               </div>
             </div>
           </div>
-        </div>
+
+          <div className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-5">
+            <h3 className="text-sm font-semibold uppercase tracking-wider text-zinc-500 mb-3">Defense &amp; Speed</h3>
+            <div className="flex justify-center flex-wrap gap-6">
+              {([
+                { label: "Dodge", value: String(Math.floor(basicSpeed + 3)), color: "text-cyan-400", d: "M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" },
+                { label: "HP", value: String(attrs.ht), color: "text-red-400", d: "M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" },
+                { label: "FP", value: String(initial?.character?.sheet?.fatigue ?? 10), color: "text-amber-400", d: "M13 10V3L4 14h7v7l9-11h-7z" },
+                { label: "Basic Speed", value: basicSpeed.toFixed(2), suffix: "km/h", color: "text-emerald-400", d: "M13 5l7 7-7 7M5 5l7 7-7 7" },
+                { label: "Move", value: String(move), color: "text-blue-400", d: "M5 12h14M12 5l7 7-7 7" },
+                { label: "Encumbrance", value: ENCUMBRANCE_LABELS[encumbranceValue], sub: `${itemsWeight.toFixed(1)} kg`, color: "text-purple-400", d: "M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" },
+              ] as Array<{ label: string; value: string; suffix?: string; color: string; d: string }>).map(({ label, value, suffix, color, d }) => (
+                <div key={label} className="flex flex-col items-center gap-1 p-2 bg-zinc-800/40 rounded-lg min-w-[80px]">
+                  <svg className={`w-5 h-5 ${color}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={d} />
+                  </svg>
+                  <span className={`${color} text-sm font-bold`}>{value}{suffix ? <span className="font-light text-xs ml-0.5">{suffix}</span> : null}</span>
+                  <span className="text-zinc-500 text-xs font-semibold uppercase">{label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <section className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-5">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <h2 className="text-lg font-semibold text-amber-100">Advantages</h2>
-                <SplitToggle active={splitAdv} onToggle={() => setSplitAdv((v) => !v)} />
-                <button
-                  type="button"
-                  onClick={() => setSearchFor("advantages")}
-                  className="flex items-center gap-1.5 text-xs font-semibold bg-zinc-700 hover:bg-zinc-600 text-zinc-200 px-2.5 py-1.5 rounded-lg transition-colors"
-                >
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-4.35-4.35M17 10.5a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z" />
-                  </svg>
-                  Search
-                </button>
-              </div>
-                <span className="text-sm text-zinc-500">{selAdv.length} selected</span>
-              </div>
+            <span className="text-sm text-zinc-500 mb-2 block">{selAdv.length} selected</span>
+            <div className="flex items-center gap-2 mb-4">
+              <h2 className="text-lg font-semibold text-amber-100">Advantages</h2>
+              <SplitToggle active={splitAdv} onToggle={() => setSplitAdv((v) => !v)} />
+              <button
+                type="button"
+                onClick={() => setSearchFor("advantages")}
+                className="flex items-center gap-1.5 text-xs font-semibold bg-zinc-700 hover:bg-zinc-600 text-zinc-200 px-2.5 py-1.5 rounded-lg transition-colors"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-4.35-4.35M17 10.5a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z" />
+                </svg>
+                Search
+              </button>
+            </div>
               <div className="space-y-2 max-h-60 overflow-y-auto scroll-thin pr-2">
                 {(() => {
                   const selIdSet = new Set(selAdv.map((s) => s.id));
@@ -702,22 +759,20 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
             </section>
 
             <section className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-5">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <h2 className="text-lg font-semibold text-amber-100">Disadvantages</h2>
-                  <SplitToggle active={splitDis} onToggle={() => setSplitDis((v) => !v)} />
-                  <button
-                    type="button"
-                    onClick={() => setSearchFor("disadvantages")}
-                    className="flex items-center gap-1.5 text-xs font-semibold bg-zinc-700 hover:bg-zinc-600 text-zinc-200 px-2.5 py-1.5 rounded-lg transition-colors"
-                  >
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-4.35-4.35M17 10.5a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z" />
-                    </svg>
-                    Search
-                  </button>
-                </div>
-                <span className="text-sm text-zinc-500">{selDis.length} selected</span>
+              <span className="text-sm text-zinc-500 mb-2 block">{selDis.length} selected</span>
+              <div className="flex items-center gap-2 mb-4">
+                <h2 className="text-lg font-semibold text-amber-100">Disadvantages</h2>
+                <SplitToggle active={splitDis} onToggle={() => setSplitDis((v) => !v)} />
+                <button
+                  type="button"
+                  onClick={() => setSearchFor("disadvantages")}
+                  className="flex items-center gap-1.5 text-xs font-semibold bg-zinc-700 hover:bg-zinc-600 text-zinc-200 px-2.5 py-1.5 rounded-lg transition-colors"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-4.35-4.35M17 10.5a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z" />
+                  </svg>
+                  Search
+                </button>
               </div>
               <div className="space-y-2 max-h-60 overflow-y-auto scroll-thin pr-2">
                 {(() => {
@@ -833,22 +888,20 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
         </div>
 
         <div className="border-t border-zinc-700/40 pt-6">
-          <div className="flex items-center justify-between mb-1">
-            <div className="flex items-center gap-2">
-              <h2 className="text-xl font-semibold text-amber-100">Skills</h2>
-              <SplitToggle active={splitSkills} onToggle={() => setSplitSkills((v) => !v)} />
-              <button
-                type="button"
-                onClick={() => setSearchFor("skills")}
-                className="flex items-center gap-1.5 text-xs font-semibold bg-zinc-700 hover:bg-zinc-600 text-zinc-200 px-2.5 py-1.5 rounded-lg transition-colors"
-              >
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-4.35-4.35M17 10.5a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z" />
-                </svg>
-                Search
-              </button>
-            </div>
-            <span className="text-sm text-zinc-500">{selSkills.length} selected</span>
+          <span className="text-sm text-zinc-500 mb-2 block">{selSkills.length} selected</span>
+          <div className="flex items-center gap-2 mb-1">
+            <h2 className="text-lg font-semibold text-amber-100">Skills</h2>
+            <SplitToggle active={splitSkills} onToggle={() => setSplitSkills((v) => !v)} />
+            <button
+              type="button"
+              onClick={() => setSearchFor("skills")}
+              className="flex items-center gap-1.5 text-xs font-semibold bg-zinc-700 hover:bg-zinc-600 text-zinc-200 px-2.5 py-1.5 rounded-lg transition-colors"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-4.35-4.35M17 10.5a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z" />
+              </svg>
+              Search
+            </button>
           </div>
           <p className="text-xs text-zinc-500 mb-4">
             Points follow the GURPS skill cost table by difficulty. Selecting a skill keeps its default level: the predefinition (attribute minus the
@@ -989,63 +1042,272 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
             </div>
           </section>
         </div>
+        </>
+        )}
 
-        <div className="border-t border-zinc-700/40 pt-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold text-amber-100">Items</h2>
-            <span className="text-sm text-zinc-500">{selItems.length} selected</span>
-          </div>
-          <section className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-5">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-80 overflow-y-auto scroll-thin pr-2">
-              {available.items.map((item) => {
-                const isSelected = selItems.some((s) => s.id === item.id);
-                return (
-                  <InfoTooltip
-                    key={item.id}
-                    rows={[
-                      { label: "Category", value: item.category },
-                      { label: "Type", value: item.type != null ? `#${item.type}` : undefined },
-                      { label: "Weight", value: item.weight != null ? `${item.weight} kg` : undefined },
-                      { label: "Dimensions", value: item.dimensions },
-                      { label: "Quality", value: item.quality },
-                      { label: "Condition", value: item.condition },
-                      { label: "Description", value: item.description },
-                    ]}
-                  >
-                    <label
-                      className={`flex items-center gap-3 p-2 rounded-lg hover:bg-zinc-700/30 cursor-pointer ${
-                        isSelected ? "bg-zinc-700/40 border border-amber-500/30" : "border border-transparent"
-                      }`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={(e) => toggleItem({ id: item.id, name: item.name }, e.target.checked)}
-                        className="w-4 h-4 rounded border-zinc-600 text-amber-500 focus:ring-amber-500 bg-zinc-900"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium text-zinc-200 truncate">{item.name || "Unnamed"}</div>
-                        <div className="text-xs text-zinc-500 truncate">
-                          {[item.category, item.quality, item.condition].filter(Boolean).join(" · ") || ""}
-                          {item.weight != null ? ` · ${item.weight} kg` : ""}
-                          {item.dimensions ? ` · ${item.dimensions}` : ""}
-                        </div>
-                        {item.description ? <div className="text-xs text-zinc-500 truncate">{item.description}</div> : null}
-                      </div>
-                    </label>
-                  </InfoTooltip>
-                );
-              })}
-              {available.items.length === 0 ? (
-                <p className="col-span-full text-zinc-600 text-sm">No items registered for this table.</p>
-              ) : null}
+        {activeTab === "items" && (
+        <>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-5">
+              <h3 className="text-sm font-semibold uppercase tracking-wider text-zinc-500 mb-3">Defense &amp; Speed</h3>
+              <div className="grid grid-cols-3 gap-2">
+                {([
+                  { label: "Dodge", value: String(Math.floor(basicSpeed + 3)), color: "text-cyan-400", d: "M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" },
+                  { label: "HP", value: String(attrs.ht), color: "text-red-400", d: "M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" },
+                  { label: "FP", value: String(initial?.character?.sheet?.fatigue ?? 10), color: "text-amber-400", d: "M13 10V3L4 14h7v7l9-11h-7z" },
+                  { label: "Basic Speed", value: basicSpeed.toFixed(2), suffix: "km/h", color: "text-emerald-400", d: "M13 5l7 7-7 7M5 5l7 7-7 7" },
+                  { label: "Move", value: String(move), color: "text-blue-400", d: "M5 12h14M12 5l7 7-7 7" },
+                  { label: "Encumbrance", value: ENCUMBRANCE_LABELS[encumbranceValue], sub: `${itemsWeight.toFixed(1)} kg`, color: "text-purple-400", d: "M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" },
+                ] as Array<{ label: string; value: string; suffix?: string; color: string; d: string }>).map(({ label, value, suffix, color, d }) => (
+                  <div key={label} className="flex flex-col items-center gap-1 p-2 bg-zinc-800/40 rounded-lg min-w-[80px]">
+                    <svg className={`w-5 h-5 ${color}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={d} />
+                    </svg>
+                    <span className={`${color} text-sm font-bold`}>{value}{suffix ? <span className="font-light text-xs ml-0.5">{suffix}</span> : null}</span>
+                    <span className="text-zinc-500 text-xs font-semibold uppercase">{label}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-          </section>
+
+            {(() => {
+              const armorItems = selItems.filter((s) => {
+                const item = available.items.find((i) => i.id === s.id);
+                return item?.type === 2 || item?.type === 3;
+              });
+              const armors = armorItems.map((s) => {
+                const eq = equipped[s.id];
+                return { id: s.id, name: s.name, fit: eq?.fit, value: eq?.dr != null ? `DR ${eq.dr}` : undefined };
+              });
+              return (
+                <div className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-5">
+                  <h3 className="text-sm font-semibold uppercase tracking-wider text-zinc-500 mb-3">Body</h3>
+                  {(() => {
+                    const drFor = (fits: string[]) => {
+                      let total = 0;
+                      for (const a of armors) {
+                        if (fits.some((f) => a.fit?.toLowerCase()?.includes(f))) {
+                          const m = /(\d+)/.exec(a.value ?? "");
+                          if (m) total += parseInt(m[1], 10);
+                        }
+                      }
+                      return total;
+                    };
+                    const head = drFor(["head", "helmet", "skull"]);
+                    const torso = drFor(["torso", "chest", "body", "full body"]);
+                    const armR = drFor(["arm", "arms"]);
+                    const armL = armR;
+                    const legR = drFor(["leg", "legs"]);
+                    const legL = legR;
+                    return (
+                      <div className="relative flex justify-center py-12">
+                        <div className="relative">
+                          <svg fill="#52525b" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" style={{ width: 90 }}>
+                            <circle cx="256" cy="56" r="56" />
+                            <path d="M437,128H75a27,27,0,0,0,0,54H176.88c6.91,0,15,3.09,19.58,15,5.35,13.83,2.73,40.54-.57,61.23l-4.32,24.45a.42.42,0,0,1-.12.35l-34.6,196.81A27.43,27.43,0,0,0,179,511.58a27.06,27.06,0,0,0,31.42-22.29l23.91-136.8S242,320,256,320c14.23,0,21.74,32.49,21.74,32.49l23.91,136.92a27.24,27.24,0,1,0,53.62-9.6L320.66,283a.45.45,0,0,0-.11-.35l-4.33-24.45c-3.3-20.69-5.92-47.4-.57-61.23,4.56-11.88,12.91-15,19.28-15H437a27,27,0,0,0,0-54Z" />
+                          </svg>
+                          <div className="absolute inset-0 w-full">
+                            {(() => {
+                              const badge = (label: string, dr: number, style: React.CSSProperties) => (
+                                <div
+                                  className="absolute flex flex-col items-center justify-center p-1 rounded border border-cyan-400/60"
+                                  style={{ ...style, width: 52, height: 44 }}
+                                >
+                                  <span className="text-zinc-400 uppercase" style={{ fontSize: 7, lineHeight: 1, letterSpacing: 0.3 }}>{label}</span>
+                                  <span className="text-cyan-400 font-bold text-sm leading-none mt-0.5">{dr}</span>
+                                </div>
+                              );
+                              return (
+                                <>
+                                  {badge("head", head, { top: -54, left: "50%", transform: "translateX(-50%)" })}
+                                  {badge("a.rig", armR, { top: -32, right: -50 })}
+                                  {badge("a.lef", armL, { top: -32, left: -50 })}
+                                  {badge("torso", torso, { top: 23, width: 50, left: -45, height: 50 })}
+                                  {badge("l.rig", legR, { top: 85, right: -50 })}
+                                  {badge("l.lef", legL, { top: 85, left: -50 })}
+                                </>
+                              );
+                            })()}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                  <div className="space-y-1 mt-4 border-t border-zinc-700/40 pt-4">
+                    {armors.map((a) => (
+                      <div key={a.id} className="flex justify-between text-xs">
+                        <span className="text-zinc-300">{a.name}</span>
+                        <span className="text-amber-400/80">
+                          {(a.value ?? "").replace("DR ", "")} {a.fit || ""}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+
+          {selItems.some((s) => {
+            const item = available.items.find((i) => i.id === s.id);
+            return item?.type === 2 || item?.type === 3;
+          }) ? (
+            <div className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-5 mt-4">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-3">Equip</h3>
+              <div className="space-y-3">
+                {selItems.filter((s) => {
+                  const item = available.items.find((i) => i.id === s.id);
+                  return item?.type === 2 || item?.type === 3;
+                }).map((s) => {
+                  const item = available.items.find((i) => i.id === s.id);
+                  const eq = equipped[s.id];
+                  return (
+                    <div key={s.id} className="bg-zinc-900/50 rounded-lg border border-zinc-700/50 p-3">
+                      <div className="flex items-center gap-2 mb-2">
+                        <svg className="w-3.5 h-3.5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                        </svg>
+                        <span className="text-sm font-medium text-zinc-200 flex-1 truncate">{s.name}</span>
+                        {item?.weight != null ? <span className="text-[10px] text-zinc-500">{item.weight} kg</span> : null}
+                      </div>
+                      <div className="grid grid-cols-3 gap-2 items-center">
+                        <div className="col-span-2">
+                          <select
+                            value={eq?.fit ?? ""}
+                            onChange={(e) => setEquipped((prev) => ({ ...prev, [s.id]: { ...prev[s.id], fit: e.target.value || undefined } }))}
+                            className="w-full bg-zinc-800 border border-zinc-600 rounded px-2 py-1 text-xs text-zinc-200"
+                          >
+                            <option value="">Not equipped</option>
+                            {BODY_LOCATIONS.map((loc) => (
+                              <option key={loc} value={loc}>{loc}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <input
+                            type="number"
+                            min={0}
+                            value={eq?.dr ?? ""}
+                            onChange={(e) => setEquipped((prev) => ({ ...prev, [s.id]: { ...prev[s.id], dr: e.target.value === "" ? undefined : Number(e.target.value) } }))}
+                            placeholder="DR"
+                            className="w-full bg-zinc-800 border border-zinc-600 rounded px-2 py-1 text-xs text-zinc-200 text-center"
+                          />
+                        </div>
+                      </div>
+                      {eq?.fit ? (
+                        <div className="flex items-center gap-1 mt-2">
+                          <svg className="w-3 h-3 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                          </svg>
+                          <span className="text-[10px] text-emerald-400">Equipped — {eq.fit}</span>
+                        </div>
+                      ) : null}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
+
+          <div className="border-t border-zinc-700/40 pt-6">
+            <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg font-semibold text-amber-100">Items</h2>
+                <SplitToggle active={splitItems} onToggle={() => setSplitItems((v) => !v)} />
+                <button
+                  type="button"
+                  onClick={() => setSearchFor("items")}
+                  className="flex items-center gap-1.5 text-xs font-semibold bg-zinc-700 hover:bg-zinc-600 text-zinc-200 px-2.5 py-1.5 rounded-lg transition-colors"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-4.35-4.35M17 10.5a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z" />
+                  </svg>
+                  Search
+                </button>
+              </div>
+              <span className="text-sm text-zinc-500">{selItems.length} selected</span>
+            </div>
+            <section className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-80 overflow-y-auto scroll-thin pr-2">
+                {(() => {
+                  const renderItem = (item: Item) => {
+                    const isSelected = selItems.some((s) => s.id === item.id);
+                    return (
+                      <InfoTooltip
+                        key={item.id}
+                        rows={[
+                          { label: "Category", value: item.category },
+                          { label: "Type", value: item.type != null ? `#${item.type}` : undefined },
+                          { label: "Weight", value: item.weight != null ? `${item.weight} kg` : undefined },
+                          { label: "Dimensions", value: item.dimensions },
+                          { label: "Quality", value: item.quality },
+                          { label: "Condition", value: item.condition },
+                          { label: "Description", value: item.description },
+                        ]}
+                      >
+                        <label
+                          className={`flex items-center gap-3 p-2 rounded-lg hover:bg-zinc-700/30 cursor-pointer ${
+                            isSelected ? "bg-zinc-700/40 border border-amber-500/30" : "border border-transparent"
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={(e) => toggleItem({ id: item.id, name: item.name }, e.target.checked)}
+                            className="w-4 h-4 rounded border-zinc-600 text-amber-500 focus:ring-amber-500 bg-zinc-900"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-medium text-zinc-200 truncate">{item.name || "Unnamed"}</div>
+                            <div className="text-xs text-zinc-500 truncate">
+                              {[item.category, item.quality, item.condition].filter(Boolean).join(" · ") || ""}
+                              {item.weight != null ? ` · ${item.weight} kg` : ""}
+                              {item.dimensions ? ` · ${item.dimensions}` : ""}
+                            </div>
+                            {item.description ? <div className="text-xs text-zinc-500 truncate">{item.description}</div> : null}
+                          </div>
+                        </label>
+                      </InfoTooltip>
+                    );
+                  };
+                  if (splitItems) {
+                    const selIdSet = new Set(selItems.map((s) => s.id));
+                    const selRows = available.items.filter((i) => selIdSet.has(i.id));
+                    const unselRows = available.items.filter((i) => !selIdSet.has(i.id));
+                    return (
+                      <>
+                        {selRows.length > 0 ? (
+                          <>
+                            <div className="col-span-full text-xs font-semibold text-zinc-500 uppercase tracking-wider pt-1">{selRows.length} selected</div>
+                            {selRows.map(renderItem)}
+                          </>
+                        ) : null}
+                        {unselRows.length > 0 ? (
+                          <>
+                            <div className="col-span-full text-xs font-semibold text-zinc-500 uppercase tracking-wider pt-3">{unselRows.length} not selected</div>
+                            {unselRows.map(renderItem)}
+                          </>
+                        ) : null}
+                      </>
+                    );
+                  }
+                  return available.items.map(renderItem);
+                })()}
+                {available.items.length === 0 ? (
+                  <p className="col-span-full text-zinc-600 text-sm">No items registered for this table.</p>
+                ) : null}
+              </div>
+            </section>
+          </div>
 
           <section className="mt-4">
-            <label className={labelCls}>
-              Encumbrance — {ENCUMBRANCE_LABELS[encumbranceValue]} ({itemsWeight.toFixed(1)} kg carried)
-            </label>
+            <div className="flex items-center gap-2 mb-2">
+              <svg className="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
+              </svg>
+              <label className={labelCls}>
+                Encumbrance — {ENCUMBRANCE_LABELS[encumbranceValue]} ({itemsWeight.toFixed(1)} kg carried)
+              </label>
+            </div>
             <div className="mt-2 grid grid-cols-5 gap-1">
               {ENCUMBRANCE_LABELS.map((label, i) => {
                 const threshold = attrs.st * [2, 4, 6, 12, 20][i];
@@ -1064,7 +1326,8 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
               })}
             </div>
           </section>
-        </div>
+        </>
+        )}
 
         {error && <p className="text-red-400 text-sm">{error}</p>}
 
@@ -1087,7 +1350,9 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
               ? "Search Advantages"
               : searchFor === "disadvantages"
                 ? "Search Disadvantages"
-                : "Search Skills"
+                : searchFor === "skills"
+                  ? "Search Skills"
+                  : "Search Items"
           }
           onSearch={doSearch}
           filters={
@@ -1107,26 +1372,58 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                     options: ["Easy", "Medium", "Hard", "Very Hard"].map((d) => ({ value: d, label: d })),
                   },
                 ]
-              : [
-                  {
-                    key: "category",
-                    label: "Category",
-                    options: [
-                      ...new Set(
-                        (searchFor === "advantages" ? available.advantages : available.disadvantages)
-                          .map((x) => x.category)
-                          .filter((c): c is string => !!c)
-                      ),
-                    ].map((c) => ({ value: c, label: c })),
-                  },
-                ]
+              : searchFor === "items"
+                ? [
+                    {
+                      key: "category",
+                      label: "Category",
+                      options: [
+                        ...new Set(
+                          available.items
+                            .map((x) => x.category)
+                            .filter((c): c is string => !!c)
+                        ),
+                      ].map((c) => ({ value: c, label: c })),
+                    },
+                    {
+                      key: "type",
+                      label: "Type",
+                      options: [
+                        ...new Map(
+                          available.items
+                            .filter((x) => x.type != null)
+                            .map((x) => [x.type!, x.type!])
+                        ).entries(),
+                      ]
+                        .sort(([a], [b]) => a - b)
+                        .map(([, n]) => ({
+                          value: String(n),
+                          label: ["Weapon", "Armor", "Equipment"][n - 1] || `Type #${n}`,
+                        })),
+                    },
+                  ]
+                : [
+                    {
+                      key: "category",
+                      label: "Category",
+                      options: [
+                        ...new Set(
+                          (searchFor === "advantages" ? available.advantages : available.disadvantages)
+                            .map((x) => x.category)
+                            .filter((c): c is string => !!c)
+                        ),
+                      ].map((c) => ({ value: c, label: c })),
+                    },
+                  ]
           }
           isSelected={(id) =>
             searchFor === "advantages"
               ? selAdv.some((s) => s.id === id)
               : searchFor === "disadvantages"
                 ? selDis.some((s) => s.id === id)
-                : selSkills.some((s) => s.id === id)
+                : searchFor === "skills"
+                  ? selSkills.some((s) => s.id === id)
+                  : selItems.some((s) => s.id === id)
           }
           onToggle={(id, checked) => {
             if (searchFor === "advantages") {
@@ -1135,9 +1432,12 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
             } else if (searchFor === "disadvantages") {
               const d = available.disadvantages.find((x) => x.id === id);
               if (d) toggleSelection("disadvantages", { id: d.id, name: d.name, cost_points: d.cost_points }, checked);
-            } else {
+            } else if (searchFor === "skills") {
               const sk = available.skills.find((x) => x.id === id);
               if (sk) toggleSkill({ id: sk.id, name: sk.name }, checked);
+            } else {
+              const item = available.items.find((x) => x.id === id);
+              if (item) toggleItem({ id: item.id, name: item.name }, checked);
             }
           }}
           onClose={() => setSearchFor(null)}
