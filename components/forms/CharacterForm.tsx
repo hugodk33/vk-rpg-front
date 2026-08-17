@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { submitJson } from "./submit";
+import { api } from "@/lib/api";
 import { inputCls, labelCls, submitCls } from "./formStyles";
 import SearchModal from "./SearchModal";
 import InfoTooltip from "./InfoTooltip";
+import SplitToggle from "./SplitToggle";
 import type { Advantage, CharacterViewer, Disadvantage, GameTableAdvantages, GameTableDisadvantages, GameTableItems, GameTableSkills, Item, SkillItem } from "@/lib/types";
 
 export interface CharacterFormProps {
@@ -147,6 +149,9 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchFor, setSearchFor] = useState<null | "advantages" | "disadvantages" | "skills">(null);
+  const [splitAdv, setSplitAdv] = useState(false);
+  const [splitDis, setSplitDis] = useState(false);
+  const [splitSkills, setSplitSkills] = useState(false);
 
   const [users, setUsers] = useState<UserOption[]>([]);
   const [available, setAvailable] = useState<{
@@ -191,18 +196,18 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
     (async () => {
       try {
         const [adv, dis, sk, items, us] = await Promise.all([
-          fetch(`/api/game-table-advantages/${currentTableId}`).then((r) => r.json()),
-          fetch(`/api/game-table-disadvantages/${currentTableId}`).then((r) => r.json()),
-          fetch(`/api/game-table-skills/${currentTableId}`).then((r) => r.json()),
-          fetch(`/api/game-table-items/${currentTableId}`).then((r) => r.json()),
-          fetch(`/api/users`).then((r) => r.json()),
+          api<GameTableAdvantages>(`/game-table-advantages/${currentTableId}`),
+          api<GameTableDisadvantages>(`/game-table-disadvantages/${currentTableId}`),
+          api<GameTableSkills>(`/game-table-skills/${currentTableId}`),
+          api<GameTableItems>(`/game-table-items/${currentTableId}`),
+          api<UserOption[]>(`/users`),
         ]);
         if (!active) return;
         setAvailable({
-          advantages: (adv as GameTableAdvantages)?.advantages ?? (Array.isArray(adv) ? adv : []),
-          disadvantages: (dis as GameTableDisadvantages)?.disadvantages ?? (Array.isArray(dis) ? dis : []),
-          skills: (sk as GameTableSkills)?.skills ?? (Array.isArray(sk) ? sk : []),
-          items: (items as GameTableItems)?.items ?? (Array.isArray(items) ? items : []),
+          advantages: adv?.advantages ?? [],
+          disadvantages: dis?.disadvantages ?? [],
+          skills: sk?.skills ?? [],
+          items: items?.items ?? [],
         });
         setUsers(Array.isArray(us) ? us : []);
       } catch {
@@ -287,6 +292,43 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
       setSelItems((prev) => prev.filter((s) => s.id !== item.id));
     }
   }
+
+  const doSearch = useCallback(
+    async (query: string, filters: Record<string, string>): Promise<import("./SearchModal").SearchModalItem[]> => {
+      if (!currentTableId || !searchFor) return [];
+      const params = new URLSearchParams();
+      if (query) params.set("search", query);
+      for (const [k, v] of Object.entries(filters)) if (v) params.set(k, v);
+      const qs = params.toString();
+      const path = `/game-table-${searchFor}/${currentTableId}${qs ? `?${qs}` : ""}`;
+      if (searchFor === "advantages") {
+        const data = await api<GameTableAdvantages>(path);
+        return (data?.advantages ?? []).map((a: Advantage) => ({
+          id: a.id,
+          name: a.name,
+          meta: [a.category, a.subcategory].filter(Boolean).join(" · ") || undefined,
+          description: a.description,
+        }));
+      }
+      if (searchFor === "disadvantages") {
+        const data = await api<GameTableDisadvantages>(path);
+        return (data?.disadvantages ?? []).map((d: Disadvantage) => ({
+          id: d.id,
+          name: d.name,
+          meta: [d.category, d.subcategory].filter(Boolean).join(" · ") || undefined,
+          description: d.description,
+        }));
+      }
+      const data = await api<GameTableSkills>(path);
+      return (data?.skills ?? []).map((sk: SkillItem) => ({
+        id: sk.id,
+        name: sk.name,
+        meta: `${sk.predefinition_type || ""}${sk.predefinition_difficulty ? ` · ${sk.predefinition_difficulty}` : ""}`,
+        description: sk.description,
+      }));
+    },
+    [currentTableId, searchFor]
+  );
 
   const MAX_QUIRKS = 5;
 
@@ -582,6 +624,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <h2 className="text-lg font-semibold text-amber-100">Advantages</h2>
+                <SplitToggle active={splitAdv} onToggle={() => setSplitAdv((v) => !v)} />
                 <button
                   type="button"
                   onClick={() => setSearchFor("advantages")}
@@ -596,43 +639,65 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                 <span className="text-sm text-zinc-500">{selAdv.length} selected</span>
               </div>
               <div className="space-y-2 max-h-60 overflow-y-auto scroll-thin pr-2">
-                {available.advantages.map((a) => {
-                  const isSelected = selAdv.some((s) => s.id === a.id);
-                  return (
-                    <InfoTooltip
-                      key={a.id}
-                      rows={[
-                        { label: "Cost", value: a.cost_points != null ? (a.cost_points >= 0 ? "+" : "") + a.cost_points : undefined },
-                        { label: "Category", value: a.category },
-                        { label: "Subcategory", value: a.subcategory },
-                        { label: "Description", value: a.description },
-                      ]}
-                    >
-                      <label
-                        className={`flex items-center gap-3 p-2 rounded-lg hover:bg-zinc-700/30 cursor-pointer ${
-                          isSelected ? "bg-zinc-700/40 border border-amber-500/30" : "border border-transparent"
-                        }`}
+                {(() => {
+                  const selIdSet = new Set(selAdv.map((s) => s.id));
+                  const selRows = available.advantages.filter((a) => selIdSet.has(a.id));
+                  const unselRows = available.advantages.filter((a) => !selIdSet.has(a.id));
+                  const renderAdv = (a: Advantage) => {
+                    const isSelected = selIdSet.has(a.id);
+                    return (
+                      <InfoTooltip
+                        key={a.id}
+                        rows={[
+                          { label: "Cost", value: a.cost_points != null ? (a.cost_points >= 0 ? "+" : "") + a.cost_points : undefined },
+                          { label: "Category", value: a.category },
+                          { label: "Subcategory", value: a.subcategory },
+                          { label: "Description", value: a.description },
+                        ]}
                       >
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={(e) => toggleSelection("advantages", { id: a.id, name: a.name, cost_points: a.cost_points }, e.target.checked)}
-                          className="w-4 h-4 rounded border-zinc-600 text-amber-500 focus:ring-amber-500 bg-zinc-900"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <div className="text-sm font-medium text-zinc-200 truncate">{a.name || "Unnamed"}</div>
-                          {a.description ? <div className="text-xs text-zinc-500 truncate">{a.description}</div> : null}
-                        </div>
-                        <span className="text-xs font-mono text-amber-400 font-bold shrink-0">
-                          {a.cost_points != null ? (a.cost_points >= 0 ? "+" : "") + a.cost_points : "±0"}
-                        </span>
-                      </label>
-                    </InfoTooltip>
-                  );
-                })}
-                {available.advantages.length === 0 ? (
-                  <p className="text-zinc-600 text-sm">No advantages registered for this table.</p>
-                ) : null}
+                        <label
+                          className={`flex items-center gap-3 p-2 rounded-lg hover:bg-zinc-700/30 cursor-pointer ${
+                            isSelected ? "bg-zinc-700/40 border border-amber-500/30" : "border border-transparent"
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={(e) => toggleSelection("advantages", { id: a.id, name: a.name, cost_points: a.cost_points }, e.target.checked)}
+                            className="w-4 h-4 rounded border-zinc-600 text-amber-500 focus:ring-amber-500 bg-zinc-900"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-medium text-zinc-200 truncate">{a.name || "Unnamed"}</div>
+                            {a.description ? <div className="text-xs text-zinc-500 truncate">{a.description}</div> : null}
+                          </div>
+                          <span className="text-xs font-mono text-amber-400 font-bold shrink-0">
+                            {a.cost_points != null ? (a.cost_points >= 0 ? "+" : "") + a.cost_points : "±0"}
+                          </span>
+                        </label>
+                      </InfoTooltip>
+                    );
+                  };
+                  if (available.advantages.length === 0) return <p className="text-zinc-600 text-sm">No advantages registered for this table.</p>;
+                  if (splitAdv) {
+                    return (
+                      <>
+                        {selRows.length > 0 ? (
+                          <>
+                            <div className="text-xs font-semibold text-zinc-500 uppercase tracking-wider pt-1">{selRows.length} selected</div>
+                            {selRows.map(renderAdv)}
+                          </>
+                        ) : null}
+                        {unselRows.length > 0 ? (
+                          <>
+                            <div className="text-xs font-semibold text-zinc-500 uppercase tracking-wider pt-3">{unselRows.length} not selected</div>
+                            {unselRows.map(renderAdv)}
+                          </>
+                        ) : null}
+                      </>
+                    );
+                  }
+                  return available.advantages.map(renderAdv);
+                })()}
               </div>
             </section>
 
@@ -640,6 +705,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
                   <h2 className="text-lg font-semibold text-amber-100">Disadvantages</h2>
+                  <SplitToggle active={splitDis} onToggle={() => setSplitDis((v) => !v)} />
                   <button
                     type="button"
                     onClick={() => setSearchFor("disadvantages")}
@@ -654,44 +720,66 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                 <span className="text-sm text-zinc-500">{selDis.length} selected</span>
               </div>
               <div className="space-y-2 max-h-60 overflow-y-auto scroll-thin pr-2">
-                {available.disadvantages.map((d) => {
-                  const isSelected = selDis.some((s) => s.id === d.id);
-                  return (
-                    <InfoTooltip
-                      key={d.id}
-                      rows={[
-                        { label: "Cost", value: d.cost_points != null ? `-${d.cost_points}` : undefined },
-                        { label: "Category", value: d.category },
-                        { label: "Subcategory", value: d.subcategory },
-                        { label: "Effect", value: d.effect },
-                        { label: "Description", value: d.description },
-                      ]}
-                    >
-                      <label
-                        className={`flex items-center gap-3 p-2 rounded-lg hover:bg-zinc-700/30 cursor-pointer ${
-                          isSelected ? "bg-zinc-700/40 border border-amber-500/30" : "border border-transparent"
-                        }`}
+                {(() => {
+                  const selIdSet = new Set(selDis.map((s) => s.id));
+                  const selRows = available.disadvantages.filter((d) => selIdSet.has(d.id));
+                  const unselRows = available.disadvantages.filter((d) => !selIdSet.has(d.id));
+                  const renderDis = (d: Disadvantage) => {
+                    const isSelected = selIdSet.has(d.id);
+                    return (
+                      <InfoTooltip
+                        key={d.id}
+                        rows={[
+                          { label: "Cost", value: d.cost_points != null ? `-${d.cost_points}` : undefined },
+                          { label: "Category", value: d.category },
+                          { label: "Subcategory", value: d.subcategory },
+                          { label: "Effect", value: d.effect },
+                          { label: "Description", value: d.description },
+                        ]}
                       >
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={(e) => toggleSelection("disadvantages", { id: d.id, name: d.name, cost_points: d.cost_points }, e.target.checked)}
-                          className="w-4 h-4 rounded border-zinc-600 text-amber-500 focus:ring-amber-500 bg-zinc-900"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <div className="text-sm font-medium text-zinc-200 truncate">{d.name || "Unnamed"}</div>
-                          {d.description ? <div className="text-xs text-zinc-500 truncate">{d.description}</div> : null}
-                        </div>
-                        <span className="text-xs font-mono text-amber-400 font-bold shrink-0">
-                          {d.cost_points != null ? (d.cost_points > 0 ? `-${d.cost_points}` : String(d.cost_points)) : "±0"}
-                        </span>
-                      </label>
-                    </InfoTooltip>
-                  );
-                })}
-                {available.disadvantages.length === 0 ? (
-                  <p className="text-zinc-600 text-sm">No disadvantages registered for this table.</p>
-                ) : null}
+                        <label
+                          className={`flex items-center gap-3 p-2 rounded-lg hover:bg-zinc-700/30 cursor-pointer ${
+                            isSelected ? "bg-zinc-700/40 border border-amber-500/30" : "border border-transparent"
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={(e) => toggleSelection("disadvantages", { id: d.id, name: d.name, cost_points: d.cost_points }, e.target.checked)}
+                            className="w-4 h-4 rounded border-zinc-600 text-amber-500 focus:ring-amber-500 bg-zinc-900"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-medium text-zinc-200 truncate">{d.name || "Unnamed"}</div>
+                            {d.description ? <div className="text-xs text-zinc-500 truncate">{d.description}</div> : null}
+                          </div>
+                          <span className="text-xs font-mono text-amber-400 font-bold shrink-0">
+                            {d.cost_points != null ? (d.cost_points > 0 ? `-${d.cost_points}` : String(d.cost_points)) : "±0"}
+                          </span>
+                        </label>
+                      </InfoTooltip>
+                    );
+                  };
+                  if (available.disadvantages.length === 0) return <p className="text-zinc-600 text-sm">No disadvantages registered for this table.</p>;
+                  if (splitDis) {
+                    return (
+                      <>
+                        {selRows.length > 0 ? (
+                          <>
+                            <div className="text-xs font-semibold text-zinc-500 uppercase tracking-wider pt-1">{selRows.length} selected</div>
+                            {selRows.map(renderDis)}
+                          </>
+                        ) : null}
+                        {unselRows.length > 0 ? (
+                          <>
+                            <div className="text-xs font-semibold text-zinc-500 uppercase tracking-wider pt-3">{unselRows.length} not selected</div>
+                            {unselRows.map(renderDis)}
+                          </>
+                        ) : null}
+                      </>
+                    );
+                  }
+                  return available.disadvantages.map(renderDis);
+                })()}
               </div>
             </section>
 
@@ -748,6 +836,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
           <div className="flex items-center justify-between mb-1">
             <div className="flex items-center gap-2">
               <h2 className="text-xl font-semibold text-amber-100">Skills</h2>
+              <SplitToggle active={splitSkills} onToggle={() => setSplitSkills((v) => !v)} />
               <button
                 type="button"
                 onClick={() => setSearchFor("skills")}
@@ -780,101 +869,123 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
               </div>
             </div>
             <div className="space-y-2 max-h-60 overflow-y-auto scroll-thin pr-2">
-              {available.skills.map((sk) => {
-                const sel = selSkills.find((s) => s.id === sk.id);
-                const base = skillTypeOf(sk) === "Physical" ? "DX" : "IQ";
-                const type = skillTypeOf(sk);
-                const level = sel?.level ?? 0;
-                const abs = (skillTypeOf(sk) === "Physical" ? attrs.dx : attrs.iq) + level;
-                const rel = level === 0 ? base : level > 0 ? `${base}+${level}` : `${base}${level}`;
-                return (
-                  <InfoTooltip
-                    key={sk.id}
-                    rows={[
-                      { label: "Type", value: [sk.predefinition_type, sk.predefinition_difficulty].filter(Boolean).join(" · ") },
-                      { label: "Default", value: skillPredefLabel(sk) },
-                      { label: "Category", value: sk.category },
-                      { label: "Subcategory", value: sk.subcategory },
-                      { label: "Effect", value: sk.effect },
-                      { label: "Description", value: sk.description },
-                      {
-                        label: "Predefinition",
-                        value:
-                          sk.predefinition
-                            ?.map((p) => [p.skill, p.depends_on_skill_for_others_attributes ?? p.value].filter(Boolean).join(" "))
-                            .filter(Boolean)
-                            .join(", ") || undefined,
-                      },
-                      {
-                        label: "Dependencies",
-                        value:
-                          sk.dependencies
-                            ?.map((d) => [d.skill, d.value].filter(Boolean).join(" "))
-                            .filter(Boolean)
-                            .join(", ") || undefined,
-                      },
-                    ]}
-                  >
-                    <div
-                      className={`flex flex-wrap items-center gap-x-2 gap-y-1 p-2 rounded-lg hover:bg-zinc-700/30 ${
-                        sel ? "bg-zinc-700/40 border border-amber-500/30" : "border border-transparent"
-                      }`}
+              {(() => {
+                const selIdSet = new Set(selSkills.map((s) => s.id));
+                const selRows = available.skills.filter((sk) => selIdSet.has(sk.id));
+                const unselRows = available.skills.filter((sk) => !selIdSet.has(sk.id));
+                const renderSkill = (sk: SkillItem) => {
+                  const sel = selSkills.find((s) => s.id === sk.id);
+                  const base = skillTypeOf(sk) === "Physical" ? "DX" : "IQ";
+                  const type = skillTypeOf(sk);
+                  const level = sel?.level ?? 0;
+                  const abs = (skillTypeOf(sk) === "Physical" ? attrs.dx : attrs.iq) + level;
+                  const rel = level === 0 ? base : level > 0 ? `${base}+${level}` : `${base}${level}`;
+                  return (
+                    <InfoTooltip
+                      key={sk.id}
+                      rows={[
+                        { label: "Type", value: [sk.predefinition_type, sk.predefinition_difficulty].filter(Boolean).join(" · ") },
+                        { label: "Default", value: skillPredefLabel(sk) },
+                        { label: "Category", value: sk.category },
+                        { label: "Subcategory", value: sk.subcategory },
+                        { label: "Effect", value: sk.effect },
+                        { label: "Description", value: sk.description },
+                        {
+                          label: "Predefinition",
+                          value:
+                            sk.predefinition
+                              ?.map((p) => [p.skill, p.depends_on_skill_for_others_attributes ?? p.value].filter(Boolean).join(" "))
+                              .filter(Boolean)
+                              .join(", ") || undefined,
+                        },
+                        {
+                          label: "Dependencies",
+                          value:
+                            sk.dependencies
+                              ?.map((d) => [d.skill, d.value].filter(Boolean).join(" "))
+                              .filter(Boolean)
+                              .join(", ") || undefined,
+                        },
+                      ]}
                     >
-                      <input
-                        type="checkbox"
-                        checked={!!sel}
-                        onChange={(e) => toggleSkill({ id: sk.id, name: sk.name }, e.target.checked)}
-                        className="w-4 h-4 rounded border-zinc-600 text-amber-500 focus:ring-amber-500 bg-zinc-900"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium text-zinc-200 truncate">{sk.name || "Unnamed"}</div>
-                        <div className="flex items-center gap-1.5 text-xs text-zinc-500">
-                          {SKILL_TYPE_META[type] ? (
-                            <svg className={`w-3.5 h-3.5 ${SKILL_TYPE_META[type].color}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={SKILL_TYPE_META[type].svg} />
-                            </svg>
-                          ) : null}
-                          <span>
-                            {sk.predefinition_type || "Skill"}
-                            {sk.predefinition_difficulty ? ` · ${sk.predefinition_difficulty}` : ""}
+                      <div
+                        className={`flex flex-wrap items-center gap-x-2 gap-y-1 p-2 rounded-lg hover:bg-zinc-700/30 ${
+                          sel ? "bg-zinc-700/40 border border-amber-500/30" : "border border-transparent"
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={!!sel}
+                          onChange={(e) => toggleSkill({ id: sk.id, name: sk.name }, e.target.checked)}
+                          className="w-4 h-4 rounded border-zinc-600 text-amber-500 focus:ring-amber-500 bg-zinc-900"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium text-zinc-200 truncate">{sk.name || "Unnamed"}</div>
+                          <div className="flex items-center gap-1.5 text-xs text-zinc-500">
+                            {SKILL_TYPE_META[type] ? (
+                              <svg className={`w-3.5 h-3.5 ${SKILL_TYPE_META[type].color}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={SKILL_TYPE_META[type].svg} />
+                              </svg>
+                            ) : null}
+                            <span>
+                              {sk.predefinition_type || "Skill"}
+                              {sk.predefinition_difficulty ? ` · ${sk.predefinition_difficulty}` : ""}
+                            </span>
+                          </div>
+                          <div className="text-xs text-zinc-500 truncate">
+                            {skillPredefLabel(sk) ? `Default: ${skillPredefLabel(sk)}` : "Default: none"}
+                          </div>
+                          {sk.description ? <div className="text-xs text-zinc-500 truncate">{sk.description}</div> : null}
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => adjSkill(sk.id, -1)}
+                              className="w-6 h-6 shrink-0 rounded bg-zinc-700 hover:bg-zinc-600 text-zinc-300 text-xs font-bold flex items-center justify-center"
+                            >
+                              −
+                            </button>
+                            <span className="text-xs font-mono text-amber-400 font-bold text-center whitespace-nowrap w-20">
+                              {sel ? `${rel} (${abs})` : "—"}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => adjSkill(sk.id, 1)}
+                              className="w-6 h-6 shrink-0 rounded bg-zinc-700 hover:bg-zinc-600 text-zinc-300 text-xs font-bold flex items-center justify-center"
+                            >
+                              +
+                            </button>
+                          </div>
+                          <span className="text-md font-mono text-amber-400 font-bold w-10 text-center whitespace-nowrap">
+                            {sel ? formatPoints(sel.cost_points) : "0"}
                           </span>
                         </div>
-                        <div className="text-xs text-zinc-500 truncate">
-                          {skillPredefLabel(sk) ? `Default: ${skillPredefLabel(sk)}` : "Default: none"}
-                        </div>
-                        {sk.description ? <div className="text-xs text-zinc-500 truncate">{sk.description}</div> : null}
                       </div>
-                      <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-1">
-                          <button
-                            type="button"
-                            onClick={() => adjSkill(sk.id, -1)}
-                            className="w-6 h-6 shrink-0 rounded bg-zinc-700 hover:bg-zinc-600 text-zinc-300 text-xs font-bold flex items-center justify-center"
-                          >
-                            −
-                          </button>
-                          <span className="text-xs font-mono text-amber-400 font-bold text-center whitespace-nowrap w-20">
-                            {sel ? `${rel} (${abs})` : "—"}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => adjSkill(sk.id, 1)}
-                            className="w-6 h-6 shrink-0 rounded bg-zinc-700 hover:bg-zinc-600 text-zinc-300 text-xs font-bold flex items-center justify-center"
-                          >
-                            +
-                          </button>
-                        </div>
-                        <span className="text-md font-mono text-amber-400 font-bold w-10 text-center whitespace-nowrap">
-                          {sel ? formatPoints(sel.cost_points) : "0"}
-                        </span>
-                      </div>
-                    </div>
-                  </InfoTooltip>
-                );
-              })}
-              {available.skills.length === 0 ? (
-                <p className="text-zinc-600 text-sm">No skills registered for this table.</p>
-              ) : null}
+                    </InfoTooltip>
+                  );
+                };
+                if (available.skills.length === 0) return <p className="text-zinc-600 text-sm">No skills registered for this table.</p>;
+                if (splitSkills) {
+                  return (
+                    <>
+                      {selRows.length > 0 ? (
+                        <>
+                          <div className="text-xs font-semibold text-zinc-500 uppercase tracking-wider pt-1">{selRows.length} selected</div>
+                          {selRows.map(renderSkill)}
+                        </>
+                      ) : null}
+                      {unselRows.length > 0 ? (
+                        <>
+                          <div className="text-xs font-semibold text-zinc-500 uppercase tracking-wider pt-3">{unselRows.length} not selected</div>
+                          {unselRows.map(renderSkill)}
+                        </>
+                      ) : null}
+                    </>
+                  );
+                }
+                return available.skills.map(renderSkill);
+              })()}
             </div>
           </section>
         </div>
@@ -978,32 +1089,12 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                 ? "Search Disadvantages"
                 : "Search Skills"
           }
-          items={
-            searchFor === "advantages"
-              ? available.advantages.map((a) => ({
-                  id: a.id,
-                  name: a.name,
-                  meta: [a.category, a.subcategory].filter(Boolean).join(" · ") || undefined,
-                  description: a.description,
-                }))
-              : searchFor === "disadvantages"
-                ? available.disadvantages.map((d) => ({
-                    id: d.id,
-                    name: d.name,
-                    meta: [d.category, d.subcategory].filter(Boolean).join(" · ") || undefined,
-                    description: d.description,
-                  }))
-                : available.skills.map((sk) => ({
-                    id: sk.id,
-                    name: sk.name,
-                    meta: `${sk.predefinition_type || ""}${sk.predefinition_difficulty ? ` · ${sk.predefinition_difficulty}` : ""}`,
-                    description: sk.description,
-                  }))
-          }
+          onSearch={doSearch}
           filters={
             searchFor === "skills"
               ? [
                   {
+                    key: "type",
                     label: "Type",
                     options: [
                       { value: "Physical", label: "Physical" },
@@ -1011,12 +1102,14 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                     ],
                   },
                   {
+                    key: "difficulty",
                     label: "Difficulty",
                     options: ["Easy", "Medium", "Hard", "Very Hard"].map((d) => ({ value: d, label: d })),
                   },
                 ]
               : [
                   {
+                    key: "category",
                     label: "Category",
                     options: [
                       ...new Set(

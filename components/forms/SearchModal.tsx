@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { inputCls } from "./formStyles";
 import InfoTooltip from "./InfoTooltip";
 
@@ -12,35 +12,67 @@ export interface SearchModalItem {
 }
 
 export interface SearchFilter {
+  key: string;
   label: string;
   options: Array<{ value: string; label: string }>;
 }
 
 interface SearchModalProps {
   title: string;
-  items: SearchModalItem[];
+  onSearch: (query: string, filters: Record<string, string>) => Promise<SearchModalItem[]>;
   isSelected: (id: string) => boolean;
   onToggle: (id: string, checked: boolean) => void;
   onClose: () => void;
   filters?: SearchFilter[];
 }
 
-export default function SearchModal({ title, items, isSelected, onToggle, onClose, filters = [] }: SearchModalProps) {
+export default function SearchModal({ title, onSearch, isSelected, onToggle, onClose, filters = [] }: SearchModalProps) {
   const [query, setQuery] = useState("");
-  const [appliedQuery, setAppliedQuery] = useState("");
-  const [appliedFilters, setAppliedFilters] = useState<string[]>(() => filters.map(() => ""));
+  const [filtersState, setFiltersState] = useState<Record<string, string>>({});
+  const [results, setResults] = useState<SearchModalItem[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  const filtered = useMemo(() => {
-    const q = appliedQuery.trim().toLowerCase();
-    return items.filter((i) => {
-      if (q && !i.name.toLowerCase().includes(q) && !(i.description?.toLowerCase().includes(q) ?? false) && !(i.meta?.toLowerCase().includes(q) ?? false)) {
-        return false;
+  const searchRef = useRef(onSearch);
+  useEffect(() => { searchRef.current = onSearch; });
+
+  const runSearch = useCallback(async (q: string, flt: Record<string, string>) => {
+    setLoading(true);
+    try {
+      const res = await searchRef.current(q, flt);
+      setResults(res);
+    } catch {
+      setResults([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      setLoading(true);
+      try {
+        const res = await searchRef.current("", {});
+        if (active) setResults(res);
+      } catch {
+        if (active) setResults([]);
+      } finally {
+        if (active) setLoading(false);
       }
-      return appliedFilters.every((value) => {
-        if (!value) return true;
-        return i.meta?.toLowerCase().includes(value.toLowerCase()) ?? false;
-      });    });
-  }, [items, appliedQuery, appliedFilters]);
+    })();
+    return () => { active = false; };
+  }, []);
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    runSearch(query, filtersState);
+  }
+
+  function handleFilterChange(key: string, value: string) {
+    const next = { ...filtersState, [key]: value };
+    setFiltersState(next);
+    runSearch(query, next);
+  }
 
   return (
     <div
@@ -62,13 +94,7 @@ export default function SearchModal({ title, items, isSelected, onToggle, onClos
           </button>
         </div>
         <div className="px-6 pb-3">
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              setAppliedQuery(query);
-            }}
-            className="flex gap-2"
-          >
+          <form onSubmit={handleSubmit} className="flex gap-2">
             <input
               type="text"
               value={query}
@@ -88,15 +114,11 @@ export default function SearchModal({ title, items, isSelected, onToggle, onClos
           </form>
           {filters.length > 0 ? (
             <div className="flex flex-wrap gap-2 mt-3">
-              {filters.map((f, idx) => (
+              {filters.map((f) => (
                 <select
-                  key={f.label}
-                  value={appliedFilters[idx]}
-                  onChange={(e) => {
-                    const next = [...appliedFilters];
-                    next[idx] = e.target.value;
-                    setAppliedFilters(next);
-                  }}
+                  key={f.key}
+                  value={filtersState[f.key] ?? ""}
+                  onChange={(e) => handleFilterChange(f.key, e.target.value)}
                   className={`${inputCls} !w-auto !px-3 !py-1.5 text-sm`}
                 >
                   <option value="">{f.label}: All</option>
@@ -111,10 +133,12 @@ export default function SearchModal({ title, items, isSelected, onToggle, onClos
           ) : null}
         </div>
         <div className="px-2 pb-6 overflow-y-auto scroll-thin space-y-1">
-          {filtered.length === 0 ? (
+          {loading ? (
+            <p className="text-zinc-600 text-sm px-4 py-2">Loading...</p>
+          ) : results.length === 0 ? (
             <p className="text-zinc-600 text-sm px-4 py-2">No results.</p>
           ) : (
-            filtered.map((i) => {
+            results.map((i) => {
               const selected = isSelected(i.id);
               return (
                 <InfoTooltip
