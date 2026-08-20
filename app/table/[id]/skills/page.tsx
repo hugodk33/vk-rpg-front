@@ -1,23 +1,53 @@
-import { api } from "@/lib/api";
+"use client";
+
+import { use, useEffect, useState } from "react";
 import type { GameTableSkills, SkillItem } from "@/lib/types";
 import TableTabs from "@/components/TableTabs";
+import { api } from "@/lib/api";
 
-export const dynamic = "force-dynamic";
+export default function TableSkillsPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
+  const [data, setData] = useState<GameTableSkills | null>(null);
+  const [search, setSearch] = useState("");
 
-export default async function TableSkillsPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
-  const data = await api<GameTableSkills>(`/game-table-skills/${id}`);
-  const skills = data.skills ?? [];
+  useEffect(() => {
+    api<GameTableSkills>(`/game-table-skills/${id}`).then(setData).catch(() => setData({ table: null, skills: [] }));
+  }, [id]);
+
+  const skills = (data?.skills ?? []).filter((s: SkillItem) => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return (s.name ?? "").toLowerCase().includes(q)
+      || (s.effect ?? "").toLowerCase().includes(q)
+      || (s.predefinition_type ?? "").toLowerCase().includes(q);
+  });
 
   return (
     <div className="max-w-4xl mx-auto p-6">
       <TableTabs tableId={id} />
-      <h1 className="text-2xl font-bold text-amber-100 mb-6">
-        {data.table?.title || "Table"} — Skills
+      <h1 className="text-2xl font-bold text-amber-100 mb-4">
+        {data?.table?.title || "Table"} — Skills
       </h1>
 
+      <div className="flex gap-2 mb-6">
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search skills..."
+          className="flex-1 bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-amber-700/60"
+        />
+        <button
+          type="button"
+          onClick={() => setSearch("")}
+          className="bg-zinc-700 hover:bg-zinc-600 text-zinc-300 text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+        >
+          Clear
+        </button>
+      </div>
+
       {skills.length === 0 ? (
-        <p className="text-zinc-500 italic">No skills registered for this table.</p>
+        <p className="text-zinc-500 italic">No skills found.</p>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {skills.map((s: SkillItem) => (

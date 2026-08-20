@@ -22,7 +22,16 @@ function tabClass(active: boolean): string {
 export default function TableTabs({ tableId, role = "narrator", active, characterUrl, characterHref }: TableTabsProps) {
   const prefix = role === "player" ? "/player" : "";
 
+  const dashboardHref = role === "player" ? "/player" : "/narrator";
+
   return (
+    <>
+      <a href={dashboardHref} className="inline-flex items-center gap-1 text-sm text-zinc-500 hover:text-zinc-300 transition-colors mb-4">
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+        </svg>
+        Tables
+      </a>
     <div className="flex gap-1 border-b border-zinc-700/50 mb-6">
       <div className="relative flex items-center">
         <Link href={`${prefix}/table/${tableId}`} className={tabClass(active === "overview")}>
@@ -64,5 +73,6 @@ export default function TableTabs({ tableId, role = "narrator", active, characte
         </Link>
       ) : null}
     </div>
+    </>
   );
 }

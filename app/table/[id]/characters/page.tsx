@@ -1,76 +1,85 @@
+"use client";
+
+import { use, useEffect, useState } from "react";
 import Link from "next/link";
-import { api } from "@/lib/api";
-import type { GameTableCharacters } from "@/lib/types";
+import type { GameTableCharacters, TableCharacter } from "@/lib/types";
 import TableTabs from "@/components/TableTabs";
 import RadarChart from "@/components/RadarChart";
+import { api } from "@/lib/api";
 
-export const dynamic = "force-dynamic";
+export default function TableCharactersPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
+  const [data, setData] = useState<GameTableCharacters | null>(null);
+  const [search, setSearch] = useState("");
 
-export default async function TableCharactersPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
-  const data = await api<GameTableCharacters>(`/game-table-characters/${id}`);
-  const characters = data.characters ?? [];
+  useEffect(() => {
+    api<GameTableCharacters>(`/game-table-characters/${id}`).then(setData).catch(() => setData({ table: null, characters: [] }));
+  }, [id]);
+
+  const characters = (data?.characters ?? []).filter((ch: TableCharacter) => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    const s = ch.sheet;
+    return (s?.name ?? ch.name ?? "").toLowerCase().includes(q)
+      || (ch.user?.username ?? "").toLowerCase().includes(q);
+  });
 
   return (
-    <div className="max-w-4xl mx-auto p-4 md:p-6">
+    <div className="max-w-4xl mx-auto p-6">
       <TableTabs tableId={id} />
-      <h1 className="text-2xl font-bold mb-1">{data.table?.title || "Characters"}</h1>
-      {data.table?.intro ? (
-        <p className="text-zinc-400 text-sm mb-6">{data.table.intro}</p>
-      ) : null}
+      <h1 className="text-2xl font-bold text-amber-100 mb-4">
+        {data?.table?.title || "Table"} — Characters
+      </h1>
+
+      <div className="flex gap-2 mb-6">
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search characters..."
+          className="flex-1 bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-amber-700/60"
+        />
+        <button
+          type="button"
+          onClick={() => setSearch("")}
+          className="bg-zinc-700 hover:bg-zinc-600 text-zinc-300 text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+        >
+          Clear
+        </button>
+      </div>
 
       {characters.length === 0 ? (
-        <div className="bg-zinc-800 rounded p-6 text-center text-zinc-400">No characters in this table.</div>
+        <p className="text-zinc-500 italic">No characters found.</p>
       ) : (
-        <div className="flex flex-col gap-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {characters.map((ch) => {
             const s = ch.sheet;
             return (
-              <div
-                key={ch.id}
-                className="bg-zinc-800/60 hover:bg-zinc-800 border border-zinc-700/40 hover:border-zinc-600/60 rounded-xl px-5 py-4 transition-colors"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-zinc-100 font-semibold text-lg">
-                        {s?.name || ch.name || "Unnamed"}
-                      </span>
-                      <span className="text-zinc-500 text-xs">{ch.user?.username ?? ""}</span>
-                    </div>
-                    <div className="mt-2 flex items-center gap-4">
-                      {s ? (
-                        <>
-                          <RadarChart st={s.st} dx={s.dx} iq={s.iq} ht={s.ht} />
-                          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
-                            <span className="text-red-400">ST {s.st ?? "-"}</span>
-                            <span className="text-emerald-400">DX {s.dx ?? "-"}</span>
-                            <span className="text-blue-400">IQ {s.iq ?? "-"}</span>
-                            <span className="text-purple-400">HT {s.ht ?? "-"}</span>
-                            <span className="text-zinc-500">·</span>
-                            <span className="text-red-400/80">HP {s.hp ?? "-"}</span>
-                            <span className="text-emerald-400/80">FP {s.fatigue ?? "-"}</span>
-                          </div>
-                        </>
-                      ) : (
-                        <span className="text-zinc-600 text-xs italic">No sheet</span>
-                      )}
+              <div key={ch.id} className="bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-4 py-3">
+                <div className="flex justify-between items-start mb-1">
+                  <span className="text-zinc-200 font-medium">{s?.name || ch.name || "Unnamed"}</span>
+                  <span className="text-zinc-500 text-xs">{ch.user?.username ?? ""}</span>
+                </div>
+                {s ? (
+                  <div className="flex items-center gap-3 mt-2">
+                    <RadarChart st={s.st} dx={s.dx} iq={s.iq} ht={s.ht} />
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs">
+                      <span className="text-red-400">ST {s.st ?? "-"}</span>
+                      <span className="text-emerald-400">DX {s.dx ?? "-"}</span>
+                      <span className="text-blue-400">IQ {s.iq ?? "-"}</span>
+                      <span className="text-purple-400">HT {s.ht ?? "-"}</span>
                     </div>
                   </div>
-                  <div className="flex flex-col gap-2 shrink-0">
-                    <Link
-                      href={`/character/${ch.id}`}
-                      className="text-center bg-zinc-700 hover:bg-zinc-600 text-zinc-200 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors"
-                    >
-                      View
-                    </Link>
-                    <Link
-                      href={`/character/${ch.id}/edit`}
-                      className="text-center bg-amber-700/60 hover:bg-amber-600 text-amber-100 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors"
-                    >
-                      Edit
-                    </Link>
-                  </div>
+                ) : (
+                  <p className="text-zinc-600 text-xs italic mt-1">No sheet</p>
+                )}
+                <div className="flex gap-2 mt-2">
+                  <Link href={`/character/${ch.id}`} className="text-xs text-amber-400 hover:text-amber-300">
+                    View
+                  </Link>
+                  <Link href={`/character/${ch.id}/edit`} className="text-xs text-amber-400 hover:text-amber-300">
+                    Edit
+                  </Link>
                 </div>
               </div>
             );
