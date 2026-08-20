@@ -16,7 +16,7 @@ export default async function PlayerTableCharactersPage({ params }: { params: Pr
   const characters = data.characters ?? [];
 
   return (
-    <div className="max-w-5xl mx-auto p-4 md:p-6">
+    <div className="max-w-4xl mx-auto p-4 md:p-6">
       <TableTabs tableId={id} role="player" characterUrl={characterUrl} />
       <h1 className="text-2xl font-bold mb-1">{data.table?.title || "Characters"}</h1>
       {data.table?.intro ? (

@@ -51,7 +51,7 @@ export default async function NarratorDashboard() {
                     href={`/table/${t.id}`}
                     className="flex-1 text-center bg-amber-700/60 hover:bg-amber-600 text-amber-100 text-xs font-medium px-3 py-2 rounded-lg transition-colors"
                   >
-                    Session
+                    Open
                   </Link>
                 </div>
                 <div className="flex gap-2">
