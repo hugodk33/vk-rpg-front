@@ -13,7 +13,7 @@ export default async function NarratorDashboard() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto p-6">
+    <div className="max-w-4xl mx-auto p-6">
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-2xl font-bold text-amber-100">Narrator Dashboard</h1>
@@ -45,56 +45,12 @@ export default async function NarratorDashboard() {
               ) : null}
             </div>
             <div className="px-5 py-4">
-              <div className="flex flex-col gap-2">
-                <div className="flex gap-2">
-                  <Link
-                    href={`/table/${t.id}`}
-                    className="flex-1 text-center bg-amber-700/60 hover:bg-amber-600 text-amber-100 text-xs font-medium px-3 py-2 rounded-lg transition-colors"
-                  >
-                    Open
-                  </Link>
-                </div>
-                <div className="flex gap-2">
-                  <Link
-                    href={`/table/${t.id}/scenes`}
-                    className="flex-1 text-center bg-zinc-700 hover:bg-zinc-600 text-zinc-200 text-xs font-medium px-3 py-2 rounded-lg transition-colors"
-                  >
-                    Scenes
-                  </Link>
-                  <Link
-                    href={`/table/${t.id}/characters`}
-                    className="flex-1 text-center bg-zinc-700 hover:bg-zinc-600 text-zinc-200 text-xs font-medium px-3 py-2 rounded-lg transition-colors"
-                  >
-                    Characters
-                  </Link>
-                  <Link
-                    href={`/table/${t.id}/edit`}
-                    className="flex-1 text-center bg-zinc-700 hover:bg-zinc-600 text-zinc-200 text-xs font-medium px-3 py-2 rounded-lg transition-colors"
-                  >
-                    Edit
-                  </Link>
-                </div>
-                <div className="flex gap-2">
-                  <Link
-                    href={`/table/${t.id}/items`}
-                    className="flex-1 text-center bg-zinc-700/50 hover:bg-zinc-600 text-zinc-300 text-xs font-medium px-3 py-2 rounded-lg transition-colors"
-                  >
-                    Items
-                  </Link>
-                  <Link
-                    href={`/table/${t.id}/advantages`}
-                    className="flex-1 text-center bg-zinc-700/50 hover:bg-zinc-600 text-zinc-300 text-xs font-medium px-3 py-2 rounded-lg transition-colors"
-                  >
-                    Advantages
-                  </Link>
-                  <Link
-                    href={`/table/${t.id}/disadvantages`}
-                    className="flex-1 text-center bg-zinc-700/50 hover:bg-zinc-600 text-zinc-300 text-xs font-medium px-3 py-2 rounded-lg transition-colors"
-                  >
-                    Disadvantages
-                  </Link>
-                </div>
-              </div>
+              <Link
+                href={`/table/${t.id}`}
+                className="block w-full text-center bg-amber-700/60 hover:bg-amber-600 text-amber-100 text-sm font-medium px-3 py-2 rounded-lg transition-colors"
+              >
+                Open
+              </Link>
             </div>
           </div>
         ))}

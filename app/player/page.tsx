@@ -36,7 +36,7 @@ export default async function PlayerDashboard() {
   const totalItems = characters.reduce((sum, c) => sum + (c.items?.length ?? 0), 0);
 
   return (
-    <div className="max-w-5xl mx-auto p-6">
+    <div className="max-w-4xl mx-auto p-6">
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-2xl font-bold text-amber-100">Player Dashboard</h1>
