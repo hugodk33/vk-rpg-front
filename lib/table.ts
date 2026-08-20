@@ -9,7 +9,7 @@ export async function getPlayerCharacterUrl(tableId: string): Promise<string | u
     ]);
     const npcIds = new Set((npcs?.npcs ?? []).map((n: TableNpc) => n.character_id));
     const player = (chars?.characters ?? []).find((c) => !npcIds.has(c.id));
-    return player ? `/jogador/personagem/${player.id}` : undefined;
+    return player ? `/player/character/${player.id}` : undefined;
   } catch {
     return undefined;
   }

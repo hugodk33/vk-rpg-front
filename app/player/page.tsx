@@ -39,9 +39,9 @@ export default async function PlayerDashboard() {
     <div className="max-w-5xl mx-auto p-6">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-amber-100">Painel do Jogador</h1>
+          <h1 className="text-2xl font-bold text-amber-100">Player Dashboard</h1>
           <p className="text-zinc-400 text-sm mt-1">
-            Jogador — {characters.length} personagen{characters.length !== 1 ? "ns" : "m"}
+            Player — {characters.length} character{characters.length !== 1 ? "s" : ""}
           </p>
         </div>
       </div>
@@ -49,19 +49,19 @@ export default async function PlayerDashboard() {
       <div className="grid grid-cols-3 gap-5 mb-8">
         <div className="bg-zinc-800/50 border border-zinc-700/40 rounded-xl px-5 py-4 text-center">
           <p className="text-2xl font-bold text-amber-400">{tables.length}</p>
-          <p className="text-zinc-500 text-xs uppercase tracking-wider mt-1">Mesas</p>
+          <p className="text-zinc-500 text-xs uppercase tracking-wider mt-1">Tables</p>
         </div>
         <div className="bg-zinc-800/50 border border-zinc-700/40 rounded-xl px-5 py-4 text-center">
           <p className="text-2xl font-bold text-emerald-400">{characters.length}</p>
-          <p className="text-zinc-500 text-xs uppercase tracking-wider mt-1">Personagens</p>
+          <p className="text-zinc-500 text-xs uppercase tracking-wider mt-1">Characters</p>
         </div>
         <div className="bg-zinc-800/50 border border-zinc-700/40 rounded-xl px-5 py-4 text-center">
           <p className="text-2xl font-bold text-blue-400">{totalItems}</p>
-          <p className="text-zinc-500 text-xs uppercase tracking-wider mt-1">Itens</p>
+          <p className="text-zinc-500 text-xs uppercase tracking-wider mt-1">Items</p>
         </div>
       </div>
 
-      <h2 className="text-lg font-bold text-zinc-200 mb-4">Meus Personagens</h2>
+      <h2 className="text-lg font-bold text-zinc-200 mb-4">My Characters</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {entries.map(({ table, ch }) => {
           const s = ch.sheet ?? ({} as Sheet);
@@ -71,7 +71,7 @@ export default async function PlayerDashboard() {
               className="bg-zinc-800/60 border border-zinc-700/50 rounded-xl overflow-hidden hover:border-emerald-700/50 transition-colors"
             >
               <div className="px-5 py-4 border-b border-zinc-700/40">
-                <h3 className="text-lg font-bold text-zinc-100">{s.name || ch.name || "Sem nome"}</h3>
+                <h3 className="text-lg font-bold text-zinc-100">{s.name || ch.name || "No name"}</h3>
                 {table ? <p className="text-xs text-zinc-500 mt-0.5">{table.title}</p> : null}
               </div>
               <div className="px-5 py-4">
@@ -90,7 +90,7 @@ export default async function PlayerDashboard() {
                 </div>
                 <div className="flex gap-2">
                   <Link
-                    href={`/personagem/${ch.id}`}
+                    href={`/character/${ch.id}`}
                     className="flex-1 text-center bg-zinc-700 hover:bg-zinc-600 text-zinc-200 text-sm font-medium px-3 py-2 rounded-lg transition-colors"
                   >
                     Sheet
@@ -98,13 +98,13 @@ export default async function PlayerDashboard() {
                   {table ? (
                     <>
                       <Link
-                        href={`/jogador/mesa/${table.id}`}
+                        href={`/player/table/${table.id}`}
                         className="flex-1 text-center bg-emerald-700/60 hover:bg-emerald-600 text-emerald-100 text-sm font-medium px-3 py-2 rounded-lg transition-colors"
                       >
                         Session
                       </Link>
                       <Link
-                        href={`/jogador/mesa/${table.id}/cenas`}
+                        href={`/player/table/${table.id}/scenes`}
                         className="flex-1 text-center bg-zinc-700 hover:bg-zinc-600 text-zinc-200 text-sm font-medium px-3 py-2 rounded-lg transition-colors"
                       >
                         Scenes
@@ -118,15 +118,15 @@ export default async function PlayerDashboard() {
         })}
         {characters.length === 0 ? (
           <div className="col-span-full text-center py-16">
-            <p className="text-zinc-500 text-lg mb-2">Nenhum personagem ainda</p>
-            <p className="text-zinc-600 text-sm">Junte-se a uma mesa para criar seu primeiro personagem</p>
+            <p className="text-zinc-500 text-lg mb-2">No characters yet</p>
+            <p className="text-zinc-600 text-sm">Join a table to create your first character</p>
           </div>
         ) : null}
       </div>
 
       <div className="mt-8 text-center">
         <Link href="/" className="text-zinc-500 hover:text-zinc-300 text-sm transition-colors">
-          &larr; Voltar ao início
+          &larr; Back to home
         </Link>
       </div>
     </div>

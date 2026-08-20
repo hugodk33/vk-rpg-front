@@ -35,7 +35,7 @@ export default async function TableAdvantagesPage({ params }: { params: Promise<
               ) : null}
               {a.description ? <p className="text-zinc-500 text-xs mt-1">{a.description}</p> : null}
               <div className="mt-2">
-                <Link href={`/vantagem/${a.id}/editar?table_id=${id}`} className="text-xs text-amber-400 hover:text-amber-300">
+                <Link href={`/advantage/${a.id}/edit?table_id=${id}`} className="text-xs text-amber-400 hover:text-amber-300">
                   Edit
                 </Link>
               </div>

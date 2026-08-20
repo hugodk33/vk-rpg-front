@@ -9,13 +9,13 @@ export default function Header() {
   const [open, setOpen] = useState(false);
 
   const tableId = (() => {
-    const m = pathname?.match(/^\/(?:mesa|jogador\/mesa)\/([^/]+)/);
+    const m = pathname?.match(/^\/(?:table|player\/table)\/([^/]+)/);
     return m ? m[1] : undefined;
   })();
 
   const charNewHref = tableId
-    ? `/personagem/novo?table_id=${tableId}`
-    : "/personagem/novo";
+    ? `/character/new?table_id=${tableId}`
+    : "/character/new";
 
   const linkClass =
     "block px-4 py-2 text-sm text-zinc-300 hover:text-amber-400 hover:bg-zinc-700/50";
@@ -64,15 +64,15 @@ export default function Header() {
           <div className="absolute left-1/2 -translate-x-1/2 top-full mt-0 w-52 bg-zinc-800 border border-zinc-700/60 rounded-lg shadow-xl py-2 z-50 text-center">
             <Link href="/" className={linkClass}>Home</Link>
             <div className="text-zinc-500 text-xs uppercase tracking-wider px-4 pt-3 pb-1">New</div>
-            <Link href="/mesa/nova" className={linkClass}>Table</Link>
+            <Link href="/table/new" className={linkClass}>Table</Link>
             <Link href={charNewHref} className={linkClass}>Character</Link>
-            <Link href="/npc/novo" className={linkClass}>NPC</Link>
-            <Link href="/item/novo" className={linkClass}>Item</Link>
-            <Link href="/vantagem/novo" className={linkClass}>Advantage</Link>
-            <Link href="/desvantagem/novo" className={linkClass}>Disadvantage</Link>
+            <Link href="/npc/new" className={linkClass}>NPC</Link>
+            <Link href="/item/new" className={linkClass}>Item</Link>
+            <Link href="/advantage/new" className={linkClass}>Advantage</Link>
+            <Link href="/disadvantage/new" className={linkClass}>Disadvantage</Link>
             <div className="text-zinc-500 text-xs uppercase tracking-wider px-4 pt-3 pb-1">Dashboards</div>
             <Link href="/narrator" className={linkClass}>Narrator</Link>
-            <Link href="/jogador" className={linkClass}>Player</Link>
+            <Link href="/player" className={linkClass}>Player</Link>
           </div>
         )}
       </div>

@@ -20,19 +20,19 @@ function tabClass(active: boolean): string {
 }
 
 export default function TableTabs({ tableId, role = "narrator", active, characterUrl, characterHref }: TableTabsProps) {
-  const prefix = role === "player" ? "/jogador" : "";
+  const prefix = role === "player" ? "/player" : "";
 
   return (
     <div className="flex gap-1 border-b border-zinc-700/50 mb-6">
-      <Link href={`${prefix}/mesa/${tableId}`} className={tabClass(active === "act")}>
+      <Link href={`${prefix}/table/${tableId}`} className={tabClass(active === "act")}>
         Act
       </Link>
-      <Link href={`${prefix}/mesa/${tableId}/cenas`} className={tabClass(active === "timeline")}>
+      <Link href={`${prefix}/table/${tableId}/scenes`} className={tabClass(active === "timeline")}>
         Timeline
       </Link>
       {role === "narrator" ? (
         <Link
-          href={`/personagem/novo?table_id=${tableId}`}
+          href={`/character/new?table_id=${tableId}`}
           className="px-4 py-2.5 text-sm font-medium transition-colors text-zinc-400 hover:text-zinc-200 border-b-2 border-transparent"
         >
           New Character
@@ -46,12 +46,12 @@ export default function TableTabs({ tableId, role = "narrator", active, characte
           </svg>
         </summary>
         <div className="absolute top-full left-0 mt-1 w-48 bg-zinc-800 border border-zinc-700 rounded-lg shadow-xl py-1 z-50">
-          <Link href={`${prefix}/mesa/${tableId}/itens`} className={dropdownLink}>Items</Link>
-          <Link href={`${prefix}/mesa/${tableId}/vantagens`} className={dropdownLink}>Advantages</Link>
-          <Link href={`${prefix}/mesa/${tableId}/desvantagens`} className={dropdownLink}>Disadvantages</Link>
-          <Link href={`${prefix}/mesa/${tableId}/habilidades`} className={dropdownLink}>Skills</Link>
-          <Link href={`${prefix}/mesa/${tableId}/personagens`} className={dropdownLink}>Characters</Link>
-          <Link href={`${prefix}/mesa/${tableId}/locais`} className={dropdownLink}>Locations</Link>
+          <Link href={`${prefix}/table/${tableId}/items`} className={dropdownLink}>Items</Link>
+          <Link href={`${prefix}/table/${tableId}/advantages`} className={dropdownLink}>Advantages</Link>
+          <Link href={`${prefix}/table/${tableId}/disadvantages`} className={dropdownLink}>Disadvantages</Link>
+          <Link href={`${prefix}/table/${tableId}/skills`} className={dropdownLink}>Skills</Link>
+          <Link href={`${prefix}/table/${tableId}/characters`} className={dropdownLink}>Characters</Link>
+          <Link href={`${prefix}/table/${tableId}/locations`} className={dropdownLink}>Locations</Link>
         </div>
       </details>
       {active === "character" && characterHref ? (

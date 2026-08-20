@@ -37,7 +37,7 @@ export default function TableForm({ initial, narratorOptions, defaultNarratorId 
           system,
           intro,
         });
-        router.push(`/mesa/${result.id}`);
+        router.push(`/table/${result.id}`);
         router.refresh();
       }
     } catch (err: unknown) {

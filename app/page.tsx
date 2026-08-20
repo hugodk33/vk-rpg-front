@@ -17,7 +17,7 @@ export default function Home() {
           <p className="text-zinc-500 text-sm mt-1">Manage your tables, scenes, and characters. Guide the story.</p>
         </Link>
         <Link
-          href="/jogador"
+          href="/player"
           className="block bg-zinc-800/60 border border-zinc-700/50 rounded-xl p-6 hover:border-emerald-700/50 transition-colors group"
         >
           <div className="text-3xl mb-2">⚔️</div>

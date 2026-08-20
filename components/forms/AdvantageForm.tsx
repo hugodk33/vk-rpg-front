@@ -100,7 +100,7 @@ export default function AdvantageForm({ tableId, tables, initial }: AdvantageFor
             <button type="button" disabled className={disabledSubmitCls}>
               {isEdit ? "Salvar Alterações" : "Criar Vantagem"}
             </button>
-            <a href={currentTableId ? `/mesa/${currentTableId}/vantagens` : "/narrator"} className={cancelCls}>
+            <a href={currentTableId ? `/table/${currentTableId}/advantages` : "/narrator"} className={cancelCls}>
               Cancel
             </a>
           </div>

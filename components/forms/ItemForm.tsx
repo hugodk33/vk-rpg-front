@@ -69,7 +69,7 @@ export default function ItemForm({ initial, tableId, tables, characters }: ItemF
     };
     try {
       await submitJson<{ success?: boolean }>("/api/game-table-item", isEdit ? "PUT" : "POST", payload);
-      router.push(`/mesa/${currentTableId}/itens`);
+      router.push(`/table/${currentTableId}/items`);
       router.refresh();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Falha ao salvar o item.");
@@ -242,7 +242,7 @@ export default function ItemForm({ initial, tableId, tables, characters }: ItemF
             <button type="submit" disabled={saving} className={`${submitCls} disabled:opacity-50`}>
               {saving ? "Salvando..." : isEdit ? "Salvar Alterações" : "Criar Item"}
             </button>
-            <a href={currentTableId ? `/mesa/${currentTableId}/itens` : "/narrator"} className={cancelCls}>
+            <a href={currentTableId ? `/table/${currentTableId}/items` : "/narrator"} className={cancelCls}>
               Cancel
             </a>
           </div>

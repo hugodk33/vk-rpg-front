@@ -258,7 +258,7 @@ export default function SessionClient({
                       <div className="flex-1">
                         <span className="text-sm text-zinc-300">
                           {charId ? (
-                            <a href={`/personagem/${charId}`} className="text-zinc-200 hover:text-blue-400">
+                            <a href={`/character/${charId}`} className="text-zinc-200 hover:text-blue-400">
                               {charName}
                             </a>
                           ) : (

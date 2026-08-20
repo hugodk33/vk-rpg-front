@@ -75,7 +75,7 @@ export default function NpcForm({ tableId, tables, initial }: NpcFormProps) {
     };
     try {
       await submitJson<{ success?: boolean }>("/api/game-table-npc", "POST", payload);
-      router.push(`/mesa/${currentTableId}/cenas`);
+      router.push(`/table/${currentTableId}/scenes`);
       router.refresh();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Falha ao salvar o NPC.");
@@ -202,7 +202,7 @@ export default function NpcForm({ tableId, tables, initial }: NpcFormProps) {
                 {saving ? "Salvando..." : "Criar NPC"}
               </button>
             )}
-            <a href={currentTableId ? `/mesa/${currentTableId}/cenas` : "/narrator"} className={cancelCls}>
+            <a href={currentTableId ? `/table/${currentTableId}/scenes` : "/narrator"} className={cancelCls}>
               Cancel
             </a>
           </div>

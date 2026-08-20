@@ -32,7 +32,7 @@ export default async function PlayerTableCharactersPage({ params }: { params: Pr
             return (
               <Link
                 key={ch.id}
-                href={characterUrl ?? `/personagem/${ch.id}`}
+                href={characterUrl ?? `/character/${ch.id}`}
                 className="bg-zinc-800/60 hover:bg-zinc-800 border border-zinc-700/40 hover:border-zinc-600/60 rounded-xl px-5 py-4 transition-colors"
               >
                 <div className="flex items-center gap-4">

@@ -59,13 +59,13 @@ export default async function TableCharactersPage({ params }: { params: Promise<
                   </div>
                   <div className="flex flex-col gap-2 shrink-0">
                     <Link
-                      href={`/personagem/${ch.id}`}
+                      href={`/character/${ch.id}`}
                       className="text-center bg-zinc-700 hover:bg-zinc-600 text-zinc-200 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors"
                     >
                       View
                     </Link>
                     <Link
-                      href={`/personagem/${ch.id}/editar`}
+                      href={`/character/${ch.id}/edit`}
                       className="text-center bg-amber-700/60 hover:bg-amber-600 text-amber-100 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors"
                     >
                       Edit

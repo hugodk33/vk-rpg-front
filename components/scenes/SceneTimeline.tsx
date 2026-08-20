@@ -18,7 +18,7 @@ function locationCard(loc: Location | null) {
 }
 
 function entityBadge(id: string, name: string, subtitle: string, moment?: number) {
-  const url = `/personagem/${id}${moment != null ? `?moment=${moment}` : ""}`;
+  const url = `/character/${id}${moment != null ? `?moment=${moment}` : ""}`;
   return (
     <Link
       href={url}
@@ -55,7 +55,7 @@ function modifierTag(m: Modifier | null) {
 function actionRow(a: NarrationAction, moment?: number) {
   const charId = a.character?.id || "";
   const charName = a.character?.name || a.character?.username || "Unknown";
-  const charUrl = charId ? `/personagem/${charId}${moment != null ? `?moment=${moment}` : ""}` : "";
+  const charUrl = charId ? `/character/${charId}${moment != null ? `?moment=${moment}` : ""}` : "";
   return (
     <div key={a.id} className="flex items-start gap-3 py-1.5">
       <span className="text-xs text-zinc-600 w-4 mt-0.5">{a.queue}.</span>

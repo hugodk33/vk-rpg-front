@@ -112,7 +112,7 @@ export default function DisadvantageForm({ tableId, tables, initial }: Disadvant
             <button type="button" disabled className={disabledSubmitCls}>
               {isEdit ? "Salvar Alterações" : "Criar Desvantagem"}
             </button>
-            <a href={currentTableId ? `/mesa/${currentTableId}/desvantagens` : "/narrator"} className={cancelCls}>
+            <a href={currentTableId ? `/table/${currentTableId}/disadvantages` : "/narrator"} className={cancelCls}>
               Cancel
             </a>
           </div>

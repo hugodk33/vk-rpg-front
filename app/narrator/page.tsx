@@ -22,7 +22,7 @@ export default async function NarratorDashboard() {
           </p>
         </div>
         <Link
-          href="/mesa/nova"
+          href="/table/new"
           className="bg-amber-600 hover:bg-amber-500 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors"
         >
           + New Table
@@ -48,7 +48,7 @@ export default async function NarratorDashboard() {
               <div className="flex flex-col gap-2">
                 <div className="flex gap-2">
                   <Link
-                    href={`/mesa/${t.id}`}
+                    href={`/table/${t.id}`}
                     className="flex-1 text-center bg-amber-700/60 hover:bg-amber-600 text-amber-100 text-xs font-medium px-3 py-2 rounded-lg transition-colors"
                   >
                     Session
@@ -56,19 +56,19 @@ export default async function NarratorDashboard() {
                 </div>
                 <div className="flex gap-2">
                   <Link
-                    href={`/mesa/${t.id}/cenas`}
+                    href={`/table/${t.id}/scenes`}
                     className="flex-1 text-center bg-zinc-700 hover:bg-zinc-600 text-zinc-200 text-xs font-medium px-3 py-2 rounded-lg transition-colors"
                   >
                     Scenes
                   </Link>
                   <Link
-                    href={`/mesa/${t.id}/personagens`}
+                    href={`/table/${t.id}/characters`}
                     className="flex-1 text-center bg-zinc-700 hover:bg-zinc-600 text-zinc-200 text-xs font-medium px-3 py-2 rounded-lg transition-colors"
                   >
                     Characters
                   </Link>
                   <Link
-                    href={`/mesa/${t.id}/editar`}
+                    href={`/table/${t.id}/edit`}
                     className="flex-1 text-center bg-zinc-700 hover:bg-zinc-600 text-zinc-200 text-xs font-medium px-3 py-2 rounded-lg transition-colors"
                   >
                     Edit
@@ -76,19 +76,19 @@ export default async function NarratorDashboard() {
                 </div>
                 <div className="flex gap-2">
                   <Link
-                    href={`/mesa/${t.id}/itens`}
+                    href={`/table/${t.id}/items`}
                     className="flex-1 text-center bg-zinc-700/50 hover:bg-zinc-600 text-zinc-300 text-xs font-medium px-3 py-2 rounded-lg transition-colors"
                   >
                     Items
                   </Link>
                   <Link
-                    href={`/mesa/${t.id}/vantagens`}
+                    href={`/table/${t.id}/advantages`}
                     className="flex-1 text-center bg-zinc-700/50 hover:bg-zinc-600 text-zinc-300 text-xs font-medium px-3 py-2 rounded-lg transition-colors"
                   >
                     Advantages
                   </Link>
                   <Link
-                    href={`/mesa/${t.id}/desvantagens`}
+                    href={`/table/${t.id}/disadvantages`}
                     className="flex-1 text-center bg-zinc-700/50 hover:bg-zinc-600 text-zinc-300 text-xs font-medium px-3 py-2 rounded-lg transition-colors"
                   >
                     Disadvantages

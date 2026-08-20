@@ -415,7 +415,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
           user_id: charType === "npc" ? null : userId,
           table_id: currentTableId,
         });
-        router.push(`/personagem/${initial.character.id}`);
+        router.push(`/character/${initial.character.id}`);
       } else if (charType === "npc") {
         const result = await submitJson<{ character_id: string }>("/api/game-table-npc", "POST", {
           table_id: currentTableId,
@@ -426,7 +426,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
           disadvantages,
           skills,
         });
-        router.push(`/personagem/${result.character_id}`);
+        router.push(`/character/${result.character_id}`);
       } else {
         const result = await submitJson<{ character_id: string }>("/api/game-table-character", "POST", {
           table_id: currentTableId,
@@ -438,7 +438,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
           items: selItems.map((i) => ({ item_id: i.id })),
           peculiarities,
         });
-        router.push(`/personagem/${result.character_id}`);
+        router.push(`/character/${result.character_id}`);
       }
       router.refresh();
     } catch (err: unknown) {
@@ -472,11 +472,20 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
       ) : null}
 
       <div className="flex items-center justify-between mb-6 mt-6">
-        <div>
-          <h1 className="text-2xl font-bold text-amber-100">
-            {isEdit ? "Edit Character" : "New Character"}
-          </h1>
-          <p className="text-zinc-400 text-sm">{isEdit ? "Save changes" : "Create a character for this table"}</p>
+        <div className="flex items-center gap-3">
+          {currentTableId ? (
+            <a href={`/table/${currentTableId}`} className="text-zinc-500 hover:text-zinc-300 transition-colors" title="Back to table">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+              </svg>
+            </a>
+          ) : null}
+          <div>
+            <h1 className="text-2xl font-bold text-amber-100">
+              {isEdit ? "Edit Character" : "New Character"}
+            </h1>
+            <p className="text-zinc-400 text-sm">{isEdit ? "Save changes" : "Create a character for this table"}</p>
+          </div>
         </div>
         {isEdit ? (
           <button
@@ -1336,7 +1345,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
             <button type="submit" disabled={saving} className={`${submitCls} disabled:opacity-50`}>
               {saving ? "Saving..." : "Create Character"}
             </button>
-            <a href={currentTableId ? `/mesa/${currentTableId}/personagens` : "/narrator"} className="text-zinc-400 hover:text-zinc-300 text-sm transition-colors">
+            <a href={currentTableId ? `/table/${currentTableId}/characters` : "/narrator"} className="text-zinc-400 hover:text-zinc-300 text-sm transition-colors">
               Cancel
             </a>
           </div>
