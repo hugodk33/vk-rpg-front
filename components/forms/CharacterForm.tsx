@@ -687,22 +687,29 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
             </div>
           </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <section className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-5">
-            <span className="text-sm text-zinc-500 mb-2 block">{selAdv.length} selected</span>
-            <div className="flex items-center gap-2 mb-4">
-              <h2 className="text-lg font-semibold text-amber-100">Advantages</h2>
-              <SplitToggle active={splitAdv} onToggle={() => setSplitAdv((v) => !v)} />
-              <button
-                type="button"
-                onClick={() => setSearchFor("advantages")}
-                className="flex items-center gap-1.5 text-xs font-semibold bg-zinc-700 hover:bg-zinc-600 text-zinc-200 px-2.5 py-1.5 rounded-lg transition-colors"
-              >
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-4.35-4.35M17 10.5a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z" />
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <svg className="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                 </svg>
-                Search
-              </button>
+                <h2 className="text-lg font-semibold text-amber-100">Advantages</h2>
+                <span className="text-sm text-zinc-500">{selAdv.length} selected</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <SplitToggle active={splitAdv} onToggle={() => setSplitAdv((v) => !v)} />
+                <button
+                  type="button"
+                  onClick={() => setSearchFor("advantages")}
+                  className="flex items-center gap-1.5 text-xs font-semibold bg-zinc-700 hover:bg-zinc-600 text-zinc-200 px-2.5 py-1.5 rounded-lg transition-colors"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-4.35-4.35M17 10.5a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z" />
+                  </svg>
+                  Search
+                </button>
+              </div>
             </div>
               <div className="space-y-2 max-h-60 overflow-y-auto scroll-thin pr-2">
                 {(() => {
@@ -768,20 +775,27 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
             </section>
 
             <section className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-5">
-              <span className="text-sm text-zinc-500 mb-2 block">{selDis.length} selected</span>
-              <div className="flex items-center gap-2 mb-4">
-                <h2 className="text-lg font-semibold text-amber-100">Disadvantages</h2>
-                <SplitToggle active={splitDis} onToggle={() => setSplitDis((v) => !v)} />
-                <button
-                  type="button"
-                  onClick={() => setSearchFor("disadvantages")}
-                  className="flex items-center gap-1.5 text-xs font-semibold bg-zinc-700 hover:bg-zinc-600 text-zinc-200 px-2.5 py-1.5 rounded-lg transition-colors"
-                >
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-4.35-4.35M17 10.5a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z" />
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <svg className="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
                   </svg>
-                  Search
-                </button>
+                  <h2 className="text-lg font-semibold text-amber-100">Disadvantages</h2>
+                  <span className="text-sm text-zinc-500">{selDis.length} selected</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <SplitToggle active={splitDis} onToggle={() => setSplitDis((v) => !v)} />
+                  <button
+                    type="button"
+                    onClick={() => setSearchFor("disadvantages")}
+                    className="flex items-center gap-1.5 text-xs font-semibold bg-zinc-700 hover:bg-zinc-600 text-zinc-200 px-2.5 py-1.5 rounded-lg transition-colors"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-4.35-4.35M17 10.5a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z" />
+                    </svg>
+                    Search
+                  </button>
+                </div>
               </div>
               <div className="space-y-2 max-h-60 overflow-y-auto scroll-thin pr-2">
                 {(() => {
@@ -846,13 +860,19 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                 })()}
               </div>
             </section>
+        </div>
 
-            <section className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-5">
+        <section className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-5">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-amber-100">Quirks</h2>
-                <span className="text-sm text-zinc-500">
-                  {quirks.length} / {MAX_QUIRKS}
-                </span>
+                <div className="flex items-center gap-2">
+                  <svg className="w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                  </svg>
+                  <h2 className="text-lg font-semibold text-amber-100">Quirks</h2>
+                  <span className="text-sm text-zinc-500">
+                    {quirks.length} / {MAX_QUIRKS}
+                  </span>
+                </div>
               </div>
               <div className="space-y-3">
                 {quirks.map((q, index) => (
@@ -894,7 +914,6 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                 + Add Quirk
               </button>
             </section>
-        </div>
 
         <div className="border-t border-zinc-700/40 pt-6">
           <span className="text-sm text-zinc-500 mb-2 block">{selSkills.length} selected</span>

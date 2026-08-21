@@ -46,25 +46,29 @@ export default function PlayerTableCharactersPage({ params }: { params: Promise<
           {characters.map((ch) => {
             const s = ch.sheet;
             return (
-              <Link key={ch.id} href={characterUrl ?? `/character/${ch.id}`} className="bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-4 py-3 hover:bg-zinc-700/40 transition-colors">
-                <div className="flex justify-between items-start mb-1">
+              <div key={ch.id} className="bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-4 py-3 flex flex-col items-center">
+                <div className="w-full flex justify-between items-start mb-1">
                   <span className="text-zinc-200 font-medium">{s?.name || ch.name || "Unnamed"}</span>
                   <span className="text-zinc-500 text-xs">{ch.user?.username ?? ""}</span>
                 </div>
+                {s ? <RadarChart st={s.st} dx={s.dx} iq={s.iq} ht={s.ht} /> : null}
                 {s ? (
-                  <div className="flex items-center gap-3 mt-2">
-                    <RadarChart st={s.st} dx={s.dx} iq={s.iq} ht={s.ht} />
-                    <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs">
-                      <span className="text-red-400">ST {s.st ?? "-"}</span>
-                      <span className="text-emerald-400">DX {s.dx ?? "-"}</span>
-                      <span className="text-blue-400">IQ {s.iq ?? "-"}</span>
-                      <span className="text-purple-400">HT {s.ht ?? "-"}</span>
-                    </div>
+                  <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-0.5 text-xs mt-2">
+                    <span className="text-red-400">ST {s.st ?? "-"}</span>
+                    <span className="text-emerald-400">DX {s.dx ?? "-"}</span>
+                    <span className="text-blue-400">IQ {s.iq ?? "-"}</span>
+                    <span className="text-purple-400">HT {s.ht ?? "-"}</span>
                   </div>
                 ) : (
                   <p className="text-zinc-600 text-xs italic mt-1">No sheet</p>
                 )}
-              </Link>
+                <Link
+                  href={characterUrl ?? `/character/${ch.id}`}
+                  className="w-full text-center bg-amber-700/60 hover:bg-amber-600 text-amber-100 text-xs font-medium px-3 py-2 rounded-lg transition-colors mt-3"
+                >
+                  Sheet
+                </Link>
+              </div>
             );
           })}
         </div>
