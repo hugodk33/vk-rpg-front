@@ -312,6 +312,20 @@ export interface Item {
   description?: string
   quality?: string
   condition?: string
+  damage_id?: string
+  damage_name?: string
+  damage_description?: string
+  damage_type?: string
+  damage_subtype?: string
+  damage_value?: string
+  damage_range?: string
+  armor_id?: string
+  armor_name?: string
+  armor_description?: string
+  armor_type?: string
+  armor_subtype?: string
+  armor_value?: string
+  armor_fit?: string
 }
 
 export interface Advantage {
