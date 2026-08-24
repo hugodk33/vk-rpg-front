@@ -18,6 +18,7 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
   const tableId = item.table_id;
   const isWeapon = !!item.damage_id;
   const isArmor = !!item.armor_id;
+  const typeName = item.type === 1 ? "Weapon" : item.type === 2 ? "Armor" : item.type === 3 ? "Equipment" : null;
 
   return (
     <div className="max-w-4xl mx-auto p-6">
@@ -32,9 +33,13 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
           <div className="flex items-start justify-between">
             <div>
               <h1 className="text-2xl font-bold text-amber-100">{item.name || "Unnamed Item"}</h1>
-              {item.category ? <span className="text-xs text-zinc-500 uppercase tracking-wider">{item.category}</span> : null}
+              <div className="flex items-center gap-2 mt-1">
+                {typeName ? <span className="text-xs text-zinc-500 uppercase tracking-wider">{typeName}</span> : null}
+                {item.category ? <span className="text-xs text-zinc-600">·</span> : null}
+                {item.category ? <span className="text-xs text-zinc-500 uppercase tracking-wider">{item.category}</span> : null}
+              </div>
             </div>
-            {item.weight ? <span className="text-zinc-500 text-sm">{item.weight} kg</span> : null}
+            {item.weight != null ? <span className="text-zinc-500 text-sm">{item.weight} kg</span> : null}
           </div>
         </div>
 
@@ -65,13 +70,54 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
                 <span className="text-zinc-200 text-sm font-medium">{item.dimensions}</span>
               </div>
             ) : null}
-            {item.type != null ? (
+            {item.skill_level ? (
               <div className="bg-zinc-800/40 rounded-lg px-3 py-2 text-center">
-                <span className="text-zinc-500 text-xs uppercase block">Type</span>
-                <span className="text-zinc-200 text-sm font-medium">{item.type === 1 ? "Weapon" : item.type === 2 ? "Armor" : item.type === 3 ? "Clothing" : item.type}</span>
+                <span className="text-zinc-500 text-xs uppercase block">Skill Required</span>
+                <span className="text-zinc-200 text-sm font-medium">{item.skill_level}</span>
               </div>
             ) : null}
           </div>
+
+          {(item.holder_id || item.owner_id || item.skill_user_id) ? (
+            <div>
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-3">Ownership</h3>
+              <div className="bg-zinc-800/30 border border-zinc-700/30 rounded-lg px-4 py-3 space-y-2">
+                {item.owner_id ? (
+                  <div className="flex items-center gap-3">
+                    <svg className="w-4 h-4 text-amber-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                    <span className="text-zinc-500 text-xs uppercase w-20">Owner</span>
+                    <Link href={`/user/${item.owner_id}`} className="text-zinc-200 text-sm hover:text-amber-300 transition-colors">
+                      {item.owner_username || item.owner_id}
+                    </Link>
+                  </div>
+                ) : null}
+                {item.holder_id ? (
+                  <div className="flex items-center gap-3">
+                    <svg className="w-4 h-4 text-blue-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0m-3 6a1.5 1.5 0 00-3 0v2a7.5 7.5 0 0015 0v-5a1.5 1.5 0 00-3 0m-6-3V11m0-5.5v-1a1.5 1.5 0 013 0v1m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11" />
+                    </svg>
+                    <span className="text-zinc-500 text-xs uppercase w-20">Holder</span>
+                    <Link href={`/user/${item.holder_id}`} className="text-zinc-200 text-sm hover:text-blue-300 transition-colors">
+                      {item.holder_username || item.holder_id}
+                    </Link>
+                  </div>
+                ) : null}
+                {item.skill_user_id ? (
+                  <div className="flex items-center gap-3">
+                    <svg className="w-4 h-4 text-purple-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                    </svg>
+                    <span className="text-zinc-500 text-xs uppercase w-20">Skill User</span>
+                    <Link href={`/user/${item.skill_user_id}`} className="text-zinc-200 text-sm hover:text-purple-300 transition-colors">
+                      {item.skill_user_username || item.skill_user_id}
+                    </Link>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
 
           {isWeapon ? (
             <div>
@@ -81,25 +127,33 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
                 </svg>
                 Weapon
               </h3>
-              <div className="bg-red-900/20 border border-red-700/30 rounded-lg px-4 py-3 flex flex-wrap gap-4">
-                <div>
-                  <span className="text-zinc-500 text-xs uppercase">Damage</span>
-                  <p className="text-red-300 font-bold text-lg">{item.damage_value || "—"}</p>
+              <div className="bg-red-900/20 border border-red-700/30 rounded-lg px-4 py-3">
+                <div className="flex flex-wrap gap-4">
+                  {item.damage_name ? (
+                    <div>
+                      <span className="text-zinc-500 text-xs uppercase">Name</span>
+                      <p className="text-zinc-200 text-sm font-medium">{item.damage_name}</p>
+                    </div>
+                  ) : null}
+                  <div>
+                    <span className="text-zinc-500 text-xs uppercase">Damage</span>
+                    <p className="text-red-300 font-bold text-lg">{item.damage_value || "—"}</p>
+                  </div>
+                  {item.damage_range ? (
+                    <div>
+                      <span className="text-zinc-500 text-xs uppercase">Range</span>
+                      <p className="text-zinc-200 text-sm">{item.damage_range}</p>
+                    </div>
+                  ) : null}
+                  {item.damage_type ? (
+                    <div>
+                      <span className="text-zinc-500 text-xs uppercase">Type</span>
+                      <p className="text-zinc-200 text-sm">{item.damage_type}{item.damage_subtype ? `/${item.damage_subtype}` : ""}</p>
+                    </div>
+                  ) : null}
                 </div>
-                {item.damage_range ? (
-                  <div>
-                    <span className="text-zinc-500 text-xs uppercase">Range</span>
-                    <p className="text-zinc-200 text-sm">{item.damage_range}</p>
-                  </div>
-                ) : null}
-                {item.damage_type ? (
-                  <div>
-                    <span className="text-zinc-500 text-xs uppercase">Type</span>
-                    <p className="text-zinc-200 text-sm">{item.damage_type}{item.damage_subtype ? `/${item.damage_subtype}` : ""}</p>
-                  </div>
-                ) : null}
+                {item.damage_description ? <p className="text-zinc-500 text-xs mt-2">{item.damage_description}</p> : null}
               </div>
-              {item.damage_description ? <p className="text-zinc-500 text-xs mt-2">{item.damage_description}</p> : null}
             </div>
           ) : null}
 
@@ -111,25 +165,33 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
                 </svg>
                 Armor
               </h3>
-              <div className="bg-cyan-900/20 border border-cyan-700/30 rounded-lg px-4 py-3 flex flex-wrap gap-4">
-                <div>
-                  <span className="text-zinc-500 text-xs uppercase">DR</span>
-                  <p className="text-cyan-300 font-bold text-lg">{item.armor_value || "—"}</p>
+              <div className="bg-cyan-900/20 border border-cyan-700/30 rounded-lg px-4 py-3">
+                <div className="flex flex-wrap gap-4">
+                  {item.armor_name ? (
+                    <div>
+                      <span className="text-zinc-500 text-xs uppercase">Name</span>
+                      <p className="text-zinc-200 text-sm font-medium">{item.armor_name}</p>
+                    </div>
+                  ) : null}
+                  <div>
+                    <span className="text-zinc-500 text-xs uppercase">DR</span>
+                    <p className="text-cyan-300 font-bold text-lg">{item.armor_value || "—"}</p>
+                  </div>
+                  {item.armor_fit ? (
+                    <div>
+                      <span className="text-zinc-500 text-xs uppercase">Fit</span>
+                      <p className="text-zinc-200 text-sm">{item.armor_fit}</p>
+                    </div>
+                  ) : null}
+                  {item.armor_type ? (
+                    <div>
+                      <span className="text-zinc-500 text-xs uppercase">Type</span>
+                      <p className="text-zinc-200 text-sm">{item.armor_type}{item.armor_subtype ? `/${item.armor_subtype}` : ""}</p>
+                    </div>
+                  ) : null}
                 </div>
-                {item.armor_fit ? (
-                  <div>
-                    <span className="text-zinc-500 text-xs uppercase">Fit</span>
-                    <p className="text-zinc-200 text-sm">{item.armor_fit}</p>
-                  </div>
-                ) : null}
-                {item.armor_type ? (
-                  <div>
-                    <span className="text-zinc-500 text-xs uppercase">Type</span>
-                    <p className="text-zinc-200 text-sm">{item.armor_type}{item.armor_subtype ? `/${item.armor_subtype}` : ""}</p>
-                  </div>
-                ) : null}
+                {item.armor_description ? <p className="text-zinc-500 text-xs mt-2">{item.armor_description}</p> : null}
               </div>
-              {item.armor_description ? <p className="text-zinc-500 text-xs mt-2">{item.armor_description}</p> : null}
             </div>
           ) : null}
 

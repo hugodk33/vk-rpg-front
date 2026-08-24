@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { api } from "@/lib/api";
-import type { Advantage, GameTableAdvantages } from "@/lib/types";
+import type { Advantage } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 

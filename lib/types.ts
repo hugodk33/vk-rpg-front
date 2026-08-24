@@ -8,6 +8,14 @@ export interface Narrator {
   type: number
 }
 
+export interface PublicUser {
+  id: string
+  type?: number
+  username?: string
+  phone?: string
+  email?: string
+}
+
 export interface Sheet {
   id: string
   name: string
@@ -313,6 +321,13 @@ export interface Item {
   description?: string
   quality?: string
   condition?: string
+  holder_id?: string
+  owner_id?: string
+  skill_user_id?: string
+  skill_level?: string
+  owner_username?: string
+  holder_username?: string
+  skill_user_username?: string
   damage_id?: string
   damage_name?: string
   damage_description?: string
