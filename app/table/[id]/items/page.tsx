@@ -59,8 +59,8 @@ export default async function TableItemsPage({ params }: { params: Promise<{ id:
                 </div>
               ) : null}
               <div className="mt-2 flex gap-2">
-                <Link href={`/item/${i.id}/edit`} className="text-xs text-amber-400 hover:text-amber-300">
-                  Edit
+                <Link href={`/item/${i.id}`} className="text-xs text-amber-400 hover:text-amber-300">
+                  View
                 </Link>
               </div>
             </div>

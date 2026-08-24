@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useEffect, useState } from "react";
+import Link from "next/link";
 import type { GameTableScenes, Location } from "@/lib/types";
 import TableTabs from "@/components/TableTabs";
 import { api } from "@/lib/api";
@@ -80,6 +81,11 @@ export default function TableLocationsPage({ params }: { params: Promise<{ id: s
                 </p>
               ) : null}
               {l.address ? <p className="text-xs text-zinc-500 ml-6">{l.address}</p> : null}
+              <div className="mt-2 ml-6">
+                <Link href={`/location/${l.id}`} className="text-xs text-amber-400 hover:text-amber-300">
+                  View
+                </Link>
+              </div>
             </div>
           ))}
         </div>

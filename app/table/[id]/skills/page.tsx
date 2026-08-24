@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useEffect, useState } from "react";
+import Link from "next/link";
 import type { GameTableSkills, SkillItem } from "@/lib/types";
 import TableTabs from "@/components/TableTabs";
 import { api } from "@/lib/api";
@@ -60,6 +61,11 @@ export default function TableSkillsPage({ params }: { params: Promise<{ id: stri
                 </span>
               </div>
               {s.effect ? <p className="text-zinc-500 text-xs mt-1">{s.effect}</p> : null}
+              <div className="mt-2">
+                <Link href={`/skill/${s.id}`} className="text-xs text-amber-400 hover:text-amber-300">
+                  View
+                </Link>
+              </div>
             </div>
           ))}
         </div>

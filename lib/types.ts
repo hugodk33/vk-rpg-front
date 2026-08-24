@@ -295,6 +295,7 @@ export interface SkillItem {
   type?: string
   predefinition_type?: string
   predefinition_difficulty?: string
+  predefinition_value?: number
   description?: string
   effect?: string
   predefinition?: Array<{ skill: string | null; value: string | null; depends_on_skill_for_others_attributes: string | null }>

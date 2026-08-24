@@ -83,10 +83,10 @@ export default function TableDisadvantagesPage({ params }: { params: Promise<{ i
                 {d.description ? <p className="text-zinc-500 text-xs mt-1">{d.description}</p> : null}
                 <div className="mt-3">
                   <Link
-                    href={`/disadvantage/${d.id}/edit?table_id=${id}`}
+                    href={`/disadvantage/${d.id}`}
                     className="text-xs text-amber-400 hover:text-amber-300 underline underline-offset-2"
                   >
-                    Edit
+                    View
                   </Link>
                 </div>
               </div>
