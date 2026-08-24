@@ -27,60 +27,82 @@ export default function TableCharactersPage({ params }: { params: Promise<{ id: 
   return (
     <div className="max-w-4xl mx-auto p-6">
       <TableTabs tableId={id} />
-      <h1 className="text-2xl font-bold text-amber-100 mb-4">
-        {data?.table?.title || "Table"} — Characters
-      </h1>
+
+      <div className="flex items-baseline gap-3 mb-1">
+        <h1 className="text-2xl font-bold text-zinc-100">Characters</h1>
+        <span className="text-sm text-zinc-500">{data?.table?.title}</span>
+      </div>
+
+      <div className="flex items-center gap-3 mb-6 text-xs text-zinc-500">
+        <span>{characters.length} character{characters.length !== 1 ? "s" : ""}</span>
+      </div>
 
       <div className="flex gap-2 mb-6">
-        <input
-          type="text"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search characters..."
-          className="flex-1 bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-amber-700/60"
-        />
-        <button
-          type="button"
-          onClick={() => setSearch("")}
-          className="bg-zinc-700 hover:bg-zinc-600 text-zinc-300 text-sm font-medium px-4 py-2 rounded-lg transition-colors"
-        >
-          Clear
-        </button>
+        <div className="relative flex-1">
+          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Filter characters..."
+            className="w-full bg-zinc-800/60 border border-zinc-700/50 rounded-lg pl-9 pr-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-violet-700/60"
+          />
+        </div>
+        {search ? (
+          <button type="button" onClick={() => setSearch("")} className="bg-zinc-800/60 hover:bg-zinc-700/60 text-zinc-400 text-sm px-3 py-2 rounded-lg transition-colors border border-zinc-700/50">
+            Clear
+          </button>
+        ) : null}
       </div>
 
       {characters.length === 0 ? (
-        <p className="text-zinc-500 italic">No characters found.</p>
+        <div className="text-center py-16">
+          <svg className="w-10 h-10 text-zinc-700 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+          </svg>
+          <p className="text-zinc-500 text-sm">{search ? "No characters match your filter." : "No characters in this table yet."}</p>
+        </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="space-y-2">
           {characters.map((ch) => {
             const s = ch.sheet;
             return (
-              <div key={ch.id} className="bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-4 py-3 flex flex-col items-center">
-                <div className="w-full flex flex-col items-start mb-1">
-                  <span className="text-zinc-200 font-medium">{s?.name || ch.name || "Unnamed"}</span>
-                  <span className="text-zinc-500 text-xs">{ch.user?.username ?? ""}</span>
-                </div>
-                <hr />
-                {s ? (
-                  <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-0.5 text-xs mt-2">
-                    <span className="text-red-400">ST {s.st ?? "-"}</span>
-                    <span className="text-emerald-400">DX {s.dx ?? "-"}</span>
-                    <span className="text-blue-400">IQ {s.iq ?? "-"}</span>
-                    <span className="text-purple-400">HT {s.ht ?? "-"}</span>
+              <Link
+                key={ch.id}
+                href={`/character/${ch.id}`}
+                className="group block bg-zinc-800/40 hover:bg-zinc-800/70 border border-zinc-700/40 hover:border-zinc-600/60 rounded-lg border-l-[3px] border-l-violet-400/70 px-4 py-3 transition-all"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <svg className="w-4 h-4 shrink-0 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                    <div className="min-w-0">
+                      <span className="text-sm font-medium text-zinc-200 group-hover:text-zinc-100 truncate block">
+                        {s?.name || ch.name || "Unnamed"}
+                      </span>
+                      {ch.user?.username ? (
+                        <span className="text-[11px] text-zinc-500">{ch.user.username}</span>
+                      ) : null}
+                    </div>
                   </div>
-                ) : (
-                  <p className="text-zinc-600 text-xs italic mt-1">No sheet</p>
-                )}
-                {s ? (
-                  <RadarChart st={s.st} dx={s.dx} iq={s.iq} ht={s.ht} />
-                ) : null}
-                <Link
-                  href={`/character/${ch.id}`}
-                  className="w-full text-center bg-amber-700/60 hover:bg-amber-600 text-amber-100 text-xs font-medium px-3 py-2 rounded-lg transition-colors mt-3"
-                >
-                  Sheet
-                </Link>
-              </div>
+                  {s ? (
+                    <div className="flex items-center gap-3 shrink-0">
+                      <div className="flex items-center gap-2 text-[11px]">
+                        <span className="text-red-400">ST {s.st ?? "-"}</span>
+                        <span className="text-emerald-400">DX {s.dx ?? "-"}</span>
+                        <span className="text-blue-400">IQ {s.iq ?? "-"}</span>
+                        <span className="text-purple-400">HT {s.ht ?? "-"}</span>
+                      </div>
+                      <RadarChart st={s.st} dx={s.dx} iq={s.iq} ht={s.ht} size={48} />
+                    </div>
+                  ) : (
+                    <span className="text-[11px] text-zinc-600 italic shrink-0">No sheet</span>
+                  )}
+                </div>
+              </Link>
             );
           })}
         </div>

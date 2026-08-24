@@ -33,63 +33,103 @@ export default function TableDisadvantagesPage({ params }: { params: Promise<{ i
       || (d.category ?? "").toLowerCase().includes(q);
   });
 
+  const categoryCounts = (data?.disadvantages ?? []).reduce<Record<string, number>>((acc, d) => {
+    const c = d.category ?? "Other";
+    acc[c] = (acc[c] ?? 0) + 1;
+    return acc;
+  }, {});
+
   return (
     <div className="max-w-4xl mx-auto p-6">
       <TableTabs tableId={id} />
-      <h1 className="text-2xl font-bold text-amber-100 mb-4">
-        {data?.table?.title || "Table"} — Disadvantages
-      </h1>
+
+      <div className="flex items-baseline gap-3 mb-1">
+        <h1 className="text-2xl font-bold text-zinc-100">Disadvantages</h1>
+        <span className="text-sm text-zinc-500">{data?.table?.title}</span>
+      </div>
+
+      <div className="flex items-center gap-3 mb-6 text-xs text-zinc-500">
+        <span>{disadvantages.length} disadvantage{disadvantages.length !== 1 ? "s" : ""}</span>
+        {Object.entries(categoryCounts).map(([c, count]) => {
+          const colors = COLORS[c] ?? FALLBACK;
+          return (
+            <span key={c} className="flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: colors.border }} />
+              {count} {c}
+            </span>
+          );
+        })}
+      </div>
 
       <div className="flex gap-2 mb-6">
-        <input
-          type="text"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search disadvantages..."
-          className="flex-1 bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-amber-700/60"
-        />
-        <button
-          type="button"
-          onClick={() => setSearch("")}
-          className="bg-zinc-700 hover:bg-zinc-600 text-zinc-300 text-sm font-medium px-4 py-2 rounded-lg transition-colors"
-        >
-          Clear
-        </button>
+        <div className="relative flex-1">
+          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Filter disadvantages..."
+            className="w-full bg-zinc-800/60 border border-zinc-700/50 rounded-lg pl-9 pr-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-amber-700/60"
+          />
+        </div>
+        {search ? (
+          <button type="button" onClick={() => setSearch("")} className="bg-zinc-800/60 hover:bg-zinc-700/60 text-zinc-400 text-sm px-3 py-2 rounded-lg transition-colors border border-zinc-700/50">
+            Clear
+          </button>
+        ) : null}
       </div>
 
       {disadvantages.length === 0 ? (
-        <p className="text-zinc-500 italic">No disadvantages found.</p>
+        <div className="text-center py-16">
+          <svg className="w-10 h-10 text-zinc-700 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+          </svg>
+          <p className="text-zinc-500 text-sm">{search ? "No disadvantages match your filter." : "No disadvantages added to this table yet."}</p>
+        </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="space-y-2">
           {disadvantages.map((d: Disadvantage) => {
             const colors = COLORS[d.category ?? ""] ?? FALLBACK;
             return (
-              <div
+              <Link
                 key={d.id}
-                className="rounded-lg px-4 py-3"
-                style={{ background: colors.bg, border: `1px solid ${colors.border}` }}
+                href={`/disadvantage/${d.id}`}
+                className="group block bg-zinc-800/40 hover:bg-zinc-800/70 border border-zinc-700/40 hover:border-zinc-600/60 rounded-lg border-l-[3px] px-4 py-3 transition-all"
+                style={{ borderLeftColor: colors.border }}
               >
-                <div className="flex justify-between items-start mb-1">
-                  <span className="text-zinc-100 font-medium">{d.name || "Unnamed"}</span>
-                  <span className="text-red-400 text-xs font-semibold">{d.cost_points ?? ""}</span>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <svg className="w-4 h-4 shrink-0 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                    </svg>
+                    <span className="text-sm font-medium text-zinc-200 group-hover:text-zinc-100 truncate">
+                      {d.name || "Unnamed"}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {d.cost_points != null ? (
+                      <span className="text-xs font-bold text-red-400 bg-red-400/10 px-2 py-0.5 rounded">
+                        {d.cost_points}
+                      </span>
+                    ) : null}
+                    {d.category ? (
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${colors.badge}`}>
+                        {d.category}
+                      </span>
+                    ) : null}
+                  </div>
                 </div>
-                {d.category ? (
-                  <span className={`inline-block ${colors.badge} text-xs px-2 py-0.5 rounded-full mt-1`}>
-                    {d.category}
-                    {d.subcategory ? ` / ${d.subcategory}` : ""}
-                  </span>
-                ) : null}
-                {d.effect ? <p className="text-zinc-400 text-xs mt-2">{d.effect}</p> : null}
-                {d.description ? <p className="text-zinc-500 text-xs mt-1">{d.description}</p> : null}
-                <div className="mt-3">
-                  <Link
-                    href={`/disadvantage/${d.id}`}
-                    className="text-xs text-amber-400 hover:text-amber-300 underline underline-offset-2"
-                  >
-                    View
-                  </Link>
+                <div className="flex items-center gap-2 mt-1.5 ml-7">
+                  {d.subcategory ? (
+                    <span className="text-[11px] text-zinc-500">{d.subcategory}</span>
+                  ) : null}
+                  {d.effect ? (
+                    <span className="text-[11px] text-zinc-600 truncate">— {d.effect}</span>
+                  ) : null}
                 </div>
-              </div>
+              </Link>
             );
           })}
         </div>
