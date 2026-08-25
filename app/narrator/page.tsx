@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { api } from "@/lib/api";
 import type { GameTable } from "@/lib/types";
+import NarratorTabs from "@/components/NarratorTabs";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +15,9 @@ export default async function NarratorDashboard() {
 
   return (
     <div className="max-w-4xl mx-auto p-6">
-      <div className="flex items-center justify-between mb-8">
+      <NarratorTabs active="tables" />
+
+      <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-amber-100">Narrator Dashboard</h1>
           <p className="text-zinc-400 text-sm mt-1">

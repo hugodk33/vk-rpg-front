@@ -24,10 +24,10 @@ export default async function CharacterViewerPage({
     <div className="max-w-4xl mx-auto p-6">
       {tableId ? (
         <>
-          <Link href={`/table/${tableId}`} className="text-zinc-500 hover:text-zinc-300 text-sm mb-2 inline-block transition-colors">
+          <Link href={`/table/${tableId}`} className="text-zinc-500 hover:text-zinc-300 text-sm mb-4 inline-block transition-colors">
             &larr; Back to table
           </Link>
-          <TableTabs tableId={tableId} active="character" characterHref={basePath} />
+          <TableTabs tableId={tableId} active="character" characterHref={basePath} hideBreadcrumb />
         </>
       ) : null}
       <CharacterSheet data={data} basePath={basePath} />
