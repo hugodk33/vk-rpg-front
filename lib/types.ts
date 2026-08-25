@@ -279,6 +279,15 @@ export interface GameTableNpcs {
   npcs: TableNpc[]
 }
 
+export interface QueueEntry {
+  id: string
+  character_id?: string | null
+  action_id?: string | null
+  queue?: string | number | null
+  status?: string | null
+  character_name?: string
+}
+
 export interface CharacterViewer {
   table: GameTable | null
   character: TableCharacter

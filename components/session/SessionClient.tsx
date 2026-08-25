@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import type { NarrationAction, Sheet } from "@/lib/types";
+import type { NarrationAction, QueueEntry, Sheet } from "@/lib/types";
 
 interface SessionChar {
   id: string;
@@ -25,8 +25,15 @@ interface SessionClientProps {
   latestMoment: number;
   characters: SessionChar[];
   actions: NarrationAction[];
+  queue?: QueueEntry[];
+  npcIds?: string[];
   role?: "narrator" | "player";
 }
+
+const queuePos = (entry: QueueEntry): number => {
+  const n = Number(entry.queue);
+  return Number.isFinite(n) ? n : Number.MAX_SAFE_INTEGER;
+};
 
 export default function SessionClient({
   tableId,
@@ -38,15 +45,85 @@ export default function SessionClient({
   latestMoment,
   characters,
   actions,
+  queue = [],
+  npcIds = [],
   role = "narrator",
 }: SessionClientProps) {
   const isPlayer = role === "player";
   const router = useRouter();
 
+  const pendingQueue = [...queue]
+    .filter((q) => (q.status ?? "pending") !== "done")
+    .sort((a, b) => queuePos(a) - queuePos(b));
+  const nextQueuePos =
+    pendingQueue.length > 0 ? Math.max(...pendingQueue.map(queuePos)) + 1 : 1;
+
   const [modal, setModal] = useState<null | "chapter" | "moment" | "narration">(null);
   const [modalTitle, setModalTitle] = useState("");
   const [narrationChar, setNarrationChar] = useState("");
   const [narrationText, setNarrationText] = useState("");
+
+  const [queueChar, setQueueChar] = useState("");
+
+  const charName = (charId?: string | null): string => {
+    if (!charId) return "Unknown";
+    const c = characters.find((x) => x.id === charId);
+    return c?.name || c?.username || "Unknown";
+  };
+
+  async function addToQueue() {
+    if (!queueChar) return;
+    try {
+      await fetch("/api/game-table-queue", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          character_id: queueChar,
+          queue: String(nextQueuePos),
+          status: "pending",
+        }),
+      });
+      setQueueChar("");
+      router.refresh();
+    } catch {
+      /* ignore */
+    }
+  }
+
+  async function removeFromQueue(entry: QueueEntry) {
+    try {
+      await fetch("/api/game-table-queue", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: entry.id,
+          character_id: entry.character_id ?? null,
+          action_id: entry.action_id ?? null,
+          queue: "",
+          status: "done",
+        }),
+      });
+      router.refresh();
+    } catch {
+      /* ignore */
+    }
+  }
+
+  async function advanceQueue(characterId: string) {
+    const entry = pendingQueue.find((q) => q.character_id === characterId);
+    if (!entry) return;
+    await fetch("/api/game-table-queue", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id: entry.id,
+        character_id: entry.character_id ?? null,
+        action_id: entry.action_id ?? null,
+        queue: String(nextQueuePos),
+        status: "pending",
+      }),
+    });
+  }
 
   const [diceType, setDiceType] = useState("6");
   const [diceCount, setDiceCount] = useState(3);
@@ -185,6 +262,11 @@ export default function SessionClient({
       });
       const j = await res.json();
       if (j.success) {
+        try {
+          await advanceQueue(actChar);
+        } catch {
+          /* ignore */
+        }
         setActDesc("");
         setActRoll("");
         setActTarget("");
@@ -245,43 +327,95 @@ export default function SessionClient({
               {latestNarration}
             </p>
           ) : null}
-          {actions.length ? (
-            <div className="mt-4 border-t border-zinc-700/40 pt-3">
-              {[...actions]
-                .sort((a, b) => (a.queue ?? 0) - (b.queue ?? 0))
-                .map((a) => {
-                  const charId = a.character?.id || "";
-                  const charName = a.character?.name || a.character?.username || "Unknown";
-                  return (
-                    <div key={a.id} className="flex items-start gap-3 py-1.5">
-                      <span className="text-xs text-zinc-600 w-4 mt-0.5">{a.queue}.</span>
-                      <div className="flex-1">
-                        <span className="text-sm text-zinc-300">
-                          {charId ? (
-                            <a href={`/character/${charId}`} className="text-zinc-200 hover:text-blue-400">
-                              {charName}
-                            </a>
-                          ) : (
-                            charName
-                          )}
-                          {a.description ? ` — ${a.description}` : ""}
-                        </span>
-                        {a.dice_roll ? (
-                          <span className="text-xs text-zinc-400 ml-1">
-                            {a.dice_roll}
-                            {a.result ? ` = ${a.result}` : ""}
-                          </span>
-                        ) : null}
-                      </div>
-                    </div>
-                  );
-                })}
+        </div>
+
+        <div className="bg-zinc-900/80 border border-zinc-700/40 rounded-xl p-5">
+          <h2 className="text-lg font-bold text-zinc-100 mb-4">Turn Queue</h2>
+          {pendingQueue.length ? (
+            <ul className="mb-4">
+              {pendingQueue.map((entry, i) => {
+                const charId = entry.character_id || "";
+                const name = charName(charId);
+                const isNext = i === 0;
+                const isNpc = npcIds.includes(charId);
+                return (
+                  <li
+                    key={entry.id}
+                    className={`flex items-center gap-3 rounded-lg px-3 py-2 ${
+                      isNext ? "bg-amber-700/10 border border-amber-700/40" : "border border-transparent"
+                    }`}
+                  >
+                    <span
+                      className={`text-xs w-4 mt-0.5 font-mono ${
+                        isNext ? "text-amber-400" : "text-zinc-600"
+                      }`}
+                    >
+                      {i + 1}.
+                    </span>
+                    {charId ? (
+                      <a href={`/character/${charId}`} className="text-sm text-zinc-200 hover:text-blue-400">
+                        {name}
+                      </a>
+                    ) : (
+                      <span className="text-sm text-zinc-200">{name}</span>
+                    )}
+                    {isNpc ? (
+                      <span className="text-[10px] uppercase tracking-wider bg-zinc-700/60 text-zinc-300 px-1.5 py-0.5 rounded">
+                        NPC
+                      </span>
+                    ) : null}
+                    {isNext ? (
+                      <span className="ml-auto text-[10px] font-semibold uppercase tracking-wider text-amber-400">
+                        Up now
+                      </span>
+                    ) : null}
+                    {!isPlayer && !isNext ? (
+                      <button
+                        onClick={() => removeFromQueue(entry)}
+                        aria-label={`Remove ${name} from queue`}
+                        className={isNext ? "" : "ml-auto text-zinc-600 hover:text-red-400 transition-colors"}
+                      >
+                        ×
+                      </button>
+                    ) : null}
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <p className="text-sm text-zinc-500 mb-4">
+              No one in the queue yet — pick who acts next.
+            </p>
+          )}
+          {!isPlayer ? (
+            <div className="flex gap-2">
+              <select
+                value={queueChar}
+                onChange={(e) => setQueueChar(e.target.value)}
+                aria-label="Choose who is next"
+                className={`${inputCls} flex-1`}
+              >
+                <option value="">Choose who is next…</option>
+                {characters.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name || c.username || "Unknown"}
+                    {npcIds.includes(c.id) ? " — NPC" : ""}
+                  </option>
+                ))}
+              </select>
+              <button
+                onClick={addToQueue}
+                disabled={!queueChar}
+                className="bg-transparent border border-amber-700 text-amber-400 hover:bg-amber-700/10 text-sm font-semibold px-4 py-2 rounded-lg transition-colors disabled:opacity-40 disabled:hover:bg-transparent"
+              >
+                + Add to queue
+              </button>
             </div>
           ) : null}
         </div>
 
         <div className="bg-zinc-900/80 border border-zinc-700/40 rounded-xl p-5">
-          <h2 className="text-lg font-bold text-zinc-100 mb-4">Roll &amp; Act</h2>
+          <h2 className="text-lg font-bold text-zinc-100 mb-4">Actions</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="flex flex-col items-center justify-center gap-2">
               <div className="flex items-center gap-3 mb-4">
@@ -460,6 +594,40 @@ export default function SessionClient({
               ) : null}
             </div>
           </div>
+
+          {actions.length ? (
+            <div className="mt-5 border-t border-zinc-700/40 pt-3">
+              {[...actions]
+                .sort((a, b) => (a.queue ?? 0) - (b.queue ?? 0))
+                .map((a) => {
+                  const charId = a.character?.id || "";
+                  const charName = a.character?.name || a.character?.username || "Unknown";
+                  return (
+                    <div key={a.id} className="flex items-start gap-3 py-1.5">
+                      <span className="text-xs text-zinc-600 w-4 mt-0.5">{a.queue}.</span>
+                      <div className="flex-1">
+                        <span className="text-sm text-zinc-300">
+                          {charId ? (
+                            <a href={`/character/${charId}`} className="text-zinc-200 hover:text-blue-400">
+                              {charName}
+                            </a>
+                          ) : (
+                            charName
+                          )}
+                          {a.description ? ` — ${a.description}` : ""}
+                        </span>
+                        {a.dice_roll ? (
+                          <span className="text-xs text-zinc-400 ml-1">
+                            {a.dice_roll}
+                            {a.result ? ` = ${a.result}` : ""}
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
+          ) : null}
         </div>
       </div>
 
