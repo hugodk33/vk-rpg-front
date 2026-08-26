@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { api } from "@/lib/api";
 import type { Item } from "@/lib/types";
+import { parseDamageEntries, DAMAGE_TYPES } from "@/lib/damage";
 
 export const dynamic = "force-dynamic";
 
@@ -123,35 +124,74 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
             <div>
               <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-3 flex items-center gap-2">
                 <svg className="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14.121 14.121L19 19m-7-7l7-7m-7 7l-2.879 2.879M12 12L9.121 9.121m0 5.758a3 3 0 10-4.243 4.243 3 3 0 004.243-4.243zm0-5.758a3 3 0 10-4.243-4.243 3 3 0 004.243 4.243z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14.121 14.121L19 19m-7-7l7-7m-7 7l-2.879 2.879M12 12L9.121 9.121m0 5.758a3 3 0 10-4.243 4.243 3 3 0 004.243-4.243zm0-5.758a3 3 0 10-4.243-4.243 3 3 0 004.243-4.243z" />
                 </svg>
                 Weapon
               </h3>
               <div className="bg-red-900/20 border border-red-700/30 rounded-lg px-4 py-3">
-                <div className="flex flex-wrap gap-4">
-                  {item.damage_name ? (
-                    <div>
-                      <span className="text-zinc-500 text-xs uppercase">Name</span>
-                      <p className="text-zinc-200 text-sm font-medium">{item.damage_name}</p>
-                    </div>
-                  ) : null}
-                  <div>
-                    <span className="text-zinc-500 text-xs uppercase">Damage</span>
-                    <p className="text-red-300 font-bold text-lg">{item.damage_value || "—"}</p>
-                  </div>
-                  {item.damage_range ? (
-                    <div>
-                      <span className="text-zinc-500 text-xs uppercase">Range</span>
-                      <p className="text-zinc-200 text-sm">{item.damage_range}</p>
-                    </div>
-                  ) : null}
-                  {item.damage_type ? (
-                    <div>
-                      <span className="text-zinc-500 text-xs uppercase">Type</span>
-                      <p className="text-zinc-200 text-sm">{item.damage_type}{item.damage_subtype ? `/${item.damage_subtype}` : ""}</p>
-                    </div>
-                  ) : null}
-                </div>
+                {item.damage_name ? (
+                  <p className="text-zinc-200 text-sm font-medium mb-2">{item.damage_name}</p>
+                ) : null}
+                {(() => {
+                  const entries = parseDamageEntries(item.damage_value);
+                  if (entries.length === 0) {
+                    return (
+                      <div className="flex flex-wrap gap-4">
+                        <div>
+                          <span className="text-zinc-500 text-xs uppercase">Damage</span>
+                          <p className="text-red-300 font-bold text-lg">{item.damage_value || "\u2014"}</p>
+                        </div>
+                        {item.damage_range ? (
+                          <div>
+                            <span className="text-zinc-500 text-xs uppercase">Range</span>
+                            <p className="text-zinc-200 text-sm">{item.damage_range}</p>
+                          </div>
+                        ) : null}
+                        {item.damage_type ? (
+                          <div>
+                            <span className="text-zinc-500 text-xs uppercase">Type</span>
+                            <p className="text-zinc-200 text-sm">{item.damage_type}{item.damage_subtype ? `/${item.damage_subtype}` : ""}</p>
+                          </div>
+                        ) : null}
+                      </div>
+                    );
+                  }
+                  const types = Array.from(new Set(entries.map((e) => e.type)));
+                  return (
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="border-b border-red-700/30">
+                          <th className="text-left text-zinc-500 font-medium py-1 px-2">ST</th>
+                          {types.map((t) => (
+                            <th key={t} className="text-left text-zinc-500 font-medium py-1 px-2">
+                              {DAMAGE_TYPES[t] || t}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {Array.from(new Set(entries.map((e) => e.st)))
+                          .sort((a, b) => a - b)
+                          .map((st) => {
+                            const row = entries.filter((e) => e.st === st);
+                            return (
+                              <tr key={st} className="border-b border-red-800/20">
+                                <td className="text-zinc-300 font-mono py-1 px-2 tabular-nums">{st}</td>
+                                {types.map((t) => {
+                                  const cell = row.find((e) => e.type === t);
+                                  return (
+                                    <td key={t} className="text-red-300 font-bold font-mono py-1 px-2">
+                                      {cell?.damage || "\u2014"}
+                                    </td>
+                                  );
+                                })}
+                              </tr>
+                            );
+                          })}
+                      </tbody>
+                    </table>
+                  );
+                })()}
                 {item.damage_description ? <p className="text-zinc-500 text-xs mt-2">{item.damage_description}</p> : null}
               </div>
             </div>
@@ -175,7 +215,7 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
                   ) : null}
                   <div>
                     <span className="text-zinc-500 text-xs uppercase">DR</span>
-                    <p className="text-cyan-300 font-bold text-lg">{item.armor_value || "—"}</p>
+                    <p className="text-cyan-300 font-bold text-lg">{item.armor_value || "\u2014"}</p>
                   </div>
                   {item.armor_fit ? (
                     <div>

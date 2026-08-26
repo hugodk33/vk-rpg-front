@@ -113,6 +113,12 @@ export interface CharacterDamage {
   range?: string
 }
 
+export interface DamageEntry {
+  damage: string
+  type: string
+  st: number
+}
+
 export interface Peculiarity {
   id: string
   character_id?: string

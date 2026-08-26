@@ -4,7 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { submitJson } from "./submit";
 import { cancelCls, inputCls, labelCls, submitCls } from "./formStyles";
-import type { Item } from "@/lib/types";
+import type { Item, DamageEntry } from "@/lib/types";
+import { DAMAGE_TYPES, generateGurpsDamageEntries, damageEntriesToJson, parseDamageEntries } from "@/lib/damage";
 
 export interface ItemFormProps {
   initial?: Item;
@@ -30,12 +31,45 @@ export default function ItemForm({ initial, tableId, tables, characters }: ItemF
   const [condition, setCondition] = useState(initial?.condition ?? "");
   const [description, setDescription] = useState(initial?.description ?? "");
   const [characterId, setCharacterId] = useState("");
-  const [damageValue, setDamageValue] = useState("");
+  const [damageEntries, setDamageEntries] = useState<DamageEntry[]>(() =>
+    parseDamageEntries(initial?.damage_value)
+  );
+  const [newDmgType, setNewDmgType] = useState("gdp");
+  const [newDmgSt, setNewDmgSt] = useState("10");
+  const [newDmgValue, setNewDmgValue] = useState("");
+  const [quickFillType, setQuickFillType] = useState("gdp+bal");
+  const [quickFillMin, setQuickFillMin] = useState("4");
+  const [quickFillMax, setQuickFillMax] = useState("20");
   const [range, setRange] = useState("");
   const [armorValue, setArmorValue] = useState("");
   const [fit, setFit] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  function addDamageEntry() {
+    if (!newDmgValue.trim()) return;
+    setDamageEntries((prev) => [
+      ...prev,
+      { damage: newDmgValue.trim(), type: newDmgType, st: Number(newDmgSt) || 10 },
+    ]);
+    setNewDmgValue("");
+  }
+
+  function removeDamageEntry(index: number) {
+    setDamageEntries((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  function applyQuickFill() {
+    const types = quickFillType.split("+").filter(Boolean);
+    const entries = generateGurpsDamageEntries(types, Number(quickFillMin) || 4, Number(quickFillMax) || 20);
+    setDamageEntries(entries);
+  }
+
+  function sortDamageEntries() {
+    setDamageEntries((prev) =>
+      [...prev].sort((a, b) => a.st - b.st || a.type.localeCompare(b.type))
+    );
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -61,7 +95,7 @@ export default function ItemForm({ initial, tableId, tables, characters }: ItemF
       skill_user_id: "",
       skill_level: "",
       character_id: characterId || null,
-      damage_value: type === 1 ? damageValue || null : null,
+      damage_value: type === 1 && damageEntries.length > 0 ? damageEntriesToJson(damageEntries) : null,
       range: type === 1 ? range || "Melee" : null,
       skill_id: "",
       armor_value: type === 2 || type === 3 ? armorValue || null : null,
@@ -191,19 +225,140 @@ export default function ItemForm({ initial, tableId, tables, characters }: ItemF
           ) : null}
 
           {type === 1 ? (
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className={labelCls}>Dano</label>
-                <input
-                  value={damageValue}
-                  onChange={(e) => setDamageValue(e.target.value)}
-                  className={inputCls}
-                  placeholder="ex: 2d6+2"
-                />
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className={labelCls}>Alcance</label>
+                  <input value={range} onChange={(e) => setRange(e.target.value)} className={inputCls} placeholder="Melee" />
+                </div>
               </div>
+
               <div>
-                <label className={labelCls}>Alcance</label>
-                <input value={range} onChange={(e) => setRange(e.target.value)} className={inputCls} placeholder="Melee" />
+                <label className={labelCls}>Tabela de Dano</label>
+                <div className="flex gap-2 items-end">
+                  <div className="flex-1">
+                    <select
+                      value={quickFillType}
+                      onChange={(e) => setQuickFillType(e.target.value)}
+                      className={inputCls}
+                    >
+                      <option value="gdp">Golpe de Ponta</option>
+                      <option value="bal">Balanço</option>
+                      <option value="gdp+bal">Golpe de Ponta + Balanço</option>
+                    </select>
+                  </div>
+                  <div className="w-20">
+                    <input
+                      type="number"
+                      value={quickFillMin}
+                      onChange={(e) => setQuickFillMin(e.target.value)}
+                      className={inputCls}
+                      placeholder="ST min"
+                    />
+                  </div>
+                  <div className="w-20">
+                    <input
+                      type="number"
+                      value={quickFillMax}
+                      onChange={(e) => setQuickFillMax(e.target.value)}
+                      className={inputCls}
+                      placeholder="ST max"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={applyQuickFill}
+                    className="bg-zinc-700 hover:bg-zinc-600 text-zinc-300 text-sm px-3 py-2 rounded-lg transition-colors"
+                  >
+                    Preencher
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className={labelCls}>Entradas de Dano</label>
+                {damageEntries.length > 0 ? (
+                  <div className="mb-2 overflow-x-auto">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="border-b border-zinc-700/40">
+                          <th className="text-left text-zinc-500 font-medium py-1 px-2">ST</th>
+                          <th className="text-left text-zinc-500 font-medium py-1 px-2">Tipo</th>
+                          <th className="text-left text-zinc-500 font-medium py-1 px-2">Dano</th>
+                          <th className="w-8"></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {damageEntries.map((entry, i) => (
+                          <tr key={i} className="border-b border-zinc-800/60">
+                            <td className="text-zinc-300 font-mono py-1 px-2">{entry.st}</td>
+                            <td className="text-zinc-400 py-1 px-2">{DAMAGE_TYPES[entry.type] || entry.type}</td>
+                            <td className="text-red-300 font-bold font-mono py-1 px-2">{entry.damage}</td>
+                            <td className="py-1 px-1">
+                              <button
+                                type="button"
+                                onClick={() => removeDamageEntry(i)}
+                                className="text-zinc-600 hover:text-red-400 transition-colors"
+                              >
+                                ×
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    <button
+                      type="button"
+                      onClick={sortDamageEntries}
+                      className="text-zinc-500 hover:text-zinc-300 text-xs mt-1 transition-colors"
+                    >
+                      Ordenar por ST
+                    </button>
+                  </div>
+                ) : (
+                  <p className="text-zinc-600 text-sm italic mb-2">Nenhuma entrada de dano</p>
+                )}
+
+                <div className="flex gap-2 items-end">
+                  <div className="w-20">
+                    <label className="text-[10px] text-zinc-500 uppercase block mb-0.5">ST</label>
+                    <input
+                      type="number"
+                      value={newDmgSt}
+                      onChange={(e) => setNewDmgSt(e.target.value)}
+                      className={inputCls}
+                    />
+                  </div>
+                  <div className="w-40">
+                    <label className="text-[10px] text-zinc-500 uppercase block mb-0.5">Tipo</label>
+                    <select
+                      value={newDmgType}
+                      onChange={(e) => setNewDmgType(e.target.value)}
+                      className={inputCls}
+                    >
+                      {Object.entries(DAMAGE_TYPES).map(([k, v]) => (
+                        <option key={k} value={k}>{v}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex-1">
+                    <label className="text-[10px] text-zinc-500 uppercase block mb-0.5">Dano</label>
+                    <input
+                      value={newDmgValue}
+                      onChange={(e) => setNewDmgValue(e.target.value)}
+                      className={inputCls}
+                      placeholder="ex: 1D+2"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={addDamageEntry}
+                    disabled={!newDmgValue.trim()}
+                    className="bg-amber-700/60 hover:bg-amber-600 text-amber-100 text-sm font-medium px-3 py-2 rounded-lg transition-colors disabled:opacity-40"
+                  >
+                    +
+                  </button>
+                </div>
               </div>
             </div>
           ) : null}

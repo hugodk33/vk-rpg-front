@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { CharacterViewer, Sheet } from "@/lib/types";
 import RadarChart from "@/components/RadarChart";
+import { parseDamageEntries, DAMAGE_TYPES } from "@/lib/damage";
 
 function statDiff(base: number | undefined, current: number | undefined): React.ReactNode {
   if (base == null || current == null || base === current) return null;
@@ -450,29 +451,71 @@ export default function CharacterSheet({ data, basePath }: CharacterSheetProps) 
                 !ch.damages || ch.damages.length === 0 ? (
                   <p className="text-zinc-600 text-sm italic">None</p>
                 ) : (
-                  ch.damages.map((d) => (
-                    <div
-                      key={d.id}
-                      className="bg-zinc-800/60 rounded-lg border border-zinc-700/40 px-3 py-2 mb-1.5"
-                    >
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <span className="text-zinc-200 text-sm font-medium">{d.name || "Unnamed"}</span>
-                          {d.type ? (
-                            <span className="text-zinc-500 text-xs ml-1">
-                              {isMelee(d.type) ? meleeIcon() : null}
-                              {isRanged(d.type) ? rangedIcon() : null}
-                              {d.type}
-                              {d.subtype ? "/" + d.subtype : ""}
-                            </span>
+                  ch.damages.map((d) => {
+                    const entries = parseDamageEntries(d.value);
+                    return (
+                      <div
+                        key={d.id}
+                        className="bg-zinc-800/60 rounded-lg border border-zinc-700/40 px-3 py-2 mb-1.5"
+                      >
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <span className="text-zinc-200 text-sm font-medium">{d.name || "Unnamed"}</span>
+                            {d.type ? (
+                              <span className="text-zinc-500 text-xs ml-1">
+                                {isMelee(d.type) ? meleeIcon() : null}
+                                {isRanged(d.type) ? rangedIcon() : null}
+                                {d.type}
+                                {d.subtype ? "/" + d.subtype : ""}
+                              </span>
+                            ) : null}
+                            {d.range ? <span className="text-zinc-500 text-xs ml-1">{d.range}</span> : null}
+                          </div>
+                          {entries.length === 0 ? (
+                            <span className="text-red-400 font-bold text-sm">{d.value || ""}</span>
                           ) : null}
-                          {d.range ? <span className="text-zinc-500 text-xs ml-1">{d.range}</span> : null}
                         </div>
-                        <span className="text-red-400 font-bold text-sm">{d.value || ""}</span>
+                        {entries.length > 0 ? (
+                          <div className="mt-2 overflow-x-auto">
+                            <table className="w-full text-xs">
+                              <thead>
+                                <tr className="border-b border-zinc-700/40">
+                                  <th className="text-left text-zinc-500 font-medium py-1 px-2">ST</th>
+                                  {Array.from(new Set(entries.map((e) => e.type))).map((t) => (
+                                    <th key={t} className="text-left text-zinc-500 font-medium py-1 px-2">
+                                      {DAMAGE_TYPES[t] || t}
+                                    </th>
+                                  ))}
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {Array.from(new Set(entries.map((e) => e.st)))
+                                  .sort((a, b) => a - b)
+                                  .map((st) => {
+                                    const row = entries.filter((e) => e.st === st);
+                                    const types = Array.from(new Set(entries.map((e) => e.type)));
+                                    return (
+                                      <tr key={st} className="border-b border-zinc-800/60">
+                                        <td className="text-zinc-300 font-mono py-1 px-2 tabular-nums">{st}</td>
+                                        {types.map((t) => {
+                                          const cell = row.find((e) => e.type === t);
+                                          return (
+                                            <td key={t} className="text-red-300 font-bold font-mono py-1 px-2">
+                                              {cell?.damage || "—"}
+                                            </td>
+                                          );
+                                        })}
+                                      </tr>
+                                    );
+                                  })}
+                              </tbody>
+                            </table>
+                          </div>
+                        ) : null}
+                        {d.description ? <p className="text-zinc-500 text-xs mt-0.5">{d.description}</p> : null}
                       </div>
-                      {d.description ? <p className="text-zinc-500 text-xs mt-0.5">{d.description}</p> : null}
-                    </div>
-                  ))
+                    );
+                  })
                 ),
                 <svg
                   className="w-4 h-4 text-amber-500"

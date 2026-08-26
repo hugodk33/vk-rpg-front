@@ -2,6 +2,7 @@ import { api } from "@/lib/api";
 import type { GameTableItems, Item } from "@/lib/types";
 import { getPlayerCharacterUrl } from "@/lib/table";
 import TableTabs from "@/components/TableTabs";
+import { parseDamageEntries } from "@/lib/damage";
 
 export const dynamic = "force-dynamic";
 
@@ -42,9 +43,14 @@ export default async function PlayerTableItemsPage({ params }: { params: Promise
                 <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
                   <span className="inline-flex items-center gap-1 bg-red-900/40 border border-red-700/50 text-red-300 px-2 py-0.5 rounded">
                     <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14.121 14.121L19 19m-7-7l7-7m-7 7l-2.879 2.879M12 12L9.121 9.121m0 5.758a3 3 0 10-4.243 4.243 3 3 0 004.243-4.243zm0-5.758a3 3 0 10-4.243-4.243 3 3 0 004.243 4.243z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14.121 14.121L19 19m-7-7l7-7m-7 7l-2.879 2.879M12 12L9.121 9.121m0 5.758a3 3 0 10-4.243 4.243 3 3 0 004.243-4.243zm0-5.758a3 3 0 10-4.243-4.243 3 3 0 004.243-4.243z" />
                     </svg>
-                    {i.damage_value || "—"}
+                    {(() => {
+                      const entries = parseDamageEntries(i.damage_value);
+                      if (entries.length === 0) return i.damage_value || "\u2014";
+                      const types = Array.from(new Set(entries.map((e) => e.type)));
+                      return `${entries.length} entries (${types.join(", ")})`;
+                    })()}
                   </span>
                   {i.damage_range ? <span className="text-zinc-500">{i.damage_range}</span> : null}
                   {i.damage_type ? <span className="text-zinc-600">{i.damage_type}{i.damage_subtype ? `/${i.damage_subtype}` : ""}</span> : null}

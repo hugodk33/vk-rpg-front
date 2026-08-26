@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { GameTableItems, Item } from "@/lib/types";
 import TableTabs from "@/components/TableTabs";
 import { api } from "@/lib/api";
+import { parseDamageEntries } from "@/lib/damage";
 
 const TYPE_BADGES: Record<number, { label: string; class: string }> = {
   1: { label: "Weapon", class: "bg-red-400/10 text-red-400 border border-red-400/20" },
@@ -127,9 +128,15 @@ export default function TableItemsPage({ params }: { params: Promise<{ id: strin
                     {i.damage_id ? (
                       <span className="inline-flex items-center gap-1 text-[10px] text-red-400 bg-red-400/10 px-1.5 py-0.5 rounded">
                         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14.121 14.121L19 19m-7-7l7-7m-7 7l-2.879 2.879M12 12L9.121 9.121m0 5.758a3 3 0 10-4.243 4.243 3 3 0 004.243-4.243zm0-5.758a3 3 0 10-4.243-4.243 3 3 0 004.243 4.243z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14.121 14.121L19 19m-7-7l7-7m-7 7l-2.879 2.879M12 12L9.121 9.121m0 5.758a3 3 0 10-4.243 4.243 3 3 0 004.243-4.243zm0-5.758a3 3 0 10-4.243-4.243 3 3 0 004.243-4.243z" />
                         </svg>
-                        {i.damage_value || "—"} {i.damage_name || ""}
+                        {(() => {
+                          const entries = parseDamageEntries(i.damage_value);
+                          if (entries.length === 0) return i.damage_value || "\u2014";
+                          const types = Array.from(new Set(entries.map((e) => e.type)));
+                          return `${entries.length} entries (${types.join(", ")})`;
+                        })()}
+                        {i.damage_name ? ` ${i.damage_name}` : ""}
                       </span>
                     ) : null}
                     {i.armor_id ? (

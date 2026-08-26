@@ -128,7 +128,6 @@ export default function SessionClient({
   const [diceType, setDiceType] = useState("6");
   const [diceCount, setDiceCount] = useState(3);
   const [diceMod, setDiceMod] = useState(0);
-  const [actChar, setActChar] = useState("");
   const [actSkill, setActSkill] = useState("dx");
   const [rolls, setRolls] = useState<number[]>([]);
   const [total, setTotal] = useState<number | null>(null);
@@ -136,7 +135,8 @@ export default function SessionClient({
   const [actTarget, setActTarget] = useState("");
   const [actDesc, setActDesc] = useState("");
 
-  const selectedChar = characters.find((c) => c.id === actChar);
+  const actorCharId = pendingQueue[0]?.character_id || "";
+  const selectedChar = characters.find((c) => c.id === actorCharId);
   const attrib = (): number => {
     if (!selectedChar) return 10;
     const attr = actSkill as "st" | "dx" | "iq" | "ht";
@@ -237,8 +237,8 @@ export default function SessionClient({
   }
 
   async function addAction() {
-    if (!actChar) {
-      alert("Select a character");
+    if (!actorCharId) {
+      alert("No one is up in the queue");
       return;
     }
     if (!actDesc) {
@@ -247,7 +247,7 @@ export default function SessionClient({
     }
     const payload = {
       narrations_id: null,
-      character_id: actChar,
+      character_id: actorCharId,
       description: actDesc,
       dice_roll: actRoll || null,
       queue: 1,
@@ -263,14 +263,13 @@ export default function SessionClient({
       const j = await res.json();
       if (j.success) {
         try {
-          await advanceQueue(actChar);
+          await advanceQueue(actorCharId);
         } catch {
           /* ignore */
         }
         setActDesc("");
         setActRoll("");
         setActTarget("");
-        setActChar("");
         router.refresh();
       } else {
         alert("Error: " + (j.error || "Unknown"));
@@ -515,19 +514,24 @@ export default function SessionClient({
             <div className="space-y-3">
               {!isPlayer ? (
                 <div>
-                  <label className="text-xs text-zinc-500 uppercase tracking-wider block mb-1">Character</label>
-                  <select
-                    value={actChar}
-                    onChange={(e) => setActChar(e.target.value)}
-                    className={inputCls}
+                  <label className="text-xs text-zinc-500 uppercase tracking-wider block mb-1">Acting now</label>
+                  <p
+                    aria-live="polite"
+                    className="bg-zinc-800/40 border border-zinc-700/50 rounded-lg px-3 py-2 text-sm text-zinc-100"
                   >
-                    <option value="">—</option>
-                    {characters.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name || c.username || "Unknown"}
-                      </option>
-                    ))}
-                  </select>
+                    {actorCharId ? (
+                      <>
+                        {charName(actorCharId)}
+                        {npcIds.includes(actorCharId) ? (
+                          <span className="ml-2 text-[10px] uppercase tracking-wider bg-zinc-700/60 text-zinc-300 px-1.5 py-0.5 rounded align-middle">
+                            NPC
+                          </span>
+                        ) : null}
+                      </>
+                    ) : (
+                      <span className="text-zinc-500">Queue is empty</span>
+                    )}
+                  </p>
                 </div>
               ) : null}
               <div>
