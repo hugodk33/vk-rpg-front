@@ -11,12 +11,12 @@ type Judgment = {
 };
 
 function judge(sum: number): Judgment {
-  if (sum <= 4) return { crit: true, success: true, text: "Sucesso crítico!" };
-  if (sum >= 18) return { crit: true, success: false, text: "Falha crítica." };
+  if (sum <= 4) return { crit: true, success: true, text: "Critical success!" };
+  if (sum >= 18) return { crit: true, success: false, text: "Critical failure." };
   const margin = TARGET - sum;
   return margin >= 0
-    ? { crit: false, success: true, text: `Bem-sucedido por ${margin}.` }
-    : { crit: false, success: false, text: `Falhou por ${-margin}.` };
+    ? { crit: false, success: true, text: `Succeeded by ${margin}.` }
+    : { crit: false, success: false, text: `Failed by ${-margin}.` };
 }
 
 export default function DiceRoller() {
@@ -56,10 +56,10 @@ export default function DiceRoller() {
     <div className="flex h-full flex-col border-2 border-ink/80 bg-paper-dim/50 p-5">
       <div className="flex items-baseline justify-between gap-3">
         <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-pencil">
-          Teste contra {TARGET}-
+          Test against {TARGET}-
         </p>
         <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-pencil">
-          role baixo
+          roll low
         </p>
       </div>
 
@@ -90,7 +90,7 @@ export default function DiceRoller() {
               <span className="uppercase">{judgment.text}</span>
             </>
           ) : (
-            <span className="text-pencil">role 3d6 e tire {TARGET} ou menos</span>
+            <span className="text-pencil">roll 3d6 and get {TARGET} or less</span>
           )}
         </p>
       </div>
@@ -100,8 +100,8 @@ export default function DiceRoller() {
         role="img"
         aria-label={
           history.length > 0
-            ? `Distribuição de ${history.length} rolagens, de 3 a 18`
-            : "Distribuição vazia das rolagens"
+            ? `Distribution of ${history.length} rolls, from 3 to 18`
+            : "Empty distribution of rolls"
         }
       >
         {Array.from({ length: 16 }, (_, i) => {
@@ -126,7 +126,7 @@ export default function DiceRoller() {
       </div>
       <div className="mt-1.5 flex justify-between font-mono text-[10px] uppercase tracking-[0.18em] text-pencil">
         <span>3</span>
-        <span>{history.length === 0 ? "a curva aparece quando você rola" : `${history.length} rolagens`}</span>
+        <span>{history.length === 0 ? "the curve appears as you roll" : `${history.length} rolls`}</span>
         <span>18</span>
       </div>
 
@@ -136,7 +136,7 @@ export default function DiceRoller() {
           onClick={roll}
           className="stretch-form bg-ink px-6 py-2.5 text-sm font-bold uppercase tracking-wide text-paper transition-colors hover:bg-stamp"
         >
-          Rolar 3d6
+          Roll 3d6
         </button>
         {history.length > 0 && (
           <button
@@ -144,7 +144,7 @@ export default function DiceRoller() {
             onClick={reset}
             className="font-mono text-xs uppercase tracking-[0.14em] text-pencil underline underline-offset-4 hover:text-stamp"
           >
-            zerar
+            Clear
           </button>
         )}
       </div>

@@ -45,6 +45,9 @@ const ATTR_NAMES: Array<{ key: "st" | "dx" | "iq" | "ht"; label: string; color: 
   const ENCUMBRANCE_LABELS = ["None", "Light", "Medium", "Heavy", "Extra-Heavy"];
   const BODY_LOCATIONS = ["Head", "Torso", "Arms", "Legs", "Full Body"];
 
+const isArmorish = (item?: Item | null): boolean =>
+  item?.kind === "armor" || item?.kind === "shield";
+
 type SkillType = "Physical" | "Mental";
 type SkillDifficulty = "Easy" | "Medium" | "Hard" | "Very Hard";
 
@@ -155,7 +158,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
   const [splitSkills, setSplitSkills] = useState(false);
   const [splitItems, setSplitItems] = useState(false);
   const [activeTab, setActiveTab] = useState<"bio" | "sheet" | "items">("bio");
-  const [equipped, setEquipped] = useState<Record<string, { fit?: string; dr?: number }>>({});
+  const [equipped, setEquipped] = useState<Record<string, { status?: string; location?: string }>>({});
 
   const [users, setUsers] = useState<UserOption[]>([]);
   const [available, setAvailable] = useState<{
@@ -337,7 +340,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
         return (data?.items ?? []).map((item: Item) => ({
           id: item.id,
           name: item.name,
-          meta: [item.category, item.type != null ? `Type #${item.type}` : null, item.weight != null ? `${item.weight} kg` : null].filter(Boolean).join(" · ") || undefined,
+          meta: [item.category, item.kind, item.weight_lb != null ? `${item.weight_lb} lb` : null].filter(Boolean).join(" · ") || undefined,
           description: item.description,
         }));
       }
@@ -363,7 +366,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
   const basicSpeed = (attrs.dx + attrs.ht) / 4;
   const itemsWeight = selItems.reduce((sum, s) => {
     const item = available.items.find((i) => i.id === s.id);
-    return sum + (item?.weight ?? 0);
+    return sum + (item?.weight_lb ?? 0);
   }, 0);
   const encumbranceValue =
     itemsWeight <= attrs.st * 2
@@ -435,7 +438,12 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
           advantages,
           disadvantages,
           skills,
-          items: selItems.map((i) => ({ item_id: i.id })),
+          equipment: selItems.map((i) => ({
+            item_id: i.id,
+            quantity: 1,
+            status: equipped[i.id]?.status || "in_inventory",
+            location: equipped[i.id]?.location || "none",
+          })),
           peculiarities,
         });
         router.push(`/character/${result.character_id}`);
@@ -1099,13 +1107,11 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
             </div>
 
             {(() => {
-              const armorItems = selItems.filter((s) => {
-                const item = available.items.find((i) => i.id === s.id);
-                return item?.type === 2 || item?.type === 3;
-              });
+              const armorItems = selItems.filter((s) => isArmorish(available.items.find((i) => i.id === s.id)));
               const armors = armorItems.map((s) => {
+                const item = available.items.find((i) => i.id === s.id);
                 const eq = equipped[s.id];
-                return { id: s.id, name: s.name, fit: eq?.fit, value: eq?.dr != null ? `DR ${eq.dr}` : undefined };
+                return { id: s.id, name: s.name, fit: eq?.location, value: item?.armor?.dr != null ? `DR ${item.armor.dr}` : undefined };
               });
               return (
                 <div className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-5">
@@ -1176,17 +1182,11 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
             })()}
           </div>
 
-          {selItems.some((s) => {
-            const item = available.items.find((i) => i.id === s.id);
-            return item?.type === 2 || item?.type === 3;
-          }) ? (
+          {selItems.some((s) => isArmorish(available.items.find((i) => i.id === s.id))) ? (
             <div className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-5 mt-4">
               <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-3">Equip</h3>
               <div className="space-y-3">
-                {selItems.filter((s) => {
-                  const item = available.items.find((i) => i.id === s.id);
-                  return item?.type === 2 || item?.type === 3;
-                }).map((s) => {
+                {selItems.filter((s) => isArmorish(available.items.find((i) => i.id === s.id))).map((s) => {
                   const item = available.items.find((i) => i.id === s.id);
                   const eq = equipped[s.id];
                   return (
@@ -1196,38 +1196,43 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
                         </svg>
                         <span className="text-sm font-medium text-zinc-200 flex-1 truncate">{s.name}</span>
-                        {item?.weight != null ? <span className="text-[10px] text-zinc-500">{item.weight} kg</span> : null}
+                        {item?.weight_lb != null ? <span className="text-[10px] text-zinc-500">{item.weight_lb} lb</span> : null}
+                        {item?.armor?.dr != null ? <span className="text-[10px] text-cyan-400">DR {item.armor.dr}</span> : null}
                       </div>
-                      <div className="grid grid-cols-3 gap-2 items-center">
-                        <div className="col-span-2">
+                      <div className="grid grid-cols-2 gap-2 items-center">
+                        <div>
+                          <label className="text-[10px] text-zinc-500 uppercase block mb-0.5">Status</label>
                           <select
-                            value={eq?.fit ?? ""}
-                            onChange={(e) => setEquipped((prev) => ({ ...prev, [s.id]: { ...prev[s.id], fit: e.target.value || undefined } }))}
+                            value={eq?.status ?? ""}
+                            onChange={(e) => setEquipped((prev) => ({ ...prev, [s.id]: { ...prev[s.id], status: e.target.value || undefined } }))}
                             className="w-full bg-zinc-800 border border-zinc-600 rounded px-2 py-1 text-xs text-zinc-200"
                           >
-                            <option value="">Not equipped</option>
+                            <option value="">—</option>
+                            <option value="equipped">Equipped</option>
+                            <option value="wielded">Wielded</option>
+                            <option value="in_inventory">In inventory</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-zinc-500 uppercase block mb-0.5">Location</label>
+                          <select
+                            value={eq?.location ?? ""}
+                            onChange={(e) => setEquipped((prev) => ({ ...prev, [s.id]: { ...prev[s.id], location: e.target.value || undefined } }))}
+                            className="w-full bg-zinc-800 border border-zinc-600 rounded px-2 py-1 text-xs text-zinc-200"
+                          >
+                            <option value="">None</option>
                             {BODY_LOCATIONS.map((loc) => (
                               <option key={loc} value={loc}>{loc}</option>
                             ))}
                           </select>
                         </div>
-                        <div>
-                          <input
-                            type="number"
-                            min={0}
-                            value={eq?.dr ?? ""}
-                            onChange={(e) => setEquipped((prev) => ({ ...prev, [s.id]: { ...prev[s.id], dr: e.target.value === "" ? undefined : Number(e.target.value) } }))}
-                            placeholder="DR"
-                            className="w-full bg-zinc-800 border border-zinc-600 rounded px-2 py-1 text-xs text-zinc-200 text-center"
-                          />
-                        </div>
                       </div>
-                      {eq?.fit ? (
+                      {eq?.status === "equipped" || eq?.status === "wielded" ? (
                         <div className="flex items-center gap-1 mt-2">
                           <svg className="w-3 h-3 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                           </svg>
-                          <span className="text-[10px] text-emerald-400">Equipped — {eq.fit}</span>
+                          <span className="text-[10px] text-emerald-400">{eq.status === "wielded" ? "Wielded" : "Equipped"}{eq.location ? ` — ${eq.location}` : ""}</span>
                         </div>
                       ) : null}
                     </div>
@@ -1265,9 +1270,8 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                         key={item.id}
                         rows={[
                           { label: "Category", value: item.category },
-                          { label: "Type", value: item.type != null ? `#${item.type}` : undefined },
-                          { label: "Weight", value: item.weight != null ? `${item.weight} kg` : undefined },
-                          { label: "Dimensions", value: item.dimensions },
+                          { label: "Kind", value: item.kind },
+                          { label: "Weight", value: item.weight_lb != null ? `${item.weight_lb} lb` : undefined },
                           { label: "Quality", value: item.quality },
                           { label: "Condition", value: item.condition },
                           { label: "Description", value: item.description },
@@ -1288,8 +1292,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                             <div className="text-sm font-medium text-zinc-200 truncate">{item.name || "Unnamed"}</div>
                             <div className="text-xs text-zinc-500 truncate">
                               {[item.category, item.quality, item.condition].filter(Boolean).join(" · ") || ""}
-                              {item.weight != null ? ` · ${item.weight} kg` : ""}
-                              {item.dimensions ? ` · ${item.dimensions}` : ""}
+                              {item.weight_lb != null ? ` · ${item.weight_lb} lb` : ""}
                             </div>
                             {item.description ? <div className="text-xs text-zinc-500 truncate">{item.description}</div> : null}
                           </div>
@@ -1333,7 +1336,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
               </svg>
               <label className={labelCls}>
-                Encumbrance — {ENCUMBRANCE_LABELS[encumbranceValue]} ({itemsWeight.toFixed(1)} kg carried)
+                Encumbrance — {ENCUMBRANCE_LABELS[encumbranceValue]} ({itemsWeight.toFixed(1)} lb carried)
               </label>
             </div>
             <div className="mt-2 grid grid-cols-5 gap-1">
@@ -1348,7 +1351,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                     }`}
                   >
                     {label}
-                    <div className="text-[10px] text-zinc-500">{i === 0 ? "0" : `>${threshold} kg`}</div>
+                    <div className="text-[10px] text-zinc-500">{i === 0 ? "0" : `>${threshold} lb`}</div>
                   </div>
                 );
               })}
@@ -1414,20 +1417,16 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                       ].map((c) => ({ value: c, label: c })),
                     },
                     {
-                      key: "type",
-                      label: "Type",
+                      key: "kind",
+                      label: "Kind",
                       options: [
                         ...new Map(
                           available.items
-                            .filter((x) => x.type != null)
-                            .map((x) => [x.type!, x.type!])
+                            .filter((x) => !!x.kind)
+                            .map((x) => [x.kind!, x.kind!])
                         ).entries(),
                       ]
-                        .sort(([a], [b]) => a - b)
-                        .map(([, n]) => ({
-                          value: String(n),
-                          label: ["Weapon", "Armor", "Equipment"][n - 1] || `Type #${n}`,
-                        })),
+                        .map(([, n]) => ({ value: String(n), label: String(n) })),
                     },
                   ]
                 : [

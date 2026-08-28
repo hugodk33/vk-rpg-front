@@ -5,12 +5,12 @@ import Link from "next/link";
 import type { GameTableItems, Item } from "@/lib/types";
 import TableTabs from "@/components/TableTabs";
 import { api } from "@/lib/api";
-import { parseDamageEntries } from "@/lib/damage";
 
-const TYPE_BADGES: Record<number, { label: string; class: string }> = {
-  1: { label: "Weapon", class: "bg-red-400/10 text-red-400 border border-red-400/20" },
-  2: { label: "Armor", class: "bg-cyan-400/10 text-cyan-400 border border-cyan-400/20" },
-  3: { label: "Equipment", class: "bg-amber-400/10 text-amber-400 border border-amber-400/20" },
+const KIND_BADGES: Record<string, { label: string; class: string }> = {
+  weapon: { label: "Weapon", class: "bg-red-400/10 text-red-400 border border-red-400/20" },
+  shield: { label: "Shield", class: "bg-orange-400/10 text-orange-400 border border-orange-400/20" },
+  armor: { label: "Armor", class: "bg-cyan-400/10 text-cyan-400 border border-cyan-400/20" },
+  equipment: { label: "Equipment", class: "bg-amber-400/10 text-amber-400 border border-amber-400/20" },
 };
 
 export default function TableItemsPage({ params }: { params: Promise<{ id: string }> }) {
@@ -28,12 +28,12 @@ export default function TableItemsPage({ params }: { params: Promise<{ id: strin
     return (i.name ?? "").toLowerCase().includes(q)
       || (i.description ?? "").toLowerCase().includes(q)
       || (i.category ?? "").toLowerCase().includes(q)
-      || (i.damage_name ?? "").toLowerCase().includes(q)
-      || (i.armor_name ?? "").toLowerCase().includes(q);
+      || ((i.kind ?? "") as string).toLowerCase().includes(q);
   });
 
-  const typeCounts = (data?.items ?? []).reduce<Record<number, number>>((acc, i) => {
-    if (i.type) acc[i.type] = (acc[i.type] ?? 0) + 1;
+  const kindCounts = (data?.items ?? []).reduce<Record<string, number>>((acc, i) => {
+    const k = i.kind;
+    if (k) acc[k] = (acc[k] ?? 0) + 1;
     return acc;
   }, {});
 
@@ -48,8 +48,8 @@ export default function TableItemsPage({ params }: { params: Promise<{ id: strin
 
       <div className="flex items-center gap-3 mb-6 text-xs text-zinc-500">
         <span>{items.length} item{items.length !== 1 ? "s" : ""}</span>
-        {Object.entries(typeCounts).map(([t, c]) => {
-          const badge = TYPE_BADGES[Number(t)];
+        {Object.entries(kindCounts).map(([t, c]) => {
+          const badge = KIND_BADGES[t];
           return badge ? (
             <span key={t} className={`px-1.5 py-0.5 rounded ${badge.class}`}>
               {c} {badge.label}{c !== 1 ? "s" : ""}
@@ -88,7 +88,7 @@ export default function TableItemsPage({ params }: { params: Promise<{ id: strin
       ) : (
         <div className="space-y-2">
           {items.map((i: Item) => {
-            const typeBadge = i.type ? TYPE_BADGES[i.type] : null;
+            const kindBadge = i.kind ? KIND_BADGES[i.kind] : null;
             return (
               <Link
                 key={i.id}
@@ -105,13 +105,13 @@ export default function TableItemsPage({ params }: { params: Promise<{ id: strin
                     </span>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    {typeBadge ? (
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded ${typeBadge.class}`}>
-                        {typeBadge.label}
+                    {kindBadge ? (
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded ${kindBadge.class}`}>
+                        {kindBadge.label}
                       </span>
                     ) : null}
-                    {i.weight ? (
-                      <span className="text-[10px] text-zinc-500">{i.weight} kg</span>
+                    {i.weight_lb != null ? (
+                      <span className="text-[10px] text-zinc-500">{i.weight_lb} lb</span>
                     ) : null}
                   </div>
                 </div>
@@ -123,28 +123,22 @@ export default function TableItemsPage({ params }: { params: Promise<{ id: strin
                     <span className="text-[11px] text-zinc-600 truncate">— {i.description}</span>
                   ) : null}
                 </div>
-                {(i.damage_id || i.armor_id) ? (
+                {(i.weapon || i.armor) ? (
                   <div className="flex items-center gap-2 mt-1.5 ml-7">
-                    {i.damage_id ? (
+                    {i.weapon ? (
                       <span className="inline-flex items-center gap-1 text-[10px] text-red-400 bg-red-400/10 px-1.5 py-0.5 rounded">
                         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14.121 14.121L19 19m-7-7l7-7m-7 7l-2.879 2.879M12 12L9.121 9.121m0 5.758a3 3 0 10-4.243 4.243 3 3 0 004.243-4.243zm0-5.758a3 3 0 10-4.243-4.243 3 3 0 004.243-4.243z" />
                         </svg>
-                        {(() => {
-                          const entries = parseDamageEntries(i.damage_value);
-                          if (entries.length === 0) return i.damage_value || "\u2014";
-                          const types = Array.from(new Set(entries.map((e) => e.type)));
-                          return `${entries.length} entries (${types.join(", ")})`;
-                        })()}
-                        {i.damage_name ? ` ${i.damage_name}` : ""}
+                        {i.weapon.attacks?.length ? `${i.weapon.attacks.length} ataque${i.weapon.attacks.length !== 1 ? "s" : ""}` : "arma"}
                       </span>
                     ) : null}
-                    {i.armor_id ? (
+                    {i.armor ? (
                       <span className="inline-flex items-center gap-1 text-[10px] text-cyan-400 bg-cyan-400/10 px-1.5 py-0.5 rounded">
                         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                         </svg>
-                        DR {i.armor_value || "—"} {i.armor_name || ""}
+                        DR {i.armor.dr ?? "—"}
                       </span>
                     ) : null}
                   </div>

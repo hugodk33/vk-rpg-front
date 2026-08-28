@@ -1,7 +1,8 @@
+import { Fragment } from "react";
 import Link from "next/link";
-import type { CharacterViewer, Sheet } from "@/lib/types";
+import type { CharacterViewer, Sheet, Modifier } from "@/lib/types";
 import RadarChart from "@/components/RadarChart";
-import { parseDamageEntries, DAMAGE_TYPES } from "@/lib/damage";
+import { resolveAttack, DAMAGE_TYPES } from "@/lib/damage";
 
 function statDiff(base: number | undefined, current: number | undefined): React.ReactNode {
   if (base == null || current == null || base === current) return null;
@@ -15,70 +16,87 @@ function statDiff(base: number | undefined, current: number | undefined): React.
   );
 }
 
-function drFor(armors: Array<{ fit?: string; value?: string }> | undefined, ...fits: string[]): number {
-  let total = 0;
+function zoneInfo(
+  armors: Array<{ locations?: string; fit?: string; value?: string; dr?: number }> | undefined,
+  ...fits: string[]
+): { dr: number; fit?: string } {
+  let dr = 0;
+  let fit: string | undefined;
   for (const a of armors ?? []) {
-    if (fits.some((f) => a.fit?.toLowerCase()?.includes(f))) {
-      const m = /(\d+)/.exec(a.value ?? "");
-      if (m) total += parseInt(m[1], 10);
+    if (fits.some((f) => a.locations?.toLowerCase()?.includes(f))) {
+      if (a.dr != null) {
+        dr += a.dr;
+      } else {
+        const m = /(\d+)/.exec(a.value ?? "");
+        if (m) dr += parseInt(m[1], 10);
+      }
+      if (!fit && a.fit) fit = a.fit;
     }
   }
-  return total;
+  return { dr, fit };
 }
 
-function hitLocationBadge(label: string, dr: number, style: React.CSSProperties): React.ReactNode {
+function zoneBadge(
+  label: string,
+  info: { dr: number; fit?: string },
+  style: React.CSSProperties
+): React.ReactNode {
   return (
     <div
-      className="absolute flex flex-col items-center justify-center p-1 rounded border border-cyan-400/60"
-      style={{ ...style, width: 52, height: 44 }}
+      className="absolute flex flex-col items-center justify-center rounded border border-amber-400/40 bg-zinc-900/95"
+      style={{ width: 58, height: 36, ...style }}
     >
-      <span
-        className="text-zinc-400 uppercase"
-        style={{ fontSize: 7, lineHeight: 1, letterSpacing: 0.3 }}
-      >
+      <span className="text-zinc-500 uppercase leading-none" style={{ fontSize: 7, letterSpacing: 0.4 }}>
         {label}
       </span>
-      <span className="text-cyan-400 font-bold text-sm leading-none mt-0.5">{dr}</span>
+      <span className="text-amber-400 font-bold leading-none mt-1" style={{ fontSize: 15 }}>
+        DR {info.dr}
+      </span>
+      {info.fit ? (
+        <span className="text-zinc-500 uppercase leading-none mt-0.5" style={{ fontSize: 6, letterSpacing: 0.3 }}>
+          {info.fit}
+        </span>
+      ) : null}
     </div>
   );
 }
 
 function armorDiagram(armors: CharacterViewer["character"]["armors"]): React.ReactNode {
-  const head = drFor(armors, "head", "helmet", "skull");
-  const torso = drFor(armors, "torso", "chest", "body", "full body");
-  const armR = drFor(armors, "arm", "arms");
-  const armL = armR;
-  const legR = drFor(armors, "leg", "legs");
-  const legL = legR;
+  const head = zoneInfo(armors, "head", "helmet", "skull");
+  const torso = zoneInfo(armors, "torso", "chest", "body", "full body");
+  const armL = zoneInfo(armors, "arm", "arms");
+  const armR = armL;
+  const legL = zoneInfo(armors, "leg", "legs");
+  const legR = legL;
 
   return (
     <div className="relative flex justify-center py-12">
       <div className="relative">
-        <svg fill="#52525b" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" style={{ width: 90 }}>
+        <svg
+          fill="#52525b"
+          viewBox="0 0 512 512"
+          xmlns="http://www.w3.org/2000/svg"
+          style={{ width: 90 }}
+        >
           <circle cx="256" cy="56" r="56" />
           <path d="M437,128H75a27,27,0,0,0,0,54H176.88c6.91,0,15,3.09,19.58,15,5.35,13.83,2.73,40.54-.57,61.23l-4.32,24.45a.42.42,0,0,1-.12.35l-34.6,196.81A27.43,27.43,0,0,0,179,511.58a27.06,27.06,0,0,0,31.42-22.29l23.91-136.8S242,320,256,320c14.23,0,21.74,32.49,21.74,32.49l23.91,136.92a27.24,27.24,0,1,0,53.62-9.6L320.66,283a.45.45,0,0,0-.11-.35l-4.33-24.45c-3.3-20.69-5.92-47.4-.57-61.23,4.56-11.88,12.91-15,19.28-15H437a27,27,0,0,0,0-54Z" />
         </svg>
-        <div className="absolute inset-0 w-full">
-          {hitLocationBadge("head", head, { top: -54, left: "50%", transform: "translateX(-50%)" })}
-          {hitLocationBadge("a.rig", armR, { top: -32, right: -50 })}
-          {hitLocationBadge("a.lef", armL, { top: -32, left: -50 })}
-          {hitLocationBadge("torso", torso, { top: 23, width: 50, left: -45, height: 50 })}
-          {hitLocationBadge("l.rig", legR, { top: 85, right: -50 })}
-          {hitLocationBadge("l.lef", legL, { top: 85, left: -50 })}
-        </div>
+        {zoneBadge("Head", head, { top: -41, left: "50%", transform: "translateX(-50%)" })}
+        {zoneBadge("Right Arm", armR, { top: 2, right: -64 })}
+        {zoneBadge("Left Arm", armL, { top: 2, left: -64 })}
+        {zoneBadge("Torso", torso, { top: 48, left: -64 })}
+        {zoneBadge("Right Leg", legR, { top: 152, left: "50%", transform: "translateX(3px)" })}
+        {zoneBadge("Left Leg", legL, { top: 152, left: "50%", transform: "translateX(calc(-100% - 3px))" })}
       </div>
     </div>
   );
 }
 
-function section(title: string, content: React.ReactNode, icon?: React.ReactNode): React.ReactNode {
+function sectionTitle(title: string, icon?: React.ReactNode): React.ReactNode {
   return (
-    <div className="mb-6">
-      <div className="flex items-center gap-2 mb-3 border-b border-zinc-700/60 pb-1.5">
-        {icon || null}
-        <h2 className="text-lg font-bold uppercase tracking-wider text-zinc-300">{title}</h2>
-      </div>
-      {content}
+    <div className="flex items-center gap-2 mb-3 border-b border-zinc-700/60 pb-1.5">
+      {icon || null}
+      <h2 className="text-lg font-bold uppercase tracking-wider text-zinc-300">{title}</h2>
     </div>
   );
 }
@@ -94,6 +112,104 @@ function meleeIcon(): React.ReactNode {
       />
     </svg>
   );
+}
+
+function swordIcon(className = "w-4 h-4 text-amber-500"): React.ReactNode {
+  return (
+    <svg
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <polyline points="14.5 17.5 3 6 3 3 6 3 17.5 14.5" />
+      <line x1="13" y1="19" x2="19" y2="13" />
+      <line x1="16" y1="16" x2="21" y2="21" />
+      <line x1="21" y1="16" x2="16" y2="21" />
+    </svg>
+  );
+}
+
+function shieldIcon(className = "w-3.5 h-3.5 text-cyan-400"): React.ReactNode {
+  return (
+    <svg
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M12 3l7 2.5V10c0 4.6-3 7.9-7 9.5C8 17.9 5 14.6 5 10V5.5L12 3z" />
+      <path d="M9 12l2 2 4-4" />
+    </svg>
+  );
+}
+
+function axeIcon(className = "w-3.5 h-3.5 text-rose-400"): React.ReactNode {
+  return (
+    <svg
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M15 3l6 6-7 1-6-6 7-1z" />
+      <path d="M2 22l7-7" />
+      <path d="M14 9l-3-3" />
+    </svg>
+  );
+}
+
+function gunIcon(className = "w-3.5 h-3.5 text-emerald-400"): React.ReactNode {
+  return (
+    <svg
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M3 8h13l3 4v3h-4l-2 2H8v-2H3V8z" />
+      <path d="M9 8V6h4v2" />
+    </svg>
+  );
+}
+
+function bowIcon(className = "w-3.5 h-3.5 text-purple-400"): React.ReactNode {
+  return (
+    <svg
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M3 8h6a6 6 0 016 6v1" />
+      <path d="M3 16h6a6 6 0 006-6V9" />
+      <path d="M13 9l-8-3 8-3v6z" />
+    </svg>
+  );
+}
+
+function weaponIconFor(g: { kind?: string; category?: string; name: string }): React.ReactNode {
+  const hay = `${g.kind ?? ""} ${g.category ?? ""} ${g.name}`.toLowerCase();
+  if (/shield|buckler/.test(hay)) return shieldIcon();
+  if (/axe|hatchet|tomahawk|cleaver/.test(hay)) return axeIcon();
+  if (/bow|arrow|crossbow|sling|staff/.test(hay)) return bowIcon();
+  if (/gun|pistol|rifle|revolver|shotgun|musket|carbine|ranged|firearm/.test(hay)) return gunIcon();
+  return swordIcon("w-3.5 h-3.5 text-amber-400");
 }
 
 function rangedIcon(): React.ReactNode {
@@ -126,7 +242,7 @@ function hpPct(hp: number | undefined, base: number | undefined): number {
 }
 
 function fpPct(fatigue: number | undefined, ht: number | undefined): number {
-  return Math.min(100, ((fatigue || 0) / (ht || 1)) * 100);
+  return Math.min(100, Math.max(0, ((fatigue || 0) / (ht || 1)) * 100));
 }
 
 const attrCards = [
@@ -160,6 +276,13 @@ const attrCards = [
   },
 ];
 
+function activeEffects(m: Modifier): boolean {
+  return (
+    m.mod_hp != null || m.mod_st != null || m.mod_dx != null ||
+    m.mod_iq != null || m.mod_ht != null || m.mod_fatigue != null
+  );
+}
+
 interface CharacterSheetProps {
   data: CharacterViewer;
   basePath: string;
@@ -173,27 +296,73 @@ export default function CharacterSheet({ data, basePath }: CharacterSheetProps) 
   const moments = data.moments ?? [];
   const selectedMoment = data.selected_moment;
   const hasBottom = moments.length > 0 || modifiers.length > 0;
+  const effects = modifiers.filter(activeEffects);
+
+  const weaponGroups = (ch.items ?? [])
+    .filter((it) => it.weapon && it.weapon.attacks.length > 0)
+    .map((it) => ({
+      name: it.name || "Unnamed",
+      kind: it.kind,
+      category: it.category,
+      quality: it.quality,
+      condition: it.condition,
+      location: it.equipment_location || it.equipment_status,
+      weapon: it.weapon!,
+    }));
+
+  const parseDefense = (val?: string | null): number | null => {
+    if (!val) return null;
+    const n = parseFloat(val);
+    return Number.isFinite(n) ? n : null;
+  };
+
+  const passive = (() => {
+    const dx = s?.dx ?? 10;
+    const parryVals = (ch.items ?? [])
+      .map((i) => parseDefense(i.weapon?.parry))
+      .filter((n): n is number => n != null);
+    const blockVals = (ch.items ?? [])
+      .map((i) => parseDefense(i.weapon?.block))
+      .filter((n): n is number => n != null);
+    const parry = parryVals.length ? Math.max(...parryVals) : Math.floor(dx / 2) + 3;
+    const block = blockVals.length ? Math.max(...blockVals) : Math.floor(dx / 2) + 3;
+    const dodge = Math.round(((s?.basic_speed ?? 0) + 3) * 10) / 10;
+    return { parry, block, dodge };
+  })();
+
+  const fittedArmors = (ch.items ?? [])
+    .filter((it) => it.armor)
+    .map((it) => ({
+      id: it.armor?.id || it.id,
+      name: it.name || it.armor?.locations || "Armor",
+      dr: it.armor?.dr ?? 0,
+      fit: it.armor?.fit || it.armor?.locations || "",
+      status: it.equipment_status || "Equipped",
+      locations: it.equipment_location || it.armor?.locations || "",
+    }));
 
   return (
     <>
       <div className="bg-zinc-900/90 border border-zinc-700/50 shadow-2xl overflow-hidden">
-        <div className="py-4 pl-4">
-          <h1 className="text-3xl font-bold text-amber-100 tracking-tight">{name}</h1>
-          {s?.bio ? <p className="text-xl text-zinc-400 mt-1">{s.bio}</p> : null}
-          {s?.backstory ? <p className="text-zinc-500 text-sm mt-1">{s.backstory}</p> : null}
-          <div className="flex mt-3 gap-1 items-center">
-            <span className="text-zinc-500 text-xs font-semibold uppercase tracking-wider">Points</span>
-            <p className="text-amber-400 font-bold text-xl">{s?.points ?? "0"}</p>
+        <div className="flex flex-wrap items-start justify-between gap-4 px-6 pt-6">
+          <div>
+            <h1 className="text-3xl font-bold text-amber-100 tracking-tight">{name}</h1>
+            {s?.bio ? <p className="text-lg text-zinc-400 mt-1">{s.bio}</p> : null}
+            {s?.backstory ? <p className="text-zinc-500 text-sm mt-1 max-w-2xl">{s.backstory}</p> : null}
+          </div>
+          <div className="flex flex-col items-end">
+            <span className="text-zinc-500 text-xs font-semibold uppercase tracking-wider">Build Points</span>
+            <p className="text-amber-400 font-bold text-2xl leading-none mt-1">{s?.points ?? "0"}</p>
           </div>
         </div>
 
         <div className="p-6">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-1 mb-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div>
               <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-3">
                 Core Attributes
               </h3>
-              <div className="flex justify-center flex-wrap gap-1 mb-4">
+              <div className="flex justify-center flex-wrap gap-1 mb-6">
                 {attrCards.map((a) => (
                   <div
                     key={a.label}
@@ -206,12 +375,7 @@ export default function CharacterSheet({ data, basePath }: CharacterSheetProps) 
                       stroke="currentColor"
                       viewBox="0 0 24 24"
                     >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d={a.svg}
-                      />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={a.svg} />
                     </svg>
                     <span className={`${a.color} text-xl font-bold`}>
                       {s ? a.value(s) ?? "-" : "-"}
@@ -221,15 +385,14 @@ export default function CharacterSheet({ data, basePath }: CharacterSheetProps) 
                   </div>
                 ))}
               </div>
-              <br />
-              <div className="flex justify-center pb-10">
+              <div className="flex justify-center">
                 {s ? (
                   <RadarChart
                     st={s.st ?? 10}
                     dx={s.dx ?? 10}
                     iq={s.iq ?? 10}
                     ht={s.ht ?? 10}
-                    size={165}
+                    size={180}
                     showValues
                   />
                 ) : null}
@@ -240,202 +403,261 @@ export default function CharacterSheet({ data, basePath }: CharacterSheetProps) 
               <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-3">
                 Vitals
               </h3>
-              <div className="flex flex-wrap items-center gap-x-6 gap-y-2 mb-4">
-                <div className="flex items-center gap-2 w-full">
-                  <div className="flex w-full items-center">
-                    <span className="flex justify-between items-center pr-2 w-2/5">
-                      <span className="text-zinc-500 text-xs font-semibold uppercase">HP </span>
-                      <span className="text-red-400 font-bold text-lg ml-1">
-                        {s?.hp ?? "-"}/{s?.base_hp ?? "-"}
-                      </span>
-                    </span>
-                    <div className="w-3/5 bg-zinc-700/50 rounded-full h-2">
-                      <div
-                        className="bg-red-500/80 h-2 rounded-full"
-                        style={{ width: `${hpPct(s?.hp, s?.base_hp)}%` }}
-                      />
-                    </div>
+              <div className="space-y-4">
+                <div className="flex w-full items-center gap-2">
+                  <span className="w-16 text-zinc-500 text-xs font-semibold uppercase shrink-0">HP</span>
+                  <span className="text-red-400 font-bold text-lg shrink-0">
+                    {s?.hp ?? "-"}
+                    <span className="text-zinc-500 font-medium text-sm">/{s?.base_hp ?? "-"}</span>
+                  </span>
+                  <div className="w-full bg-zinc-700/50 rounded-full h-2">
+                    <div
+                      className="bg-red-500/80 h-2 rounded-full"
+                      style={{ width: `${hpPct(s?.hp, s?.base_hp)}%` }}
+                    />
                   </div>
                 </div>
-                <div className="flex items-center gap-2 w-full">
-                  <div className="flex w-full items-center">
-                    <span className="flex justify-between items-center pr-2 w-2/5">
-                      <span className="text-zinc-500 text-xs font-semibold uppercase">FP </span>
-                      <span className="text-blue-400 font-bold text-lg ml-1">{s?.fatigue ?? "-"}</span>
+
+                {effects.length > 0 ? (
+                  <div className="space-y-1.5">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-rose-400/80">
+                      Active effects
                     </span>
-                    <div className="w-3/5 bg-zinc-700/50 rounded-full h-2">
+                    {effects.map((m) => (
                       <div
-                        className="bg-blue-500/80 h-2 rounded-full"
-                        style={{ width: `${fpPct(s?.fatigue, s?.ht)}%` }}
-                      />
-                    </div>
+                        key={m.id}
+                        className="flex items-center gap-2 text-xs bg-rose-500/10 border border-rose-500/30 rounded-lg px-2.5 py-1.5"
+                      >
+                        <span className="text-zinc-300 font-medium truncate">{m.name || "Effect"}</span>
+                        {m.mod_hp != null ? (
+                          <span className="text-red-400 font-semibold ml-auto">
+                            HP {m.mod_hp >= 0 ? "+" : ""}
+                            {m.mod_hp}
+                          </span>
+                        ) : null}
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+
+                <div className="flex w-full items-center gap-2">
+                  <span className="w-16 text-zinc-500 text-xs font-semibold uppercase shrink-0">FP</span>
+                  <span className="text-blue-400 font-bold text-lg shrink-0">
+                    {s?.fatigue ?? "-"}
+                    <span className="text-zinc-500 font-medium text-sm">/{s?.ht ?? "-"}</span>
+                  </span>
+                  <div className="w-full bg-zinc-700/50 rounded-full h-2">
+                    <div
+                      className="bg-blue-500/80 h-2 rounded-full"
+                      style={{ width: `${fpPct(s?.fatigue, s?.ht)}%` }}
+                    />
                   </div>
                 </div>
               </div>
 
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-3">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 mt-6 mb-3">
                 Movement
               </h3>
-              <div className="flex justify-center flex-wrap gap-1">
-                <div className="flex flex-col items-center gap-1 p-2 bg-zinc-800/40 rounded-lg min-w-[72px]">
-                  <svg
-                    className="w-5 h-5 text-cyan-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M13 5l7 7-7 7M5 5l7 7-7 7"
-                    />
-                  </svg>
-                  <span className="text-cyan-400 text-sm font-bold">
-                    {s?.basic_speed ?? "-"}
-                    <span className="font-light">{s?.move ? " km/h" : ""}</span>
-                  </span>
-                  <span className="text-zinc-500 text-xs font-semibold uppercase">Basic Speed</span>
+              <div className="grid grid-cols-3 gap-1">
+                <div className="flex flex-col items-center gap-1 p-2 bg-zinc-800/40 rounded-lg">
+                  <span className="text-cyan-400 text-sm font-bold">{s?.basic_speed ?? "-"}</span>
+                  <span className="text-zinc-500 text-[10px] font-semibold uppercase text-center">Basic Speed</span>
                 </div>
-                <div className="flex flex-col items-center gap-1 p-2 bg-zinc-800/40 rounded-lg min-w-[72px]">
-                  <svg
-                    className="w-5 h-5 text-cyan-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M5 12h14M12 5l7 7-7 7"
-                    />
-                  </svg>
+                <div className="flex flex-col items-center gap-1 p-2 bg-zinc-800/40 rounded-lg">
                   <span className="text-cyan-400 text-sm font-bold">{s?.move ?? "-"}</span>
-                  <span className="text-zinc-500 text-xs font-semibold uppercase">Move</span>
+                  <span className="text-zinc-500 text-[10px] font-semibold uppercase text-center">Move</span>
                 </div>
-                <div className="flex flex-col items-center gap-1 p-2 bg-zinc-800/40 rounded-lg min-w-[72px]">
-                  <svg
-                    className="w-5 h-5 text-cyan-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"
-                    />
-                  </svg>
-                  <span className="text-cyan-400 text-sm font-bold">{s?.encumbrance ?? "-"}</span>
-                  <span className="text-zinc-500 text-xs font-semibold uppercase">Enc</span>
+                <div className="flex flex-col items-center gap-1 p-2 bg-zinc-800/40 rounded-lg">
+                  <span className="text-cyan-400 text-sm font-bold truncate max-w-full">
+                    {s?.encumbrance || "-"}
+                  </span>
+                  <span className="text-zinc-500 text-[10px] font-semibold uppercase text-center">Encumbrance</span>
+                </div>
+              </div>
+
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 mt-6 mb-3">
+                Passive Defenses
+              </h3>
+              <div className="grid grid-cols-3 gap-1">
+                <div className="flex flex-col items-center gap-1 p-2 bg-zinc-800/40 rounded-lg">
+                  <span className="text-amber-400 text-sm font-bold">{passive.parry}</span>
+                  <span className="text-zinc-500 text-[10px] font-semibold uppercase text-center">Parry</span>
+                </div>
+                <div className="flex flex-col items-center gap-1 p-2 bg-zinc-800/40 rounded-lg">
+                  <span className="text-amber-400 text-sm font-bold">{passive.block}</span>
+                  <span className="text-zinc-500 text-[10px] font-semibold uppercase text-center">Block</span>
+                </div>
+                <div className="flex flex-col items-center gap-1 p-2 bg-zinc-800/40 rounded-lg">
+                  <span className="text-amber-400 text-sm font-bold">{passive.dodge}</span>
+                  <span className="text-zinc-500 text-[10px] font-semibold uppercase text-center">Dodge</span>
                 </div>
               </div>
             </div>
 
             <div>
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-3">Body</h3>
-              {armorDiagram(ch.armors)}
-              <div className="space-y-1 mt-4 border-t border-zinc-700/40 pt-4">
-                {(ch.armors ?? []).map((a) => (
-                  <div key={a.id} className="flex justify-between text-xs">
-                    <span className="text-zinc-300">{a.name}</span>
-                    <span className="text-amber-400/80">
-                      {(a.value ?? "").replace("DR ", "")} {a.fit || ""}
-                    </span>
-                  </div>
-                ))}
-              </div>
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-3">
+                Offense
+              </h3>
+              {weaponGroups.length === 0 ? (
+                <p className="text-zinc-600 text-sm italic">No weapons equipped</p>
+              ) : (
+                weaponGroups.map((g, gi) => {
+                  const hand = g.weapon.handedness === 2 ? "2H" : g.weapon.handedness === 1 ? "1H" : "";
+                  const tags = [hand, g.weapon.reach ? `Reach ${g.weapon.reach}` : null]
+                    .filter(Boolean)
+                    .join(" · ");
+                  return (
+                    <Fragment key={g.weapon.id || g.name}>
+                      {gi > 0 ? (
+                        <hr className="border-0 border-t border-dotted border-zinc-600 my-3" />
+                      ) : null}
+                      <div className="mb-4">
+                        <div className="flex items-center gap-2 mb-1.5">
+                          <span className="shrink-0">{weaponIconFor(g)}</span>
+                          <span className="text-zinc-100 font-semibold text-sm">{g.name}</span>
+                          {g.location ? (
+                            <span className="ml-auto text-[10px] uppercase tracking-wide text-zinc-500">
+                              {g.location.replace(/_/g, " ")}
+                            </span>
+                          ) : null}
+                        </div>
+
+                        <div className="space-y-1 text-xs mb-2">
+                          {g.quality ? (
+                            <div className="flex items-center">
+                              <span className="w-20 shrink-0 text-zinc-500 uppercase tracking-wide">Quality</span>
+                              <span className="text-amber-400/90 capitalize">{g.quality}</span>
+                            </div>
+                          ) : null}
+                          {g.condition && g.condition !== "new" ? (
+                            <div className="flex items-center">
+                              <span className="w-20 shrink-0 text-zinc-500 uppercase tracking-wide">Condition</span>
+                              <span className="text-zinc-300 capitalize">{g.condition}</span>
+                            </div>
+                          ) : null}
+                          {tags ? (
+                            <div className="flex items-center">
+                              <span className="w-20 shrink-0 text-zinc-500 uppercase tracking-wide">Weapon</span>
+                              <span className="text-zinc-400 uppercase">{tags}</span>
+                            </div>
+                          ) : null}
+                        </div>
+
+                        <div className="space-y-1">
+                          {g.weapon.attacks.map((atk, ai) => {
+                            const resolved = resolveAttack(atk, s?.st ?? 10, g.weapon.rated_st);
+                            const ranged = isRanged(atk.range) || isRanged(atk.name);
+                            return (
+                              <div key={atk.id || `${g.weapon.id}-${ai}`} className="flex items-center gap-2 text-sm">
+                                <span className={ranged ? "text-cyan-400" : "text-red-400"}>
+                                  {ranged ? rangedIcon() : meleeIcon()}
+                                </span>
+                                <span className="text-zinc-300 font-medium">{atk.name || "Attack"}</span>
+                                {atk.usage ? <span className="text-zinc-500 text-xs">{atk.usage}</span> : null}
+                                <span className="text-red-400 font-bold ml-auto">{resolved}</span>
+                                <span className="text-zinc-400 text-xs">
+                                  {DAMAGE_TYPES[atk.damage_type] || atk.damage_type}
+                                </span>
+                                {atk.range ? (
+                                  <span className="text-zinc-500 text-xs">({atk.range})</span>
+                                ) : null}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </Fragment>
+                  );
+                })
+              )}
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
             <div>
-              {section(
+              {sectionTitle(
                 "Advantages",
-                !ch.advantages || ch.advantages.length === 0 ? (
-                  <p className="text-zinc-600 text-sm italic">None</p>
-                ) : (
-                  ch.advantages.map((a) => (
-                    <div
-                      key={a.id}
-                      className="bg-zinc-800/60 rounded-lg border border-zinc-700/40 px-3 py-2 flex justify-between items-center mb-1.5"
-                    >
+                <svg className="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                </svg>
+              )}
+              {!ch.advantages || ch.advantages.length === 0 ? (
+                <p className="text-zinc-600 text-sm italic">None</p>
+              ) : (
+                ch.advantages.map((a) => (
+                  <div
+                    key={a.id}
+                    className="bg-zinc-800/60 rounded-lg border border-zinc-700/40 px-3 py-2 mb-1.5"
+                  >
+                    <div className="flex justify-between items-center">
                       <span className="text-zinc-200 text-sm font-medium">{a.name}</span>
-                      <span className="text-emerald-400 text-xs font-semibold">{a.cost_points}</span>
+                      <span className="text-emerald-400 text-xs font-semibold">+{a.cost_points}</span>
                     </div>
-                  ))
-                ),
-                <svg
-                  className="w-4 h-4 text-amber-500"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
+                    {a.effect ? <p className="text-zinc-500 text-xs mt-0.5">{a.effect}</p> : null}
+                  </div>
+                ))
+              )}
+            </div>
+            <div>
+              {sectionTitle(
+                "Disadvantages",
+                <svg className="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              )}
+              {!ch.disadvantages || ch.disadvantages.length === 0 ? (
+                <p className="text-zinc-600 text-sm italic">None</p>
+              ) : (
+                ch.disadvantages.map((d) => (
+                  <div
+                    key={d.id}
+                    className="bg-zinc-800/60 rounded-lg border border-zinc-700/40 px-3 py-2 mb-1.5"
+                  >
+                    <div className="flex justify-between items-center">
+                      <span className="text-zinc-200 text-sm font-medium">{d.name}</span>
+                      <span className="text-red-400 text-xs font-semibold">{d.cost_points}</span>
+                    </div>
+                    {d.effect ? <p className="text-zinc-500 text-xs mt-0.5">{d.effect}</p> : null}
+                  </div>
+                ))
+              )}
+            </div>
+            <div>
+              {sectionTitle(
+                "Peculiarities",
+                <svg className="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth="2"
-                    d="M5 13l4 4L19 7"
+                    d="M12 3v1m0 16v1m9-10h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
                   />
                 </svg>
               )}
-            </div>
-            <div>
-              {section(
-                "Disadvantages",
-                !ch.disadvantages || ch.disadvantages.length === 0 ? (
-                  <p className="text-zinc-600 text-sm italic">None</p>
-                ) : (
-                  ch.disadvantages.map((d) => (
-                    <div
-                      key={d.id}
-                      className="bg-zinc-800/60 rounded-lg border border-zinc-700/40 px-3 py-2 flex justify-between items-center mb-1.5"
-                    >
-                      <span className="text-zinc-200 text-sm font-medium">{d.name}</span>
-                      <span className="text-red-400 text-xs font-semibold">{d.cost_points}</span>
+              {!ch.peculiarities || ch.peculiarities.length === 0 ? (
+                <p className="text-zinc-600 text-sm italic">None</p>
+              ) : (
+                ch.peculiarities.map((p) => (
+                  <div
+                    key={p.id}
+                    className="bg-zinc-800/60 rounded-lg border border-zinc-700/40 px-3 py-2 mb-1.5"
+                  >
+                    <div className="flex justify-between items-center">
+                      <span className="text-zinc-200 text-sm font-medium">{p.name}</span>
+                      <span className="text-cyan-400 text-xs font-semibold">{p.cost_points}</span>
                     </div>
-                  ))
-                ),
-                <svg
-                  className="w-4 h-4 text-amber-500"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                    {p.effect ? <p className="text-zinc-500 text-xs mt-0.5">{p.effect}</p> : null}
+                  </div>
+                ))
               )}
             </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
             <div>
-              {section(
+              {sectionTitle(
                 "Skills",
-                !ch.skills || ch.skills.length === 0 ? (
-                  <p className="text-zinc-600 text-sm italic">None</p>
-                ) : (
-                  ch.skills.map((sk) => (
-                    <div
-                      key={sk.id}
-                      className="bg-zinc-800/60 rounded-lg border border-zinc-700/40 px-3 py-2 mb-1.5"
-                    >
-                      <div className="flex justify-between items-center">
-                        <span className="text-zinc-200 text-sm font-medium">{sk.skill_name || sk.name}</span>
-                        <span className="text-zinc-500 text-xs">
-                          {sk.predefinition_type || ""}
-                          {sk.predefinition_difficulty ? "/" + sk.predefinition_difficulty : ""}
-                        </span>
-                      </div>
-                      {sk.effect ? <p className="text-zinc-500 text-xs mt-0.5">{sk.effect}</p> : null}
-                    </div>
-                  ))
-                ),
-                <svg
-                  className="w-4 h-4 text-amber-500"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
+                <svg className="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -444,125 +666,44 @@ export default function CharacterSheet({ data, basePath }: CharacterSheetProps) 
                   />
                 </svg>
               )}
-            </div>
-            <div>
-              {section(
-                "Attacks & Damage",
-                !ch.damages || ch.damages.length === 0 ? (
-                  <p className="text-zinc-600 text-sm italic">None</p>
-                ) : (
-                  ch.damages.map((d) => {
-                    const entries = parseDamageEntries(d.value);
-                    return (
-                      <div
-                        key={d.id}
-                        className="bg-zinc-800/60 rounded-lg border border-zinc-700/40 px-3 py-2 mb-1.5"
-                      >
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <span className="text-zinc-200 text-sm font-medium">{d.name || "Unnamed"}</span>
-                            {d.type ? (
-                              <span className="text-zinc-500 text-xs ml-1">
-                                {isMelee(d.type) ? meleeIcon() : null}
-                                {isRanged(d.type) ? rangedIcon() : null}
-                                {d.type}
-                                {d.subtype ? "/" + d.subtype : ""}
-                              </span>
-                            ) : null}
-                            {d.range ? <span className="text-zinc-500 text-xs ml-1">{d.range}</span> : null}
-                          </div>
-                          {entries.length === 0 ? (
-                            <span className="text-red-400 font-bold text-sm">{d.value || ""}</span>
-                          ) : null}
-                        </div>
-                        {entries.length > 0 ? (
-                          <div className="mt-2 overflow-x-auto">
-                            <table className="w-full text-xs">
-                              <thead>
-                                <tr className="border-b border-zinc-700/40">
-                                  <th className="text-left text-zinc-500 font-medium py-1 px-2">ST</th>
-                                  {Array.from(new Set(entries.map((e) => e.type))).map((t) => (
-                                    <th key={t} className="text-left text-zinc-500 font-medium py-1 px-2">
-                                      {DAMAGE_TYPES[t] || t}
-                                    </th>
-                                  ))}
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {Array.from(new Set(entries.map((e) => e.st)))
-                                  .sort((a, b) => a - b)
-                                  .map((st) => {
-                                    const row = entries.filter((e) => e.st === st);
-                                    const types = Array.from(new Set(entries.map((e) => e.type)));
-                                    return (
-                                      <tr key={st} className="border-b border-zinc-800/60">
-                                        <td className="text-zinc-300 font-mono py-1 px-2 tabular-nums">{st}</td>
-                                        {types.map((t) => {
-                                          const cell = row.find((e) => e.type === t);
-                                          return (
-                                            <td key={t} className="text-red-300 font-bold font-mono py-1 px-2">
-                                              {cell?.damage || "—"}
-                                            </td>
-                                          );
-                                        })}
-                                      </tr>
-                                    );
-                                  })}
-                              </tbody>
-                            </table>
-                          </div>
-                        ) : null}
-                        {d.description ? <p className="text-zinc-500 text-xs mt-0.5">{d.description}</p> : null}
-                      </div>
-                    );
-                  })
-                ),
-                <svg
-                  className="w-4 h-4 text-amber-500"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M14.121 14.121L19 19m-7-7l7-7m-7 7l-2.879 2.879M12 12L9.121 9.121m0 5.758a3 3 0 10-4.243 4.243 3 3 0 004.243-4.243zm0-5.758a3 3 0 10-4.243-4.243 3 3 0 004.243 4.243z"
-                  />
-                </svg>
-              )}
-            </div>
-            <div>
-              {section(
-                "Items",
-                !ch.items || ch.items.length === 0 ? (
-                  <p className="text-zinc-600 text-sm italic">None</p>
-                ) : (
-                  ch.items.map((i) => (
+              {!ch.skills || ch.skills.length === 0 ? (
+                <p className="text-zinc-600 text-sm italic">None</p>
+              ) : (
+                ch.skills.map((sk) => {
+                  const level = sk.value ?? null;
+                  return (
                     <div
-                      key={i.id}
+                      key={sk.id}
                       className="bg-zinc-800/60 rounded-lg border border-zinc-700/40 px-3 py-2 mb-1.5"
                     >
-                      <div className="flex justify-between items-start">
-                        <span className="text-zinc-200 text-sm font-medium">{i.name || "Unnamed"}</span>
-                        {i.weight ? <span className="text-zinc-500 text-xs">{i.weight} kg</span> : null}
+                      <div className="flex justify-between items-center">
+                        <span className="text-zinc-200 text-sm font-medium">{sk.skill_name || sk.name}</span>
+                        {level != null ? (
+                          <span className="text-amber-400 font-bold text-sm">{level}-</span>
+                        ) : (
+                          <span className="text-zinc-500 text-xs">
+                            {sk.predefinition_type || ""}
+                            {sk.predefinition_difficulty ? " / " + sk.predefinition_difficulty : ""}
+                          </span>
+                        )}
                       </div>
-                      <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1 text-xs text-zinc-500">
-                        {i.category ? <span>{i.category}</span> : null}
-                        {i.quality ? <span>{i.quality}</span> : null}
-                        {i.condition ? <span>{i.condition}</span> : null}
-                        {i.dimensions ? <span>{i.dimensions}</span> : null}
-                      </div>
-                      {i.description ? <p className="text-zinc-500 text-xs mt-0.5">{i.description}</p> : null}
+                      {level != null ? (
+                        <div className="text-xs text-zinc-500">
+                          {[sk.predefinition_type, sk.predefinition_difficulty].filter(Boolean).join(" · ") ||
+                            "Roll against value"}
+                        </div>
+                      ) : null}
+                      {sk.effect ? <p className="text-zinc-500 text-xs mt-0.5">{sk.effect}</p> : null}
                     </div>
-                  ))
-                ),
-                <svg
-                  className="w-4 h-4 text-amber-500"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
+                  );
+                })
+              )}
+            </div>
+
+            <div>
+              {sectionTitle(
+                "Inventory",
+                <svg className="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -571,6 +712,72 @@ export default function CharacterSheet({ data, basePath }: CharacterSheetProps) 
                   />
                 </svg>
               )}
+              {!ch.items || ch.items.length === 0 ? (
+                <p className="text-zinc-600 text-sm italic">None</p>
+              ) : (
+                ch.items.map((i) => {
+                  const loc = i.equipment_location || i.equipment_status;
+                  return (
+                  <div
+                    key={i.id}
+                    className="bg-zinc-800/60 rounded-lg border border-zinc-700/40 px-3 py-2 mb-1.5"
+                  >
+                    <div className="flex justify-between items-start">
+                      <span className="text-zinc-200 text-sm font-medium">
+                        {i.name || "Unnamed"}
+                        {i.quantity && i.quantity > 1 ? <span className="text-zinc-500 text-xs"> ×{i.quantity}</span> : null}
+                      </span>
+                      {i.weight ? <span className="text-zinc-500 text-xs">{i.weight} lb</span> : null}
+                    </div>
+                    <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1 text-xs text-zinc-500">
+                      {i.category ? <span>{i.category}</span> : null}
+                      {i.kind ? <span>{i.kind}</span> : null}
+                      {i.quality ? <span className="uppercase text-amber-400/80">{i.quality}</span> : null}
+                      {i.condition ? <span className="capitalize">{i.condition}</span> : null}
+                      {loc ? (
+                        <span className="capitalize">{loc.replace(/_/g, " ")}</span>
+                      ) : null}
+                    </div>
+                    {i.description ? <p className="text-zinc-500 text-xs mt-0.5">{i.description}</p> : null}
+                  </div>
+                  );
+                })
+              )}
+            </div>
+
+            <div>
+              {sectionTitle(
+                "Body & Armor",
+                <svg className="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+                  />
+                </svg>
+              )}
+              {armorDiagram(ch.armors)}
+              <div className="space-y-1 border-t border-zinc-700/40 pt-3">
+                {fittedArmors.length === 0 ? (
+                  <p className="text-zinc-600 text-sm italic">Unarmored</p>
+                ) : (
+                  fittedArmors.map((a) => (
+                    <div key={a.id} className="flex justify-between items-center text-xs">
+                      <div className="flex flex-col">
+                        <span className="text-zinc-200 font-medium">{a.name}</span>
+                        <span className="text-zinc-500 uppercase tracking-wide text-[10px]">
+                          {[a.status, a.locations].filter(Boolean).join(" · ")}
+                        </span>
+                      </div>
+                      <span className="text-amber-400/90 text-right">
+                        DR {a.dr}
+                        {a.fit ? ` · ${a.fit}` : ""}
+                      </span>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -643,10 +850,7 @@ export default function CharacterSheet({ data, basePath }: CharacterSheetProps) 
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                   {modifiers.map((m) => (
-                    <div
-                      key={m.id}
-                      className="bg-zinc-800/60 rounded-lg border border-zinc-700/40 px-3 py-2"
-                    >
+                    <div key={m.id} className="bg-zinc-800/60 rounded-lg border border-zinc-700/40 px-3 py-2">
                       <div className="flex justify-between items-start">
                         <span className="text-zinc-200 text-sm font-medium">{m.name}</span>
                         <span className="text-xs text-zinc-500">{m.damage_value || ""}</span>

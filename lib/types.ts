@@ -88,8 +88,13 @@ export interface CharacterItem {
   category?: string
   quality?: string
   condition?: string
-  dimensions?: string
+  kind?: string
   description?: string
+  weapon?: Weapon | null
+  armor?: ArmorData | null
+  equipment_status?: string
+  equipment_location?: string
+  equipment_quantity?: number
 }
 
 export interface CharacterArmor {
@@ -101,6 +106,8 @@ export interface CharacterArmor {
   value?: string
   fit?: string
   weight?: number
+  dr?: number
+  locations?: string
 }
 
 export interface CharacterDamage {
@@ -113,10 +120,78 @@ export interface CharacterDamage {
   range?: string
 }
 
+export type DamageSource =
+  | "st_swing"
+  | "st_thrust"
+  | "rated_st_swing"
+  | "rated_st_thrust"
+  | "fixed";
+
+export type DamageType =
+  | "cut"
+  | "cr"
+  | "imp"
+  | "pi"
+  | "pi-"
+  | "pi+"
+  | "pi++"
+  | "burn"
+  | "tox"
+  | "cor"
+  | "fat";
+
+export interface WeaponAttack {
+  id?: string;
+  weapon_id?: string;
+  name?: string;
+  usage?: string;
+  damage_source: DamageSource;
+  damage_dice?: string | null;
+  damage_modifier?: number;
+  damage_type: DamageType;
+  armor_penetration?: number;
+  accuracy?: number | null;
+  range?: string;
+  recoil?: number | null;
+  shots?: number | null;
+}
+
+export interface Weapon {
+  id?: string;
+  item_id?: string;
+  skill?: string | null;
+  min_st?: number | null;
+  rated_st?: number | null;
+  handedness?: number;
+  reach?: string;
+  parry?: string | null;
+  block?: string | null;
+  attacks: WeaponAttack[];
+}
+
+export interface ArmorData {
+  id?: string;
+  item_id?: string;
+  dr?: number | null;
+  flex?: boolean;
+  locations?: string;
+  fit?: string;
+}
+
+export interface EquipmentRef {
+  id?: string;
+  item_id?: string;
+  quantity?: number;
+  status?: string;
+  location?: string;
+  rendered_st?: number | null;
+}
+
 export interface DamageEntry {
-  damage: string
-  type: string
-  st: number
+  damage: string;
+  type: string;
+  st: number;
+  source?: DamageSource;
 }
 
 export interface Peculiarity {
@@ -329,34 +404,16 @@ export interface Item {
   id: string
   table_id?: string
   name: string
-  type?: number
+  kind?: string
   category?: string
-  weight?: number
+  weight_lb?: number
+  cost?: number
   dimensions?: string
   description?: string
   quality?: string
   condition?: string
-  holder_id?: string
-  owner_id?: string
-  skill_user_id?: string
-  skill_level?: string
-  owner_username?: string
-  holder_username?: string
-  skill_user_username?: string
-  damage_id?: string
-  damage_name?: string
-  damage_description?: string
-  damage_type?: string
-  damage_subtype?: string
-  damage_value?: string
-  damage_range?: string
-  armor_id?: string
-  armor_name?: string
-  armor_description?: string
-  armor_type?: string
-  armor_subtype?: string
-  armor_value?: string
-  armor_fit?: string
+  weapon?: Weapon | null
+  armor?: ArmorData | null
 }
 
 export interface Advantage {

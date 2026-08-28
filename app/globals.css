@@ -40,3 +40,29 @@ details > summary::-webkit-details-marker {
 .scroll-thin::-webkit-scrollbar-thumb:hover {
   background: rgb(113 113 122);
 }
+
+/* =========================================================
+   The Armory Exhibit — item maker's plate & spec ledger
+   Scoped to the item detail page; unique prefixed classes.
+   Palette mirrors the Character page (zinc + semantic accents).
+   ========================================================= */
+
+/* ---- reveal on scroll ---- */
+.exhibit-reveal {
+  opacity: 1;
+  transition: opacity 0.5s ease, transform 0.55s cubic-bezier(0.22, 0.61, 0.36, 1);
+  will-change: opacity, transform;
+}
+.exhibit-reveal-ready:not(.exhibit-reveal-in) {
+  opacity: 0;
+  transform: translateY(14px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .exhibit-reveal, .exhibit-reveal-ready:not(.exhibit-reveal-in) {
+    transition: none;
+    opacity: 1;
+    transform: none;
+  }
+}
+
