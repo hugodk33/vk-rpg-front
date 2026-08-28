@@ -107,7 +107,7 @@ export default function SessionClient({
 
   const [modal, setModal] = useState<null | "chapter" | "moment" | "narration">(null);
   const [modalTitle, setModalTitle] = useState("");
-  const [narrationChar, setNarrationChar] = useState("");
+  const [narrationChars, setNarrationChars] = useState<string[]>([]);
   const [narrationText, setNarrationText] = useState("");
 
   const [queueChar, setQueueChar] = useState("");
@@ -235,15 +235,17 @@ export default function SessionClient({
 
   async function submitNarration() {
     if (!modalTitle) return;
-    const opt = characters.find((c) => c.id === narrationChar);
-    const prefix = opt ? `**${opt.name || opt.username || "Unknown"}**: ` : "";
+    const opted = characters.filter((c) => narrationChars.includes(c.id));
+    const prefix = opted.length
+      ? `**${opted.map((c) => c.name || c.username || "Unknown").join(", ")}**: `
+      : "";
     const res = await fetch("/api/game-table-narration", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ table_id: tableId, scene_id: latestSceneId, title: modalTitle, narration: prefix + narrationText, moment: latestMoment }),
     });
     const j = await res.json();
-    if (j.success) { setModal(null); setModalTitle(""); setNarrationChar(""); setNarrationText(""); router.refresh(); }
+    if (j.success) { setModal(null); setModalTitle(""); setNarrationChars([]); setNarrationText(""); router.refresh(); }
     else alert("Error: " + (j.error || "Unknown"));
   }
 
@@ -442,7 +444,7 @@ export default function SessionClient({
 
       {/* ================= DICE ================= */}
       {tab === "dice" ? (
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-5">
+        <div className="grid grid-cols-1 gap-5">
           {/* tray */}
           <div className="bg-zinc-900/80 border border-zinc-700/40 rounded-xl p-5">
             {/* acting now */}
@@ -584,19 +586,6 @@ export default function SessionClient({
               ) : null}
             </div>
           </div>
-
-          {/* side column */}
-          <div className="space-y-4">
-            <div className="bg-zinc-900/80 border border-zinc-700/40 rounded-xl p-5">
-              <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-2">How it works</span>
-              <ul className="space-y-2 text-sm text-zinc-400 leading-relaxed">
-                <li>1. Pick die, count and modifier.</li>
-                <li>2. The target is derived from the acting character&apos;s attribute.</li>
-                <li>3. Roll — GURPS tests <span className="text-zinc-200">3d6 ≤ target</span>.</li>
-                <li>4. The action is recorded in the Journal tab.</li>
-              </ul>
-            </div>
-          </div>
         </div>
       ) : null}
 
@@ -656,13 +645,30 @@ export default function SessionClient({
               {modal === "narration" ? (
                 <>
                   <div>
-                    <label className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Character in scene</label>
-                    <select value={narrationChar} onChange={(e) => setNarrationChar(e.target.value)} className={inputCls}>
-                      <option value="">—</option>
-                      {characters.map((c) => (
-                        <option key={c.id} value={c.id}>{c.name || c.username || "Unknown"}</option>
-                      ))}
-                    </select>
+                    <label className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Characters in scene</label>
+                    <div className="space-y-1.5 max-h-40 overflow-y-auto border border-zinc-700/50 rounded-lg p-2">
+                      {characters.map((c) => {
+                        const checked = narrationChars.includes(c.id);
+                        return (
+                          <label key={c.id} className="flex items-center gap-2 text-sm cursor-pointer select-none">
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() =>
+                                setNarrationChars((prev) =>
+                                  checked ? prev.filter((id) => id !== c.id) : [...prev, c.id]
+                                )
+                              }
+                              className="accent-amber-500"
+                            />
+                            <span className={checked ? "text-zinc-100" : "text-zinc-400"}>{c.name || c.username || "Unknown"}</span>
+                          </label>
+                        );
+                      })}
+                      {characters.length === 0 ? (
+                        <p className="text-zinc-600 text-sm font-mono italic">No characters in this table.</p>
+                      ) : null}
+                    </div>
                   </div>
                   <div>
                     <label className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Narration</label>
