@@ -23,6 +23,7 @@ export interface Sheet {
   backstory?: string
   points?: number
   hp?: number
+  current_hp?: number
   st?: number
   dx?: number
   iq?: number
@@ -37,6 +38,7 @@ export interface Sheet {
   base_iq?: number
   base_ht?: number
   base_fatigue?: number
+  modifiers?: Modifier[]
 }
 
 export interface CharacterUser {
@@ -228,7 +230,11 @@ export interface GameTable {
   intro?: string
   title: string
   system?: string
-  players?: Array<{ character: TableCharacter }>
+  players?: Array<{
+    userId?: string
+    username?: string | null
+    character?: TableCharacter | null
+  }>
 }
 
 export interface Location {

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { api } from "@/lib/api";
-import type { GameTable, TableCharacter } from "@/lib/types";
+import type { GameTable } from "@/lib/types";
 export const dynamic = "force-dynamic";
 
 /* ---------- campaign sigil ---------- */
@@ -54,13 +54,30 @@ function Sigil({ title, name }: { title: string; name: string }) {
 
 /* ---------- stats ---------- */
 
-function partyStats(table: GameTable) {
-  const chars = (table.players ?? []).map((p) => p.character).filter(Boolean) as TableCharacter[];
-  const totalPoints = chars.reduce((acc, c) => acc + (c.sheet?.points ?? 0), 0);
-  return { count: chars.length, totalPoints };
+function playerStats(table: GameTable) {
+  const players = table.players ?? [];
+  const totalPoints = players.reduce((acc, p) => acc + (p.character?.sheet?.points ?? 0), 0);
+  const withSheets = players.some((p) => p.character?.sheet);
+  return { count: players.length, totalPoints, withSheets };
 }
 
-function RosterChip({ name, points, hp, baseHp }: { name: string; points?: number; hp?: number; baseHp?: number }) {
+function RosterChip({
+  name,
+  points,
+  hp,
+  baseHp,
+  hasSheet,
+  mods,
+  modNames,
+}: {
+  name: string;
+  points?: number;
+  hp?: number;
+  baseHp?: number;
+  hasSheet?: boolean;
+  mods?: number;
+  modNames?: string;
+}) {
   const hue = hueFor(name);
   const maxHp = baseHp ?? hp ?? 0;
   const hpPct = maxHp ? Math.max(0, Math.min(1, (hp ?? 0) / maxHp)) : 0;
@@ -70,28 +87,42 @@ function RosterChip({ name, points, hp, baseHp }: { name: string; points?: numbe
       <div className="min-w-0 leading-tight">
         <div className="text-xs text-zinc-200 truncate max-w-[9rem]">{name}</div>
         <div className="flex items-center gap-1.5 mt-0.5">
-          <span className="font-mono text-[9px] uppercase text-amber-400/80">PTS {points ?? "–"}</span>
-          {maxHp ? (
-            <span className="flex items-center gap-1">
-              <span className="w-8 h-1 rounded-full bg-zinc-700/70 overflow-hidden">
-                <span className="block h-full rounded-full bg-red-400/80" style={{ width: `${hpPct * 100}%` }} />
-              </span>
-              <span className="font-mono text-[9px] text-zinc-400">{hp}/{maxHp}</span>
-            </span>
-          ) : null}
+          {hasSheet ? (
+            <>
+              <span className="font-mono text-[9px] uppercase text-amber-400/80">PTS {points ?? "–"}</span>
+              {maxHp ? (
+                <span className="flex items-center gap-1">
+                  <span className="w-8 h-1 rounded-full bg-zinc-700/70 overflow-hidden">
+                    <span className="block h-full rounded-full bg-red-400/80" style={{ width: `${hpPct * 100}%` }} />
+                  </span>
+                  <span className="font-mono text-[9px] text-zinc-400">{hp}/{maxHp}</span>
+                </span>
+              ) : null}
+              {mods && mods > 0 ? (
+                <span
+                  title={modNames}
+                  className="font-mono text-[9px] uppercase tracking-widest text-amber-400/70"
+                >
+                  {mods} effect{mods === 1 ? "" : "s"}
+                </span>
+              ) : null}
+            </>
+          ) : (
+            <span className="font-mono text-[9px] uppercase tracking-widest text-zinc-500">No sheet yet</span>
+          )}
         </div>
       </div>
     </div>
   );
 }
 
-function EmptyParty() {
+function EmptyPlayers() {
   return (
     <div className="flex items-center gap-2 text-zinc-600 text-xs font-mono italic">
       <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="1.5">
         <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
       </svg>
-      No party signed up yet — recruit players to make the story theirs.
+      No players yet — invite players to join the table.
     </div>
   );
 }
@@ -105,8 +136,8 @@ export default async function NarratorDashboard() {
   }
 
   const narratorName = tables.find((t) => t.narrator)?.narrator?.username || "the Narrator";
-  const withParty = tables.filter((t) => (t.players ?? []).some((p) => p.character)).length;
-  const totalPlayers = tables.reduce((acc, t) => acc + partyStats(t).count, 0);
+  const withPlayers = tables.filter((t) => (t.players ?? []).length > 0).length;
+  const totalPlayers = tables.reduce((acc, t) => acc + (t.players ?? []).length, 0);
   const sealer = tables.find((t) => t.narrator)?.narrator;
 
   return (
@@ -136,8 +167,8 @@ export default async function NarratorDashboard() {
         <div className="grid grid-cols-3 gap-3 mt-6 relative">
           {[
             { label: "Campaigns", value: tables.length },
-            { label: "Tables with party", value: withParty },
-            { label: "Party members", value: totalPlayers },
+            { label: "Tables with players", value: withPlayers },
+            { label: "Players", value: totalPlayers },
           ].map((s) => (
             <div key={s.label} className="rounded-lg border border-zinc-700/40 bg-zinc-900/60 px-4 py-3">
               <div className="font-mono text-2xl font-bold text-amber-300 leading-none">{s.value}</div>
@@ -162,8 +193,8 @@ export default async function NarratorDashboard() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           {tables.map((t) => {
-            const { count, totalPoints } = partyStats(t);
-            const chars = (t.players ?? []).map((p) => p.character).filter(Boolean) as TableCharacter[];
+            const { count, totalPoints, withSheets } = playerStats(t);
+            const players = t.players ?? [];
             return (
               <div
                 key={t.id}
@@ -176,14 +207,14 @@ export default async function NarratorDashboard() {
                       <h2 className="text-lg font-bold text-zinc-100 leading-tight">{t.title || "Untitled"}</h2>
                     </div>
                     <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                      <span className="font-mono text-[10px] uppercase tracking-widest text-amber-400/80">
+                      <span className="inline-flex items-center font-mono text-[10px] uppercase tracking-widest px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/20">
                         {t.system || "System"}
                       </span>
                       <span className="text-zinc-700">·</span>
                       <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">
-                        {count} in party
+                        {count} {count === 1 ? "player" : "players"}
                       </span>
-                      {count > 0 ? (
+                      {withSheets ? (
                         <>
                           <span className="text-zinc-700">·</span>
                           <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">
@@ -200,20 +231,27 @@ export default async function NarratorDashboard() {
                 ) : null}
 
                 <div className="px-5 py-4 flex-1">
-                  {chars.length ? (
+                  {players.length ? (
                     <div className="flex flex-wrap gap-2">
-                      {chars.map((c) => (
-                        <RosterChip
-                          key={c.id}
-                          name={c.name || "Unnamed"}
-                          points={c.sheet?.points}
-                          hp={c.sheet?.hp}
-                          baseHp={c.sheet?.base_hp}
-                        />
-                      ))}
+                      {players.map((p, idx) => {
+                        const c = p.character;
+                        const name = c?.name || p.username || "Unnamed Player";
+                        return (
+                          <RosterChip
+                            key={p.userId ?? c?.id ?? idx}
+                            name={name}
+                            points={c?.sheet?.points}
+                            hp={c?.sheet?.current_hp ?? c?.sheet?.hp}
+                            baseHp={c?.sheet?.hp}
+                            hasSheet={!!c?.sheet}
+                            mods={c?.sheet?.modifiers?.length}
+                            modNames={c?.sheet?.modifiers?.map((m) => m.name).join(", ")}
+                          />
+                        );
+                      })}
                     </div>
                   ) : (
-                    <EmptyParty />
+                    <EmptyPlayers />
                   )}
                 </div>
 
