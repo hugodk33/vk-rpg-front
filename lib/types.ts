@@ -220,6 +220,7 @@ export interface TableCharacter {
   items?: CharacterItem[]
   damages?: CharacterDamage[]
   modifiers?: Modifier[]
+  active_effects?: Modifier[]
   peculiarities?: Peculiarity[]
 }
 
@@ -261,6 +262,7 @@ export interface Modifier {
   iq?: number
   ht?: number
   fatigue?: number
+  encumbrance?: string
   mod_hp?: number
   mod_st?: number
   mod_dx?: number
@@ -271,6 +273,28 @@ export interface Modifier {
   skill_value?: string
   item_quantity?: number
   item_weight?: number
+}
+
+export interface CharacterHistoryEvent extends Modifier {
+  narration_moment?: number | null
+  narration_title?: string | null
+  narration_body?: string | null
+  scene_title?: string | null
+  chapter?: number | null
+  action_queue?: string | number | null
+  action_description?: string | null
+  action_result?: string | null
+  action_dice_roll?: string | null
+}
+
+export interface CharacterHistory {
+  character: {
+    id: string
+    name?: string | null
+    user?: { id?: string; username?: string | null } | null
+  }
+  table?: GameTable | null
+  events: CharacterHistoryEvent[]
 }
 
 export interface ActionCharacter {

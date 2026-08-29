@@ -1,7 +1,8 @@
 import { Fragment } from "react";
 import Link from "next/link";
-import type { CharacterViewer, Sheet, Modifier } from "@/lib/types";
+import type { CharacterViewer, Sheet } from "@/lib/types";
 import RadarChart from "@/components/RadarChart";
+import CharacterJourney from "@/components/character/CharacterJourney";
 import { resolveAttack, DAMAGE_TYPES } from "@/lib/damage";
 
 function statDiff(base: number | undefined, current: number | undefined): React.ReactNode {
@@ -85,8 +86,8 @@ function armorDiagram(armors: CharacterViewer["character"]["armors"]): React.Rea
         {zoneBadge("Right Arm", armR, { top: 2, right: -64 })}
         {zoneBadge("Left Arm", armL, { top: 2, left: -64 })}
         {zoneBadge("Torso", torso, { top: 48, left: -64 })}
-        {zoneBadge("Right Leg", legR, { top: 152, left: "50%", transform: "translateX(3px)" })}
-        {zoneBadge("Left Leg", legL, { top: 152, left: "50%", transform: "translateX(calc(-100% - 3px))" })}
+        {zoneBadge("Right Leg", legR, { top: 95, left: "50%", transform: "translateX(3px)" })}
+        {zoneBadge("Left Leg", legL, { top: 95, left: "50%", transform: "translateX(calc(-100% - 3px))" })}
       </div>
     </div>
   );
@@ -203,6 +204,96 @@ function bowIcon(className = "w-3.5 h-3.5 text-purple-400"): React.ReactNode {
   );
 }
 
+function windIcon(className = "w-4 h-4 text-cyan-400"): React.ReactNode {
+  return (
+    <svg
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M17.7 7.7a2.5 2.5 0 1 1 1.8 4.3H2" />
+      <path d="M9.6 4.6A2 2 0 1 1 11 8H2" />
+      <path d="M12.6 19.4A2 2 0 1 0 14 16H2" />
+    </svg>
+  );
+}
+
+function footprintsIcon(className = "w-4 h-4 text-cyan-400"): React.ReactNode {
+  return (
+    <svg
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M4 16v-2.38C4 11.5 2.97 10.5 3 8c.03-2.72 1.49-6 4.5-6C9.37 2 10 3.8 10 5.5c0 3.11-2 5.66-2 8.68V16a2 2 0 1 1-4 0Z" />
+      <path d="M20 20v-2.38c0-2.12 1.03-3.12 1-5.62-.03-2.72-1.49-6-4.5-6C14.63 6 14 7.8 14 9.5c0 3.11 2 5.66 2 8.68V20a2 2 0 1 1-4 0" />
+    </svg>
+  );
+}
+
+function packageIcon(className = "w-4 h-4 text-cyan-400"): React.ReactNode {
+  return (
+    <svg
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z" />
+      <path d="M12 22V12" />
+      <path d="m3.3 7 7.703 4.734a2 2 0 0 0 1.994 0L20.7 7" />
+      <path d="m7.5 4.27 9 5.15" />
+    </svg>
+  );
+}
+
+function swordsIcon(className = "w-4 h-4 text-amber-400"): React.ReactNode {
+  return (
+    <svg
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <polyline points="14.5 17.5 3 6 3 3 6 3 17.5 14.5" />
+      <line x1="13" y1="19" x2="19" y2="13" />
+      <line x1="16" y1="16" x2="21" y2="21" />
+      <line x1="21" y1="16" x2="16" y2="21" />
+    </svg>
+  );
+}
+
+function dodgeIcon(className = "w-4 h-4 text-amber-400"): React.ReactNode {
+  return (
+    <svg
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <polyline points="15 10 20 15 15 20" />
+      <path d="M4 4v7a4 4 0 0 0 4 4h12" />
+    </svg>
+  );
+}
+
 function weaponIconFor(g: { kind?: string; category?: string; name: string }): React.ReactNode {
   const hay = `${g.kind ?? ""} ${g.category ?? ""} ${g.name}`.toLowerCase();
   if (/shield|buckler/.test(hay)) return shieldIcon();
@@ -276,11 +367,56 @@ const attrCards = [
   },
 ];
 
-function activeEffects(m: Modifier): boolean {
+function activeEffects(m: {
+  mod_hp?: number;
+  mod_st?: number;
+  mod_dx?: number;
+  mod_iq?: number;
+  mod_ht?: number;
+  mod_fatigue?: number;
+}): boolean {
   return (
     m.mod_hp != null || m.mod_st != null || m.mod_dx != null ||
     m.mod_iq != null || m.mod_ht != null || m.mod_fatigue != null
   );
+}
+
+function signedDelta(n: number): string {
+  return `${n >= 0 ? "+" : ""}${n}`;
+}
+
+function effectDeltas(m: {
+  mod_hp?: number;
+  mod_st?: number;
+  mod_dx?: number;
+  mod_iq?: number;
+  mod_ht?: number;
+  mod_fatigue?: number;
+}): Array<{ key: string; label: string; value: string; cls: string }> {
+  const chips: Array<{ key: string; label: string; value: string; cls: string }> = [];
+  if (m.mod_hp != null) chips.push({ key: "hp", label: "HP", value: signedDelta(m.mod_hp), cls: "text-red-400" });
+  if (m.mod_st != null) chips.push({ key: "st", label: "ST", value: signedDelta(m.mod_st), cls: "text-red-400" });
+  if (m.mod_dx != null) chips.push({ key: "dx", label: "DX", value: signedDelta(m.mod_dx), cls: "text-emerald-400" });
+  if (m.mod_iq != null) chips.push({ key: "iq", label: "IQ", value: signedDelta(m.mod_iq), cls: "text-blue-400" });
+  if (m.mod_ht != null) chips.push({ key: "ht", label: "HT", value: signedDelta(m.mod_ht), cls: "text-purple-400" });
+  if (m.mod_fatigue != null) chips.push({ key: "fp", label: "FP", value: signedDelta(m.mod_fatigue), cls: "text-blue-400" });
+  return chips;
+}
+
+function effectSign(m: {
+  mod_hp?: number;
+  mod_st?: number;
+  mod_dx?: number;
+  mod_iq?: number;
+  mod_ht?: number;
+  mod_fatigue?: number;
+}): -1 | 0 | 1 {
+  const deltas = [m.mod_hp, m.mod_st, m.mod_dx, m.mod_iq, m.mod_ht, m.mod_fatigue]
+    .filter((n): n is number => n != null);
+  if (!deltas.length) return 0;
+  if (deltas.some((n) => n < 0) && !deltas.some((n) => n > 0)) return -1;
+  if (deltas.some((n) => n > 0) && !deltas.some((n) => n < 0)) return 1;
+  return 0;
 }
 
 interface CharacterSheetProps {
@@ -292,7 +428,7 @@ export default function CharacterSheet({ data, basePath }: CharacterSheetProps) 
   const ch = data.character;
   const s = ch.sheet;
   const name = s?.name || ch.name || "Character";
-  const modifiers = ch.modifiers ?? [];
+  const modifiers = ch.active_effects ?? [];
   const moments = data.moments ?? [];
   const selectedMoment = data.selected_moment;
   const hasBottom = moments.length > 0 || modifiers.length > 0;
@@ -417,28 +553,6 @@ export default function CharacterSheet({ data, basePath }: CharacterSheetProps) 
                     />
                   </div>
                 </div>
-
-                {effects.length > 0 ? (
-                  <div className="space-y-1.5">
-                    <span className="text-xs font-semibold uppercase tracking-wider text-rose-400/80">
-                      Active effects
-                    </span>
-                    {effects.map((m) => (
-                      <div
-                        key={m.id}
-                        className="flex items-center gap-2 text-xs bg-rose-500/10 border border-rose-500/30 rounded-lg px-2.5 py-1.5"
-                      >
-                        <span className="text-zinc-300 font-medium truncate">{m.name || "Effect"}</span>
-                        {m.mod_hp != null ? (
-                          <span className="text-red-400 font-semibold ml-auto">
-                            HP {m.mod_hp >= 0 ? "+" : ""}
-                            {m.mod_hp}
-                          </span>
-                        ) : null}
-                      </div>
-                    ))}
-                  </div>
-                ) : null}
 
                 <div className="flex w-full items-center gap-2">
                   <span className="w-16 text-zinc-500 text-xs font-semibold uppercase shrink-0">FP</span>
@@ -572,6 +686,47 @@ export default function CharacterSheet({ data, basePath }: CharacterSheetProps) 
               )}
             </div>
           </div>
+
+          {effects.length > 0 ? (
+            <div className="mt-6 pt-4 border-t border-zinc-700/40">
+              <div className="flex items-center gap-2 mb-3">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                  Active effects
+                </h3>
+                <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-600">
+                  {effects.length}
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {effects.map((m) => {
+                  const deltas = effectDeltas(m);
+                  const sign = effectSign(m);
+                  const dot =
+                    sign < 0 ? "bg-rose-400 shadow-[0_0_6px_rgba(251,113,133,0.7)]" :
+                    sign > 0 ? "bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.7)]" :
+                    "bg-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.6)]";
+                  return (
+                    <div
+                      key={m.id}
+                      className="flex items-center gap-2 bg-zinc-800/50 border border-zinc-700/40 rounded-lg px-2.5 py-1.5"
+                    >
+                      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dot}`} />
+                      <span className="text-zinc-200 text-sm font-medium">{m.name || "Effect"}</span>
+                      {deltas.length > 0 ? (
+                        <span className="flex items-center gap-1.5 ml-1">
+                          {deltas.map((d) => (
+                            <span key={d.key} className={`font-mono text-[10px] ${d.cls}`}>
+                              {d.label} {d.value}
+                            </span>
+                          ))}
+                        </span>
+                      ) : null}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
             <div>
@@ -828,84 +983,27 @@ export default function CharacterSheet({ data, basePath }: CharacterSheetProps) 
                 ) : null}
               </div>
             ) : null}
-            {modifiers.length > 0 ? (
-              <div>
-                <div className="flex items-center gap-2 mb-3 border-b border-zinc-700/60 pb-1.5">
-                  <svg
-                    className="w-4 h-4 text-amber-500"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"
-                    />
-                  </svg>
-                  <h2 className="text-lg font-bold uppercase tracking-wider text-zinc-300">
-                    Modifiers Applied
-                  </h2>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {modifiers.map((m) => (
-                    <div key={m.id} className="bg-zinc-800/60 rounded-lg border border-zinc-700/40 px-3 py-2">
-                      <div className="flex justify-between items-start">
-                        <span className="text-zinc-200 text-sm font-medium">{m.name}</span>
-                        <span className="text-xs text-zinc-500">{m.damage_value || ""}</span>
-                      </div>
-                      {m.description ? (
-                        <p className="text-zinc-500 text-xs mt-0.5">{m.description}</p>
-                      ) : null}
-                      <div className="flex flex-wrap gap-2 mt-1 text-xs">
-                        {m.mod_hp != null ? (
-                          <span className="text-red-400">
-                            HP {m.mod_hp >= 0 ? "+" : ""}
-                            {m.mod_hp}
-                          </span>
-                        ) : null}
-                        {m.mod_st != null ? (
-                          <span className="text-red-400">
-                            ST {m.mod_st >= 0 ? "+" : ""}
-                            {m.mod_st}
-                          </span>
-                        ) : null}
-                        {m.mod_dx != null ? (
-                          <span className="text-emerald-400">
-                            DX {m.mod_dx >= 0 ? "+" : ""}
-                            {m.mod_dx}
-                          </span>
-                        ) : null}
-                        {m.mod_iq != null ? (
-                          <span className="text-blue-400">
-                            IQ {m.mod_iq >= 0 ? "+" : ""}
-                            {m.mod_iq}
-                          </span>
-                        ) : null}
-                        {m.mod_ht != null ? (
-                          <span className="text-purple-400">
-                            HT {m.mod_ht >= 0 ? "+" : ""}
-                            {m.mod_ht}
-                          </span>
-                        ) : null}
-                        {m.mod_fatigue != null ? (
-                          <span className="text-blue-400">
-                            FP {m.mod_fatigue >= 0 ? "+" : ""}
-                            {m.mod_fatigue}
-                          </span>
-                        ) : null}
-                        {m.hp != null ? (
-                          <span className="text-red-400">
-                            Base HP&rarr;{m.hp}
-                          </span>
-                        ) : null}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+            <div>
+              <div className="flex items-center gap-2 mb-3 border-b border-zinc-700/60 pb-1.5">
+                <svg
+                  className="w-4 h-4 text-amber-500"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"
+                  />
+                </svg>
+                <h2 className="text-lg font-bold uppercase tracking-wider text-zinc-300">
+                  Journey
+                </h2>
               </div>
-            ) : null}
+              <CharacterJourney characterId={ch.id} selectedMoment={selectedMoment} />
+            </div>
           </div>
         </div>
       ) : null}
