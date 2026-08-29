@@ -574,14 +574,17 @@ export default function CharacterSheet({ data, basePath }: CharacterSheetProps) 
               </h3>
               <div className="grid grid-cols-3 gap-1">
                 <div className="flex flex-col items-center gap-1 p-2 bg-zinc-800/40 rounded-lg">
+                  {windIcon()}
                   <span className="text-cyan-400 text-sm font-bold">{s?.basic_speed ?? "-"}</span>
                   <span className="text-zinc-500 text-[10px] font-semibold uppercase text-center">Basic Speed</span>
                 </div>
                 <div className="flex flex-col items-center gap-1 p-2 bg-zinc-800/40 rounded-lg">
+                  {footprintsIcon()}
                   <span className="text-cyan-400 text-sm font-bold">{s?.move ?? "-"}</span>
                   <span className="text-zinc-500 text-[10px] font-semibold uppercase text-center">Move</span>
                 </div>
                 <div className="flex flex-col items-center gap-1 p-2 bg-zinc-800/40 rounded-lg">
+                  {packageIcon()}
                   <span className="text-cyan-400 text-sm font-bold truncate max-w-full">
                     {s?.encumbrance || "-"}
                   </span>
@@ -594,14 +597,17 @@ export default function CharacterSheet({ data, basePath }: CharacterSheetProps) 
               </h3>
               <div className="grid grid-cols-3 gap-1">
                 <div className="flex flex-col items-center gap-1 p-2 bg-zinc-800/40 rounded-lg">
+                  {swordsIcon()}
                   <span className="text-amber-400 text-sm font-bold">{passive.parry}</span>
                   <span className="text-zinc-500 text-[10px] font-semibold uppercase text-center">Parry</span>
                 </div>
                 <div className="flex flex-col items-center gap-1 p-2 bg-zinc-800/40 rounded-lg">
+                  {shieldIcon("w-4 h-4 text-amber-400")}
                   <span className="text-amber-400 text-sm font-bold">{passive.block}</span>
                   <span className="text-zinc-500 text-[10px] font-semibold uppercase text-center">Block</span>
                 </div>
                 <div className="flex flex-col items-center gap-1 p-2 bg-zinc-800/40 rounded-lg">
+                  {dodgeIcon()}
                   <span className="text-amber-400 text-sm font-bold">{passive.dodge}</span>
                   <span className="text-zinc-500 text-[10px] font-semibold uppercase text-center">Dodge</span>
                 </div>
