@@ -1,8 +1,9 @@
 import { Fragment } from "react";
 import Link from "next/link";
-import type { CharacterViewer, Sheet } from "@/lib/types";
+import type { CharacterViewer, Sheet, VisibilityRule } from "@/lib/types";
 import RadarChart from "@/components/RadarChart";
 import CharacterJourney from "@/components/character/CharacterJourney";
+import { buildVisibilityMap, isItemHidden, isSkillHidden, isAttributeHidden, isAdvantageHidden, isDisadvantageHidden } from "@/lib/visibility";
 import { resolveAttack, DAMAGE_TYPES } from "@/lib/damage";
 
 function statDiff(base: number | undefined, current: number | undefined): React.ReactNode {
@@ -322,12 +323,6 @@ function isRanged(type?: string): boolean {
   return t.includes("range") || t.includes("ranged") || t.includes("bow") || t.includes("thrown");
 }
 
-function isMelee(type?: string): boolean {
-  if (!type) return true;
-  const t = type.toLowerCase();
-  return t.includes("melee") || t.includes("swing") || t.includes("thrust") || t.includes("sword");
-}
-
 function hpPct(hp: number | undefined, base: number | undefined): number {
   return Math.min(100, Math.max(0, ((hp || 0) / (base || 1)) * 100));
 }
@@ -422,9 +417,10 @@ function effectSign(m: {
 interface CharacterSheetProps {
   data: CharacterViewer;
   basePath: string;
+  visibility?: VisibilityRule[] | null;
 }
 
-export default function CharacterSheet({ data, basePath }: CharacterSheetProps) {
+export default function CharacterSheet({ data, basePath, visibility }: CharacterSheetProps) {
   const ch = data.character;
   const s = ch.sheet;
   const name = s?.name || ch.name || "Character";
@@ -433,6 +429,14 @@ export default function CharacterSheet({ data, basePath }: CharacterSheetProps) 
   const selectedMoment = data.selected_moment;
   const hasBottom = moments.length > 0 || modifiers.length > 0;
   const effects = modifiers.filter(activeEffects);
+
+  const vis = visibility ? buildVisibilityMap(visibility) : null;
+  const censored = (field: string): string => vis?.values.get(field) ?? "???";
+  const itemHidden = (id?: string | null) => vis ? isItemHidden(vis, id) : false;
+  const skillHidden = (id?: string | null) => vis ? isSkillHidden(vis, id) : false;
+  const advHidden = (id?: string | null) => vis ? isAdvantageHidden(vis, id) : false;
+  const disHidden = (id?: string | null) => vis ? isDisadvantageHidden(vis, id) : false;
+  const attrHidden = (a?: string | null) => vis ? isAttributeHidden(vis, a) : false;
 
   const weaponGroups = (ch.items ?? [])
     .filter((it) => it.weapon && it.weapon.attacks.length > 0)
@@ -445,6 +449,9 @@ export default function CharacterSheet({ data, basePath }: CharacterSheetProps) 
       location: it.equipment_location || it.equipment_status,
       weapon: it.weapon!,
     }));
+  const visibleWeaponGroups = vis
+    ? weaponGroups.filter((g) => !itemHidden(ch.items?.find((it) => it.name === g.name)?.id))
+    : weaponGroups;
 
   const parseDefense = (val?: string | null): number | null => {
     if (!val) return null;
@@ -476,6 +483,19 @@ export default function CharacterSheet({ data, basePath }: CharacterSheetProps) 
       status: it.equipment_status || "Equipped",
       locations: it.equipment_location || it.armor?.locations || "",
     }));
+  const visibleArmors = vis ? fittedArmors.filter((a) => !itemHidden(ch.items?.find((it) => (it.armor?.id || it.id) === a.id)?.id)) : fittedArmors;
+  const visibleItems = vis
+    ? (ch.items ?? []).filter((i) => !itemHidden(i.id))
+    : ch.items;
+  const visibleSkills = vis
+    ? (ch.skills ?? []).filter((sk) => !skillHidden(sk.skill_id ?? sk.id))
+    : ch.skills;
+  const visibleAdvantages = vis
+    ? (ch.advantages ?? []).filter((a) => !advHidden(a.advantage_id ?? a.id))
+    : ch.advantages;
+  const visibleDisadvantages = vis
+    ? (ch.disadvantages ?? []).filter((d) => !disHidden(d.disadvantage_id ?? d.id))
+    : ch.disadvantages;
 
   return (
     <>
@@ -514,8 +534,8 @@ export default function CharacterSheet({ data, basePath }: CharacterSheetProps) 
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={a.svg} />
                     </svg>
                     <span className={`${a.color} text-xl font-bold`}>
-                      {s ? a.value(s) ?? "-" : "-"}
-                      {s ? statDiff(a.base(s), a.value(s)) : null}
+                      {s ? (attrHidden(a.label) ? censored(`attr:${a.label.toLowerCase()}`) : (a.value(s) ?? "-")) : "-"}
+                      {s && !attrHidden(a.label) ? statDiff(a.base(s), a.value(s)) : null}
                     </span>
                     <span className="text-zinc-500 text-xs font-semibold uppercase">{a.label}</span>
                   </div>
@@ -618,10 +638,10 @@ export default function CharacterSheet({ data, basePath }: CharacterSheetProps) 
               <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-3">
                 Offense
               </h3>
-              {weaponGroups.length === 0 ? (
+              {visibleWeaponGroups.length === 0 ? (
                 <p className="text-zinc-600 text-sm italic">No weapons equipped</p>
               ) : (
-                weaponGroups.map((g, gi) => {
+                visibleWeaponGroups.map((g, gi) => {
                   const hand = g.weapon.handedness === 2 ? "2H" : g.weapon.handedness === 1 ? "1H" : "";
                   const tags = [hand, g.weapon.reach ? `Reach ${g.weapon.reach}` : null]
                     .filter(Boolean)
@@ -742,10 +762,10 @@ export default function CharacterSheet({ data, basePath }: CharacterSheetProps) 
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                 </svg>
               )}
-              {!ch.advantages || ch.advantages.length === 0 ? (
+              {!visibleAdvantages || visibleAdvantages.length === 0 ? (
                 <p className="text-zinc-600 text-sm italic">None</p>
               ) : (
-                ch.advantages.map((a) => (
+                visibleAdvantages.map((a) => (
                   <div
                     key={a.id}
                     className="bg-zinc-800/60 rounded-lg border border-zinc-700/40 px-3 py-2 mb-1.5"
@@ -766,10 +786,10 @@ export default function CharacterSheet({ data, basePath }: CharacterSheetProps) 
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
                 </svg>
               )}
-              {!ch.disadvantages || ch.disadvantages.length === 0 ? (
+              {!visibleDisadvantages || visibleDisadvantages.length === 0 ? (
                 <p className="text-zinc-600 text-sm italic">None</p>
               ) : (
-                ch.disadvantages.map((d) => (
+                visibleDisadvantages.map((d) => (
                   <div
                     key={d.id}
                     className="bg-zinc-800/60 rounded-lg border border-zinc-700/40 px-3 py-2 mb-1.5"
@@ -827,10 +847,10 @@ export default function CharacterSheet({ data, basePath }: CharacterSheetProps) 
                   />
                 </svg>
               )}
-              {!ch.skills || ch.skills.length === 0 ? (
+              {!visibleSkills || visibleSkills.length === 0 ? (
                 <p className="text-zinc-600 text-sm italic">None</p>
               ) : (
-                ch.skills.map((sk) => {
+                visibleSkills.map((sk) => {
                   const level = sk.value ?? null;
                   return (
                     <div
@@ -873,10 +893,10 @@ export default function CharacterSheet({ data, basePath }: CharacterSheetProps) 
                   />
                 </svg>
               )}
-              {!ch.items || ch.items.length === 0 ? (
+              {!visibleItems || visibleItems.length === 0 ? (
                 <p className="text-zinc-600 text-sm italic">None</p>
               ) : (
-                ch.items.map((i) => {
+                visibleItems.map((i) => {
                   const loc = i.equipment_location || i.equipment_status;
                   return (
                   <div
@@ -920,10 +940,10 @@ export default function CharacterSheet({ data, basePath }: CharacterSheetProps) 
               )}
               {armorDiagram(ch.armors)}
               <div className="space-y-1 border-t border-zinc-700/40 pt-3">
-                {fittedArmors.length === 0 ? (
+                {visibleArmors.length === 0 ? (
                   <p className="text-zinc-600 text-sm italic">Unarmored</p>
                 ) : (
-                  fittedArmors.map((a) => (
+                  visibleArmors.map((a) => (
                     <div key={a.id} className="flex justify-between items-center text-xs">
                       <div className="flex flex-col">
                         <span className="text-zinc-200 font-medium">{a.name}</span>

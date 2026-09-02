@@ -399,6 +399,19 @@ export interface QueueEntry {
   character_name?: string
 }
 
+export interface VisibilityRule {
+  id: string
+  character_id?: string | null
+  skill_id?: string | null
+  advantage_id?: string | null
+  disadvantage_id?: string | null
+  attribute?: string | null
+  additionals_attributes?: string | null
+  item_id?: string | null
+  value?: string | null
+  status?: string | null
+}
+
 export interface CharacterViewer {
   table: GameTable | null
   character: TableCharacter

@@ -29,103 +29,154 @@ async function loadPlayerEntries(): Promise<PlayerEntry[]> {
   }
 }
 
+/* -------- sigil (per-character hue) -------- */
+
+const PALETTE = [
+  { dot: "#2dd4bf", ring: "#2dd4bf55" }, // teal
+  { dot: "#38bdf8", ring: "#38bdf855" }, // sky
+  { dot: "#a78bfa", ring: "#a78bfa55" }, // violet
+  { dot: "#f472b6", ring: "#f472b655" }, // pink
+  { dot: "#fbbf24", ring: "#fbbf2455" }, // amber
+  { dot: "#34d399", ring: "#34d39955" }, // emerald
+];
+
+function hueFor(name: string) {
+  let sum = 0;
+  for (let i = 0; i < name.length; i++) sum += name.charCodeAt(i);
+  const h = PALETTE[sum % PALETTE.length];
+  const letters = (name || "?").slice(0, 2).toUpperCase();
+  return { ...h, letters };
+}
+
+/* -------- stats helpers -------- */
+
+function statRow(s: Sheet) {
+  return [
+    { label: "ST", value: s.st ?? s.base_st, hex: "#f87171" },
+    { label: "DX", value: s.dx ?? s.base_dx, hex: "#34d399" },
+    { label: "IQ", value: s.iq ?? s.base_iq, hex: "#60a5fa" },
+    { label: "HT", value: s.ht ?? s.base_ht, hex: "#a78bfa" },
+  ];
+}
+
+function hpBar(s: Sheet) {
+  const max = s.hp ?? s.base_hp ?? 0;
+  const cur = s.current_hp ?? max;
+  const pct = max ? Math.max(0, Math.min(1, cur / max)) : 0;
+  return { max, cur, pct };
+}
+
 export default async function PlayerDashboard() {
   const entries = await loadPlayerEntries();
-  const tables = entries.map((e) => e.table);
-  const characters = entries.map((e) => e.ch);
-  const totalItems = characters.reduce((sum, c) => sum + (c.items?.length ?? 0), 0);
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-2xl font-bold text-amber-100">Player Dashboard</h1>
-          <p className="text-zinc-400 text-sm mt-1">
-            Player — {characters.length} character{characters.length !== 1 ? "s" : ""}
+    <div className="max-w-3xl mx-auto px-6 py-10">
+      {/* ---- hero ---- */}
+      <div className="relative rounded-2xl border border-teal-600/30 bg-gradient-to-b from-zinc-900/70 to-zinc-950 p-6 mb-8 overflow-hidden">
+        <div className="absolute inset-y-0 left-0 w-1/2 opacity-[0.05] pointer-events-none select-none">
+          <div className="absolute -bottom-14 -left-16 w-72 h-72 rounded-full border border-teal-500" />
+          <div className="absolute top-4 -left-6 w-56 h-56 rounded-full border border-teal-500" />
+        </div>
+        <div className="relative">
+          <p className="font-mono text-[10px] tracking-widest uppercase text-teal-300/90">At the table</p>
+          <h1 className="text-2xl md:text-3xl font-bold text-zinc-100 mt-1">Your Company</h1>
+          <p className="text-stone-400 text-sm mt-1.5">
+            {entries.length === 0
+              ? "No adventurers yet — claim a seat in a campaign."
+              : `${entries.length} ${entries.length === 1 ? "adventurer" : "adventurers"} ride under your banner.`}
           </p>
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-5 mb-8">
-        <div className="bg-zinc-800/50 border border-zinc-700/40 rounded-xl px-5 py-4 text-center">
-          <p className="text-2xl font-bold text-amber-400">{tables.length}</p>
-          <p className="text-zinc-500 text-xs uppercase tracking-wider mt-1">Tables</p>
+      {/* ---- company (characters only) ---- */}
+      {entries.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-teal-700/40 text-center py-20 bg-zinc-900/40">
+          <div className="font-mono text-[10px] tracking-widest uppercase text-teal-400/60">Empty roster</div>
+          <p className="text-zinc-300 mt-2 max-w-sm mx-auto text-sm">
+            When a narrator adds you to a campaign and you claim a character, it will appear here.
+          </p>
         </div>
-        <div className="bg-zinc-800/50 border border-zinc-700/40 rounded-xl px-5 py-4 text-center">
-          <p className="text-2xl font-bold text-emerald-400">{characters.length}</p>
-          <p className="text-zinc-500 text-xs uppercase tracking-wider mt-1">Characters</p>
-        </div>
-        <div className="bg-zinc-800/50 border border-zinc-700/40 rounded-xl px-5 py-4 text-center">
-          <p className="text-2xl font-bold text-blue-400">{totalItems}</p>
-          <p className="text-zinc-500 text-xs uppercase tracking-wider mt-1">Items</p>
-        </div>
-      </div>
+      ) : (
+        <div className="space-y-3">
+          {entries.map(({ table, ch }) => {
+            const s = ch.sheet ?? ({} as Sheet);
+            const name = s.name || ch.name || "Unnamed adventurer";
+            const hue = hueFor(name);
+            const hp = hpBar(s);
+            const attrs = statRow(s);
+            const sessionUrl = `/player/character/${ch.id}/session`;
+            const sheetUrl = `/player/character/${ch.id}`;
+            return (
+              <div
+                key={ch.id}
+                className="group relative bg-zinc-900/60 border border-zinc-700/50 rounded-2xl overflow-hidden hover:border-teal-700/50 transition-colors flex flex-col sm:flex-row"
+              >
+                {/* hue rail */}
+                <div className="hidden sm:block w-1 shrink-0" style={{ background: `linear-gradient(180deg, ${hue.dot}, ${hue.dot}33)` }} />
 
-      <h2 className="text-lg font-bold text-zinc-200 mb-4">My Characters</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {entries.map(({ table, ch }) => {
-          const s = ch.sheet ?? ({} as Sheet);
-          return (
-            <div
-              key={ch.id}
-              className="bg-zinc-800/60 border border-zinc-700/50 rounded-xl overflow-hidden hover:border-emerald-700/50 transition-colors"
-            >
-              <div className="px-5 py-4 border-b border-zinc-700/40">
-                <h3 className="text-lg font-bold text-zinc-100">{s.name || ch.name || "No name"}</h3>
-                {table ? <p className="text-xs text-zinc-500 mt-0.5">{table.title}</p> : null}
-              </div>
-              <div className="px-5 py-4">
-                <div className="grid grid-cols-4 gap-2 mb-4">
-                  {[
-                    { label: "ST", value: s.st, color: "text-red-400" },
-                    { label: "DX", value: s.dx, color: "text-emerald-400" },
-                    { label: "IQ", value: s.iq, color: "text-blue-400" },
-                    { label: "HT", value: s.ht, color: "text-purple-400" },
-                  ].map((a) => (
-                    <div key={a.label} className="text-center">
-                      <span className={`block ${a.color} font-bold`}>{a.value ?? "-"}</span>
-                      <span className="text-zinc-600 text-xs uppercase">{a.label}</span>
+                <div className="flex-1 p-5 flex flex-col sm:flex-row items-start gap-4">
+                  {/* sigil */}
+                  <div className="relative flex items-center justify-center shrink-0" style={{ width: 56, height: 56 }}>
+                    <svg viewBox="0 0 64 64" className="absolute inset-0" style={{ width: 56, height: 56 }}>
+                      <circle cx="32" cy="32" r="27" fill="none" stroke={hue.ring} strokeWidth="1.5" />
+                      <circle cx="32" cy="32" r="27" fill="none" stroke={hue.dot} strokeWidth="0.75" strokeDasharray="1.5 6" strokeDashoffset="14" />
+                    </svg>
+                    <span className="font-mono font-bold leading-none relative z-10" style={{ color: hue.dot, fontSize: 20, letterSpacing: "-0.02em" }}>
+                      {hue.letters}
+                    </span>
+                  </div>
+
+                  {/* identity + vitals */}
+                  <div className="min-w-0 flex-1 w-full">
+                    <div className="flex items-start justify-between gap-3 flex-wrap">
+                      <div className="min-w-0">
+                        <h2 className="text-lg font-bold text-zinc-100 leading-tight truncate">{name}</h2>
+                        <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500 mt-0.5">
+                          {table ? table.title : "Unknown table"}
+                        </p>
+                      </div>
+                      {hp.max ? (
+                        <div className="text-right shrink-0">
+                          <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-500 block">HP</span>
+                          <span className="font-mono text-sm font-bold text-red-300">{hp.cur}<span className="text-zinc-600">/</span>{hp.max}</span>
+                        </div>
+                      ) : null}
                     </div>
-                  ))}
+
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 mt-3">
+                      {attrs.map((a) => (
+                        <span key={a.label} className="inline-flex items-baseline gap-1">
+                          <span className="font-mono text-[10px] uppercase text-zinc-600">{a.label}</span>
+                          <span className="font-mono text-lg font-bold leading-none" style={{ color: a.hex }}>{a.value ?? "–"}</span>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
                 </div>
-                <div className="flex gap-2">
+
+                {/* actions */}
+                <div className="flex sm:flex-col gap-2 px-5 pb-5 sm:pb-0 sm:pr-5 sm:justify-center shrink-0">
                   <Link
-                    href={`/character/${ch.id}`}
-                    className="flex-1 text-center bg-zinc-700 hover:bg-zinc-600 text-zinc-200 text-sm font-medium px-3 py-2 rounded-lg transition-colors"
+                    href={sessionUrl}
+                    className="flex-1 sm:flex-none text-center bg-teal-600 hover:bg-teal-500 text-teal-950 text-sm font-semibold px-4 py-2 rounded-lg transition-colors shadow-lg shadow-teal-900/20"
+                  >
+                    Enter Session
+                  </Link>
+                  <Link
+                    href={sheetUrl}
+                    className="flex-1 sm:flex-none text-center border border-zinc-700 hover:border-teal-700/60 text-zinc-300 hover:text-teal-200 text-sm font-medium px-4 py-2 rounded-lg transition-colors"
                   >
                     Sheet
                   </Link>
-                  {table ? (
-                    <>
-                      <Link
-                        href={`/player/table/${table.id}`}
-                        className="flex-1 text-center bg-emerald-700/60 hover:bg-emerald-600 text-emerald-100 text-sm font-medium px-3 py-2 rounded-lg transition-colors"
-                      >
-                        Session
-                      </Link>
-                      <Link
-                        href={`/player/table/${table.id}/scenes`}
-                        className="flex-1 text-center bg-zinc-700 hover:bg-zinc-600 text-zinc-200 text-sm font-medium px-3 py-2 rounded-lg transition-colors"
-                      >
-                        Scenes
-                      </Link>
-                    </>
-                  ) : null}
                 </div>
               </div>
-            </div>
-          );
-        })}
-        {characters.length === 0 ? (
-          <div className="col-span-full text-center py-16">
-            <p className="text-zinc-500 text-lg mb-2">No characters yet</p>
-            <p className="text-zinc-600 text-sm">Join a table to create your first character</p>
-          </div>
-        ) : null}
-      </div>
+            );
+          })}
+        </div>
+      )}
 
-      <div className="mt-8 text-center">
-        <Link href="/" className="text-zinc-500 hover:text-zinc-300 text-sm transition-colors">
+      <div className="mt-10 text-center">
+        <Link href="/" className="text-zinc-500 hover:text-teal-300 text-sm transition-colors">
           &larr; Back to home
         </Link>
       </div>

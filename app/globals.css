@@ -66,3 +66,32 @@ details > summary::-webkit-details-marker {
   }
 }
 
+/* =========================================================
+   Player session — "the turn beacon"
+   The player's console breathes around *waiting*: when it's
+   your turn the beacon pulses behind the acting seat and the
+   dice tray; otherwise everything stays dim behind a veil.
+   ========================================================= */
+@keyframes beacon-pulse {
+  0%, 100% { opacity: 0.35; transform: scale(1); }
+  50%      { opacity: 0.75; transform: scale(1.06); }
+}
+.beacon {
+  animation: beacon-pulse 2.6s ease-in-out infinite;
+}
+.beacon-pulse {
+  animation: beacon-pulse 2.6s ease-in-out infinite;
+}
+@keyframes beacon-spin {
+  to { transform: rotate(360deg); }
+}
+.beacon-ring {
+  animation: beacon-spin 7s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .beacon, .beacon-pulse, .beacon-ring {
+    animation: none;
+  }
+}
+

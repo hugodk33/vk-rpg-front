@@ -1,29 +1,22 @@
-import { api } from "@/lib/api";
-import type { CharacterViewer } from "@/lib/types";
-import TableTabs from "@/components/TableTabs";
-import CharacterSheet from "@/components/character/CharacterSheet";
+import { loadPlayerConsole } from "@/lib/player";
+import PlayerConsole from "@/components/player/PlayerConsole";
 
 export const dynamic = "force-dynamic";
 
 export default async function PlayerCharacterViewerPage({
   params,
-  searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ moment?: string }>;
 }) {
   const { id } = await params;
-  const { moment } = await searchParams;
-  const qs = moment ? `?moment=${moment}` : "";
-  const data = await api<CharacterViewer>(`/game-table-character/${id}${qs}`);
+  const data = await loadPlayerConsole(id);
   const basePath = `/player/character/${id}`;
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
-      {data.table?.id ? (
-        <TableTabs tableId={data.table.id} role="player" active="character" characterHref={basePath} />
-      ) : null}
-      <CharacterSheet data={data} basePath={basePath} />
-    </div>
+    <PlayerConsole
+      {...data}
+      basePath={basePath}
+      initialTab="sheet"
+    />
   );
 }
