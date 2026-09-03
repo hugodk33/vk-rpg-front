@@ -81,6 +81,18 @@ function judgeRoll(total: number, target: number): Judgment {
     : { crit: false, ok: false, text: `Failed by ${-m}` };
 }
 
+function performRoll(diceCount: number, diceType: string, modValue: number): { r: number[]; tot: number } {
+  const die = parseInt(diceType, 10);
+  const r: number[] = [];
+  let sum = 0;
+  for (let i = 0; i < diceCount; i++) {
+    const v = Math.floor(Math.random() * die) + 1;
+    r.push(v);
+    sum += v;
+  }
+  return { r, tot: sum + modValue };
+}
+
 export default function SessionClient({
   tableId,
   chapter,
@@ -178,16 +190,8 @@ export default function SessionClient({
   const modValue = isPlayer ? diceMod : Math.floor((Number(attrib()) - 10) / 2) + diceMod;
   const attrHex = attrMeta[actSkill]?.hex ?? "#fbbf24";
 
-  function performRoll(): { r: number[]; tot: number } {
-    const die = parseInt(diceType, 10);
-    const r: number[] = [];
-    let sum = 0;
-    for (let i = 0; i < diceCount; i++) {
-      const v = Math.floor(Math.random() * die) + 1;
-      r.push(v);
-      sum += v;
-    }
-    const tot = sum + modValue;
+  function performRollFn(): { r: number[]; tot: number } {
+    const { r, tot } = performRoll(diceCount, diceType, modValue);
     setRolls(r);
     setTotal(tot);
     setJudgment(judgeRoll(tot, attrib()));
@@ -195,7 +199,7 @@ export default function SessionClient({
   }
 
   function rollBtn() {
-    const { r } = performRoll();
+    const { r } = performRollFn();
     setActRoll(`${diceCount}d${diceType} [ ${r.join(" , ")} ]`);
   }
 
@@ -529,24 +533,26 @@ export default function SessionClient({
                 </div>
 
                 {/* curve */}
-                <div className="mt-6">
-                  <div className="flex items-center gap-2 mb-1.5">
-                    <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">3d6 curve</span>
-                    <span className="flex-1 h-px bg-zinc-700/40" />
+                {isPlayer ? (
+                  <div className="mt-6">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">3d6 curve</span>
+                      <span className="flex-1 h-px bg-zinc-700/40" />
+                    </div>
+                    <div className="flex h-16 items-end gap-0.5 border-b border-zinc-700/40">
+                      {Array.from({ length: 16 }, (_, i) => {
+                        const face = i + 3;
+                        const c = counts.get(face) ?? 0;
+                        const isCurrent = total === face;
+                        return (
+                          <span key={face} className="flex-1 h-full flex items-end" title={`=${face}`}>
+                            <span className={`w-full rounded-t-sm transition-[height] ${isCurrent ? (judgment?.ok ? "bg-emerald-400" : "bg-red-400") : c ? "bg-amber-500/50" : "bg-zinc-800"}`} style={{ height: `${c ? Math.max(8, (c / maxCount) * 100) : 3}%` }} />
+                          </span>
+                        );
+                      })}
+                    </div>
                   </div>
-                  <div className="flex h-16 items-end gap-0.5 border-b border-zinc-700/40">
-                    {Array.from({ length: 16 }, (_, i) => {
-                      const face = i + 3;
-                      const c = counts.get(face) ?? 0;
-                      const isCurrent = total === face;
-                      return (
-                        <span key={face} className="flex-1 h-full flex items-end" title={`=${face}`}>
-                          <span className={`w-full rounded-t-sm transition-[height] ${isCurrent ? (judgment?.ok ? "bg-emerald-400" : "bg-red-400") : c ? "bg-amber-500/50" : "bg-zinc-800"}`} style={{ height: `${c ? Math.max(8, (c / maxCount) * 100) : 3}%` }} />
-                        </span>
-                      );
-                    })}
-                  </div>
-                </div>
+                ) : null}
               </div>
 
               {/* log action */}
@@ -571,17 +577,6 @@ export default function SessionClient({
                     <input type="text" value={actDesc} onChange={(e) => setActDesc(e.target.value)} placeholder="Attacks the goblin…" className={inputCls} />
                   </div>
                   <button onClick={addAction} className="w-full bg-amber-600 hover:bg-amber-500 text-amber-950 text-sm font-bold px-4 py-2.5 rounded-lg transition-colors">+ Log action</button>
-
-                  {sortedActions.length ? (
-                    <div className="pt-2 border-t border-zinc-700/40">
-                      <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1.5">Latest rolls</span>
-                      <div className="space-y-1.5">
-                        {sortedActions.map((a) => (
-                          <RollSlip key={a.id} a={a} />
-                        ))}
-                      </div>
-                    </div>
-                  ) : null}
                 </div>
               ) : null}
             </div>

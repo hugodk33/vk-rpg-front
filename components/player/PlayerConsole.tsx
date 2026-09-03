@@ -14,22 +14,26 @@ import type {
 import TurnPanel from "@/components/player/PlayerSession";
 import SceneTimeline from "@/components/scenes/SceneTimeline";
 import CharacterSheet from "@/components/character/CharacterSheet";
+import PlayerTablePanel from "@/components/player/PlayerTablePanel";
 
 /* ============================================================
    Player Console — one panel per character.
    A single tab bar unifies the player's flow:
-     · TURN      — the scene console (queue + dice, turn-gated).
-     · CHRONICLE — the table's timeline, read-only.
-     · SHEET     — the player's own sheet, visibility-aware.
+     · SESSION  — the scene console (queue + dice, turn-gated).
+     · CHRONICLE— the table's timeline, read-only.
+     · TABLE    — the table's sandbox: items, npcs, skills,
+                  advantages and disadvantages (read-only).
+     · SHEET    — the player's own sheet, visibility-aware.
    The narrator sees a full desk; the player sees a ritual built
    around waiting for their moment.
    ============================================================ */
 
-export type PlayerTab = "turn" | "chronicle" | "sheet";
+export type PlayerTab = "turn" | "chronicle" | "table" | "sheet";
 
 interface PlayerConsoleProps {
   character: TableCharacter | null;
   viewer: CharacterViewer | null;
+  tableId: string;
   roster: TableCharacter[];
   table: GameTable | null;
   scenes: Scene[];
@@ -51,14 +55,16 @@ const icon = (path: string, cls = "w-4 h-4") => (
 );
 
 const TABS: Array<{ key: PlayerTab; label: string; icon: string }> = [
-  { key: "turn", label: "Turn", icon: "M4 5a2 2 0 012-2h12a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm0 8a2 2 0 012-2h12a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm0 8a2 2 0 012-2h6a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2z" },
+  { key: "turn", label: "Session", icon: "M4 5a2 2 0 012-2h12a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm0 8a2 2 0 012-2h12a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm0 8a2 2 0 012-2h6a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2z" },
   { key: "chronicle", label: "Chronicle", icon: "M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" },
+  { key: "table", label: "Table", icon: "M3 6h18v12H3V6zm0 0V4m0 2v2m18-2V4m0 2v2M3 10h18M3 14h18M3 18h18M7 4v2M12 4v2M17 4v2" },
   { key: "sheet", label: "Sheet", icon: "M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 16a3.001 3.001 0 00-2.83-2M15 11a2 2 0 11-4 0 2 2 0 014 0z" },
 ];
 
 export default function PlayerConsole({
   character,
   viewer,
+  tableId,
   roster,
   table,
   scenes,
@@ -128,6 +134,8 @@ export default function PlayerConsole({
       {tab === "chronicle" ? (
         <SceneTimeline table={table} scenes={scenes} showEditButtons={false} />
       ) : null}
+
+      {tab === "table" ? <PlayerTablePanel tableId={tableId} /> : null}
 
       {tab === "sheet" && viewer ? (
         <CharacterSheet data={viewer} basePath={basePath} visibility={visibility} />
