@@ -11,6 +11,7 @@ import type {
   GameTableScenes,
   GameTableSkills,
   Modifier,
+  TableNpc,
 } from "@/lib/types";
 import { getSessionState } from "@/lib/session";
 import TableTabs from "@/components/TableTabs";
@@ -129,46 +130,71 @@ function SeatRow({ s }: { s: Seat }) {
     <Link
       href={linkable ? `/character/${s.id}` : "#"}
       aria-disabled={!linkable}
-      className="group flex flex-1 items-center gap-3 rounded-lg border border-zinc-700/40 bg-zinc-900/60 px-3.5 py-2.5 min-w-[15rem] hover:border-amber-600/50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/60"
+      className="group flex flex-col flex-1 rounded-lg border border-zinc-700/40 bg-zinc-900/60 px-3.5 py-2.5 min-w-[15rem] hover:border-amber-600/50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/60"
     >
-      <span className="w-2 h-2 rounded-full shrink-0" style={{ background: hueFor(s.name).dot, boxShadow: `0 0 6px ${hueFor(s.name).ring}` }} />
-      <span className="min-w-0 flex-1 leading-tight">
-        <span className="block text-sm font-medium text-zinc-200 truncate">{s.name}</span>
-        <span className="block font-mono text-[9px] uppercase tracking-widest text-zinc-500 mt-0.5 truncate">
-          {s.owner}
-        </span>
+      <span className="flex items-center gap-2">
+        <span className="w-2 h-2 rounded-full shrink-0" style={{ background: hueFor(s.name).dot, boxShadow: `0 0 6px ${hueFor(s.name).ring}` }} />
+        <span className="block text-sm font-medium text-zinc-200 leading-tight break-words">{s.name}</span>
+      </span>
+      <span className="block font-mono text-[9px] uppercase tracking-widest text-zinc-500 mt-0.5 ml-4 break-words">
+        {s.owner}
       </span>
 
       {s.hasSheet ? (
-        <span className="flex items-center gap-3 shrink-0">
-          <span className="font-mono text-[9px] uppercase tracking-widest text-amber-400/80">
+        <span className="grid grid-cols-3 items-center gap-2 mt-2.5 pt-2.5 border-t border-zinc-700/40">
+          <span className="font-mono text-[9px] uppercase tracking-widest text-amber-400/80 whitespace-nowrap">
             Pts {s.points ?? "–"}
           </span>
-          {s.base ? (
-            <span className="flex items-center gap-1.5" title={`${s.current ?? s.base}/${s.base} HP`}>
-              <span className="w-14 h-1.5 rounded-full bg-zinc-700/70 overflow-hidden">
-                <span
-                  className="block h-full rounded-full bg-red-400/90"
-                  style={{ width: `${hpPct(s.current ?? s.base, maxN)}%` }}
-                />
-              </span>
-              <span className="font-mono text-[10px] text-zinc-400 tabular-nums">
-                {s.current ?? s.base}/{s.base}
-              </span>
+          <span className="flex items-center gap-1.5 min-w-0" title={`${s.current ?? s.base}/${s.base} HP`}>
+            <span className="flex-1 w-14 h-1.5 rounded-full bg-zinc-700/70 overflow-hidden">
+              <span
+                className="block h-full rounded-full bg-red-400/90"
+                style={{ width: `${hpPct(s.current ?? s.base ?? 0, maxN)}%` }}
+              />
             </span>
-          ) : null}
-          {s.effects.length > 0 ? (
-            <span
-              title={s.effects.map((e) => e.name).filter(Boolean).join(", ") || "Modifiers applied"}
-              className="font-mono text-[9px] uppercase tracking-widest text-rose-300/90 bg-rose-500/10 border border-rose-500/30 rounded px-1.5 py-0.5"
-            >
-              {s.effects.length} effect{s.effects.length === 1 ? "" : "s"}
+            <span className="font-mono text-[10px] text-zinc-400 tabular-nums whitespace-nowrap">
+              {s.current ?? s.base}/{s.base}
             </span>
-          ) : null}
+          </span>
+          <span className="flex justify-end">
+            {s.effects.length > 0 ? (
+              <span
+                title={s.effects.map((e) => e.name).filter(Boolean).join(", ") || "Modifiers applied"}
+                className="font-mono text-[9px] uppercase tracking-widest text-rose-300/90 bg-rose-500/10 border border-rose-500/30 rounded px-1.5 py-0.5 whitespace-nowrap"
+              >
+                {s.effects.length} effect{s.effects.length === 1 ? "" : "s"}
+              </span>
+            ) : (
+              <span className="font-mono text-[9px] uppercase tracking-widest text-zinc-600 whitespace-nowrap">No effects</span>
+            )}
+          </span>
         </span>
       ) : (
-        <span className="font-mono text-[9px] uppercase tracking-widest text-zinc-500 shrink-0">No sheet yet</span>
+        <span className="block font-mono text-[9px] uppercase tracking-widest text-zinc-500 mt-2.5 pt-2.5 border-t border-zinc-700/40">
+          No sheet yet
+        </span>
       )}
+    </Link>
+  );
+}
+
+/* ---------- npc card ---------- */
+
+function NpcCard({ n }: { n: TableNpc }) {
+  const id = n.character_id ?? "";
+  return (
+    <Link
+      href={id ? `/character/${id}` : "#"}
+      aria-disabled={!id}
+      className="group flex flex-1 items-center gap-3 rounded-lg border border-zinc-700/40 bg-zinc-900/60 px-3.5 py-2.5 min-w-[15rem] hover:border-zinc-500/60 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/60"
+    >
+      <span className="w-2 h-2 rounded-full shrink-0 bg-sky-400" style={{ boxShadow: "0 0 6px rgba(56,189,248,0.6)" }} />
+      <span className="min-w-0 flex-1 leading-tight">
+        <span className="block text-sm font-medium text-zinc-200 break-words">{n.name || "Unnamed NPC"}</span>
+        <span className="block font-mono text-[9px] uppercase tracking-widest text-sky-400/80 mt-0.5 break-words">
+          {n.status || "NPC"}
+        </span>
+      </span>
     </Link>
   );
 }
@@ -307,7 +333,6 @@ export default async function TableOverviewPage({ params }: { params: Promise<{ 
 
   const cells: ArchiveCell[] = [
     { group: "People", name: "Characters", unit: "dossiers", count: characters.length, seal: "#34d399", href: `/table/${id}/characters`, addHref: `/character/new?table_id=${id}`, addLabel: "New character" },
-    { group: "People", name: "NPCs", unit: "marked as NPC", count: npcs.length, seal: "#38bdf8", addHref: `/npc/new?table_id=${id}`, addLabel: "New NPC" },
     { group: "Gear", name: "Items", unit: "records", count: items.length, seal: "#f59e0b", href: `/table/${id}/items`, addHref: `/item/new?table_id=${id}`, addLabel: "New item" },
     { group: "Traits", name: "Advantages", unit: "records", count: advantages.length, seal: "#818cf8", href: `/table/${id}/advantages`, addHref: `/advantage/new?table_id=${id}`, addLabel: "New advantage" },
     { group: "Traits", name: "Disadvantages", unit: "records", count: disadvantages.length, seal: "#f87171", href: `/table/${id}/disadvantages`, addHref: `/disadvantage/new?table_id=${id}`, addLabel: "New disadvantage" },
@@ -400,9 +425,9 @@ export default async function TableOverviewPage({ params }: { params: Promise<{ 
         </span>
       </div>
 
-      {/* ---- seating ---- */}
+      {/* ---- seating (players) ---- */}
       <section className="mt-8">
-        <LedgerHeader title="Seating" meta={`${seated} of ${(table?.players ?? []).length} seated`} />
+        <LedgerHeader title="Players" meta={`${seated} of ${(table?.players ?? []).length} seated`} />
 
         {seats.length === 0 ? (
           <div className="rounded-xl border border-dashed border-zinc-700/60 px-4 py-10 text-center">
@@ -425,6 +450,18 @@ export default async function TableOverviewPage({ params }: { params: Promise<{ 
           </div>
         )}
       </section>
+
+      {/* ---- npcs ---- */}
+      {npcs.length > 0 ? (
+        <section className="mt-8">
+          <LedgerHeader title="NPCs" meta={`${npcs.length} marked as NPC`} />
+          <div className="flex flex-wrap gap-2">
+            {npcs.map((n) => (
+              <NpcCard key={n.id || n.character_id || n.name} n={n} />
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       {/* ---- archive ---- */}
       <section className="mt-8">
