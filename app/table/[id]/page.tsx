@@ -11,7 +11,6 @@ import type {
   GameTableScenes,
   GameTableSkills,
   Modifier,
-  TableNpc,
 } from "@/lib/types";
 import { getSessionState } from "@/lib/session";
 import TableTabs from "@/components/TableTabs";
@@ -84,28 +83,6 @@ function Sigil({ title, name }: { title: string; name: string }) {
   );
 }
 
-/* ---------- marker ribbon (signature) ---------- */
-
-function MarkerRibbon({ chapter, part, title, hasChronicle }: { chapter: number; part: string; title: string; hasChronicle: boolean }) {
-  return (
-    <div className="relative md:w-60 md:shrink-0 border-t md:border-l md:border-t-0 border-amber-500/20 bg-zinc-950/50 md:rounded-r-2xl">
-      <div className="p-5 h-full">
-        <p className="font-mono text-[9px] tracking-widest uppercase text-amber-400/80">Marker</p>
-        <div className="mt-3 flex items-baseline gap-2">
-          <span className="font-mono text-3xl font-bold leading-none text-amber-300">CH·{roman(chapter)}</span>
-        </div>
-        <div className="mt-2 font-mono text-[10px] tracking-widest uppercase text-blue-300/90">
-          Scene {part}
-        </div>
-        <p className="mt-1.5 text-sm leading-snug text-zinc-300">
-          {hasChronicle ? title || "A new scene lies ahead." : "The chronicle waits for its first scene."}
-        </p>
-      </div>
-      <span aria-hidden className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-4 h-4 rotate-45 bg-amber-400 shadow-[0_0_10px_rgba(251,191,36,0.45)]" />
-    </div>
-  );
-}
-
 /* ---------- seating ---------- */
 
 interface Seat {
@@ -123,17 +100,18 @@ function hpPct(current: number, base: number): number {
   return base ? Math.max(0, Math.min(100, (current / base) * 100)) : 0;
 }
 
-function SeatRow({ s }: { s: Seat }) {
+function SeatRow({ s, hue }: { s: Seat; hue?: (typeof PALETTE)[number] }) {
   const linkable = s.id.length > 0;
   const maxN = Math.max(s.base ?? 0, s.current ?? 0);
+  const dot = hue ?? hueFor(s.name);
   return (
     <Link
       href={linkable ? `/character/${s.id}` : "#"}
       aria-disabled={!linkable}
-      className="group flex flex-col flex-1 rounded-lg border border-zinc-700/40 bg-zinc-900/60 px-3.5 py-2.5 min-w-[15rem] hover:border-amber-600/50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/60"
+      className="group flex flex-col w-full rounded-lg border border-zinc-700/40 bg-zinc-900/60 px-3.5 py-2.5 min-w-[15rem] hover:border-amber-600/50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/60"
     >
       <span className="flex items-center gap-2">
-        <span className="w-2 h-2 rounded-full shrink-0" style={{ background: hueFor(s.name).dot, boxShadow: `0 0 6px ${hueFor(s.name).ring}` }} />
+        <span className="w-2 h-2 rounded-full shrink-0" style={{ background: dot.dot, boxShadow: `0 0 6px ${dot.ring}` }} />
         <span className="block text-sm font-medium text-zinc-200 leading-tight break-words">{s.name}</span>
       </span>
       <span className="block font-mono text-[9px] uppercase tracking-widest text-zinc-500 mt-0.5 ml-4 break-words">
@@ -174,27 +152,6 @@ function SeatRow({ s }: { s: Seat }) {
           No sheet yet
         </span>
       )}
-    </Link>
-  );
-}
-
-/* ---------- npc card ---------- */
-
-function NpcCard({ n }: { n: TableNpc }) {
-  const id = n.character_id ?? "";
-  return (
-    <Link
-      href={id ? `/character/${id}` : "#"}
-      aria-disabled={!id}
-      className="group flex flex-1 items-center gap-3 rounded-lg border border-zinc-700/40 bg-zinc-900/60 px-3.5 py-2.5 min-w-[15rem] hover:border-zinc-500/60 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/60"
-    >
-      <span className="w-2 h-2 rounded-full shrink-0 bg-sky-400" style={{ boxShadow: "0 0 6px rgba(56,189,248,0.6)" }} />
-      <span className="min-w-0 flex-1 leading-tight">
-        <span className="block text-sm font-medium text-zinc-200 break-words">{n.name || "Unnamed NPC"}</span>
-        <span className="block font-mono text-[9px] uppercase tracking-widest text-sky-400/80 mt-0.5 break-words">
-          {n.status || "NPC"}
-        </span>
-      </span>
     </Link>
   );
 }
@@ -311,13 +268,38 @@ export default async function TableOverviewPage({ params }: { params: Promise<{ 
 
   const seated = seats.filter((s) => s.hasSheet).length;
 
+  /* npc seats — same per-character effect state as players */
+  const npcs = npcsRes?.npcs ?? [];
+  const npcSeats: Seat[] = await Promise.all(
+    npcs.map(async (n): Promise<Seat> => {
+      const base: Seat = {
+        id: n.character_id ?? "",
+        name: n.name || n.status || "Unnamed NPC",
+        owner: n.status || "NPC",
+        effects: [],
+        hasSheet: false,
+      };
+      if (!n.character_id) return base;
+      const viewer = await api<CharacterViewer>(`/game-table-character/${n.character_id}`).catch(() => null);
+      const sheet = viewer?.character?.sheet;
+      if (!sheet) return base;
+      return {
+        ...base,
+        hasSheet: true,
+        points: sheet.points,
+        base: sheet.base_hp ?? sheet.hp ?? 0,
+        current: sheet.hp ?? 0,
+        effects: viewer?.character?.active_effects ?? [],
+      };
+    })
+  );
+
   /* records on file */
   const characters = charsRes?.characters ?? [];
   const items = itemsRes?.items ?? [];
   const advantages = advRes?.advantages ?? [];
   const disadvantages = disRes?.disadvantages ?? [];
   const skills = skillsRes?.skills ?? [];
-  const npcs = npcsRes?.npcs ?? [];
 
   const seenPlaces = new Set<string>();
   for (const scene of scenes) {
@@ -392,13 +374,6 @@ export default async function TableOverviewPage({ params }: { params: Promise<{ 
               <p className="text-stone-400 text-sm mt-4 max-w-2xl leading-relaxed">{table.intro}</p>
             ) : null}
           </div>
-
-          <MarkerRibbon
-            chapter={hasChronicle ? state.chapter : 1}
-            part={hasChronicle ? state.part : "1"}
-            title={hasChronicle ? state.latestTitle : ""}
-            hasChronicle={hasChronicle}
-          />
         </div>
       </section>
 
@@ -443,7 +418,7 @@ export default async function TableOverviewPage({ params }: { params: Promise<{ 
             </Link>
           </div>
         ) : (
-          <div className="flex flex-wrap gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
             {seats.map((s) => (
               <SeatRow key={s.id || s.name} s={s} />
             ))}
@@ -455,9 +430,9 @@ export default async function TableOverviewPage({ params }: { params: Promise<{ 
       {npcs.length > 0 ? (
         <section className="mt-8">
           <LedgerHeader title="NPCs" meta={`${npcs.length} marked as NPC`} />
-          <div className="flex flex-wrap gap-2">
-            {npcs.map((n) => (
-              <NpcCard key={n.id || n.character_id || n.name} n={n} />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+            {npcSeats.map((s) => (
+              <SeatRow key={s.id || s.name} s={s} hue={{ dot: "#38bdf8", ring: "#38bdf855" }} />
             ))}
           </div>
         </section>

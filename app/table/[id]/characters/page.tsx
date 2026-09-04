@@ -2,7 +2,7 @@
 
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
-import type { GameTableCharacters, TableCharacter } from "@/lib/types";
+import type { GameTableCharacters, GameTableNpcs, TableCharacter } from "@/lib/types";
 import TableTabs from "@/components/TableTabs";
 import RadarChart from "@/components/RadarChart";
 import { api } from "@/lib/api";
@@ -10,10 +10,12 @@ import { api } from "@/lib/api";
 export default function TableCharactersPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const [data, setData] = useState<GameTableCharacters | null>(null);
+  const [npcs, setNpcs] = useState<GameTableNpcs | null>(null);
   const [search, setSearch] = useState("");
 
   useEffect(() => {
     api<GameTableCharacters>(`/game-table-characters/${id}`).then(setData).catch(() => setData({ table: null, characters: [] }));
+    api<GameTableNpcs>(`/game-table-npcs/${id}`).then(setNpcs).catch(() => setNpcs({ table: null, npcs: [] }));
   }, [id]);
 
   const characters = (data?.characters ?? []).filter((ch: TableCharacter) => {
@@ -23,6 +25,15 @@ export default function TableCharactersPage({ params }: { params: Promise<{ id: 
     return (s?.name ?? ch.name ?? "").toLowerCase().includes(q)
       || (ch.user?.username ?? "").toLowerCase().includes(q);
   });
+
+  const npcStatusById = new Map((npcs?.npcs ?? []).map((n) => [n.character_id, n.status]));
+
+  const isNpc = (ch: TableCharacter): boolean => ch.user?.type === 0;
+  const isAlly = (ch: TableCharacter): boolean => {
+    if (!isNpc(ch)) return false;
+    const st = npcStatusById.get(ch.id);
+    return st ? st.toLowerCase() !== "enemy" : true;
+  };
 
   return (
     <div className="max-w-4xl mx-auto p-6">
@@ -68,6 +79,50 @@ export default function TableCharactersPage({ params }: { params: Promise<{ id: 
         <div className="space-y-2">
           {characters.map((ch) => {
             const s = ch.sheet;
+            if (isNpc(ch)) {
+              const ally = isAlly(ch);
+              return (
+                <Link
+                  key={ch.id}
+                  href={`/character/${ch.id}`}
+                  className="group block bg-zinc-800/40 hover:bg-zinc-800/70 border border-zinc-700/40 hover:border-zinc-600/60 rounded-lg border-l-[3px] px-4 py-3 transition-all"
+                  style={{ borderLeftColor: ally ? "#34d399" : "#f87171" }}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <svg className="w-4 h-4 shrink-0 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                      <div className="min-w-0">
+                        <span className="text-sm font-medium text-zinc-200 group-hover:text-zinc-100 truncate block">
+                          {s?.name || ch.name || "Unnamed"}
+                        </span>
+                        <span className="text-[11px] text-zinc-500">NPC</span>
+                      </div>
+                      <span
+                        className="shrink-0 font-mono text-[9px] uppercase tracking-widest text-zinc-900 bg-zinc-200 rounded px-1.5 py-0.5"
+                        style={{ background: ally ? "#34d399" : "#f87171", color: "#18181b" }}
+                      >
+                        {ally ? "Ally" : "Enemy"}
+                      </span>
+                    </div>
+                    {s ? (
+                      <div className="flex items-center gap-3 shrink-0">
+                        <div className="flex items-center gap-2 text-[11px]">
+                          <span className="text-red-400">ST {s.st ?? "-"}</span>
+                          <span className="text-emerald-400">DX {s.dx ?? "-"}</span>
+                          <span className="text-blue-400">IQ {s.iq ?? "-"}</span>
+                          <span className="text-purple-400">HT {s.ht ?? "-"}</span>
+                        </div>
+                        <RadarChart st={s.st} dx={s.dx} iq={s.iq} ht={s.ht} size={48} />
+                      </div>
+                    ) : (
+                      <span className="text-[11px] text-zinc-600 italic shrink-0">No sheet</span>
+                    )}
+                  </div>
+                </Link>
+              );
+            }
             return (
               <Link
                 key={ch.id}
