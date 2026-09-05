@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { GameTableItems, Item } from "@/lib/types";
 import TableTabs from "@/components/TableTabs";
 import { api } from "@/lib/api";
+import { fitLabel } from "@/lib/fit";
 
 const KIND_BADGES: Record<string, { label: string; class: string }> = {
   weapon: { label: "Weapon", class: "bg-red-400/10 text-red-400 border border-red-400/20" },
@@ -131,6 +132,11 @@ export default function TableItemsPage({ params }: { params: Promise<{ id: strin
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14.121 14.121L19 19m-7-7l7-7m-7 7l-2.879 2.879M12 12L9.121 9.121m0 5.758a3 3 0 10-4.243 4.243 3 3 0 004.243-4.243zm0-5.758a3 3 0 10-4.243-4.243 3 3 0 004.243-4.243z" />
                         </svg>
                         {i.weapon.attacks?.length ? `${i.weapon.attacks.length} ataque${i.weapon.attacks.length !== 1 ? "s" : ""}` : "arma"}
+                      </span>
+                    ) : null}
+                    {i.weapon?.fit && i.weapon.fit !== "normal" ? (
+                      <span className="inline-flex items-center gap-1 text-[10px] text-red-300/90 bg-red-400/5 px-1.5 py-0.5 rounded border border-red-400/20">
+                        Ajuste: {fitLabel(i.weapon.fit)}
                       </span>
                     ) : null}
                     {i.armor ? (

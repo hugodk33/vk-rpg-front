@@ -87,6 +87,9 @@ export interface CharacterItem {
   character_id?: string
   quantity?: number
   weight?: number
+  weight_lb?: number
+  cost?: number
+  dimensions?: string
   category?: string
   quality?: string
   condition?: string
@@ -94,9 +97,11 @@ export interface CharacterItem {
   description?: string
   weapon?: Weapon | null
   armor?: ArmorData | null
+  equipment_id?: string
   equipment_status?: string
   equipment_location?: string
   equipment_quantity?: number
+  equipment_rendered_st?: number | null
 }
 
 export interface CharacterArmor {
@@ -168,6 +173,7 @@ export interface Weapon {
   reach?: string;
   parry?: string | null;
   block?: string | null;
+  fit?: string;
   attacks: WeaponAttack[];
 }
 

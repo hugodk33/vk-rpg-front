@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { submitJson } from "./submit";
 import { cancelCls, inputCls, labelCls, submitCls } from "./formStyles";
+import { FIT_OPTIONS } from "@/lib/fit";
 import type { ArmorData, Item, Weapon, WeaponAttack } from "@/lib/types";
 
 export interface ItemFormProps {
@@ -91,6 +92,7 @@ export default function ItemForm({ initial, tableId, tables }: ItemFormProps) {
   const [reach, setReach] = useState(initial?.weapon?.reach ?? "C");
   const [parry, setParry] = useState(initial?.weapon?.parry ?? "");
   const [block, setBlock] = useState(initial?.weapon?.block ?? "");
+  const [weaponFit, setWeaponFit] = useState(initial?.weapon?.fit ?? "normal");
   const [attacks, setAttacks] = useState<WeaponAttack[]>(
     (initial?.weapon?.attacks?.length ? initial.weapon.attacks : [emptyAttack()]).map((a) => ({ ...a }))
   );
@@ -137,6 +139,7 @@ export default function ItemForm({ initial, tableId, tables }: ItemFormProps) {
             reach: reach || "C",
             parry: parry || null,
             block: block || null,
+            weapon_fit: weaponFit || "normal",
             attacks: attacks.map((a) => ({
               name: a.name || "Ataque",
               usage: a.usage || null,
@@ -165,6 +168,7 @@ export default function ItemForm({ initial, tableId, tables }: ItemFormProps) {
               reach: reach || "C",
               parry: parry || null,
               block: block || null,
+              weapon_fit: weaponFit || "normal",
               attacks: attacks.map((a) => ({
                 name: a.name || "Ataque",
                 usage: a.usage || null,
@@ -347,7 +351,7 @@ export default function ItemForm({ initial, tableId, tables }: ItemFormProps) {
                   </select>
                 </div>
               </div>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
                   <label className={labelCls}>Alcance</label>
                   <input value={reach} onChange={(e) => setReach(e.target.value)} className={inputCls} placeholder="C, 1, 2" />
@@ -359,6 +363,14 @@ export default function ItemForm({ initial, tableId, tables }: ItemFormProps) {
                 <div>
                   <label className={labelCls}>Block</label>
                   <input value={block} onChange={(e) => setBlock(e.target.value)} className={inputCls} placeholder="ex: 9" />
+                </div>
+                <div>
+                  <label className={labelCls}>Ajuste</label>
+                  <select value={weaponFit} onChange={(e) => setWeaponFit(e.target.value)} className={inputCls}>
+                    {FIT_OPTIONS.map((o) => (
+                      <option key={o.value} value={o.value}>{o.label}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
 

@@ -1,8 +1,6 @@
 import { Fragment } from "react";
-import Link from "next/link";
 import type { CharacterViewer, Sheet, VisibilityRule } from "@/lib/types";
 import RadarChart from "@/components/RadarChart";
-import CharacterJourney from "@/components/character/CharacterJourney";
 import { buildVisibilityMap, isItemHidden, isSkillHidden, isAttributeHidden, isAdvantageHidden, isDisadvantageHidden } from "@/lib/visibility";
 import { resolveAttack, DAMAGE_TYPES } from "@/lib/damage";
 
@@ -420,14 +418,11 @@ interface CharacterSheetProps {
   visibility?: VisibilityRule[] | null;
 }
 
-export default function CharacterSheet({ data, basePath, visibility }: CharacterSheetProps) {
+export default function CharacterSheet({ data, visibility }: CharacterSheetProps) {
   const ch = data.character;
   const s = ch.sheet;
   const name = s?.name || ch.name || "Character";
   const modifiers = ch.active_effects ?? [];
-  const moments = data.moments ?? [];
-  const selectedMoment = data.selected_moment;
-  const hasBottom = moments.length > 0 || modifiers.length > 0;
   const effects = modifiers.filter(activeEffects);
 
   const vis = visibility ? buildVisibilityMap(visibility) : null;
@@ -438,8 +433,11 @@ export default function CharacterSheet({ data, basePath, visibility }: Character
   const disHidden = (id?: string | null) => vis ? isDisadvantageHidden(vis, id) : false;
   const attrHidden = (a?: string | null) => vis ? isAttributeHidden(vis, a) : false;
 
+  const isCarried = (it: { equipment_status?: string }) =>
+    it.equipment_status === "equipped" || it.equipment_status === "wielded";
+
   const weaponGroups = (ch.items ?? [])
-    .filter((it) => it.weapon && it.weapon.attacks.length > 0)
+    .filter((it) => isCarried(it) && it.weapon && it.weapon.attacks.length > 0)
     .map((it) => ({
       name: it.name || "Unnamed",
       kind: it.kind,
@@ -462,9 +460,11 @@ export default function CharacterSheet({ data, basePath, visibility }: Character
   const passive = (() => {
     const dx = s?.dx ?? 10;
     const parryVals = (ch.items ?? [])
+      .filter(isCarried)
       .map((i) => parseDefense(i.weapon?.parry))
       .filter((n): n is number => n != null);
     const blockVals = (ch.items ?? [])
+      .filter(isCarried)
       .map((i) => parseDefense(i.weapon?.block))
       .filter((n): n is number => n != null);
     const parry = parryVals.length ? Math.max(...parryVals) : Math.floor(dx / 2) + 3;
@@ -474,7 +474,7 @@ export default function CharacterSheet({ data, basePath, visibility }: Character
   })();
 
   const fittedArmors = (ch.items ?? [])
-    .filter((it) => it.armor)
+    .filter((it) => isCarried(it) && it.armor)
     .map((it) => ({
       id: it.armor?.id || it.id,
       name: it.name || it.armor?.locations || "Armor",
@@ -484,9 +484,6 @@ export default function CharacterSheet({ data, basePath, visibility }: Character
       locations: it.equipment_location || it.armor?.locations || "",
     }));
   const visibleArmors = vis ? fittedArmors.filter((a) => !itemHidden(ch.items?.find((it) => (it.armor?.id || it.id) === a.id)?.id)) : fittedArmors;
-  const visibleItems = vis
-    ? (ch.items ?? []).filter((i) => !itemHidden(i.id))
-    : ch.items;
   const visibleSkills = vis
     ? (ch.skills ?? []).filter((sk) => !skillHidden(sk.skill_id ?? sk.id))
     : ch.skills;
@@ -883,51 +880,6 @@ export default function CharacterSheet({ data, basePath, visibility }: Character
 
             <div>
               {sectionTitle(
-                "Inventory",
-                <svg className="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
-                  />
-                </svg>
-              )}
-              {!visibleItems || visibleItems.length === 0 ? (
-                <p className="text-zinc-600 text-sm italic">None</p>
-              ) : (
-                visibleItems.map((i) => {
-                  const loc = i.equipment_location || i.equipment_status;
-                  return (
-                  <div
-                    key={i.id}
-                    className="bg-zinc-800/60 rounded-lg border border-zinc-700/40 px-3 py-2 mb-1.5"
-                  >
-                    <div className="flex justify-between items-start">
-                      <span className="text-zinc-200 text-sm font-medium">
-                        {i.name || "Unnamed"}
-                        {i.quantity && i.quantity > 1 ? <span className="text-zinc-500 text-xs"> ×{i.quantity}</span> : null}
-                      </span>
-                      {i.weight ? <span className="text-zinc-500 text-xs">{i.weight} lb</span> : null}
-                    </div>
-                    <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1 text-xs text-zinc-500">
-                      {i.category ? <span>{i.category}</span> : null}
-                      {i.kind ? <span>{i.kind}</span> : null}
-                      {i.quality ? <span className="uppercase text-amber-400/80">{i.quality}</span> : null}
-                      {i.condition ? <span className="capitalize">{i.condition}</span> : null}
-                      {loc ? (
-                        <span className="capitalize">{loc.replace(/_/g, " ")}</span>
-                      ) : null}
-                    </div>
-                    {i.description ? <p className="text-zinc-500 text-xs mt-0.5">{i.description}</p> : null}
-                  </div>
-                  );
-                })
-              )}
-            </div>
-
-            <div>
-              {sectionTitle(
                 "Body & Armor",
                 <svg className="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
@@ -963,76 +915,6 @@ export default function CharacterSheet({ data, basePath, visibility }: Character
           </div>
         </div>
       </div>
-
-      {hasBottom ? (
-        <div className="bg-zinc-900/90 border border-zinc-700/50 shadow-2xl overflow-hidden mt-6">
-          <div className="p-4">
-            {moments.length > 0 ? (
-              <div className="mb-4">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-xs font-semibold uppercase tracking-wider text-zinc-500 mr-1">
-                    History
-                  </span>
-                  <Link
-                    href={basePath}
-                    className={`px-2.5 py-1 text-xs rounded-md transition-colors ${
-                      !selectedMoment
-                        ? "bg-amber-600/30 text-amber-300 border border-amber-600/50"
-                        : "bg-zinc-800/60 text-zinc-400 border border-zinc-700/50 hover:text-zinc-200"
-                    }`}
-                  >
-                    Present
-                  </Link>
-                  {[...moments].reverse().map((m, i, arr) => {
-                    const label = i === arr.length - 1 ? "Starting" : `${m}`;
-                    const isSel = selectedMoment === m;
-                    return (
-                      <Link
-                        key={m}
-                        href={`${basePath}?moment=${m}`}
-                        className={`px-2.5 py-1 text-xs rounded-md transition-colors ${
-                          isSel
-                            ? "bg-amber-600/30 text-amber-300 border border-amber-600/50"
-                            : "bg-zinc-800/60 text-zinc-400 border border-zinc-700/50 hover:text-zinc-200"
-                        }`}
-                      >
-                        {label}
-                      </Link>
-                    );
-                  })}
-                </div>
-                {selectedMoment ? (
-                  <p className="text-xs text-zinc-500 mt-2">
-                    Viewing character state at{" "}
-                    <span className="text-amber-400 font-medium">Moment {selectedMoment}</span>
-                  </p>
-                ) : null}
-              </div>
-            ) : null}
-            <div>
-              <div className="flex items-center gap-2 mb-3 border-b border-zinc-700/60 pb-1.5">
-                <svg
-                  className="w-4 h-4 text-amber-500"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"
-                  />
-                </svg>
-                <h2 className="text-lg font-bold uppercase tracking-wider text-zinc-300">
-                  Journey
-                </h2>
-              </div>
-              <CharacterJourney characterId={ch.id} selectedMoment={selectedMoment} />
-            </div>
-          </div>
-        </div>
-      ) : null}
     </>
   );
 }
