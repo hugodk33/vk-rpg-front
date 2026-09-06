@@ -168,6 +168,34 @@ export default function SessionClient({
     });
   }
 
+  async function applyTest() {
+    const entry = pendingQueue[0];
+    if (!entry) return;
+    const payload = {
+      id: entry.id,
+      character_id: entry.character_id ?? null,
+      action_id: entry.action_id ?? null,
+      queue: entry.queue ?? "",
+      status: entry.status ?? "pending",
+      test_dice: diceType,
+      test_count: diceCount,
+      test_mod: diceMod,
+      test_attr: actSkill,
+    };
+    try {
+      const res = await fetch("/api/game-table-queue", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const j = await res.json();
+      if (!j.success) alert("Error: " + (j.error || "Unknown"));
+      router.refresh();
+    } catch (err: unknown) {
+      alert("Network error: " + (err instanceof Error ? err.message : "Unknown"));
+    }
+  }
+
   /* ---- dice ---- */
   const [diceType, setDiceType] = useState("6");
   const [diceCount, setDiceCount] = useState(3);
@@ -181,6 +209,7 @@ export default function SessionClient({
   const [actDesc, setActDesc] = useState("");
 
   const actorCharId = pendingQueue[0]?.character_id || "";
+  const upEntry = pendingQueue[0];
   const selectedChar = characters.find((c) => c.id === actorCharId);
   const attrib = (): number => {
     if (!selectedChar) return 10;
@@ -459,10 +488,27 @@ export default function SessionClient({
                 {actorCharId ? charName(actorCharId) : <span className="text-zinc-500">empty queue</span>}
               </span>
               {actorIsNpc ? <span className="font-mono text-[9px] uppercase tracking-widest px-1.5 py-px rounded bg-amber-400/15 text-amber-300">NPC</span> : null}
-              <span className="ml-auto font-mono text-[10px] text-zinc-500 uppercase tracking-widest">
-                target: <span style={{ color: attrHex }}>{attrib()}</span> ({attrMetaEntry?.label})
-              </span>
+<span className="ml-auto font-mono text-[10px] text-zinc-500 uppercase tracking-widest">
+                  target: <span style={{ color: attrHex }}>{attrib()}</span> ({attrMetaEntry?.label})
+                </span>
             </div>
+
+            {!isPlayer ? (
+              <div className="flex items-center gap-2 mb-5 -mt-1">
+                <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-600">
+                  {upEntry && (upEntry.test_dice ?? null) != null
+                    ? `Seat test: ${upEntry.test_count ?? 3}d${upEntry.test_dice ?? "6"}${(upEntry.test_mod ?? 0) >= 0 ? "+" : ""}${upEntry.test_mod ?? 0} (${(upEntry.test_attr ?? "dx").toUpperCase()})`
+                    : "No test set for this seat yet"}
+                </span>
+                <span className="flex-1 h-px bg-zinc-700/40" />
+                <button
+                  onClick={applyTest}
+                  className="font-mono text-[10px] font-semibold uppercase tracking-widest px-3 py-1.5 rounded-lg border border-zinc-600 text-zinc-300 hover:border-amber-500 hover:text-amber-300 transition-colors shrink-0"
+                >
+                  Save as this seat's test
+                </button>
+              </div>
+            ) : null}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>

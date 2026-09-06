@@ -403,6 +403,10 @@ export interface QueueEntry {
   queue?: string | number | null
   status?: string | null
   character_name?: string
+  test_dice?: string | null
+  test_count?: number | null
+  test_mod?: number | null
+  test_attr?: string | null
 }
 
 export interface VisibilityRule {

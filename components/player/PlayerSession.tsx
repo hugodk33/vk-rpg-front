@@ -112,29 +112,32 @@ export default function TurnPanel({
   };
   const charIsMine = (id?: string | null): boolean => id === myId;
 
-  /* ---- dice ---- */
-  const [diceType, setDiceType] = useState("6");
-  const [diceCount, setDiceCount] = useState(3);
-  const [diceMod, setDiceMod] = useState(0);
-  const [actSkill, setActSkill] = useState("dx");
+  /* ---- dice (narrator-controlled test) ---- */
   const [rolls, setRolls] = useState<number[]>([]);
   const [total, setTotal] = useState<number | null>(null);
   const [judgment, setJudgment] = useState<Judgment | null>(null);
 
+  const myEntry = pendingQueue.find((e) => e.character_id === myId);
+  const testAttr = (myEntry?.test_attr as "st" | "dx" | "iq" | "ht") || "dx";
+  const testDie = myEntry?.test_dice || "6";
+  const testCount = Math.max(1, Number(myEntry?.test_count ?? 3) || 3);
+  const testMod = Number(myEntry?.test_mod ?? 0) || 0;
+  const testSet = (myEntry?.test_dice ?? null) != null;
+
   const myChar = roster.find((c) => c.id === myId);
   const s = myChar?.sheet;
   const attrib = (): number => {
-    const attr = actSkill as "st" | "dx" | "iq" | "ht";
+    const attr = testAttr;
     return s?.[attr] ?? s?.[`base_${attr}` as "base_st"] ?? 10;
   };
-  const modValue = Math.floor((Number(attrib()) - 10) / 2) + diceMod;
-  const attrHex = attrMeta[actSkill]?.hex ?? "#2dd4bf";
+  const modValue = Math.floor((Number(attrib()) - 10) / 2) + testMod;
+  const attrHex = attrMeta[testAttr]?.hex ?? "#2dd4bf";
   const rollDisabled = () => !isMyTurn || !myId;
 
   function performRoll(): { r: number[]; tot: number } {
-    const die = parseInt(diceType, 10);
+    const die = parseInt(testDie, 10);
     if (rollDisabled()) return { r: [], tot: 0 };
-    const { r, tot } = rollDice(diceCount, die, modValue);
+    const { r, tot } = rollDice(testCount, die, modValue);
     setRolls(r);
     setTotal(tot);
     setJudgment(judgeRoll(tot, attrib()));
@@ -288,40 +291,35 @@ export default function TurnPanel({
               <span className="text-sm font-semibold text-zinc-100">
                 {pendingQueue[0] ? charName(pendingQueue[0].character_id) : "empty queue"}
               </span>
-              <span className="ml-auto font-mono text-[10px] text-zinc-500 uppercase tracking-widest">
-                target: <span style={{ color: attrHex }}>{attrib()}</span> ({attrMeta[actSkill]?.label})
-              </span>
+<span className="ml-auto font-mono text-[10px] text-zinc-500 uppercase tracking-widest">
+                  target: <span style={{ color: attrHex }}>{attrib()}</span> ({attrMeta[testAttr]?.label})
+                </span>
             </div>
 
             <div className="grid grid-cols-1 gap-5">
               <div className="flex flex-wrap items-end gap-3">
                 <div>
                   <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Die</span>
-                  <select value={diceType} onChange={(e) => setDiceType(e.target.value)} disabled={rollDisabled()} className="bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-3 py-2 text-zinc-100 text-sm focus:outline-none focus:border-teal-700/60 disabled:opacity-40">
-                    {["4", "6", "8", "10", "12", "20"].map((d) => (
-                      <option key={d} value={d} className="bg-zinc-800">d{d}</option>
-                    ))}
-                  </select>
+                  <span className="inline-flex items-center justify-center min-w-[3.5rem] h-10 bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-3 text-zinc-100 text-sm font-mono">d{testDie}</span>
                 </div>
                 <div>
                   <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Count</span>
-                  <div className="flex items-center gap-1">
-                    <button onClick={() => setDiceCount((c) => Math.max(1, c - 1))} disabled={rollDisabled()} className="w-8 h-9 bg-zinc-800/60 border border-zinc-700/50 rounded-lg text-zinc-300 hover:bg-zinc-700 transition-colors disabled:opacity-40 leading-none">−</button>
-                    <span className="w-10 text-center text-lg font-bold font-mono text-teal-300">{diceCount}</span>
-                    <button onClick={() => setDiceCount((c) => Math.min(20, c + 1))} disabled={rollDisabled()} className="w-8 h-9 bg-zinc-800/60 border border-zinc-700/50 rounded-lg text-zinc-300 hover:bg-zinc-700 transition-colors disabled:opacity-40 leading-none">+</button>
-                  </div>
+                  <span className="inline-flex items-center justify-center min-w-[3.5rem] h-10 bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-3 text-zinc-100 text-sm font-mono">{testCount}</span>
                 </div>
                 <div>
                   <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Mod</span>
-                  <input type="number" value={diceMod} min={-20} max={20} onChange={(e) => setDiceMod(Number(e.target.value))} className="w-16 bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-2 py-2 text-zinc-100 text-sm text-center focus:outline-none focus:border-teal-700/60" />
+                  <span className="inline-flex items-center justify-center min-w-[3.5rem] h-10 bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-3 text-zinc-100 text-sm font-mono">{testMod >= 0 ? `+${testMod}` : testMod}</span>
                 </div>
                 <div>
                   <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Attribute</span>
-                  <select value={actSkill} onChange={(e) => setActSkill(e.target.value)} disabled={rollDisabled()} className="bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-3 py-2 text-zinc-100 text-sm focus:outline-none focus:border-teal-700/60 disabled:opacity-40">
-                    {["st", "dx", "iq", "ht"].map((a) => (
-                      <option key={a} value={a} className="bg-zinc-800">{a.toUpperCase()}</option>
-                    ))}
-                  </select>
+                  <span className="inline-flex items-center justify-center min-w-[3.5rem] h-10 bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-3 text-zinc-100 text-sm font-mono">{testAttr.toUpperCase()}</span>
+                </div>
+                <div className="w-full">
+                  <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-600">
+                    {testSet
+                      ? "Locked by the narrator — roll with these."
+                      : "No test set yet — defaults locked until the narrator tunes it."}
+                  </span>
                 </div>
               </div>
 
@@ -365,7 +363,7 @@ export default function TurnPanel({
                       : "bg-zinc-800 text-zinc-500 cursor-not-allowed"
                   } text-sm font-bold px-6 py-2.5 rounded-lg transition-colors`}
                 >
-                  {icon("M12 3l1.5 6.5L20 11l-6.5 1.5L12 19l-1.5-6.5L4 11l6.5-1.5L12 3z", "w-4 h-4 inline mr-1")}Roll {diceCount}d{diceType}
+                  {icon("M12 3l1.5 6.5L20 11l-6.5 1.5L12 19l-1.5-6.5L4 11l6.5-1.5L12 3z", "w-4 h-4 inline mr-1")}Roll {testCount}d{testDie}
                 </button>
               </div>
 
