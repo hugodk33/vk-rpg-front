@@ -408,6 +408,7 @@ export interface QueueEntry {
 export interface VisibilityRule {
   id: string
   character_id?: string | null
+  other_character_id?: string | null
   skill_id?: string | null
   advantage_id?: string | null
   disadvantage_id?: string | null

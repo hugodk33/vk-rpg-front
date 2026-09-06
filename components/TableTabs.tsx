@@ -10,7 +10,7 @@ import Link from "next/link";
 interface TableTabsProps {
   tableId: string;
   role?: "narrator" | "player";
-  active?: "overview" | "sessions" | "timeline" | "character";
+  active?: "overview" | "sessions" | "timeline" | "visibility" | "character";
   characterUrl?: string;
   characterHref?: string;
   hideBreadcrumb?: boolean;
@@ -32,6 +32,7 @@ const ICONS = {
   loc: "M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0zM15 11a3 3 0 11-6 0 3 3 0 016 0z",
   sessions: "M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z",
   timeline: "M12 6V4m0 16v-2m0-4V8M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M4 12H2m20 0h-2m-1.07-7.07l-1.41 1.41M6.34 17.66l-1.41 1.41M12 16a4 4 0 100-8 4 4 0 000 8z",
+  visibility: "M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7zM12 9a3 3 0 100 6 3 3 0 000-6z",
   character: "M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 16a3.001 3.001 0 00-2.83-2M15 11a2 2 0 11-4 0 2 2 0 014 0z",
 };
 
@@ -118,6 +119,12 @@ export default function TableTabs({ tableId, role = "narrator", active, characte
         <Link href={`${prefix}/table/${tableId}/scenes`} className={`${tabActive(active === "timeline")} ${active === "timeline" ? "after:absolute after:inset-x-2 after:bottom-0 after:h-0.5 after:rounded-full after:bg-amber-500 after:content-['']" : ""}`}>
           {icon(ICONS.timeline, "w-4 h-4")} Timeline
         </Link>
+
+        {role !== "player" ? (
+        <Link href={`${prefix}/table/${tableId}/visibility`} className={`${tabActive(active === "visibility")} ${active === "visibility" ? "after:absolute after:inset-x-2 after:bottom-0 after:h-0.5 after:rounded-full after:bg-amber-500 after:content-['']" : ""}`}>
+          {icon(ICONS.visibility, "w-4 h-4")} Visibility
+        </Link>
+        ) : null}
 
         {active === "character" && characterHref ? (
           <Link href={characterHref} className={`${tabActive(true)} after:absolute after:inset-x-2 after:bottom-0 after:h-0.5 after:rounded-full after:bg-amber-500 after:content-['']`}>

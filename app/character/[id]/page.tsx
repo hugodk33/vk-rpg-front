@@ -5,6 +5,7 @@ import CharacterTabs, { type SheetTab } from "@/components/character/CharacterTa
 import CharacterSheet from "@/components/character/CharacterSheet";
 import GearPanel from "@/components/character/GearPanel";
 import CharacterJourneyView from "@/components/character/CharacterJourneyView";
+import CharacterVisibilityDrawer from "@/components/visibility/CharacterVisibilityDrawer";
 
 export const dynamic = "force-dynamic";
 
@@ -45,7 +46,10 @@ export default async function CharacterViewerPage({
           tab={activeTab}
         />
       ) : (
-        <CharacterSheet data={data} basePath={basePath} />
+        <>
+          <CharacterSheet data={data} basePath={basePath} />
+          <CharacterVisibilityDrawer tableId={tableId} targetId={data.character.id} />
+        </>
       )}
     </div>
   );

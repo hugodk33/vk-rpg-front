@@ -29,7 +29,7 @@ export function buildVisibilityMap(rules: VisibilityRule[] | null | undefined): 
     values: new Map(),
   };
   for (const r of rules ?? []) {
-    const hidden = (r.status ?? "hidden") === "hidden";
+    const hidden = !(r.status === "known" || r.status === "specialist");
     if (r.item_id) {
       map.values.set(`item:${r.item_id}`, r.value ?? "");
       if (hidden) map.hiddenItems.add(r.item_id);

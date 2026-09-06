@@ -27,6 +27,8 @@ export default function PlayerTableCharactersPage({ params }: { params: Promise<
       || (ch.user?.username ?? "").toLowerCase().includes(q);
   });
 
+  const myId = characterUrl?.match(/\/player\/character\/([^/?]+)/)?.[1];
+
   return (
     <div className="max-w-4xl mx-auto p-6">
       <TableTabs tableId={id} role="player" characterUrl={characterUrl} />
@@ -62,12 +64,28 @@ export default function PlayerTableCharactersPage({ params }: { params: Promise<
                 ) : (
                   <p className="text-zinc-600 text-xs italic mt-1">No sheet</p>
                 )}
-                <Link
-                  href={characterUrl ?? `/character/${ch.id}`}
-                  className="w-full text-center bg-amber-700/60 hover:bg-amber-600 text-amber-100 text-xs font-medium px-3 py-2 rounded-lg transition-colors mt-3"
-                >
-                  Sheet
-                </Link>
+                {ch.id === myId ? (
+                  <Link
+                    href={characterUrl ?? `/character/${ch.id}`}
+                    className="w-full text-center bg-amber-700/60 hover:bg-amber-600 text-amber-100 text-xs font-medium px-3 py-2 rounded-lg transition-colors mt-3"
+                  >
+                    My sheet
+                  </Link>
+                ) : myId ? (
+                  <Link
+                    href={`/player/character/${ch.id}/view?viewer=${myId}`}
+                    className="w-full text-center bg-zinc-700/60 hover:bg-zinc-600 text-zinc-100 text-xs font-medium px-3 py-2 rounded-lg transition-colors mt-3"
+                  >
+                    View sheet
+                  </Link>
+                ) : (
+                  <Link
+                    href={`/character/${ch.id}`}
+                    className="w-full text-center bg-amber-700/60 hover:bg-amber-600 text-amber-100 text-xs font-medium px-3 py-2 rounded-lg transition-colors mt-3"
+                  >
+                    Sheet
+                  </Link>
+                )}
               </div>
             );
           })}
