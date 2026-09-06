@@ -135,6 +135,7 @@ export default function VisibilityPanel({
   const [target, setTarget] = useState<string | null>(targetId ?? null);
   const [rules, setRules] = useState<VisibilityRule[]>([]);
   const [saving, setSaving] = useState(false);
+  const [bulkApplying, setBulkApplying] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const curObserver = observerId ?? observers[0]?.id ?? null;
@@ -225,6 +226,37 @@ export default function VisibilityPanel({
     ];
   }, [items, skills, advantages, disadvantages]);
 
+  const refetch = (observer: string) =>
+    api<VisibilityRule[]>(`/game-table-visibility/${observer}`)
+      .then((d) => setRules(Array.isArray(d) ? d : []))
+      .catch(() => setRules([]));
+
+  const saveRule = async (
+    row: PanelRow,
+    status: VisStatus,
+    value: string | null
+  ) => {
+    const existing = index.get(ruleKey(row.target.type, row.target.id));
+    const body: Omit<VisibilityRule, "id"> = {
+      character_id: curObserver!,
+      other_character_id: curTarget!,
+      status,
+      value: value ?? "",
+      ...entityField(row.target),
+    };
+    if (existing) {
+      await api("/game-table-visibility", {
+        method: "PUT",
+        body: JSON.stringify({ ...body, id: existing.id }),
+      });
+    } else {
+      await api("/game-table-visibility", {
+        method: "POST",
+        body: JSON.stringify(body),
+      });
+    }
+  };
+
   const persist = async (
     row: PanelRow,
     status: VisStatus,
@@ -233,33 +265,27 @@ export default function VisibilityPanel({
     if (!curObserver || !curTarget) return;
     setSaving(true);
     setError(null);
-    const existing = index.get(ruleKey(row.target.type, row.target.id));
-    const body: Omit<VisibilityRule, "id"> = {
-      character_id: curObserver,
-      other_character_id: curTarget,
-      status,
-      value: value ?? "",
-      ...entityField(row.target),
-    };
     try {
-      if (existing) {
-        await api("/game-table-visibility", {
-          method: "PUT",
-          body: JSON.stringify({ ...body, id: existing.id }),
-        });
-      } else {
-        await api("/game-table-visibility", {
-          method: "POST",
-          body: JSON.stringify(body),
-        });
-      }
-      await api<VisibilityRule[]>(`/game-table-visibility/${curObserver}`)
-        .then((d) => setRules(Array.isArray(d) ? d : []))
-        .catch(() => setRules([]));
+      await saveRule(row, status, value);
+      await refetch(curObserver);
     } catch {
       setError("Failed to save visibility rule.");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const applyToSection = async (group: PanelTarget, status: VisStatus) => {
+    if (!curObserver || !curTarget || group.rows.length === 0) return;
+    setBulkApplying(group.key);
+    setError(null);
+    try {
+      await Promise.all(group.rows.map((r) => saveRule(r, status, valueOf(r))));
+      await refetch(curObserver);
+    } catch {
+      setError(`Failed to liberate ${group.label} at once.`);
+    } finally {
+      setBulkApplying(null);
     }
   };
 
@@ -269,6 +295,23 @@ export default function VisibilityPanel({
 
   const valueOf = (row: PanelRow): string =>
     index.get(ruleKey(row.target.type, row.target.id))?.value ?? "";
+
+  const revealedOf = (row: PanelRow): boolean => {
+    const s = statusOf(row);
+    return s === "known" || s === "specialist";
+  };
+
+  const groupStateOf = (group: PanelTarget): "on" | "off" | "mixed" => {
+    if (group.rows.length === 0) return "off";
+    let seenOn = false;
+    let seenOff = false;
+    for (const row of group.rows) {
+      if (revealedOf(row)) seenOn = true;
+      else seenOff = true;
+      if (seenOn && seenOff) return "mixed";
+    }
+    return seenOn ? "on" : "off";
+  };
 
   return (
     <div className="w-full">
@@ -324,7 +367,9 @@ export default function VisibilityPanel({
         <span className="font-mono text-zinc-400">“value”</span> is shown when
         filled). <span className="text-emerald-300">Known</span> and{" "}
         <span className="text-violet-300">Specialist</span> reveal it. Anything
-        never touched defaults to Unknown.
+        never touched defaults to Unknown. The switch in each group header
+        liberates or hides the whole group at once; the switch on each row does
+        the same for a single entity.
       </p>
 
       <div className="grid gap-4 md:grid-cols-2">
@@ -335,24 +380,88 @@ export default function VisibilityPanel({
               compact ? "" : g.key === "identity" ? "md:col-span-2" : ""
             }`}
           >
-            <h3 className="font-mono text-xs uppercase tracking-[0.15em] text-amber-400/80 mb-2">
-              {g.label}
-              <span className="ml-2 text-zinc-600">{g.rows.length}</span>
-            </h3>
+            <div className="flex items-center gap-2 mb-2">
+              <h3 className="font-mono text-xs uppercase tracking-[0.15em] text-amber-400/80">
+                {g.label}
+                <span className="ml-2 text-zinc-600">{g.rows.length}</span>
+              </h3>
+              <div className="ml-auto flex items-center gap-2">
+                {bulkApplying === g.key ? (
+                  <span className="text-[10px] font-mono text-zinc-500 uppercase animate-pulse">
+                    apply all…
+                  </span>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        applyToSection(
+                          g,
+                          groupStateOf(g) === "on" ? "unknown" : "known"
+                        )
+                      }
+                      disabled={g.rows.length === 0}
+                      title={
+                        groupStateOf(g) === "on"
+                          ? "Hide the whole group"
+                          : "Liberate the whole group"
+                      }
+                      className={`relative inline-flex h-4 w-8 shrink-0 items-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/60 disabled:opacity-40 disabled:cursor-not-allowed ${
+                        groupStateOf(g) === "on"
+                          ? "bg-emerald-500/60"
+                          : groupStateOf(g) === "mixed"
+                          ? "bg-amber-500/50"
+                          : "bg-zinc-700"
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-3 w-3 rounded-full bg-zinc-100 transition-transform ${
+                          groupStateOf(g) === "on"
+                            ? "translate-x-[18px] bg-emerald-200"
+                            : "translate-x-0.5 bg-zinc-400"
+                        }`}
+                      />
+                    </button>
+                    <span className="text-[10px] font-mono uppercase text-zinc-500 w-20 text-left">
+                      {groupStateOf(g) === "on"
+                        ? "all revealed"
+                        : groupStateOf(g) === "mixed"
+                        ? "mixed"
+                        : "all hidden"}
+                    </span>
+                  </>
+                )}
+              </div>
+            </div>
             <ul className="divide-y divide-zinc-800/70">
               {g.rows.map((row) => {
                 const status = statusOf(row);
-                const sMeta = STATUS_META[status];
+                const revealed = status === "known" || status === "specialist";
                 return (
                   <li
                     key={row.target.type + ":" + row.target.id}
                     className="py-1.5"
                   >
                     <div className="flex items-center gap-2">
-                      <span
-                        className={`w-2 h-2 rounded-full shrink-0 ${sMeta.dot}`}
-                        aria-hidden
-                      />
+                      <button
+                        type="button"
+                        onClick={() =>
+                          persist(row, revealed ? "unknown" : "known", valueOf(row))
+                        }
+                        aria-pressed={revealed}
+                        title={revealed ? "Hide this one" : "Liberate (reveal now)"}
+                        className={`relative inline-flex h-4 w-8 shrink-0 items-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/60 ${
+                          revealed ? "bg-emerald-500/60" : "bg-zinc-700"
+                        }`}
+                      >
+                        <span
+                          className={`inline-block h-3 w-3 rounded-full bg-zinc-100 transition-transform ${
+                            revealed
+                              ? "translate-x-[18px] bg-emerald-200"
+                              : "translate-x-0.5 bg-zinc-400"
+                          }`}
+                        />
+                      </button>
                       <span className="flex-1 min-w-0 text-sm text-zinc-200 truncate">
                         {row.label}
                       </span>
