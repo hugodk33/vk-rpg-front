@@ -97,7 +97,7 @@ export default function CharacterVisibilityDrawer({
                 Visibility
               </h2>
               <p className="text-xs text-zinc-500 mt-0.5">
-                What observers can see of this character
+                Choose who sees what — target starts at this character
               </p>
             </div>
             <button

@@ -145,9 +145,6 @@ export default function VisibilityPanel({
   const isTargetValid =
     !!target && targetOptions.some((c) => c.id === target);
   const curTarget = (isTargetValid ? target : null) ?? targetOptions[0]?.id ?? null;
-  const targetChar = curTarget
-    ? characters.find((c) => c.id === curTarget)
-    : undefined;
 
   useEffect(() => {
     if (!curObserver) return;
@@ -295,8 +292,7 @@ export default function VisibilityPanel({
           </select>
         </label>
 
-        {!targetId ? (
-          <label className="flex flex-col gap-1 text-xs uppercase tracking-wider text-zinc-500 font-mono">
+        <label className="flex flex-col gap-1 text-xs uppercase tracking-wider text-zinc-500 font-mono">
             Target
             <select
               value={curTarget ?? ""}
@@ -313,14 +309,6 @@ export default function VisibilityPanel({
               ))}
             </select>
           </label>
-        ) : (
-          <span className="text-sm text-zinc-400">
-            Target:{" "}
-            <span className="text-zinc-200">
-              {targetChar ? charName(targetChar) : "—"}
-            </span>
-          </span>
-        )}
 
         {saving ? (
           <span className="text-xs text-zinc-500 font-mono animate-pulse">
