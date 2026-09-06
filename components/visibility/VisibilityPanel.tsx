@@ -19,11 +19,16 @@ import { api } from "@/lib/api";
 import type {
   Advantage,
   Disadvantage,
+  GameTableScenes,
   Item,
+  Location,
   SkillItem,
   TableCharacter,
   VisibilityRule,
 } from "@/lib/types";
+import DiscoveryContext, {
+  type DiscoverySelection,
+} from "./DiscoveryContext";
 
 export type VisStatus = "unknown" | "known" | "specialist";
 
@@ -54,7 +59,13 @@ const STATUS_META: Record<
   },
 };
 
-type RowType = "attr" | "item" | "skill" | "advantage" | "disadvantage";
+type RowType =
+  | "attr"
+  | "item"
+  | "skill"
+  | "advantage"
+  | "disadvantage"
+  | "location";
 
 interface RowTarget {
   type: RowType;
@@ -75,6 +86,11 @@ interface PanelRow {
 
 const ruleKey = (type: RowType, id: string) => `${type}:${id}`;
 
+// Locations and catalogs are observer-global knowledge (not bound to a
+// single target sheet), so they carry no `other_character_id`.
+const GLOBAL_TARGETED: RowType[] = ["location"];
+const GLOBAL_UNTARGETED: RowType[] = ["item", "skill", "advantage", "disadvantage"];
+
 const entityField = (t: RowTarget): Record<string, string> => {
   switch (t.type) {
     case "attr":
@@ -87,6 +103,8 @@ const entityField = (t: RowTarget): Record<string, string> => {
       return { advantage_id: t.id };
     case "disadvantage":
       return { disadvantage_id: t.id };
+    case "location":
+      return { location_id: t.id };
   }
 };
 
@@ -111,25 +129,38 @@ const ATTRS: { key: string; label: string }[] = [
 
 const charName = (c: TableCharacter) => c.sheet?.name || c.name || "Unnamed";
 
+type TabKey = "characters" | "items" | "locations" | "skills" | "advantages" | "disadvantages";
+
+const TABS: { key: TabKey; label: string }[] = [
+  { key: "characters", label: "Characters" },
+  { key: "items", label: "Items" },
+  { key: "locations", label: "Locations" },
+  { key: "skills", label: "Skills" },
+  { key: "advantages", label: "Advantages" },
+  { key: "disadvantages", label: "Disadvantages" },
+];
+
 interface VisibilityPanelProps {
   tableId?: string;
   characters: TableCharacter[];
   items: Item[];
+  locations?: Location[];
   skills: SkillItem[];
   advantages: Advantage[];
   disadvantages: Disadvantage[];
+  scenes?: GameTableScenes | null;
   targetId?: string;
-  compact?: boolean;
 }
 
 export default function VisibilityPanel({
   characters,
   items,
+  locations,
   skills,
   advantages,
   disadvantages,
+  scenes,
   targetId,
-  compact,
 }: VisibilityPanelProps) {
   const observers = useMemo(
     () => characters.filter((c) => c.user?.id),
@@ -137,10 +168,12 @@ export default function VisibilityPanel({
   );
   const [observerId, setObserverId] = useState<string | null>(null);
   const [target, setTarget] = useState<string | null>(targetId ?? null);
+  const [tab, setTab] = useState<TabKey>("characters");
   const [rules, setRules] = useState<VisibilityRule[]>([]);
   const [saving, setSaving] = useState(false);
   const [bulkApplying, setBulkApplying] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [discovery, setDiscovery] = useState<DiscoverySelection>({});
 
   const curObserver = observerId ?? observers[0]?.id ?? null;
   const targetOptions = useMemo(
@@ -167,10 +200,21 @@ export default function VisibilityPanel({
   }, [curObserver]);
 
   const scopeRules = useMemo(() => {
-    if (!curTarget) return [];
-    return (rules ?? []).filter(
-      (r) => !r.other_character_id || r.other_character_id === curTarget
-    );
+    return (rules ?? []).filter((r) => {
+      // Locations are always observer-global knowledge (no target).
+      if (r.location_id) return true;
+      // Catalog rows (item/skill/advantage/disadvantage) can be global
+      // (unidentified possession) or target-scoped. Without a selected
+      // target, only the global knowledge rows apply.
+      const isCatalog =
+        r.item_id || r.skill_id || r.advantage_id || r.disadvantage_id;
+      if (isCatalog) {
+        if (!r.other_character_id) return true;
+        return !!curTarget && r.other_character_id === curTarget;
+      }
+      // Attribute rows on a character sheet need a chosen target.
+      return !!curTarget && (!r.other_character_id || r.other_character_id === curTarget);
+    });
   }, [rules, curTarget]);
 
   const index = useMemo(() => {
@@ -191,6 +235,7 @@ export default function VisibilityPanel({
       if (r.advantage_id) m.set(ruleKey("advantage", String(r.advantage_id)), r);
       if (r.disadvantage_id)
         m.set(ruleKey("disadvantage", String(r.disadvantage_id)), r);
+      if (r.location_id) m.set(ruleKey("location", String(r.location_id)), r);
     }
     return m;
   }, [scopeRules]);
@@ -221,14 +266,20 @@ export default function VisibilityPanel({
       label: d.name,
       aliasing: false,
     }));
+    const locRows: PanelRow[] = (locations ?? []).map((l) => ({
+      target: { type: "location", id: l.id },
+      label: l.name,
+      aliasing: true,
+    }));
     return [
       { key: "identity", label: "Identity & Attributes", rows: attrRows },
       { key: "items", label: "Items", rows: itemRows },
       { key: "skills", label: "Skills", rows: skillRows },
       { key: "advantages", label: "Advantages", rows: advRows },
       { key: "disadvantages", label: "Disadvantages", rows: disRows },
+      { key: "locations", label: "Locations", rows: locRows },
     ];
-  }, [items, skills, advantages, disadvantages]);
+  }, [items, skills, advantages, disadvantages, locations]);
 
   const refetch = (observer: string) =>
     api<VisibilityRule[]>(`/game-table-visibility/${observer}`)
@@ -241,11 +292,20 @@ export default function VisibilityPanel({
     value: string | null
   ) => {
     const existing = index.get(ruleKey(row.target.type, row.target.id));
+    const isGlobalTarget =
+      GLOBAL_TARGETED.includes(row.target.type) ||
+      GLOBAL_UNTARGETED.includes(row.target.type);
+    if (!curObserver) return;
     const body: Omit<VisibilityRule, "id"> = {
-      character_id: curObserver!,
-      other_character_id: curTarget!,
+      character_id: curObserver,
+      // Locations and the bare knowledge that an item exists are not
+      // tied to a single target sheet: they carry no other_character_id.
+      other_character_id: isGlobalTarget ? null : curTarget ?? null,
       status,
       value: value ?? "",
+      scene_id: discovery.sceneId ?? null,
+      narration_id: discovery.narrationId ?? null,
+      moment: discovery.moment ?? null,
       ...entityField(row.target),
     };
     if (existing) {
@@ -266,7 +326,12 @@ export default function VisibilityPanel({
     status: VisStatus,
     value: string | null
   ) => {
-    if (!curObserver || !curTarget) return;
+    if (!curObserver) return;
+    const isGlobal =
+      GLOBAL_TARGETED.includes(row.target.type) ||
+      GLOBAL_UNTARGETED.includes(row.target.type);
+    // Per-target rows (characters/attributes) still need a chosen target.
+    if (!isGlobal && !curTarget) return;
     setSaving(true);
     setError(null);
     try {
@@ -280,7 +345,11 @@ export default function VisibilityPanel({
   };
 
   const applyToSection = async (group: PanelTarget, status: VisStatus) => {
-    if (!curObserver || !curTarget || group.rows.length === 0) return;
+    if (!curObserver || group.rows.length === 0) return;
+    const isGlobal =
+      GLOBAL_TARGETED.includes(group.rows[0].target.type) ||
+      GLOBAL_UNTARGETED.includes(group.rows[0].target.type);
+    if (!isGlobal && !curTarget) return;
     setBulkApplying(group.key);
     setError(null);
     try {
@@ -380,14 +449,50 @@ export default function VisibilityPanel({
         single entity.
       </p>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        {groups.map((g) => (
-          <section
-            key={g.key}
-            className={`bg-zinc-900/60 border border-zinc-800 rounded-lg p-3 ${
-              compact ? "" : g.key === "identity" ? "md:col-span-2" : ""
-            }`}
-          >
+      <DiscoveryContext
+        scenes={scenes ?? null}
+        value={discovery}
+        onChange={setDiscovery}
+      />
+
+      {/* Tab bar */}
+      <div className="flex flex-wrap gap-1 mb-4 border-b border-zinc-800">
+        {TABS.map((t) => {
+          const groupKey = t.key === "characters" ? "identity" : t.key;
+          const count =
+            groups.find((g) => g.key === groupKey)?.rows.length ?? 0;
+          return (
+            <button
+              key={t.key}
+              type="button"
+              onClick={() => setTab(t.key)}
+              className={`px-3 py-2 text-xs font-mono uppercase tracking-wide border-b-2 -mb-px transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/60 ${
+                tab === t.key
+                  ? "border-amber-400 text-amber-300"
+                  : "border-transparent text-zinc-500 hover:text-zinc-300"
+              }`}
+            >
+              {t.label}
+              <span className="ml-1.5 text-[10px] text-zinc-600">{count}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {(() => {
+        const g = (() => {
+          switch (tab) {
+            case "characters": return groups.find((x) => x.key === "identity")!;
+            case "items": return groups.find((x) => x.key === "items")!;
+            case "locations": return groups.find((x) => x.key === "locations")!;
+            case "skills": return groups.find((x) => x.key === "skills")!;
+            case "advantages": return groups.find((x) => x.key === "advantages")!;
+            case "disadvantages": return groups.find((x) => x.key === "disadvantages")!;
+          }
+        })();
+        if (!g) return null;
+        return (
+          <section className="bg-zinc-900/60 border border-zinc-800 rounded-lg p-3">
             <div className="flex items-center gap-2 mb-2">
               <h3 className="font-mono text-xs uppercase tracking-[0.15em] text-amber-400/80">
                 {g.label}
@@ -515,8 +620,8 @@ export default function VisibilityPanel({
               })}
             </ul>
           </section>
-        ))}
-      </div>
+        );
+      })()}
     </div>
   );
 }

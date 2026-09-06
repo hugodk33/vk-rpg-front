@@ -15,8 +15,11 @@ import type {
   GameTableCharacters,
   GameTableDisadvantages,
   GameTableItems,
+  GameTableLocations,
+  GameTableScenes,
   GameTableSkills,
   Item,
+  Location,
   SkillItem,
   TableCharacter,
 } from "@/lib/types";
@@ -25,9 +28,11 @@ import VisibilityPanel from "@/components/visibility/VisibilityPanel";
 interface DrawerData {
   characters: TableCharacter[];
   items: Item[];
+  locations: Location[];
   skills: SkillItem[];
   advantages: Advantage[];
   disadvantages: Disadvantage[];
+  scenes: GameTableScenes | null;
 }
 
 export default function CharacterVisibilityDrawer({
@@ -46,23 +51,35 @@ export default function CharacterVisibilityDrawer({
     Promise.all([
       api<GameTableCharacters>(`/game-table-characters/${tableId}`),
       api<GameTableItems>(`/game-table-items/${tableId}`),
+      api<GameTableLocations>(`/game-table-locations/${tableId}`),
       api<GameTableSkills>(`/game-table-skills/${tableId}`),
       api<GameTableAdvantages>(`/game-table-advantages/${tableId}`),
       api<GameTableDisadvantages>(`/game-table-disadvantages/${tableId}`),
+      api<GameTableScenes>(`/game-table-scenes/${tableId}`),
     ])
-      .then(([chars, items, skills, advs, dis]) => {
+      .then(([chars, items, locations, skills, advs, dis, scenes]) => {
         if (cancelled) return;
         setData({
           characters: chars?.characters ?? [],
           items: items?.items ?? [],
+          locations: locations?.locations ?? [],
           skills: skills?.skills ?? [],
           advantages: advs?.advantages ?? [],
           disadvantages: dis?.disadvantages ?? [],
+          scenes: scenes ?? null,
         });
       })
       .catch(() => {
         if (cancelled) return;
-        setData({ characters: [], items: [], skills: [], advantages: [], disadvantages: [] });
+        setData({
+          characters: [],
+          items: [],
+          locations: [],
+          skills: [],
+          advantages: [],
+          disadvantages: [],
+          scenes: null,
+        });
       });
     return () => {
       cancelled = true;
@@ -121,11 +138,12 @@ export default function CharacterVisibilityDrawer({
               <VisibilityPanel
                 characters={data.characters}
                 items={data.items}
+                locations={data.locations}
                 skills={data.skills}
                 advantages={data.advantages}
                 disadvantages={data.disadvantages}
+                scenes={data.scenes}
                 targetId={targetId}
-                compact
               />
             ) : (
               <p className="text-sm text-zinc-500 animate-pulse">

@@ -7,9 +7,10 @@ export const dynamic = "force-dynamic";
 
 export default async function PlayerTableItemsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [data, characterUrl] = await Promise.all([
-    api<GameTableItems>(`/game-table-items/${id}`),
-    getPlayerCharacterUrl(id),
+  const characterUrl = await getPlayerCharacterUrl(id);
+  const viewerId = characterUrl?.split("/").pop() ?? "";
+  const [data] = await Promise.all([
+    api<GameTableItems>(`/game-table-items/${id}${viewerId ? `?viewer=${encodeURIComponent(viewerId)}` : ""}`),
   ]);
   const items = data.items ?? [];
 

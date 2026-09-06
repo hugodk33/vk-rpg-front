@@ -22,8 +22,17 @@ export default function PlayerTableDisadvantagesPage({ params }: { params: Promi
   const [search, setSearch] = useState("");
 
   useEffect(() => {
-    api<GameTableDisadvantages>(`/game-table-disadvantages/${id}`).then(setData).catch(() => setData({ table: null, disadvantages: [] }));
-    getPlayerCharacterUrl(id).then(setCharacterUrl).catch(() => setCharacterUrl(undefined));
+    let cancelled = false;
+    getPlayerCharacterUrl(id).then((url) => {
+      if (cancelled) return;
+      setCharacterUrl(url);
+      const viewerId = url?.split("/").pop() ?? "";
+      const q = viewerId ? `?viewer=${encodeURIComponent(viewerId)}` : "";
+      api<GameTableDisadvantages>(`/game-table-disadvantages/${id}${q}`)
+        .then((d) => { if (!cancelled) setData(d); })
+        .catch(() => { if (!cancelled) setData({ table: null, disadvantages: [] }); });
+    }).catch(() => { if (!cancelled) setCharacterUrl(undefined); });
+    return () => { cancelled = true; };
   }, [id]);
 
   const disadvantages = (data?.disadvantages ?? []).filter((d: Disadvantage) => {

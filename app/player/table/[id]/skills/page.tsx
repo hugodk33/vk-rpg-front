@@ -13,8 +13,17 @@ export default function PlayerTableSkillsPage({ params }: { params: Promise<{ id
   const [search, setSearch] = useState("");
 
   useEffect(() => {
-    api<GameTableSkills>(`/game-table-skills/${id}`).then(setData).catch(() => setData({ table: null, skills: [] }));
-    getPlayerCharacterUrl(id).then(setCharacterUrl).catch(() => setCharacterUrl(undefined));
+    let cancelled = false;
+    getPlayerCharacterUrl(id).then((url) => {
+      if (cancelled) return;
+      setCharacterUrl(url);
+      const viewerId = url?.split("/").pop() ?? "";
+      const q = viewerId ? `?viewer=${encodeURIComponent(viewerId)}` : "";
+      api<GameTableSkills>(`/game-table-skills/${id}${q}`)
+        .then((d) => { if (!cancelled) setData(d); })
+        .catch(() => { if (!cancelled) setData({ table: null, skills: [] }); });
+    }).catch(() => { if (!cancelled) setCharacterUrl(undefined); });
+    return () => { cancelled = true; };
   }, [id]);
 
   const skills = (data?.skills ?? []).filter((s: SkillItem) => {

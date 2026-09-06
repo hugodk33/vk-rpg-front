@@ -4,7 +4,9 @@ import type {
   GameTableCharacters,
   GameTableDisadvantages,
   GameTableItems,
+  GameTableScenes,
   GameTableSkills,
+  GameTableLocations,
 } from "@/lib/types";
 import TableTabs from "@/components/TableTabs";
 import VisibilityPanel from "@/components/visibility/VisibilityPanel";
@@ -17,13 +19,16 @@ export default async function TableVisibilityPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [chars, items, skills, advantages, disadvantages] = await Promise.all([
-    api<GameTableCharacters>(`/game-table-characters/${id}`),
-    api<GameTableItems>(`/game-table-items/${id}`),
-    api<GameTableSkills>(`/game-table-skills/${id}`),
-    api<GameTableAdvantages>(`/game-table-advantages/${id}`),
-    api<GameTableDisadvantages>(`/game-table-disadvantages/${id}`),
-  ]);
+  const [chars, items, skills, advantages, disadvantages, locations, scenes] =
+    await Promise.all([
+      api<GameTableCharacters>(`/game-table-characters/${id}`),
+      api<GameTableItems>(`/game-table-items/${id}`),
+      api<GameTableSkills>(`/game-table-skills/${id}`),
+      api<GameTableAdvantages>(`/game-table-advantages/${id}`),
+      api<GameTableDisadvantages>(`/game-table-disadvantages/${id}`),
+      api<GameTableLocations>(`/game-table-locations/${id}`),
+      api<GameTableScenes>(`/game-table-scenes/${id}`),
+    ]);
 
   return (
     <div className="max-w-5xl mx-auto p-6">
@@ -40,9 +45,11 @@ export default async function TableVisibilityPage({
       <VisibilityPanel
         characters={chars?.characters ?? []}
         items={items?.items ?? []}
+        locations={locations?.locations ?? []}
         skills={skills?.skills ?? []}
         advantages={advantages?.advantages ?? []}
         disadvantages={disadvantages?.disadvantages ?? []}
+        scenes={scenes ?? null}
       />
     </div>
   );

@@ -13,8 +13,17 @@ export default function PlayerTableAdvantagesPage({ params }: { params: Promise<
   const [search, setSearch] = useState("");
 
   useEffect(() => {
-    api<GameTableAdvantages>(`/game-table-advantages/${id}`).then(setData).catch(() => setData({ table: null, advantages: [] }));
-    getPlayerCharacterUrl(id).then(setCharacterUrl).catch(() => setCharacterUrl(undefined));
+    let cancelled = false;
+    getPlayerCharacterUrl(id).then((url) => {
+      if (cancelled) return;
+      setCharacterUrl(url);
+      const viewerId = url?.split("/").pop() ?? "";
+      const q = viewerId ? `?viewer=${encodeURIComponent(viewerId)}` : "";
+      api<GameTableAdvantages>(`/game-table-advantages/${id}${q}`)
+        .then((d) => { if (!cancelled) setData(d); })
+        .catch(() => { if (!cancelled) setData({ table: null, advantages: [] }); });
+    }).catch(() => { if (!cancelled) setCharacterUrl(undefined); });
+    return () => { cancelled = true; };
   }, [id]);
 
   const advantages = (data?.advantages ?? []).filter((a: Advantage) => {

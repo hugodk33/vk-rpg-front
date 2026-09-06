@@ -392,6 +392,11 @@ export interface GameTableDisadvantages {
   disadvantages: Disadvantage[]
 }
 
+export interface GameTableLocations {
+  table: GameTable | null
+  locations: Location[]
+}
+
 export interface GameTableNpcs {
   table: GameTable | null
   npcs: TableNpc[]
@@ -420,8 +425,13 @@ export interface VisibilityRule {
   attribute?: string | null
   additionals_attributes?: string | null
   item_id?: string | null
+  location_id?: string | null
   value?: string | null
   status?: string | null
+  scene_id?: string | null
+  narration_id?: string | null
+  moment?: number | null
+  previous_status?: string | null
 }
 
 export interface CharacterViewer {
