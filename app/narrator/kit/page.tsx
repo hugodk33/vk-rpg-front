@@ -18,7 +18,7 @@ const shortcuts = [
 
 export default function NarratorKitPage() {
   return (
-    <div className="max-w-4xl mx-auto p-6">
+    <div className="max-w-5xl mx-auto p-6">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-amber-100">GM Kit</h1>
         <p className="text-zinc-400 text-sm mt-1">

@@ -17,7 +17,7 @@ export default async function PlayerCharacterViewedPage({
 
   if (!viewer) {
     return (
-      <div className="max-w-4xl mx-auto p-6">
+      <div className="max-w-5xl mx-auto p-6">
         <p className="text-sm text-zinc-500">
           Missing <code className="text-amber-400">viewer</code> — who is
           looking?
@@ -35,7 +35,7 @@ export default async function PlayerCharacterViewedPage({
   const tableId = data.table?.id;
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
+    <div className="max-w-5xl mx-auto p-6">
       {tableId ? (
         <Link
           href={`/player/table/${tableId}`}

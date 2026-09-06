@@ -264,7 +264,7 @@ export default function SceneTimeline({ table, scenes, showEditButtons = true }:
   const chapterEntries = [...chapters.entries()];
 
   return (
-    <div className="max-w-4xl mx-auto px-6 py-8">
+    <div className="max-w-5xl mx-auto px-6 py-8">
       {/* canopy */}
       <Panel>
         <h1 className="text-[clamp(30px,6vw,52px)] leading-[0.95] font-bold tracking-tight text-amber-100 mt-3">

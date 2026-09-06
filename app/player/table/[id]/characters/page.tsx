@@ -30,7 +30,7 @@ export default function PlayerTableCharactersPage({ params }: { params: Promise<
   const myId = characterUrl?.match(/\/player\/character\/([^/?]+)/)?.[1];
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
+    <div className="max-w-5xl mx-auto p-6">
       <TableTabs tableId={id} role="player" characterUrl={characterUrl} />
       <h1 className="text-2xl font-bold text-amber-100 mb-4">
         {data?.table?.title || "Table"} — Characters

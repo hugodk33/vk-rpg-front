@@ -28,7 +28,7 @@ export default async function CharacterViewerPage({
   const momentNum = moment ? Number(moment) : null;
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
+    <div className="max-w-5xl mx-auto p-6">
       {tableId ? (
         <Link href={`/table/${tableId}`} className="text-zinc-500 hover:text-zinc-300 text-sm mb-4 inline-block transition-colors">
           &larr; Back to table

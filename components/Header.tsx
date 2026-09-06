@@ -22,7 +22,7 @@ export default function Header() {
 
   return (
     <header className="bg-zinc-800/90 border-b border-zinc-700/50 sticky top-0 z-50 backdrop-blur-sm">
-      <div className="max-w-6xl mx-auto px-4 relative">
+      <div className="max-w-5xl mx-auto px-4 relative">
         <div className="flex items-center justify-center h-14">
           <div className="w-14"></div>
           <Link

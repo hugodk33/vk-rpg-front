@@ -24,7 +24,7 @@ export default function TableAdvantagesPage({ params }: { params: Promise<{ id: 
   });
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
+    <div className="max-w-5xl mx-auto p-6">
       <TableTabs tableId={id} />
 
       <div className="flex items-baseline gap-3 mb-1">

@@ -41,7 +41,7 @@ export default async function PlayerTableOverviewPage({ params }: { params: Prom
   ];
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
+    <div className="max-w-5xl mx-auto p-6">
       <TableTabs tableId={id} role="player" active="overview" characterUrl={characterUrl} />
       <h1 className="text-2xl font-bold text-amber-100 mt-3 mb-1">
         {table?.title || "Table"}

@@ -83,7 +83,7 @@ export default function PlayerConsole({
   const name = character?.sheet?.name || character?.name || "Your character";
 
   return (
-    <div className="max-w-4xl mx-auto px-6 py-8">
+    <div className="max-w-5xl mx-auto px-6 py-8">
       {/* heading */}
       <div className="flex flex-wrap items-end justify-between gap-4 mb-5">
         <div>

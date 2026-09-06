@@ -70,7 +70,7 @@ export default async function PlayerDashboard() {
   const entries = await loadPlayerEntries();
 
   return (
-    <div className="max-w-3xl mx-auto px-6 py-10">
+    <div className="max-w-5xl mx-auto px-6 py-10">
       {/* ---- hero ---- */}
       <div className="relative rounded-2xl border border-teal-600/30 bg-gradient-to-b from-zinc-900/70 to-zinc-950 p-6 mb-8 overflow-hidden">
         <div className="absolute inset-y-0 left-0 w-1/2 opacity-[0.05] pointer-events-none select-none">
