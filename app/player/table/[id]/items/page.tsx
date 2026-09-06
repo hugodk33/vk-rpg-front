@@ -16,7 +16,7 @@ export default async function PlayerTableItemsPage({ params }: { params: Promise
   return (
     <div className="max-w-5xl mx-auto p-6">
       <TableTabs tableId={id} role="player" characterUrl={characterUrl} />
-      <h1 className="text-2xl font-bold text-amber-100 mb-6">
+      <h1 className="text-2xl font-bold text-blue-100 mb-6">
         {data.table?.title || "Table"} — Items
       </h1>
 

@@ -217,6 +217,7 @@ export interface TableCharacter {
   userId?: string
   name?: string
   isNpc?: boolean
+  known?: boolean
   user?: CharacterUser
   sheet?: Sheet | null
   advantages?: CharacterAdvantage[]

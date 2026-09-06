@@ -185,33 +185,24 @@ function RollSlip({ a, moment }: { a: NarrationAction; moment?: number }) {
 
 /* ---------- beat (narration) ---------- */
 
-function Beat({ n, sceneMoment, index }: { n: { narration: string; title?: string; moment?: number; location: Location | null; characters: { id: string; name: string }[]; npcs: { characterId: string; name: string; status: string }[]; actions: NarrationAction[] }; sceneMoment: number; index: number }) {
-  const ms = `${sceneMoment}.${index + 1}`;
+function Beat({ n }: { n: { narration: string; title?: string; moment?: number; location: Location | null; characters: { id: string; name: string }[]; npcs: { characterId: string; name: string; status: string }[]; actions: NarrationAction[] } }) {
   return (
     <Panel>
-      <div className="grid grid-cols-[52px_1fr] gap-4">
-        <div className="text-right pt-1 select-none">
-          <span className="font-mono text-[10px] text-zinc-500">M.{ms}</span>
-        </div>
-        <div className="min-w-0 relative">
-          {/* spine thread */}
-          <span aria-hidden className="absolute left-[-17px] top-2 bottom-[-8px] w-px bg-zinc-700/40 hidden sm:block" />
-          {n.title ? <div className="font-mono text-[11px] tracking-widest uppercase text-blue-300/80 mb-1">{n.title}</div> : null}
-          <p className="text-[15px] leading-relaxed text-zinc-300">{n.narration}</p>
+      <div className="min-w-0 relative">
+        <p className="text-[15px] leading-relaxed text-zinc-300">{n.narration}</p>
 
-          {n.location ? <div className="mt-2.5">{locationPin(n.location)}</div> : null}
-          <CastChips chars={n.characters} npcs={n.npcs} moment={n.moment} />
+        {n.location ? <div className="mt-2.5">{locationPin(n.location)}</div> : null}
+        <CastChips chars={n.characters} npcs={n.npcs} moment={n.moment} />
 
-          {n.actions?.length ? (
-            <div className="mt-3 space-y-1.5">
-              {[...n.actions]
-                .sort((a, b) => (a.queue ?? 0) - (b.queue ?? 0))
-                .map((a) => (
-                  <RollSlip key={a.id} a={a} moment={n.moment} />
-                ))}
-            </div>
-          ) : null}
-        </div>
+        {n.actions?.length ? (
+          <div className="mt-3 space-y-1.5">
+            {[...n.actions]
+              .sort((a, b) => (a.queue ?? 0) - (b.queue ?? 0))
+              .map((a) => (
+                <RollSlip key={a.id} a={a} moment={n.moment} />
+              ))}
+          </div>
+        ) : null}
       </div>
     </Panel>
   );
@@ -219,25 +210,28 @@ function Beat({ n, sceneMoment, index }: { n: { narration: string; title?: strin
 
 /* ---------- scene ---------- */
 
-function SceneCard({ scene, showEdit }: { scene: Scene; showEdit: boolean }) {
+function SceneCard({ scene, showEdit, badgeCls }: { scene: Scene; showEdit: boolean; badgeCls: string }) {
+  const sceneNum = scene.moment != null ? scene.moment + 1 : "—";
   return (
     <div className="mb-8">
       <div className="flex items-center gap-3 mb-4">
-        <span className="font-mono text-[11px] tracking-widest uppercase text-amber-500/90 border border-amber-700/40 rounded px-2 py-0.5">
-          Scene {scene.moment != null ? scene.moment + 1 : "—"}
-        </span>
-        <h3 className="text-lg font-semibold text-zinc-100">{scene.title}</h3>
+        <h3 className="text-lg font-semibold text-zinc-100">
+          {scene.title}
+          <span className={`ml-3 font-mono text-[11px] tracking-widest uppercase rounded px-2 py-0.5 ${badgeCls}`}>
+            m {sceneNum}
+          </span>
+        </h3>
         {showEdit ? (
           <span className="ml-auto font-mono text-[10px] text-zinc-600 uppercase tracking-widest hidden sm:inline">open</span>
         ) : null}
       </div>
-      <div className="pl-[52px]">
+      <div className="pl-[18px]">
         {scene.narrations.length === 0 ? (
           <p className="text-sm text-zinc-600 italic font-mono">No entries in this scene.</p>
         ) : (
-          <div className="space-y-5 border-l border-zinc-700/40 pl-[18px]">
-            {scene.narrations.map((n, ni) => (
-              <Beat key={n.id} n={n} sceneMoment={scene.moment ?? 0} index={ni} />
+          <div className="space-y-5 border-l border-zinc-700/40">
+            {scene.narrations.map((n) => (
+              <Beat key={n.id} n={n} />
             ))}
           </div>
         )}
@@ -252,9 +246,13 @@ interface SceneTimelineProps {
   table: GameTable | null;
   scenes: Scene[];
   showEditButtons?: boolean;
+  role?: "narrator" | "player";
 }
 
-export default function SceneTimeline({ table, scenes, showEditButtons = true }: SceneTimelineProps) {
+export default function SceneTimeline({ table, scenes, showEditButtons = true, role = "narrator" }: SceneTimelineProps) {
+  const isPlayer = role === "player";
+  const titleCls = isPlayer ? "text-blue-100" : "text-amber-100";
+  const badgeCls = isPlayer ? "text-blue-300 border border-blue-700/40" : "text-amber-500/90 border border-amber-700/40";
   const chapters = new Map<number, Scene[]>();
   for (const scene of scenes) {
     const ch = scene.chapter || 1;
@@ -267,7 +265,7 @@ export default function SceneTimeline({ table, scenes, showEditButtons = true }:
     <div className="max-w-5xl mx-auto px-6 py-8">
       {/* canopy */}
       <Panel>
-        <h1 className="text-[clamp(30px,6vw,52px)] leading-[0.95] font-bold tracking-tight text-amber-100 mt-3">
+        <h1 className={`text-[clamp(30px,6vw,52px)] leading-[0.95] font-bold tracking-tight mt-3 ${titleCls}`}>
           {table?.title || "The Chronicle"}
         </h1>
         {table?.intro ? (
@@ -300,7 +298,7 @@ export default function SceneTimeline({ table, scenes, showEditButtons = true }:
             </div>
 
             {chapterScenes.map((scene) => (
-              <SceneCard key={scene.id} scene={scene} showEdit={showEditButtons} />
+              <SceneCard key={scene.id} scene={scene} showEdit={showEditButtons} badgeCls={badgeCls} />
             ))}
           </Panel>
         ))

@@ -19,7 +19,7 @@ export default async function PlayerCharacterViewedPage({
     return (
       <div className="max-w-5xl mx-auto p-6">
         <p className="text-sm text-zinc-500">
-          Missing <code className="text-amber-400">viewer</code> — who is
+          Missing <code className="text-blue-400">viewer</code> — who is
           looking?
         </p>
       </div>

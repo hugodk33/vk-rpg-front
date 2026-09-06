@@ -38,12 +38,12 @@ export default function PlayerTableDisadvantagesPage({ params }: { params: Promi
   return (
     <div className="max-w-5xl mx-auto p-6">
       <TableTabs tableId={id} role="player" characterUrl={characterUrl} />
-      <h1 className="text-2xl font-bold text-amber-100 mb-4">
+      <h1 className="text-2xl font-bold text-blue-100 mb-4">
         {data?.table?.title || "Table"} — Disadvantages
       </h1>
 
       <div className="flex gap-2 mb-6">
-        <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search disadvantages..." className="flex-1 bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-amber-700/60" />
+        <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search disadvantages..." className="flex-1 bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-blue-700/60" />
         <button type="button" onClick={() => setSearch("")} className="bg-zinc-700 hover:bg-zinc-600 text-zinc-300 text-sm font-medium px-4 py-2 rounded-lg transition-colors">Clear</button>
       </div>
 

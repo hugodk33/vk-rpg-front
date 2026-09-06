@@ -131,7 +131,7 @@ export default function TurnPanel({
     return s?.[attr] ?? s?.[`base_${attr}` as "base_st"] ?? 10;
   };
   const modValue = Math.floor((Number(attrib()) - 10) / 2) + testMod;
-  const attrHex = attrMeta[testAttr]?.hex ?? "#2dd4bf";
+  const attrHex = attrMeta[testAttr]?.hex ?? "#3b82f6";
   const rollDisabled = () => !isMyTurn || !myId;
 
   function performRoll(): { r: number[]; tot: number } {
@@ -163,12 +163,12 @@ export default function TurnPanel({
           <div className="flex items-center gap-4 flex-wrap">
             <div className="flex items-baseline gap-1.5">
               <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">Chapter</span>
-              <span className="font-mono text-xl font-bold text-teal-300 tabular-nums">{chapter}</span>
+              <span className="font-mono text-xl font-bold text-blue-300 tabular-nums">{chapter}</span>
             </div>
             <span className="w-px h-6 bg-zinc-700/60" aria-hidden />
             <div className="flex items-baseline gap-1.5">
               <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">Part</span>
-              <span className="font-mono text-xl font-bold text-teal-300 tabular-nums">{part}</span>
+              <span className="font-mono text-xl font-bold text-blue-300 tabular-nums">{part}</span>
             </div>
             {latestTitle ? (
               <>
@@ -179,11 +179,11 @@ export default function TurnPanel({
           </div>
           <span
             className={`inline-flex items-center gap-2 font-mono text-[11px] uppercase tracking-widest px-3 py-1.5 rounded-full border ${
-              isMyTurn ? "border-amber-500/50 text-amber-300" : "border-zinc-700/50 text-zinc-500"
+              isMyTurn ? "border-blue-500/50 text-blue-300" : "border-zinc-700/50 text-zinc-500"
             }`}
           >
-            <span className={`w-2 h-2 rounded-full ${isMyTurn ? "bg-amber-400 beacon" : "bg-zinc-600"}`}
-              style={isMyTurn ? { boxShadow: "0 0 8px rgba(251,191,36,.7)" } : undefined} />
+            <span className={`w-2 h-2 rounded-full ${isMyTurn ? "bg-blue-400 beacon" : "bg-zinc-600"}`}
+              style={isMyTurn ? { boxShadow: "0 0 8px rgba(59,130,246,.7)" } : undefined} />
             {isMyTurn ? "Your turn" : notInQueue ? "Not in queue" : "Waiting"}
           </span>
         </div>
@@ -216,29 +216,29 @@ export default function TurnPanel({
                   key={entry.id}
                   className={`relative flex items-center gap-3 rounded-xl border px-3.5 py-2.5 transition-colors ${
                     up
-                      ? "border-amber-600/50 bg-amber-700/10"
+                      ? "border-blue-600/50 bg-blue-700/10"
                       : mine
-                        ? "border-teal-700/50 bg-teal-900/10"
+                        ? "border-blue-700/50 bg-blue-900/10"
                         : "border-zinc-700/40 bg-zinc-900/50"
                   }`}
                 >
                   <span
                     className={`absolute -left-[21px] top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full border-2 ${
                       up
-                        ? "border-amber-400 bg-amber-500 beacon"
+                        ? "border-blue-400 bg-blue-500 beacon"
                         : mine
-                          ? "border-teal-500 bg-zinc-950"
+                          ? "border-blue-500 bg-zinc-950"
                           : "border-zinc-600 bg-zinc-800"
                     }`}
-                    style={up ? { boxShadow: "0 0 10px rgba(251,191,36,.6)" } : undefined}
+                    style={up ? { boxShadow: "0 0 10px rgba(59,130,246,.6)" } : undefined}
                   />
                   <span className="font-mono text-[11px] text-zinc-500 w-6 text-right shrink-0">
-                    {up ? <span className="text-amber-400 font-bold">NOW</span> : `#${i + 1}`}
+                    {up ? <span className="text-blue-400 font-bold">NOW</span> : `#${i + 1}`}
                   </span>
                   <div className="flex-1 min-w-0">
-                    <div className={`text-sm font-semibold truncate ${mine ? "text-teal-200" : "text-zinc-200"}`}>
+                    <div className={`text-sm font-semibold truncate ${mine ? "text-blue-200" : "text-zinc-200"}`}>
                       {charName(cid)}
-                      {mine ? <span className="ml-2 font-mono text-[9px] uppercase tracking-widest text-teal-400">you</span> : null}
+                      {mine ? <span className="ml-2 font-mono text-[9px] uppercase tracking-widest text-blue-400">you</span> : null}
                     </div>
                     <div className="mt-0.5">
                       {roster.find((r) => r.id === cid) ? (
@@ -247,9 +247,9 @@ export default function TurnPanel({
                     </div>
                   </div>
                   {up && mine ? (
-                    <span className="shrink-0 font-mono text-[10px] uppercase tracking-widest text-amber-300">Roll now</span>
+                    <span className="shrink-0 font-mono text-[10px] uppercase tracking-widest text-blue-300">Roll now</span>
                   ) : up ? (
-                    <span className="shrink-0 font-mono text-[10px] uppercase tracking-widest text-amber-400/70">acting</span>
+                    <span className="shrink-0 font-mono text-[10px] uppercase tracking-widest text-blue-400/70">acting</span>
                   ) : null}
                 </div>
               );
@@ -263,7 +263,7 @@ export default function TurnPanel({
         <div
           className={`rounded-xl border px-4 py-3 flex items-center gap-3 ${
             isMyTurn
-              ? "border-amber-500/40 bg-amber-700/10 text-amber-200"
+              ? "border-blue-500/40 bg-blue-700/10 text-blue-200"
               : "border-zinc-700/40 bg-zinc-900/40 text-zinc-400"
           }`}
         >
@@ -279,13 +279,13 @@ export default function TurnPanel({
         <div
           className="rounded-2xl border overflow-hidden relative transition-colors"
           style={{
-            borderColor: isMyTurn ? "#f59e0b55" : "#27272a",
-            boxShadow: isMyTurn ? "0 0 40px -12px rgba(245,158,11,.45)" : undefined,
+            borderColor: isMyTurn ? "#3b82f655" : "#27272a",
+            boxShadow: isMyTurn ? "0 0 40px -12px rgba(59,130,246,.45)" : undefined,
           }}
         >
           <div className="bg-zinc-900/90 p-5">
             <div className="flex items-center gap-3 mb-5 pb-4 border-b border-zinc-700/40">
-              <span className={`w-2.5 h-2.5 rounded-full ${isMyTurn ? "bg-amber-400 beacon" : "bg-zinc-600"}`}
+              <span className={`w-2.5 h-2.5 rounded-full ${isMyTurn ? "bg-blue-400 beacon" : "bg-zinc-600"}`}
                 style={isMyTurn ? { boxShadow: "0 0 10px rgba(251,191,36,.7)" } : undefined} />
               <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">Acting now</span>
               <span className="text-sm font-semibold text-zinc-100">
@@ -332,7 +332,7 @@ export default function TurnPanel({
                 ) : (
                   rolls.map((r, i) => (
                     <div key={i} className="flex items-center gap-2">
-                      <div className="w-12 h-12 rounded-lg border bg-zinc-800 flex items-center justify-center text-xl font-bold font-mono text-amber-300 shadow-inner" style={{ borderColor: "#fbbf2455" }}>
+                      <div className="w-12 h-12 rounded-lg border bg-zinc-800 flex items-center justify-center text-xl font-bold font-mono text-blue-300 shadow-inner" style={{ borderColor: "#3b82f655" }}>
                         {r}
                       </div>
                       {i < rolls.length - 1 ? <span className="text-zinc-600">+</span> : null}
@@ -351,7 +351,7 @@ export default function TurnPanel({
                   </div>
                 ) : (
                   <span className="text-sm text-zinc-600">
-                    Click <span className={isMyTurn ? "text-amber-400 font-semibold" : "text-zinc-500"}>Roll</span> to test.
+                    Click <span className={isMyTurn ? "text-blue-400 font-semibold" : "text-zinc-500"}>Roll</span> to test.
                   </span>
                 )}
                 <button
@@ -359,7 +359,7 @@ export default function TurnPanel({
                   disabled={rollDisabled()}
                   className={`${
                     isMyTurn
-                      ? "bg-amber-600 hover:bg-amber-500 text-amber-950 shadow-lg shadow-amber-900/30"
+                      ? "bg-blue-600 hover:bg-blue-500 text-blue-950 shadow-lg shadow-blue-900/30"
                       : "bg-zinc-800 text-zinc-500 cursor-not-allowed"
                   } text-sm font-bold px-6 py-2.5 rounded-lg transition-colors`}
                 >
@@ -379,7 +379,7 @@ export default function TurnPanel({
                     const isCurrent = total === face;
                     return (
                       <span key={face} className="flex-1 h-full flex items-end" title={`=${face}`}>
-                        <span className={`w-full rounded-t-sm transition-[height] ${isCurrent ? (judgment?.ok ? "bg-emerald-400" : "bg-red-400") : c ? "bg-teal-500/50" : "bg-zinc-800"}`} style={{ height: `${c ? Math.max(8, (c / maxCount) * 100) : 3}%` }} />
+                        <span className={`w-full rounded-t-sm transition-[height] ${isCurrent ? (judgment?.ok ? "bg-emerald-400" : "bg-red-400") : c ? "bg-blue-500/50" : "bg-zinc-800"}`} style={{ height: `${c ? Math.max(8, (c / maxCount) * 100) : 3}%` }} />
                       </span>
                     );
                   })}
@@ -391,7 +391,7 @@ export default function TurnPanel({
           {!isMyTurn ? (
             <div className="pointer-events-none absolute inset-0 bg-zinc-950/55 backdrop-blur-[1px] flex items-center justify-center">
               <div className="text-center px-6">
-                <div className={`mx-auto mb-3 flex items-center justify-center w-12 h-12 rounded-full border-2 ${notInQueue ? "border-zinc-600" : "border-amber-600/50"}`}>
+                <div className={`mx-auto mb-3 flex items-center justify-center w-12 h-12 rounded-full border-2 ${notInQueue ? "border-zinc-600" : "border-blue-600/50"}`}>
                   {icon(notInQueue ? "M12 8v8m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" : "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z", "w-6 h-6")}
                 </div>
                 <p className="font-mono text-[11px] uppercase tracking-widest text-zinc-500">

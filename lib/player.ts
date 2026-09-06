@@ -48,7 +48,7 @@ export async function loadPlayerConsole(characterId: string): Promise<PlayerCons
       ? api<QueueEntry[]>(`/game-table-queue/${tableId}`).catch(() => [])
       : Promise.resolve([]) as Promise<QueueEntry[]>,
     tableId
-      ? api<GameTableCharacters>(`/game-table-characters/${tableId}`).catch(() => ({ table: null, characters: [] }))
+      ? api<GameTableCharacters>(`/game-table-characters/${tableId}?viewer=${encodeURIComponent(characterId)}`).catch(() => ({ table: null, characters: [] }))
       : Promise.resolve({ table: null, characters: [] }) as Promise<GameTableCharacters>,
     tableId
       ? api<VisibilityRule[]>(`/game-table-visibility/${characterId}`).catch(() => [])

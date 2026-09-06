@@ -87,7 +87,7 @@ export default function PlayerConsole({
       {/* heading */}
       <div className="flex flex-wrap items-end justify-between gap-4 mb-5">
         <div>
-          <p className="font-mono text-[10px] tracking-widest uppercase text-teal-300/90">Your seat at the table</p>
+          <p className="font-mono text-[10px] tracking-widest uppercase text-blue-300/90">Your seat at the table</p>
           <h1 className="text-2xl md:text-3xl font-bold text-zinc-100 mt-1">{name}</h1>
           {table?.title ? (
             <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500 mt-0.5">{table.title}</p>
@@ -95,7 +95,7 @@ export default function PlayerConsole({
         </div>
         <Link
           href="/player"
-          className="inline-flex items-center gap-1 text-sm text-zinc-500 hover:text-teal-300 transition-colors"
+          className="inline-flex items-center gap-1 text-sm text-zinc-500 hover:text-blue-300 transition-colors"
         >
           {icon("M15 19l-7-7 7-7", "w-4 h-4")} Your company
         </Link>
@@ -109,8 +109,8 @@ export default function PlayerConsole({
             role="tab"
             aria-selected={tab === t.key}
             onClick={() => setTab(t.key)}
-            className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-md font-mono text-[12px] uppercase tracking-[0.12em] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500/60 ${
-              tab === t.key ? "bg-zinc-700 text-teal-300" : "text-zinc-500 hover:text-zinc-200"
+            className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-md font-mono text-[12px] uppercase tracking-[0.12em] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 ${
+              tab === t.key ? "bg-zinc-700 text-blue-300" : "text-zinc-500 hover:text-zinc-200"
             }`}
           >
             {icon(t.icon, "w-3.5 h-3.5")} {t.label}
@@ -132,10 +132,10 @@ export default function PlayerConsole({
       ) : null}
 
       {tab === "chronicle" ? (
-        <SceneTimeline table={table} scenes={scenes} showEditButtons={false} />
+        <SceneTimeline table={table} scenes={scenes} showEditButtons={false} role="player" />
       ) : null}
 
-      {tab === "table" ? <PlayerTablePanel tableId={tableId} /> : null}
+      {tab === "table" ? <PlayerTablePanel tableId={tableId} viewerId={character?.id ?? ""} /> : null}
 
       {tab === "sheet" && viewer ? (
         <CharacterSheet data={viewer} basePath={basePath} visibility={visibility} />

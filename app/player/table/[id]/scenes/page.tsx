@@ -18,7 +18,7 @@ export default async function PlayerTableScenesPage({ params }: { params: Promis
       <div className="max-w-5xl mx-auto p-6 pb-0">
         <TableTabs tableId={id} role="player" active="timeline" characterUrl={characterUrl} />
       </div>
-      <SceneTimeline table={data.table} scenes={data.scenes ?? []} showEditButtons={false} />
+      <SceneTimeline table={data.table} scenes={data.scenes ?? []} showEditButtons={false} role="player" />
     </>
   );
 }

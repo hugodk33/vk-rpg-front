@@ -103,6 +103,10 @@ const ATTRS: { key: string; label: string }[] = [
   { key: "points", label: "Points" },
   { key: "basic_speed", label: "Speed" },
   { key: "move", label: "Move" },
+  { key: "encumbrance", label: "Encumbrance" },
+  { key: "parry", label: "Parry" },
+  { key: "block", label: "Block" },
+  { key: "dodge", label: "Dodge" },
 ];
 
 const charName = (c: TableCharacter) => c.sheet?.name || c.name || "Unnamed";
@@ -195,7 +199,7 @@ export default function VisibilityPanel({
     const attrRows: PanelRow[] = ATTRS.map((a) => ({
       target: { type: "attr", id: a.key },
       label: a.label,
-      aliasing: ["name", "bio", "backstory"].includes(a.key) || a.key === "st",
+      aliasing: true,
     }));
     const itemRows: PanelRow[] = (items ?? []).map((it) => ({
       target: { type: "item", id: it.id },
@@ -362,14 +366,18 @@ export default function VisibilityPanel({
       </div>
 
       <p className="text-xs text-zinc-500 mb-4">
-        <span className="text-zinc-300">Unknown</span> hides the entity (an
-        alias{" "}
-        <span className="font-mono text-zinc-400">“value”</span> is shown when
-        filled). <span className="text-emerald-300">Known</span> and{" "}
-        <span className="text-violet-300">Specialist</span> reveal it. Anything
-        never touched defaults to Unknown. The switch in each group header
-        liberates or hides the whole group at once; the switch on each row does
-        the same for a single entity.
+        Three tiers per entity —{" "}
+        <span className="text-zinc-300">Unknown</span> keeps it hidden
+        (name reads “???”),{" "}
+        <span className="text-emerald-300">Known</span> shows the{" "}
+        <span className="font-mono text-zinc-400">masked value</span>{" "}
+        you type (you know the person <em>by that name</em> — or the item
+        is identified “unidentified”), and{" "}
+        <span className="text-violet-300">Specialist</span> reveals the{" "}
+        <em>real</em> value in full. Anything never touched defaults to
+        Unknown. The switch in each group header liberates or hides the
+        whole group at once; the switch on each row does the same for a
+        single entity.
       </p>
 
       <div className="grid gap-4 md:grid-cols-2">
@@ -489,7 +497,7 @@ export default function VisibilityPanel({
                         <input
                           type="text"
                           defaultValue={valueOf(row)}
-                          placeholder="Alias (what others see while Unknown)"
+                          placeholder="Masked value (shown at Known/Unknown)"
                           onBlur={(e) => {
                             const v = e.target.value;
                             if (v !== valueOf(row))

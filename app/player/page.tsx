@@ -72,13 +72,13 @@ export default async function PlayerDashboard() {
   return (
     <div className="max-w-5xl mx-auto px-6 py-10">
       {/* ---- hero ---- */}
-      <div className="relative rounded-2xl border border-teal-600/30 bg-gradient-to-b from-zinc-900/70 to-zinc-950 p-6 mb-8 overflow-hidden">
+      <div className="relative rounded-2xl border border-blue-600/30 bg-gradient-to-b from-zinc-900/70 to-zinc-950 p-6 mb-8 overflow-hidden">
         <div className="absolute inset-y-0 left-0 w-1/2 opacity-[0.05] pointer-events-none select-none">
-          <div className="absolute -bottom-14 -left-16 w-72 h-72 rounded-full border border-teal-500" />
-          <div className="absolute top-4 -left-6 w-56 h-56 rounded-full border border-teal-500" />
+          <div className="absolute -bottom-14 -left-16 w-72 h-72 rounded-full border border-blue-500" />
+          <div className="absolute top-4 -left-6 w-56 h-56 rounded-full border border-blue-500" />
         </div>
         <div className="relative">
-          <p className="font-mono text-[10px] tracking-widest uppercase text-teal-300/90">At the table</p>
+          <p className="font-mono text-[10px] tracking-widest uppercase text-blue-300/90">At the table</p>
           <h1 className="text-2xl md:text-3xl font-bold text-zinc-100 mt-1">Your Company</h1>
           <p className="text-stone-400 text-sm mt-1.5">
             {entries.length === 0
@@ -90,8 +90,8 @@ export default async function PlayerDashboard() {
 
       {/* ---- company (characters only) ---- */}
       {entries.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-teal-700/40 text-center py-20 bg-zinc-900/40">
-          <div className="font-mono text-[10px] tracking-widest uppercase text-teal-400/60">Empty roster</div>
+        <div className="rounded-2xl border border-dashed border-blue-700/40 text-center py-20 bg-zinc-900/40">
+          <div className="font-mono text-[10px] tracking-widest uppercase text-blue-400/60">Empty roster</div>
           <p className="text-zinc-300 mt-2 max-w-sm mx-auto text-sm">
             When a narrator adds you to a campaign and you claim a character, it will appear here.
           </p>
@@ -109,7 +109,7 @@ export default async function PlayerDashboard() {
             return (
               <div
                 key={ch.id}
-                className="group relative bg-zinc-900/60 border border-zinc-700/50 rounded-2xl overflow-hidden hover:border-teal-700/50 transition-colors flex flex-col sm:flex-row"
+                className="group relative bg-zinc-900/60 border border-zinc-700/50 rounded-2xl overflow-hidden hover:border-blue-700/50 transition-colors flex flex-col sm:flex-row"
               >
                 {/* hue rail */}
                 <div className="hidden sm:block w-1 shrink-0" style={{ background: `linear-gradient(180deg, ${hue.dot}, ${hue.dot}33)` }} />
@@ -158,13 +158,13 @@ export default async function PlayerDashboard() {
                 <div className="flex sm:flex-col gap-2 px-5 pb-5 sm:pb-0 sm:pr-5 sm:justify-center shrink-0">
                   <Link
                     href={sessionUrl}
-                    className="flex-1 sm:flex-none text-center bg-teal-600 hover:bg-teal-500 text-teal-950 text-sm font-semibold px-4 py-2 rounded-lg transition-colors shadow-lg shadow-teal-900/20"
+                    className="flex-1 sm:flex-none text-center bg-blue-600 hover:bg-blue-500 text-blue-950 text-sm font-semibold px-4 py-2 rounded-lg transition-colors shadow-lg shadow-blue-900/20"
                   >
                     Enter Session
                   </Link>
                   <Link
                     href={sheetUrl}
-                    className="flex-1 sm:flex-none text-center border border-zinc-700 hover:border-teal-700/60 text-zinc-300 hover:text-teal-200 text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+                    className="flex-1 sm:flex-none text-center border border-zinc-700 hover:border-blue-700/60 text-zinc-300 hover:text-blue-200 text-sm font-medium px-4 py-2 rounded-lg transition-colors"
                   >
                     Sheet
                   </Link>
@@ -176,7 +176,7 @@ export default async function PlayerDashboard() {
       )}
 
       <div className="mt-10 text-center">
-        <Link href="/" className="text-zinc-500 hover:text-teal-300 text-sm transition-colors">
+        <Link href="/" className="text-zinc-500 hover:text-blue-300 text-sm transition-colors">
           &larr; Back to home
         </Link>
       </div>

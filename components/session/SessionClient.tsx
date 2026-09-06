@@ -13,6 +13,9 @@ import type { NarrationAction, QueueEntry, Sheet } from "@/lib/types";
      · JOURNAL — the session diary + roll slips.
    The context bar (Chapter · Part · latest action) stays fixed
    above the tabs.
+
+   Two trails share this console: the narrator trail glows amber,
+   the player trail glows blue (`role` selects the tone).
    ============================================================ */
 
 interface SessionChar {
@@ -48,8 +51,8 @@ const queuePos = (entry: QueueEntry): number => {
   return Number.isFinite(n) ? n : Number.MAX_SAFE_INTEGER;
 };
 
-const inputCls =
-  "w-full bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-3 py-2 text-zinc-100 text-sm placeholder-zinc-600 focus:outline-none focus:border-amber-700/60 transition-colors";
+const inputCls = (focus: string) =>
+  `w-full bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-3 py-2 text-zinc-100 text-sm placeholder-zinc-600 focus:outline-none ${focus} transition-colors`;
 
 const icon = (path: string, cls = "w-4 h-4") => (
   <svg className={cls} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -108,6 +111,55 @@ export default function SessionClient({
   role = "narrator",
 }: SessionClientProps) {
   const isPlayer = role === "player";
+  const T = isPlayer
+    ? {
+        ring: "focus-visible:ring-blue-500/60",
+        activeTab: "bg-zinc-700 text-blue-300",
+        text: "text-blue-400",
+        textSoft: "text-blue-300",
+        textSofter: "text-blue-200",
+        softBg: "bg-blue-700/10",
+        softBorder: "border-blue-600/60",
+        btnFill: "bg-blue-600 hover:bg-blue-500 text-blue-950",
+        borderCta: "border-blue-600 text-blue-400 hover:bg-blue-700/10",
+        borderHover: "hover:border-blue-500 hover:text-blue-300",
+        badge: "bg-blue-500 text-blue-950",
+        dot: "bg-blue-400",
+        curve: "bg-blue-500/50",
+        inputBorder: "focus:border-blue-700/60",
+        diceText: "text-blue-300",
+        diceBorder: "#3b82f655",
+        shadow: "rgba(59,130,246,.6)",
+        shadowCardA: "rgba(59,130,246,.15)",
+        shadowCardB: "rgba(59,130,246,.35)",
+        accent: "accent-blue-500",
+        hex: "#3b82f6",
+        linkHover: "hover:text-blue-300",
+      }
+    : {
+        ring: "focus-visible:ring-amber-500/60",
+        activeTab: "bg-zinc-700 text-amber-300",
+        text: "text-amber-400",
+        textSoft: "text-amber-300",
+        textSofter: "text-amber-200",
+        softBg: "bg-amber-700/10",
+        softBorder: "border-amber-600/60",
+        btnFill: "bg-amber-600 hover:bg-amber-500 text-amber-950",
+        borderCta: "border-amber-600 text-amber-400 hover:bg-amber-700/10",
+        borderHover: "hover:border-amber-500 hover:text-amber-300",
+        badge: "bg-amber-500 text-amber-950",
+        dot: "bg-amber-400",
+        curve: "bg-amber-500/50",
+        inputBorder: "focus:border-amber-700/60",
+        diceText: "text-amber-300",
+        diceBorder: "#fbbf2455",
+        shadow: "rgba(245,158,11,.6)",
+        shadowCardA: "rgba(245,158,11,.15)",
+        shadowCardB: "rgba(245,158,11,.35)",
+        accent: "accent-amber-500",
+        hex: "#fbbf24",
+        linkHover: "hover:text-amber-300",
+      };
   const router = useRouter();
   const [tab, setTab] = useState<SessionTab>("turn");
 
@@ -217,7 +269,7 @@ export default function SessionClient({
     return selectedChar[attr] ?? selectedChar.sheet?.[attr] ?? 10;
   };
   const modValue = isPlayer ? diceMod : Math.floor((Number(attrib()) - 10) / 2) + diceMod;
-  const attrHex = attrMeta[actSkill]?.hex ?? "#fbbf24";
+  const attrHex = attrMeta[actSkill]?.hex ?? T.hex;
 
   function performRollFn(): { r: number[]; tot: number } {
     const { r, tot } = performRoll(diceCount, diceType, modValue);
@@ -328,12 +380,12 @@ export default function SessionClient({
           <div className="flex items-center gap-4 flex-wrap">
             <div className="flex items-baseline gap-1.5">
               <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">Chapter</span>
-              <span className="font-mono text-xl font-bold text-amber-400 tabular-nums">{chapter}</span>
+              <span className={`font-mono text-xl font-bold ${T.text} tabular-nums`}>{chapter}</span>
             </div>
             <span className="w-px h-6 bg-zinc-700/60" aria-hidden />
             <div className="flex items-baseline gap-1.5">
               <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">Part</span>
-              <span className="font-mono text-xl font-bold text-amber-400 tabular-nums">{part}</span>
+              <span className={`font-mono text-xl font-bold ${T.text} tabular-nums`}>{part}</span>
             </div>
             <span className="w-px h-6 bg-zinc-700/60 hidden sm:block" aria-hidden />
             {latestTitle ? (
@@ -343,7 +395,7 @@ export default function SessionClient({
           {!isPlayer ? (
             <div className="flex gap-2 flex-wrap">
               {[
-                { m: "chapter" as const, label: "+ Chapter", hex: "#fbbf24" },
+                { m: "chapter" as const, label: "+ Chapter", hex: T.hex },
                 { m: "moment" as const, label: "+ Part", hex: "#a1a1aa" },
                 { m: "narration" as const, label: "+ Narration", hex: "#a1a1aa" },
               ].map((b) => (
@@ -372,8 +424,8 @@ export default function SessionClient({
             role="tab"
             aria-selected={tab === t.key}
             onClick={() => setTab(t.key)}
-            className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-md font-mono text-[12px] uppercase tracking-[0.12em] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/60 ${
-              tab === t.key ? "bg-zinc-700 text-amber-300" : "text-zinc-500 hover:text-zinc-200"
+            className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-md font-mono text-[12px] uppercase tracking-[0.12em] transition-colors focus:outline-none focus-visible:ring-2 ${T.ring} ${
+              tab === t.key ? T.activeTab : "text-zinc-500 hover:text-zinc-200"
             }`}
           >
             {icon(t.icon, "w-3.5 h-3.5")}
@@ -397,24 +449,24 @@ export default function SessionClient({
                     key={entry.id}
                     className={`relative rounded-xl border p-4 transition-colors ${
                       isNext
-                        ? "border-amber-600/60 bg-amber-700/10 shadow-[0_0_0_1px_rgba(245,158,11,.15),0_10px_30px_-18px_rgba(245,158,11,.35)]"
+                        ? `${T.softBorder} ${T.softBg} shadow-[0_0_0_1px_${T.shadowCardA},0_10px_30px_-18px_${T.shadowCardB}]`
                         : "border-zinc-700/40 bg-zinc-800/40 hover:bg-zinc-800/60"
                     }`}
                   >
                     {isNext ? (
-                      <span className="absolute -top-2.5 left-3 font-mono text-[9px] tracking-widest uppercase px-1.5 py-px rounded-full bg-amber-500 text-amber-950 font-bold">
+                      <span className={`absolute -top-2.5 left-3 font-mono text-[9px] tracking-widest uppercase px-1.5 py-px rounded-full ${T.badge} font-bold`}>
                         Up now
                       </span>
                     ) : null}
                     <div className="flex items-center gap-3">
                       <span
                         className={`w-3 h-3 rounded-full shrink-0 ${isNpc ? "bg-amber-400" : "bg-blue-400"}`}
-                        style={{ boxShadow: isNext ? "0 0 8px rgba(245,158,11,.6)" : undefined }}
+                        style={{ boxShadow: isNext ? `0 0 8px ${T.shadow}` : undefined }}
                       />
                       <div className="min-w-0 flex-1">
                         <div className="text-sm font-semibold text-zinc-100 truncate">
                           {charId ? (
-                            <Link href={`/character/${charId}`} className="hover:text-amber-300">{name}</Link>
+                            <Link href={`/character/${charId}`} className={T.linkHover}>{name}</Link>
                           ) : name}
                         </div>
                         <div className="font-mono text-[10px] uppercase tracking-wider text-zinc-500">
@@ -435,7 +487,7 @@ export default function SessionClient({
                       <span className="font-mono text-[10px] text-zinc-600 uppercase tracking-widest">Order #{i + 1}</span>
                       <span className="flex-1 h-px bg-zinc-700/40" />
                       {isNext ? (
-                        <span className="font-mono text-[10px] uppercase tracking-widest text-amber-400">Now</span>
+                        <span className={`font-mono text-[10px] uppercase tracking-widest ${T.text}`}>Now</span>
                       ) : null}
                     </div>
                   </div>
@@ -454,7 +506,7 @@ export default function SessionClient({
                 value={queueChar}
                 onChange={(e) => setQueueChar(e.target.value)}
                 aria-label="Who enters the queue"
-                className={`${inputCls} flex-1`}
+                className={`${inputCls(T.inputBorder)} flex-1`}
               >
                 <option value="">Who acts next?…</option>
                 {characters.map((c) => (
@@ -466,7 +518,7 @@ export default function SessionClient({
               <button
                 onClick={addToQueue}
                 disabled={!queueChar}
-                className="font-mono text-[12px] font-semibold uppercase tracking-widest px-4 py-2 rounded-lg border border-amber-600 text-amber-400 hover:bg-amber-700/10 transition-colors disabled:opacity-40 w-full sm:w-auto"
+                className={`font-mono text-[12px] font-semibold uppercase tracking-widest px-4 py-2 rounded-lg border ${T.borderCta} transition-colors disabled:opacity-40 w-full sm:w-auto`}
               >
                 + Add to queue
               </button>
@@ -482,7 +534,7 @@ export default function SessionClient({
           <div className="bg-zinc-900/80 border border-zinc-700/40 rounded-xl p-5">
             {/* acting now */}
             <div className="flex items-center gap-3 mb-5 pb-4 border-b border-zinc-700/40">
-              <span className="w-2.5 h-2.5 rounded-full bg-amber-400" style={{ boxShadow: "0 0 8px rgba(245,158,11,.6)" }} />
+              <span className={`w-2.5 h-2.5 rounded-full ${T.dot}`} style={{ boxShadow: `0 0 8px ${T.shadow}` }} />
               <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">Acting now</span>
               <span className="text-sm font-semibold text-zinc-100">
                 {actorCharId ? charName(actorCharId) : <span className="text-zinc-500">empty queue</span>}
@@ -503,9 +555,9 @@ export default function SessionClient({
                 <span className="flex-1 h-px bg-zinc-700/40" />
                 <button
                   onClick={applyTest}
-                  className="font-mono text-[10px] font-semibold uppercase tracking-widest px-3 py-1.5 rounded-lg border border-zinc-600 text-zinc-300 hover:border-amber-500 hover:text-amber-300 transition-colors shrink-0"
+                  className={`font-mono text-[10px] font-semibold uppercase tracking-widest px-3 py-1.5 rounded-lg border border-zinc-600 text-zinc-300 ${T.borderHover} transition-colors shrink-0`}
                 >
-                  Save as this seat's test
+                  Save as this seat&apos;s test
                 </button>
               </div>
             ) : null}
@@ -516,7 +568,7 @@ export default function SessionClient({
                 <div className="flex flex-wrap items-end gap-3 mb-5">
                   <div>
                     <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Die</span>
-                    <select value={diceType} onChange={(e) => setDiceType(e.target.value)} className="bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-3 py-2 text-zinc-100 text-sm focus:outline-none focus:border-amber-700/60">
+                    <select value={diceType} onChange={(e) => setDiceType(e.target.value)} className={`bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-3 py-2 text-zinc-100 text-sm focus:outline-none ${T.inputBorder}`}>
                       {["4", "6", "8", "10", "12", "20"].map((d) => (
                         <option key={d} value={d} className="bg-zinc-800">d{d}</option>
                       ))}
@@ -526,17 +578,17 @@ export default function SessionClient({
                     <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Count</span>
                     <div className="flex items-center gap-1">
                       <button onClick={() => setDiceCount((c) => Math.max(1, c - 1))} className="w-8 h-9 bg-zinc-800/60 border border-zinc-700/50 rounded-lg text-zinc-300 hover:bg-zinc-700 transition-colors leading-none">−</button>
-                      <span className="w-10 text-center text-lg font-bold font-mono text-amber-400">{diceCount}</span>
+                      <span className={`w-10 text-center text-lg font-bold font-mono ${T.text}`}>{diceCount}</span>
                       <button onClick={() => setDiceCount((c) => Math.min(20, c + 1))} className="w-8 h-9 bg-zinc-800/60 border border-zinc-700/50 rounded-lg text-zinc-300 hover:bg-zinc-700 transition-colors leading-none">+</button>
                     </div>
                   </div>
                   <div>
                     <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Mod</span>
-                    <input type="number" value={diceMod} min={-20} max={20} readOnly={isPlayer} onChange={(e) => setDiceMod(Number(e.target.value))} className="w-16 bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-2 py-2 text-zinc-100 text-sm text-center focus:outline-none focus:border-amber-700/60" />
+                    <input type="number" value={diceMod} min={-20} max={20} readOnly={isPlayer} onChange={(e) => setDiceMod(Number(e.target.value))} className={`w-16 bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-2 py-2 text-zinc-100 text-sm text-center focus:outline-none ${T.inputBorder}`} />
                   </div>
                   <div>
                     <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Attribute</span>
-                    <select value={actSkill} onChange={(e) => setActSkill(e.target.value)} className="bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-3 py-2 text-zinc-100 text-sm focus:outline-none focus:border-amber-700/60">
+                    <select value={actSkill} onChange={(e) => setActSkill(e.target.value)} className={`bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-3 py-2 text-zinc-100 text-sm focus:outline-none ${T.inputBorder}`}>
                       {["st", "dx", "iq", "ht"].map((s) => (
                         <option key={s} value={s} className="bg-zinc-800">{s.toUpperCase()}</option>
                       ))}
@@ -551,7 +603,7 @@ export default function SessionClient({
                   ) : (
                     rolls.map((r, i) => (
                       <div key={i} className="flex items-center gap-2">
-                        <div className="w-12 h-12 rounded-lg border bg-zinc-800 flex items-center justify-center text-xl font-bold font-mono text-amber-300 shadow-inner" style={{ borderColor: "#fbbf2455" }}>
+                        <div className={`w-12 h-12 rounded-lg border bg-zinc-800 flex items-center justify-center text-xl font-bold font-mono ${T.diceText} shadow-inner`} style={{ borderColor: T.diceBorder }}>
                           {r}
                         </div>
                         {i < rolls.length - 1 ? <span className="text-zinc-600">+</span> : null}
@@ -570,10 +622,10 @@ export default function SessionClient({
                       </span>
                     </div>
                   ) : (
-                    <span className="text-sm text-zinc-600">Click <span className="text-amber-500 font-semibold">Roll</span> to test.</span>
+                    <span className="text-sm text-zinc-600">Click <span className={`${T.textSofter} font-semibold`}>Roll</span> to test.</span>
                   )}
                   <div className="flex gap-2 flex-wrap">
-                    <button onClick={rollBtn} className="bg-amber-600 hover:bg-amber-500 text-amber-950 text-sm font-bold px-5 py-2.5 rounded-lg transition-colors">{icon("M12 3l1.5 6.5L20 11l-6.5 1.5L12 19l-1.5-6.5L4 11l6.5-1.5L12 3z", "w-4 h-4 inline mr-1")}Roll {diceCount}d{diceType}</button>
+                    <button onClick={rollBtn} className={`${T.btnFill} text-sm font-bold px-5 py-2.5 rounded-lg transition-colors`}>{icon("M12 3l1.5 6.5L20 11l-6.5 1.5L12 19l-1.5-6.5L4 11l6.5-1.5L12 3z", "w-4 h-4 inline mr-1")}Roll {diceCount}d{diceType}</button>
                     <button onClick={copyRoll} className="bg-zinc-700 hover:bg-zinc-600 text-zinc-300 text-sm font-medium px-4 py-2.5 rounded-lg transition-colors">Copy</button>
                   </div>
                 </div>
@@ -592,7 +644,7 @@ export default function SessionClient({
                         const isCurrent = total === face;
                         return (
                           <span key={face} className="flex-1 h-full flex items-end" title={`=${face}`}>
-                            <span className={`w-full rounded-t-sm transition-[height] ${isCurrent ? (judgment?.ok ? "bg-emerald-400" : "bg-red-400") : c ? "bg-amber-500/50" : "bg-zinc-800"}`} style={{ height: `${c ? Math.max(8, (c / maxCount) * 100) : 3}%` }} />
+                            <span className={`w-full rounded-t-sm transition-[height] ${isCurrent ? (judgment?.ok ? "bg-emerald-400" : "bg-red-400") : c ? T.curve : "bg-zinc-800"}`} style={{ height: `${c ? Math.max(8, (c / maxCount) * 100) : 3}%` }} />
                           </span>
                         );
                       })}
@@ -607,11 +659,11 @@ export default function SessionClient({
                   <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block">Log action</span>
                   <div>
                     <label className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Dice (prefilled)</label>
-                    <input type="text" value={actRoll} onChange={(e) => setActRoll(e.target.value)} placeholder="3d6+2=14" className={inputCls} />
+                    <input type="text" value={actRoll} onChange={(e) => setActRoll(e.target.value)} placeholder="3d6+2=14" className={inputCls(T.inputBorder)} />
                   </div>
                   <div>
                     <label className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Target</label>
-                    <select value={actTarget} onChange={(e) => setActTarget(e.target.value)} className={inputCls}>
+                    <select value={actTarget} onChange={(e) => setActTarget(e.target.value)} className={inputCls(T.inputBorder)}>
                       <option value="">—</option>
                       {characters.map((c) => (
                         <option key={c.id} value={c.id}>{c.name || c.username || "Unknown"}</option>
@@ -620,9 +672,9 @@ export default function SessionClient({
                   </div>
                   <div>
                     <label className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Description</label>
-                    <input type="text" value={actDesc} onChange={(e) => setActDesc(e.target.value)} placeholder="Attacks the goblin…" className={inputCls} />
+                    <input type="text" value={actDesc} onChange={(e) => setActDesc(e.target.value)} placeholder="Attacks the goblin…" className={inputCls(T.inputBorder)} />
                   </div>
-                  <button onClick={addAction} className="w-full bg-amber-600 hover:bg-amber-500 text-amber-950 text-sm font-bold px-4 py-2.5 rounded-lg transition-colors">+ Log action</button>
+                  <button onClick={addAction} className={`w-full ${T.btnFill} text-sm font-bold px-4 py-2.5 rounded-lg transition-colors`}>+ Log action</button>
                 </div>
               ) : null}
             </div>
@@ -638,7 +690,7 @@ export default function SessionClient({
               <div className="flex items-center gap-2 mb-2">
                 <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">Latest entry</span>
                 <span className="flex-1 h-px bg-zinc-700/40" />
-                <span className="font-mono text-[10px] text-amber-400">M.{latestMoment}</span>
+                <span className={`font-mono text-[10px] ${T.text}`}>M.{latestMoment}</span>
               </div>
               <p className="text-[15px] leading-relaxed text-zinc-300 italic">{latestNarration}</p>
             </div>
@@ -653,7 +705,7 @@ export default function SessionClient({
             {sortedActions.length ? (
               <div className="space-y-2">
                 {sortedActions.map((a) => (
-                  <RollSlip key={a.id} a={a} />
+                  <RollSlip key={a.id} a={a} linkHover={T.linkHover} />
                 ))}
               </div>
             ) : (
@@ -681,7 +733,7 @@ export default function SessionClient({
             >
               <div>
                 <label className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Title</label>
-                <input type="text" value={modalTitle} onChange={(e) => setModalTitle(e.target.value)} required placeholder="Title…" className={inputCls} />
+                <input type="text" value={modalTitle} onChange={(e) => setModalTitle(e.target.value)} required placeholder="Title…" className={inputCls(T.inputBorder)} />
               </div>
               {modal === "narration" ? (
                 <>
@@ -700,7 +752,7 @@ export default function SessionClient({
                                   checked ? prev.filter((id) => id !== c.id) : [...prev, c.id]
                                 )
                               }
-                              className="accent-amber-500"
+                              className={T.accent}
                             />
                             <span className={checked ? "text-zinc-100" : "text-zinc-400"}>{c.name || c.username || "Unknown"}</span>
                           </label>
@@ -713,13 +765,13 @@ export default function SessionClient({
                   </div>
                   <div>
                     <label className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Narration</label>
-                    <textarea value={narrationText} onChange={(e) => setNarrationText(e.target.value)} rows={3} placeholder="Describe what happens…" className={`${inputCls} resize-none`} />
+                    <textarea value={narrationText} onChange={(e) => setNarrationText(e.target.value)} rows={3} placeholder="Describe what happens…" className={`${inputCls(T.inputBorder)} resize-none`} />
                   </div>
                 </>
               ) : null}
               <div className="flex gap-3 justify-end">
                 <button type="button" onClick={() => setModal(null)} className="bg-zinc-700 hover:bg-zinc-600 text-zinc-300 text-sm px-4 py-2 rounded-lg transition-colors">Cancel</button>
-                <button type="submit" className="text-sm font-semibold px-4 py-2 rounded-lg transition-colors bg-amber-600 hover:bg-amber-500 text-amber-950">Create</button>
+                <button type="submit" className={`text-sm font-semibold px-4 py-2 rounded-lg transition-colors ${T.btnFill}`}>Create</button>
               </div>
             </form>
           </div>
@@ -730,7 +782,7 @@ export default function SessionClient({
 }
 
 /* ---- roll slip (journal) ---- */
-function RollSlip({ a }: { a: NarrationAction }) {
+function RollSlip({ a, linkHover }: { a: NarrationAction; linkHover: string }) {
   const charId = a.character?.id || "";
   const charName = a.character?.name || a.character?.username || "Unknown";
   const roll = (a.dice_roll ?? "").toLowerCase();
@@ -745,7 +797,7 @@ function RollSlip({ a }: { a: NarrationAction }) {
       <div className="flex-1 min-w-0 px-3 py-2">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="font-mono text-[11px] font-semibold text-zinc-200">
-            {charId ? <Link href={`/character/${charId}`} className="hover:text-amber-300">{charName}</Link> : charName}
+            {charId ? <Link href={`/character/${charId}`} className={linkHover}>{charName}</Link> : charName}
           </span>
           {a.queue != null ? <span className="font-mono text-[10px] text-zinc-500">{a.queue}.</span> : null}
           <span className="text-[13px] text-zinc-400 truncate flex-1 min-w-0">{a.description}</span>

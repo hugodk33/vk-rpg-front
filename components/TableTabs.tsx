@@ -3,9 +3,30 @@ import Link from "next/link";
 /* ============================================================
    Table navigation — primary tab bar.
    "Table" opens the resource group (items, advantages, skills...);
-   Sessions / Timeline are linear tabs. Active state in amber,
-   visible focus, compact mono labels.
+   Sessions / Timeline are linear tabs. Two trails share the bar:
+   the narrator trail glows amber, the player trail glows blue.
    ============================================================ */
+
+interface TrailTone {
+  ring: string;
+  activeText: string;
+  hoverText: string;
+  underline: string;
+}
+
+const AMBER_TONE: TrailTone = {
+  ring: "focus-visible:ring-amber-500/60",
+  activeText: "text-amber-400",
+  hoverText: "hover:text-amber-300",
+  underline: "bg-amber-500",
+};
+
+const BLUE_TONE: TrailTone = {
+  ring: "focus-visible:ring-blue-500/60",
+  activeText: "text-blue-400",
+  hoverText: "hover:text-blue-300",
+  underline: "bg-blue-500",
+};
 
 interface TableTabsProps {
   tableId: string;
@@ -45,10 +66,10 @@ const RESOURCES = [
   { href: "/locations", label: "Locations", icon: "loc" },
 ] as const;
 
-function tabActive(active: boolean): string {
-  return `relative inline-flex items-center gap-1.5 px-3 py-2.5 font-mono text-[12px] uppercase tracking-[0.12em] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/60 rounded-md ${
+function tabActive(active: boolean, tone: TrailTone): string {
+  return `relative inline-flex items-center gap-1.5 px-3 py-2.5 font-mono text-[12px] uppercase tracking-[0.12em] transition-colors focus:outline-none focus-visible:ring-2 ${tone.ring} rounded-md ${
     active
-      ? "text-amber-400"
+      ? tone.activeText
       : "text-zinc-400 hover:text-zinc-100"
   }`;
 }
@@ -56,13 +77,15 @@ function tabActive(active: boolean): string {
 export default function TableTabs({ tableId, role = "narrator", active, characterUrl, characterHref, hideBreadcrumb }: TableTabsProps) {
   const prefix = role === "player" ? "/player" : "";
   const dashboardHref = role === "player" ? "/player" : "/narrator";
+  const tone = role === "player" ? BLUE_TONE : AMBER_TONE;
+  const underlineCls = `after:absolute after:inset-x-2 after:bottom-0 after:h-0.5 after:rounded-full ${tone.underline} after:content-['']`;
 
   return (
     <>
       {!hideBreadcrumb ? (
         <a
           href={dashboardHref}
-          className="inline-flex items-center gap-1 text-sm text-zinc-500 hover:text-zinc-200 transition-colors mb-3 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/60"
+          className={`inline-flex items-center gap-1 text-sm text-zinc-500 hover:text-zinc-200 transition-colors mb-3 rounded focus:outline-none focus-visible:ring-2 ${tone.ring}`}
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
@@ -80,19 +103,19 @@ export default function TableTabs({ tableId, role = "narrator", active, characte
             aria-label="Table resources"
           >
             {icon(ICONS.overview, "w-4 h-4")}
-            <span className={active === "overview" ? "text-amber-400" : ""}>Table</span>
+            <span className={active === "overview" ? tone.activeText : ""}>Table</span>
             <svg className="w-3.5 h-3.5 text-zinc-500 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
             </svg>
             {/* indicador ativo */}
-            {active === "overview" ? <span aria-hidden className="absolute inset-x-2 bottom-0 h-0.5 rounded-full bg-amber-500" /> : null}
+            {active === "overview" ? <span aria-hidden className={`absolute inset-x-2 bottom-0 h-0.5 rounded-full ${tone.underline}`} /> : null}
           </summary>
 
           <div className="absolute left-0 top-full mt-1 w-56 rounded-lg border border-zinc-700/60 bg-zinc-900/95 backdrop-blur shadow-2xl py-1.5 z-50">
             {/* Overview */}
             <Link
               href={`${prefix}/table/${tableId}`}
-              className="flex items-center gap-2.5 px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-700/50 hover:text-amber-300 rounded transition-colors"
+              className={`flex items-center gap-2.5 px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-700/50 ${tone.hoverText} rounded transition-colors`}
             >
               {icon(ICONS.overview, "w-4 h-4 text-zinc-500")}
               Overview
@@ -112,28 +135,28 @@ export default function TableTabs({ tableId, role = "narrator", active, characte
         </details>
         ) : null}
 
-        <Link href={`${prefix}/table/${tableId}/sessions`} className={`${tabActive(active === "sessions")} ${active === "sessions" ? "after:absolute after:inset-x-2 after:bottom-0 after:h-0.5 after:rounded-full after:bg-amber-500 after:content-['']" : ""}`}>
+        <Link href={`${prefix}/table/${tableId}/sessions`} className={`${tabActive(active === "sessions", tone)} ${active === "sessions" ? underlineCls : ""}`}>
           {icon(ICONS.sessions, "w-4 h-4")} Sessions
         </Link>
 
-        <Link href={`${prefix}/table/${tableId}/scenes`} className={`${tabActive(active === "timeline")} ${active === "timeline" ? "after:absolute after:inset-x-2 after:bottom-0 after:h-0.5 after:rounded-full after:bg-amber-500 after:content-['']" : ""}`}>
+        <Link href={`${prefix}/table/${tableId}/scenes`} className={`${tabActive(active === "timeline", tone)} ${active === "timeline" ? underlineCls : ""}`}>
           {icon(ICONS.timeline, "w-4 h-4")} Timeline
         </Link>
 
         {role !== "player" ? (
-        <Link href={`${prefix}/table/${tableId}/visibility`} className={`${tabActive(active === "visibility")} ${active === "visibility" ? "after:absolute after:inset-x-2 after:bottom-0 after:h-0.5 after:rounded-full after:bg-amber-500 after:content-['']" : ""}`}>
+        <Link href={`${prefix}/table/${tableId}/visibility`} className={`${tabActive(active === "visibility", tone)} ${active === "visibility" ? underlineCls : ""}`}>
           {icon(ICONS.visibility, "w-4 h-4")} Visibility
         </Link>
         ) : null}
 
         {active === "character" && characterHref ? (
-          <Link href={characterHref} className={`${tabActive(true)} after:absolute after:inset-x-2 after:bottom-0 after:h-0.5 after:rounded-full after:bg-amber-500 after:content-['']`}>
+          <Link href={characterHref} className={`${tabActive(true, tone)} ${underlineCls}`}>
             {icon(ICONS.character, "w-4 h-4")} Character
           </Link>
         ) : null}
 
         {role === "player" && characterUrl && active !== "character" ? (
-          <Link href={characterUrl} className={tabActive(false)}>
+          <Link href={characterUrl} className={tabActive(false, tone)}>
             {icon(ICONS.character, "w-4 h-4")} Character
           </Link>
         ) : null}

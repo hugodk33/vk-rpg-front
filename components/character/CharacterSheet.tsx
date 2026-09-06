@@ -432,6 +432,8 @@ export default function CharacterSheet({ data, visibility }: CharacterSheetProps
   const advHidden = (id?: string | null) => vis ? isAdvantageHidden(vis, id) : false;
   const disHidden = (id?: string | null) => vis ? isDisadvantageHidden(vis, id) : false;
   const attrHidden = (a?: string | null) => vis ? isAttributeHidden(vis, a) : false;
+  const masked = (a?: string | null, raw?: string | number | null, fallback = "-") =>
+    attrHidden(a) ? censored(`attr:${String(a).toLowerCase()}`) : (raw ?? fallback);
 
   const isCarried = (it: { equipment_status?: string }) =>
     it.equipment_status === "equipped" || it.equipment_status === "wielded";
@@ -484,6 +486,12 @@ export default function CharacterSheet({ data, visibility }: CharacterSheetProps
       locations: it.equipment_location || it.armor?.locations || "",
     }));
   const visibleArmors = vis ? fittedArmors.filter((a) => !itemHidden(ch.items?.find((it) => (it.armor?.id || it.id) === a.id)?.id)) : fittedArmors;
+  const equipmentItems = (ch.items ?? []).filter(
+    (it) =>
+      isCarried(it) &&
+      !(it.weapon && it.weapon.attacks.length > 0) &&
+      !it.armor
+  );
   const visibleSkills = vis
     ? (ch.skills ?? []).filter((sk) => !skillHidden(sk.skill_id ?? sk.id))
     : ch.skills;
@@ -505,7 +513,7 @@ export default function CharacterSheet({ data, visibility }: CharacterSheetProps
           </div>
           <div className="flex flex-col items-end">
             <span className="text-zinc-500 text-xs font-semibold uppercase tracking-wider">Build Points</span>
-            <p className="text-amber-400 font-bold text-2xl leading-none mt-1">{s?.points ?? "0"}</p>
+            <p className="text-amber-400 font-bold text-2xl leading-none mt-1">{masked("points", s?.points, "0")}</p>
           </div>
         </div>
 
@@ -592,18 +600,18 @@ export default function CharacterSheet({ data, visibility }: CharacterSheetProps
               <div className="grid grid-cols-3 gap-1">
                 <div className="flex flex-col items-center gap-1 p-2 bg-zinc-800/40 rounded-lg">
                   {windIcon()}
-                  <span className="text-cyan-400 text-sm font-bold">{s?.basic_speed ?? "-"}</span>
+                  <span className="text-cyan-400 text-sm font-bold">{masked("basic_speed", s?.basic_speed)}</span>
                   <span className="text-zinc-500 text-[10px] font-semibold uppercase text-center">Basic Speed</span>
                 </div>
                 <div className="flex flex-col items-center gap-1 p-2 bg-zinc-800/40 rounded-lg">
                   {footprintsIcon()}
-                  <span className="text-cyan-400 text-sm font-bold">{s?.move ?? "-"}</span>
+                  <span className="text-cyan-400 text-sm font-bold">{masked("move", s?.move)}</span>
                   <span className="text-zinc-500 text-[10px] font-semibold uppercase text-center">Move</span>
                 </div>
                 <div className="flex flex-col items-center gap-1 p-2 bg-zinc-800/40 rounded-lg">
                   {packageIcon()}
                   <span className="text-cyan-400 text-sm font-bold truncate max-w-full">
-                    {s?.encumbrance || "-"}
+                    {masked("encumbrance", s?.encumbrance)}
                   </span>
                   <span className="text-zinc-500 text-[10px] font-semibold uppercase text-center">Encumbrance</span>
                 </div>
@@ -615,17 +623,17 @@ export default function CharacterSheet({ data, visibility }: CharacterSheetProps
               <div className="grid grid-cols-3 gap-1">
                 <div className="flex flex-col items-center gap-1 p-2 bg-zinc-800/40 rounded-lg">
                   {swordsIcon()}
-                  <span className="text-amber-400 text-sm font-bold">{passive.parry}</span>
+                  <span className="text-amber-400 text-sm font-bold">{masked("parry", s?.dx == null ? null : passive.parry)}</span>
                   <span className="text-zinc-500 text-[10px] font-semibold uppercase text-center">Parry</span>
                 </div>
                 <div className="flex flex-col items-center gap-1 p-2 bg-zinc-800/40 rounded-lg">
                   {shieldIcon("w-4 h-4 text-amber-400")}
-                  <span className="text-amber-400 text-sm font-bold">{passive.block}</span>
+                  <span className="text-amber-400 text-sm font-bold">{masked("block", s?.dx == null ? null : passive.block)}</span>
                   <span className="text-zinc-500 text-[10px] font-semibold uppercase text-center">Block</span>
                 </div>
                 <div className="flex flex-col items-center gap-1 p-2 bg-zinc-800/40 rounded-lg">
                   {dodgeIcon()}
-                  <span className="text-amber-400 text-sm font-bold">{passive.dodge}</span>
+                  <span className="text-amber-400 text-sm font-bold">{masked("dodge", s?.basic_speed == null ? null : passive.dodge)}</span>
                   <span className="text-zinc-500 text-[10px] font-semibold uppercase text-center">Dodge</span>
                 </div>
               </div>
@@ -911,6 +919,39 @@ export default function CharacterSheet({ data, visibility }: CharacterSheetProps
                   ))
                 )}
               </div>
+            </div>
+
+            <div>
+              {sectionTitle(
+                "Equipment",
+                <svg className="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                </svg>
+              )}
+              {equipmentItems.length === 0 ? (
+                <p className="text-zinc-600 text-sm italic">Nothing carried</p>
+              ) : (
+                equipmentItems.map((it) => (
+                  <div
+                    key={it.id}
+                    className="bg-zinc-800/60 rounded-lg border border-zinc-700/40 px-3 py-2 mb-1.5"
+                  >
+                    <div className="flex justify-between items-center">
+                      <span className="text-zinc-200 text-sm font-medium">
+                        {it.name || "Unidentified item"}
+                      </span>
+                      {it.equipment_quantity != null ? (
+                        <span className="text-zinc-500 text-xs">×{it.equipment_quantity}</span>
+                      ) : null}
+                    </div>
+                    {it.weight_lb != null ? (
+                      <span className="text-zinc-500 text-[10px] uppercase tracking-wide">
+                        {it.weight_lb} lb
+                      </span>
+                    ) : null}
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>

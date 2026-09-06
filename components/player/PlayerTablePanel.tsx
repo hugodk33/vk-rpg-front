@@ -15,7 +15,6 @@ import type {
   TableCharacter,
 } from "@/lib/types";
 import { api } from "@/lib/api";
-import RadarChart from "@/components/RadarChart";
 
 /* ============================================================
    Player Table Panel — the table's shared sandbox.
@@ -54,9 +53,10 @@ const ADV_FALLBACK = { bg: "#14532d", border: "#16a34a", badge: "bg-emerald-700/
 
 interface PlayerTablePanelProps {
   tableId: string;
+  viewerId?: string;
 }
 
-export default function PlayerTablePanel({ tableId }: PlayerTablePanelProps) {
+export default function PlayerTablePanel({ tableId, viewerId }: PlayerTablePanelProps) {
   const [section, setSection] = useState<TableSection>("items");
   const [search, setSearch] = useState("");
   const [items, setItems] = useState<Item[]>([]);
@@ -70,8 +70,11 @@ export default function PlayerTablePanel({ tableId }: PlayerTablePanelProps) {
     api<GameTableItems>(`/game-table-items/${tableId}`)
       .then((d) => setItems(d.items ?? []))
       .catch(() => setItems([]));
-    api<GameTableCharacters>(`/game-table-characters/${tableId}`)
-      .then((d) => setNpcs((d.characters ?? []).filter((c) => c.isNpc)))
+    const charsUrl = viewerId
+      ? `/game-table-characters/${tableId}?viewer=${encodeURIComponent(viewerId)}`
+      : `/game-table-characters/${tableId}`;
+    api<GameTableCharacters>(charsUrl)
+      .then((d) => setNpcs((d.characters ?? []).filter((c) => c.isNpc && (c.known ?? true))))
       .catch(() => setNpcs([]));
     api<GameTableSkills>(`/game-table-skills/${tableId}`)
       .then((d) => setSkills(d.skills ?? []))
@@ -82,16 +85,16 @@ export default function PlayerTablePanel({ tableId }: PlayerTablePanelProps) {
     api<GameTableDisadvantages>(`/game-table-disadvantages/${tableId}`)
       .then((d) => setDisadvantages(d.disadvantages ?? []))
       .catch(() => setDisadvantages([]));
-  }, [tableId]);
+  }, [tableId, viewerId]);
 
   const q = search.toLowerCase();
 
-  const filteredItems = items.filter((i) => !q || (i.name ?? "").toLowerCase().includes(q));
   const filteredNpcs = npcs.filter((c) => {
     if (!q) return true;
     const s = c.sheet;
     return (s?.name ?? c.name ?? "").toLowerCase().includes(q);
   });
+  const filteredItems = items.filter((i) => !q || (i.name ?? "").toLowerCase().includes(q));
   const filteredSkills = skills.filter((s) => !q || (s.name ?? "").toLowerCase().includes(q));
   const filteredAdvantages = advantages.filter((a) => !q || (a.name ?? "").toLowerCase().includes(q));
   const filteredDisadvantages = disadvantages.filter((d) => !q || (d.name ?? "").toLowerCase().includes(q));
@@ -105,8 +108,8 @@ export default function PlayerTablePanel({ tableId }: PlayerTablePanelProps) {
             key={s.key}
             type="button"
             onClick={() => { setSection(s.key); setSearch(""); }}
-            className={`px-3 py-1.5 rounded-md font-mono text-[11px] uppercase tracking-[0.12em] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500/60 ${
-              section === s.key ? "bg-amber-700/60 text-amber-100" : "bg-zinc-800/50 border border-zinc-700/40 text-zinc-500 hover:text-zinc-200"
+            className={`px-3 py-1.5 rounded-md font-mono text-[11px] uppercase tracking-[0.12em] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 ${
+              section === s.key ? "bg-blue-700/60 text-blue-100" : "bg-zinc-800/50 border border-zinc-700/40 text-zinc-500 hover:text-zinc-200"
             }`}
           >
             {s.label}
@@ -121,7 +124,7 @@ export default function PlayerTablePanel({ tableId }: PlayerTablePanelProps) {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder={`Search ${section}...`}
-          className="flex-1 bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-amber-700/60"
+          className="flex-1 bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-blue-700/60"
         />
         <button
           type="button"
@@ -133,7 +136,7 @@ export default function PlayerTablePanel({ tableId }: PlayerTablePanelProps) {
       </div>
 
       {section === "items" ? renderItems(filteredItems) : null}
-      {section === "npcs" ? renderNpcs(filteredNpcs) : null}
+      {section === "npcs" ? renderNpcs(filteredNpcs, viewerId) : null}
       {section === "skills" ? renderSkills(filteredSkills) : null}
       {section === "advantages" ? renderAdvantages(filteredAdvantages) : null}
       {section === "disadvantages" ? renderDisadvantages(filteredDisadvantages) : null}
@@ -191,19 +194,23 @@ function renderItems(items: Item[]) {
   );
 }
 
-function renderNpcs(npcs: TableCharacter[]) {
-  if (npcs.length === 0) return <Empty msg="No NPCs registered in this table yet." />;
+function renderNpcs(npcs: TableCharacter[], viewerId?: string) {
+  if (npcs.length === 0) return <Empty msg="No NPCs you have met yet." />;
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       {npcs.map((ch) => {
         const s = ch.sheet;
+        const name = s?.name || ch?.name || "???";
+        const hiddenIdentity = !s?.name || s.name === "???" || !ch.name;
         return (
           <div key={ch.id} className="bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-4 py-3 flex flex-col items-center">
             <div className="w-full flex justify-between items-start mb-1">
-              <span className="text-zinc-200 font-medium">{s?.name || ch.name || "Unnamed"}</span>
+              <span className="text-zinc-200 font-medium">{name}</span>
               <span className="text-zinc-500 text-xs">NPC</span>
             </div>
-            {s ? <RadarChart st={s.st} dx={s.dx} iq={s.iq} ht={s.ht} /> : null}
+            {hiddenIdentity ? (
+              <p className="text-[10px] font-mono uppercase tracking-widest text-zinc-600">Unknown identity</p>
+            ) : null}
             {s ? (
               <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-0.5 text-xs mt-2">
                 <span className="text-red-400">ST {s.st ?? "-"}</span>
@@ -212,14 +219,14 @@ function renderNpcs(npcs: TableCharacter[]) {
                 <span className="text-purple-400">HT {s.ht ?? "-"}</span>
               </div>
             ) : (
-              <p className="text-zinc-600 text-xs italic mt-1">No sheet</p>
+              <p className="text-zinc-600 text-xs italic mt-1">Unknown</p>
             )}
-            {ch.id ? (
+            {viewerId ? (
               <Link
-                href={`/character/${ch.id}`}
-                className="w-full text-center bg-amber-700/60 hover:bg-amber-600 text-amber-100 text-xs font-medium px-3 py-2 rounded-lg transition-colors mt-3"
+                href={`/player/character/${ch.id}/view?viewer=${encodeURIComponent(viewerId)}`}
+                className="w-full text-center bg-blue-700/60 hover:bg-blue-600 text-blue-100 text-xs font-medium px-3 py-2 rounded-lg transition-colors mt-3"
               >
-                Sheet
+                See what you know
               </Link>
             ) : null}
           </div>
