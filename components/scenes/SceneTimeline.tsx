@@ -225,11 +225,11 @@ function SceneCard({ scene, showEdit, badgeCls }: { scene: Scene; showEdit: bool
           <span className="ml-auto font-mono text-[10px] text-zinc-600 uppercase tracking-widest hidden sm:inline">open</span>
         ) : null}
       </div>
-      <div className="pl-[18px]">
+      <div className="pl-[18px] border-l border-zinc-700/40">
         {scene.narrations.length === 0 ? (
           <p className="text-sm text-zinc-600 italic font-mono">No entries in this scene.</p>
         ) : (
-          <div className="space-y-5 border-l border-zinc-700/40">
+          <div className="space-y-5">
             {scene.narrations.map((n) => (
               <Beat key={n.id} n={n} />
             ))}
