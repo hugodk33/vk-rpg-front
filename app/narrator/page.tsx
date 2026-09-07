@@ -89,7 +89,7 @@ function RosterChip({
         <div className="flex items-center gap-1.5 mt-0.5">
           {hasSheet ? (
             <>
-              <span className="font-mono text-[9px] uppercase text-amber-400/80">PTS {points ?? "–"}</span>
+              <span className="font-mono text-[9px] uppercase text-lime-500/80">PTS {points ?? "–"}</span>
               {maxHp ? (
                 <span className="flex items-center gap-1">
                   <span className="w-8 h-1 rounded-full bg-zinc-700/70 overflow-hidden">
@@ -101,7 +101,7 @@ function RosterChip({
               {mods && mods > 0 ? (
                 <span
                   title={modNames}
-                  className="font-mono text-[9px] uppercase tracking-widest text-amber-400/70"
+                  className="font-mono text-[9px] uppercase tracking-widest text-lime-500/70"
                 >
                   {mods} effect{mods === 1 ? "" : "s"}
                 </span>
@@ -145,20 +145,20 @@ export default async function NarratorDashboard() {
       {/* ---- GM desk hero ---- */}
       <div className="rounded-2xl border border-zinc-700/50 bg-gradient-to-b from-zinc-900/80 to-zinc-950 p-6 mb-6 overflow-hidden relative">
         <div className="absolute inset-y-0 right-0 w-1/2 opacity-[0.06] pointer-events-none select-none">
-          <div className="absolute -top-10 -right-10 w-72 h-72 rounded-full border border-amber-500" />
-          <div className="absolute -top-4 -right-4 w-56 h-56 rounded-full border border-amber-500" />
-          <div className="absolute top-6 right-6 w-40 h-40 rounded-full border border-amber-500" />
+          <div className="absolute -top-10 -right-10 w-72 h-72 rounded-full border border-lime-600" />
+          <div className="absolute -top-4 -right-4 w-56 h-56 rounded-full border border-lime-600" />
+          <div className="absolute top-6 right-6 w-40 h-40 rounded-full border border-lime-600" />
         </div>
 
         <div className="flex flex-wrap items-start justify-between gap-4 relative">
           <div>
-            <p className="font-mono text-[10px] tracking-widest uppercase text-amber-400/90">GM Desk</p>
+            <p className="font-mono text-[10px] tracking-widest uppercase text-lime-500/90">GM Desk</p>
             <h1 className="text-2xl md:text-3xl font-bold text-zinc-100 mt-1">Command Center</h1>
             <p className="text-stone-400 text-sm mt-1.5">Welcome, {narratorName}. The table awaits its storyteller.</p>
           </div>
           <Link
             href="/table/new"
-            className="bg-amber-600 hover:bg-amber-500 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors shadow-lg shadow-amber-900/30"
+            className="bg-lime-700 hover:bg-lime-600 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors shadow-lg shadow-lime-900/30"
           >
             + New Table
           </Link>
@@ -171,7 +171,7 @@ export default async function NarratorDashboard() {
             { label: "Players", value: totalPlayers },
           ].map((s) => (
             <div key={s.label} className="rounded-lg border border-zinc-700/40 bg-zinc-900/60 px-4 py-3">
-              <div className="font-mono text-2xl font-bold text-amber-300 leading-none">{s.value}</div>
+              <div className="font-mono text-2xl font-bold text-lime-400 leading-none">{s.value}</div>
               <div className="font-mono text-[10px] uppercase tracking-widest text-zinc-500 mt-1.5">{s.label}</div>
             </div>
           ))}
@@ -185,7 +185,7 @@ export default async function NarratorDashboard() {
           <p className="text-zinc-300 text-lg mt-2">Found your first table and begin a campaign.</p>
           <Link
             href="/table/new"
-            className="inline-block mt-5 bg-amber-600 hover:bg-amber-500 text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors"
+            className="inline-block mt-5 bg-lime-700 hover:bg-lime-600 text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors"
           >
             + Found a Table
           </Link>
@@ -198,7 +198,7 @@ export default async function NarratorDashboard() {
             return (
               <div
                 key={t.id}
-                className="group bg-zinc-900/70 border border-zinc-700/50 rounded-2xl overflow-hidden hover:border-amber-700/50 transition-colors flex flex-col"
+                className="group bg-zinc-900/70 border border-zinc-700/50 rounded-2xl overflow-hidden hover:border-lime-800/50 transition-colors flex flex-col"
               >
                 <div className="p-5 flex items-start gap-4 border-b border-zinc-700/40">
                   <Sigil title={t.title} name={sealer?.name || "GM"} />
@@ -207,7 +207,7 @@ export default async function NarratorDashboard() {
                       <h2 className="text-lg font-bold text-zinc-100 leading-tight">{t.title || "Untitled"}</h2>
                     </div>
                     <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                      <span className="inline-flex items-center font-mono text-[10px] uppercase tracking-widest px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/20">
+                      <span className="inline-flex items-center font-mono text-[10px] uppercase tracking-widest px-1.5 py-0.5 rounded bg-lime-600/10 text-lime-400 border border-lime-600/20">
                         {t.system || "System"}
                       </span>
                       <span className="text-zinc-700">·</span>
@@ -258,7 +258,7 @@ export default async function NarratorDashboard() {
                 <div className="px-5 pb-5">
                   <Link
                     href={`/table/${t.id}`}
-                    className="block w-full text-center bg-amber-700/60 group-hover:bg-amber-600 text-amber-50 text-sm font-semibold px-3 py-2.5 rounded-lg transition-colors"
+                    className="block w-full text-center bg-lime-800/60 group-hover:bg-lime-700 text-white text-sm font-semibold px-3 py-2.5 rounded-lg transition-colors"
                   >
                     Open Table
                   </Link>

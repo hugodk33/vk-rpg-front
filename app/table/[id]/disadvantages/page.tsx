@@ -71,7 +71,7 @@ export default function TableDisadvantagesPage({ params }: { params: Promise<{ i
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Filter disadvantages..."
-            className="w-full bg-zinc-800/60 border border-zinc-700/50 rounded-lg pl-9 pr-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-amber-700/60"
+            className="w-full bg-zinc-800/60 border border-zinc-700/50 rounded-lg pl-9 pr-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-lime-800/60"
           />
         </div>
         {search ? (

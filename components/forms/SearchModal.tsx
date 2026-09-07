@@ -104,7 +104,7 @@ export default function SearchModal({ title, onSearch, isSelected, onToggle, onC
             />
             <button
               type="submit"
-              className="flex items-center gap-1.5 shrink-0 text-xs font-semibold bg-amber-600 hover:bg-amber-500 text-white px-4 py-2.5 rounded-lg transition-colors"
+              className="flex items-center gap-1.5 shrink-0 text-xs font-semibold bg-lime-700 hover:bg-lime-600 text-white px-4 py-2.5 rounded-lg transition-colors"
             >
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-4.35-4.35M17 10.5a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z" />
@@ -150,14 +150,14 @@ export default function SearchModal({ title, onSearch, isSelected, onToggle, onC
                 >
                   <label
                     className={`flex items-center gap-3 p-2 rounded-lg hover:bg-zinc-700/30 cursor-pointer ${
-                      selected ? "bg-zinc-700/40 border border-amber-500/30" : "border border-transparent"
+                      selected ? "bg-zinc-700/40 border border-lime-600/30" : "border border-transparent"
                     }`}
                   >
                     <input
                       type="checkbox"
                       checked={selected}
                       onChange={(e) => onToggle(i.id, e.target.checked)}
-                      className="w-4 h-4 rounded border-zinc-600 text-amber-500 focus:ring-amber-500 bg-zinc-900"
+                      className="w-4 h-4 rounded border-zinc-600 text-white0 focus:ring-lime-700 bg-zinc-900"
                     />
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-medium text-zinc-200 truncate">{i.name || "Unnamed"}</div>

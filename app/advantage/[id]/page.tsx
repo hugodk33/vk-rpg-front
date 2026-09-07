@@ -27,9 +27,9 @@ export async function generateMetadata({
 
 const TYPE_CONFIG: Record<string, { color: string; bg: string; ring: string; svg: string }> = {
   Physical: {
-    color: "text-amber-400",
+    color: "text-lime-500",
     bg: "bg-amber-400/10",
-    ring: "ring-amber-400/20",
+    ring: "ring-lime-500/20",
     svg: "M6.5 6.5v11M3.5 9v6M17.5 6.5v11M20.5 9v6M6.5 12h11",
   },
   Mental: {
@@ -82,7 +82,7 @@ export default async function AdvantageDetailPage({
                 </div>
               ) : null}
               <div className="min-w-0">
-                <h1 className="text-2xl font-bold text-amber-100 leading-tight">{advantage.name || "Unnamed Advantage"}</h1>
+                <h1 className="text-2xl font-bold text-lime-100 leading-tight">{advantage.name || "Unnamed Advantage"}</h1>
                 {advantage.category || advantage.subcategory ? (
                   <div className="flex items-center gap-2 mt-1 flex-wrap">
                     {advantage.category ? (
@@ -119,7 +119,7 @@ export default async function AdvantageDetailPage({
           </div>
 
           <div className="flex gap-3 pt-2">
-            <Link href={`/advantage/${advantage.id}/edit`} className="bg-amber-700/60 hover:bg-amber-600 text-amber-100 text-sm font-medium px-4 py-2 rounded-lg transition-colors">
+            <Link href={`/advantage/${advantage.id}/edit`} className="bg-lime-800/60 hover:bg-lime-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
               Edit
             </Link>
           </div>

@@ -7,7 +7,7 @@ export default function SplitToggle({ active, onToggle }: { active: boolean; onT
       onClick={onToggle}
       className={`flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg border transition-colors ${
         active
-          ? "bg-amber-600/20 border-amber-500/40 text-amber-300"
+          ? "bg-lime-700/20 border-lime-600/40 text-lime-400"
           : "bg-zinc-700 hover:bg-zinc-600 border-transparent text-zinc-300"
       }`}
     >

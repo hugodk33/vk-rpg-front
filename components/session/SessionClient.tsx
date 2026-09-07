@@ -14,7 +14,7 @@ import type { NarrationAction, QueueEntry, Sheet } from "@/lib/types";
    The context bar (Chapter · Part · latest action) stays fixed
    above the tabs.
 
-   Two trails share this console: the narrator trail glows amber,
+   Two trails share this console: the narrator trail glows olive,
    the player trail glows blue (`role` selects the tone).
    ============================================================ */
 
@@ -137,28 +137,28 @@ export default function SessionClient({
         linkHover: "hover:text-blue-300",
       }
     : {
-        ring: "focus-visible:ring-amber-500/60",
-        activeTab: "bg-zinc-700 text-amber-300",
-        text: "text-amber-400",
-        textSoft: "text-amber-300",
-        textSofter: "text-amber-200",
-        softBg: "bg-amber-700/10",
-        softBorder: "border-amber-600/60",
-        btnFill: "bg-amber-600 hover:bg-amber-500 text-amber-950",
-        borderCta: "border-amber-600 text-amber-400 hover:bg-amber-700/10",
-        borderHover: "hover:border-amber-500 hover:text-amber-300",
-        badge: "bg-amber-500 text-amber-950",
-        dot: "bg-amber-400",
-        curve: "bg-amber-500/50",
-        inputBorder: "focus:border-amber-700/60",
-        diceText: "text-amber-300",
-        diceBorder: "#fbbf2455",
-        shadow: "rgba(245,158,11,.6)",
-        shadowCardA: "rgba(245,158,11,.15)",
-        shadowCardB: "rgba(245,158,11,.35)",
-        accent: "accent-amber-500",
-        hex: "#fbbf24",
-        linkHover: "hover:text-amber-300",
+        ring: "focus-visible:ring-lime-700/60",
+        activeTab: "bg-zinc-700 text-lime-400",
+        text: "text-lime-500",
+        textSoft: "text-lime-400",
+        textSofter: "text-lime-300",
+        softBg: "bg-lime-800/10",
+        softBorder: "border-lime-700/60",
+        btnFill: "bg-lime-700 hover:bg-lime-600 text-white",
+        borderCta: "border-lime-700 text-lime-500 hover:bg-lime-800/10",
+        borderHover: "hover:border-lime-600 hover:text-lime-400",
+        badge: "bg-lime-600 text-white",
+        dot: "bg-lime-400",
+        curve: "bg-lime-600/50",
+        inputBorder: "focus:border-lime-800/60",
+        diceText: "text-lime-400",
+        diceBorder: "#84cc1655",
+        shadow: "rgba(132,204,22,.6)",
+        shadowCardA: "rgba(132,204,22,.15)",
+        shadowCardB: "rgba(132,204,22,.35)",
+        accent: "accent-lime-700",
+        hex: "#84cc16",
+        linkHover: "hover:text-lime-400",
       };
   const router = useRouter();
   const [tab, setTab] = useState<SessionTab>("turn");

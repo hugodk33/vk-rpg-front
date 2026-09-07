@@ -92,7 +92,7 @@ export default function CharacterVisibilityDrawer({
     <>
       <button
         onClick={() => setOpen((o) => !o)}
-        className="fixed bottom-4 right-4 z-40 inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-zinc-700 bg-zinc-900/95 text-sm text-zinc-200 hover:text-amber-300 hover:border-amber-500/50 shadow-xl backdrop-blur transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/60"
+        className="fixed bottom-4 right-4 z-40 inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-zinc-700 bg-zinc-900/95 text-sm text-zinc-200 hover:text-lime-400 hover:border-lime-600/50 shadow-xl backdrop-blur transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-lime-700/60"
         aria-expanded={open}
       >
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -110,16 +110,17 @@ export default function CharacterVisibilityDrawer({
         <div className="fixed inset-y-0 right-0 z-50 flex w-full max-w-2xl flex-col bg-zinc-950 border-l border-zinc-800 shadow-2xl">
           <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-800">
             <div>
-              <h2 className="font-mono text-xs uppercase tracking-[0.2em] text-amber-400">
+              <h2 className="font-mono text-xs uppercase tracking-[0.2em] text-lime-500">
                 Visibility
               </h2>
               <p className="text-xs text-zinc-500 mt-0.5">
-                Choose who sees what — target starts at this character
+                Who sees what — players perspective for this character,
+                table perspective (NPCs) for a npc
               </p>
             </div>
             <button
               onClick={() => setOpen(false)}
-              className="p-1.5 rounded-md text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/60"
+              className="p-1.5 rounded-md text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-lime-700/60"
               aria-label="Close visibility drawer"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -144,6 +145,11 @@ export default function CharacterVisibilityDrawer({
                 disadvantages={data.disadvantages}
                 scenes={data.scenes}
                 targetId={targetId}
+                perspective={
+                  data.characters.find((c) => c.id === targetId)?.isNpc
+                    ? "world"
+                    : "players"
+                }
               />
             ) : (
               <p className="text-sm text-zinc-500 animate-pulse">

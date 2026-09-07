@@ -144,14 +144,14 @@ export default function PerspectiveSwitch() {
         className={`inline-flex items-center gap-2 rounded-full border px-3.5 py-2 text-xs font-medium shadow-lg backdrop-blur-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 ${
           isPlayer
             ? "bg-blue-900/80 border-blue-700/60 text-blue-100 hover:bg-blue-800/80"
-            : "bg-amber-900/80 border-amber-700/60 text-amber-100 hover:bg-amber-800/80"
+            : "bg-lime-900/80 border-lime-800/60 text-white hover:bg-lime-800/80"
         }`}
       >
         <span
-          className={`w-2 h-2 rounded-full ${isPlayer ? "bg-blue-300" : "bg-amber-300"}`}
+          className={`w-2 h-2 rounded-full ${isPlayer ? "bg-blue-300" : "bg-lime-400"}`}
         />
         <span className="font-mono uppercase tracking-widest">{seat}</span>
-        <span className={`font-mono text-[10px] ${isPlayer ? "text-blue-300/70" : "text-amber-300/70"}`}>
+        <span className={`font-mono text-[10px] ${isPlayer ? "text-blue-300/70" : "text-lime-400/70"}`}>
           {busy ? "…" : hint}
         </span>
       </button>

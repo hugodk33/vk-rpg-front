@@ -10,10 +10,10 @@ export default function Home() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
         <Link
           href="/narrator"
-          className="block bg-zinc-800/60 border border-zinc-700/50 rounded-xl p-6 hover:border-amber-700/50 transition-colors group"
+          className="block bg-zinc-800/60 border border-zinc-700/50 rounded-xl p-6 hover:border-lime-800/50 transition-colors group"
         >
           <div className="text-3xl mb-2">🎲</div>
-          <h2 className="text-xl font-bold text-zinc-100 group-hover:text-amber-400 transition-colors">Narrator</h2>
+          <h2 className="text-xl font-bold text-zinc-100 group-hover:text-lime-500 transition-colors">Narrator</h2>
           <p className="text-zinc-500 text-sm mt-1">Manage your tables, scenes, and characters. Guide the story.</p>
         </Link>
         <Link

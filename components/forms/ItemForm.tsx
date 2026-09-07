@@ -223,7 +223,7 @@ export default function ItemForm({ initial, tableId, tables }: ItemFormProps) {
   return (
     <div className="max-w-3xl mx-auto p-6">
       <div className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-6">
-        <h1 className="text-2xl font-bold text-amber-100 mb-6">
+        <h1 className="text-2xl font-bold text-lime-100 mb-6">
           {isEdit ? "Editar Item" : "Novo Item"}
         </h1>
         <form onSubmit={handleSubmit} className="space-y-5">
@@ -377,7 +377,7 @@ export default function ItemForm({ initial, tableId, tables }: ItemFormProps) {
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <label className={labelCls}>Ataques</label>
-                  <button type="button" onClick={addAttack} className="bg-amber-700/60 hover:bg-amber-600 text-amber-100 text-sm font-medium px-3 py-1.5 rounded-lg transition-colors">
+                  <button type="button" onClick={addAttack} className="bg-lime-800/60 hover:bg-lime-700 text-white text-sm font-medium px-3 py-1.5 rounded-lg transition-colors">
                     + Ataque
                   </button>
                 </div>

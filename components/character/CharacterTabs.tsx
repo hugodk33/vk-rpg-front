@@ -57,9 +57,9 @@ export default function CharacterTabs({
             key={t.id}
             href={characterTabHref(basePath, t.id, moment)}
             aria-current={isActive ? "page" : undefined}
-            className={`relative inline-flex items-center gap-1.5 px-3 py-2.5 font-mono text-[12px] uppercase tracking-[0.12em] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/60 rounded-md ${
-              isActive ? "text-amber-400" : "text-zinc-400 hover:text-zinc-100"
-            }${isActive ? " after:absolute after:inset-x-2 after:bottom-0 after:h-0.5 after:rounded-full after:bg-amber-500 after:content-['']" : ""}`}
+            className={`relative inline-flex items-center gap-1.5 px-3 py-2.5 font-mono text-[12px] uppercase tracking-[0.12em] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-lime-700/60 rounded-md ${
+              isActive ? "text-lime-500" : "text-zinc-400 hover:text-zinc-100"
+            }${isActive ? " after:absolute after:inset-x-2 after:bottom-0 after:h-0.5 after:rounded-full after:bg-lime-600 after:content-['']" : ""}`}
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={t.icon} />

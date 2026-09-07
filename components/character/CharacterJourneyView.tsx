@@ -39,7 +39,7 @@ export default function CharacterJourneyView({
                 href={characterTabHref(basePath, tab, null)}
                 className={`px-2.5 py-1 text-xs rounded-md transition-colors ${
                   !selectedMoment
-                    ? "bg-amber-600/30 text-amber-300 border border-amber-600/50"
+                    ? "bg-lime-700/30 text-lime-400 border border-lime-700/50"
                     : "bg-zinc-800/60 text-zinc-400 border border-zinc-700/50 hover:text-zinc-200"
                 }`}
               >
@@ -54,7 +54,7 @@ export default function CharacterJourneyView({
                     href={characterTabHref(basePath, tab, m)}
                     className={`px-2.5 py-1 text-xs rounded-md transition-colors ${
                       isSel
-                        ? "bg-amber-600/30 text-amber-300 border border-amber-600/50"
+                        ? "bg-lime-700/30 text-lime-400 border border-lime-700/50"
                         : "bg-zinc-800/60 text-zinc-400 border border-zinc-700/50 hover:text-zinc-200"
                     }`}
                   >
@@ -66,7 +66,7 @@ export default function CharacterJourneyView({
             {selectedMoment != null ? (
               <p className="text-xs text-zinc-500 mt-2">
                 Viewing character state at{" "}
-                <span className="text-amber-400 font-medium">Moment {selectedMoment}</span>
+                <span className="text-lime-500 font-medium">Moment {selectedMoment}</span>
               </p>
             ) : null}
           </div>

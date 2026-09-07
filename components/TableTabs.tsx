@@ -4,7 +4,7 @@ import Link from "next/link";
    Table navigation — primary tab bar.
    "Table" opens the resource group (items, advantages, skills...);
    Sessions / Timeline are linear tabs. Two trails share the bar:
-   the narrator trail glows amber, the player trail glows blue.
+   the narrator trail glows green, the player trail glows blue.
    ============================================================ */
 
 interface TrailTone {
@@ -14,11 +14,11 @@ interface TrailTone {
   underline: string;
 }
 
-const AMBER_TONE: TrailTone = {
-  ring: "focus-visible:ring-amber-500/60",
-  activeText: "text-amber-400",
-  hoverText: "hover:text-amber-300",
-  underline: "bg-amber-500",
+const GREEN_TONE: TrailTone = {
+  ring: "focus-visible:ring-lime-700/60",
+  activeText: "text-lime-400",
+  hoverText: "hover:text-lime-300",
+  underline: "bg-lime-700",
 };
 
 const BLUE_TONE: TrailTone = {
@@ -77,7 +77,7 @@ function tabActive(active: boolean, tone: TrailTone): string {
 export default function TableTabs({ tableId, role = "narrator", active, characterUrl, characterHref, hideBreadcrumb }: TableTabsProps) {
   const prefix = role === "player" ? "/player" : "";
   const dashboardHref = role === "player" ? "/player" : "/narrator";
-  const tone = role === "player" ? BLUE_TONE : AMBER_TONE;
+  const tone = role === "player" ? BLUE_TONE : GREEN_TONE;
   const underlineCls = `after:absolute after:inset-x-2 after:bottom-0 after:h-0.5 after:rounded-full ${tone.underline} after:content-['']`;
 
   return (
@@ -125,7 +125,7 @@ export default function TableTabs({ tableId, role = "narrator", active, characte
               <Link
                 key={r.href}
                 href={`${prefix}/table/${tableId}${r.href}`}
-                className="flex items-center gap-2.5 px-3 py-2 text-sm text-zinc-300 hover:bg-zinc-700/50 hover:text-amber-300 rounded transition-colors"
+                className="flex items-center gap-2.5 px-3 py-2 text-sm text-zinc-300 hover:bg-zinc-700/50 hover:text-emerald-300 rounded transition-colors"
               >
                 {icon(ICONS[r.icon], "w-4 h-4 text-zinc-500")}
                 {r.label}

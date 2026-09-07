@@ -66,7 +66,7 @@ export default function GmDiceRoller() {
             onClick={() => setTarget((t) => Math.max(3, t - 1))}
             disabled={target <= 3}
             aria-label="Decrease target"
-            className="w-8 h-8 rounded-lg border border-zinc-700 text-zinc-300 hover:border-amber-600 hover:text-amber-300 transition-colors disabled:opacity-40 disabled:hover:border-zinc-700 disabled:hover:text-zinc-300"
+            className="w-8 h-8 rounded-lg border border-zinc-700 text-zinc-300 hover:border-lime-700 hover:text-lime-400 transition-colors disabled:opacity-40 disabled:hover:border-zinc-700 disabled:hover:text-zinc-300"
           >
             −
           </button>
@@ -78,7 +78,7 @@ export default function GmDiceRoller() {
             onClick={() => setTarget((t) => Math.min(18, t + 1))}
             disabled={target >= 18}
             aria-label="Increase target"
-            className="w-8 h-8 rounded-lg border border-zinc-700 text-zinc-300 hover:border-amber-600 hover:text-amber-300 transition-colors disabled:opacity-40 disabled:hover:border-zinc-700 disabled:hover:text-zinc-300"
+            className="w-8 h-8 rounded-lg border border-zinc-700 text-zinc-300 hover:border-lime-700 hover:text-lime-400 transition-colors disabled:opacity-40 disabled:hover:border-zinc-700 disabled:hover:text-zinc-300"
           >
             +
           </button>
@@ -91,7 +91,7 @@ export default function GmDiceRoller() {
             <span
               key={`${rollId}-${i}`}
               className={`flex w-14 h-14 items-center justify-center rounded-lg border-2 bg-zinc-800/60 font-mono text-2xl font-bold ${
-                dice ? "border-amber-600/70 text-zinc-100" : "border-zinc-700 text-zinc-600"
+                dice ? "border-lime-700/70 text-zinc-100" : "border-zinc-700 text-zinc-600"
               }`}
             >
               {dice ? dice[i] : "–"}
@@ -139,7 +139,7 @@ export default function GmDiceRoller() {
             <span key={face} className="flex h-full flex-1 items-end">
               <span
                 className={`w-full rounded-t-sm transition-[height] ${
-                  isCurrent ? "bg-amber-400" : count > 0 ? "bg-zinc-600" : "bg-zinc-800"
+                  isCurrent ? "bg-lime-500" : count > 0 ? "bg-zinc-600" : "bg-zinc-800"
                 }`}
                 style={{ height: `${count > 0 ? (count / maxCount) * 100 : 4}%` }}
               />
@@ -157,7 +157,7 @@ export default function GmDiceRoller() {
         <button
           type="button"
           onClick={roll}
-          className="bg-amber-700/60 hover:bg-amber-600 text-amber-100 text-sm font-medium px-6 py-2.5 rounded-lg transition-colors"
+          className="bg-lime-800/60 hover:bg-lime-700 text-white text-sm font-medium px-6 py-2.5 rounded-lg transition-colors"
         >
           Roll 3d6
         </button>
