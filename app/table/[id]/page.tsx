@@ -108,7 +108,7 @@ function SeatRow({ s, hue }: { s: Seat; hue?: (typeof PALETTE)[number] }) {
     <Link
       href={linkable ? `/character/${s.id}` : "#"}
       aria-disabled={!linkable}
-      className="group flex flex-col w-full rounded-lg border border-zinc-700/40 bg-zinc-900/60 px-3.5 py-2.5 min-w-[15rem] hover:border-lime-700/50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-lime-700/60"
+      className="group flex flex-col w-full rounded-lg border border-zinc-700/40 bg-zinc-900/60 px-3.5 py-2.5 min-w-[15rem] hover:border-green-800/50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-green-800/60"
     >
       <span className="flex items-center gap-2">
         <span className="w-2 h-2 rounded-full shrink-0" style={{ background: dot.dot, boxShadow: `0 0 6px ${dot.ring}` }} />
@@ -120,7 +120,7 @@ function SeatRow({ s, hue }: { s: Seat; hue?: (typeof PALETTE)[number] }) {
 
       {s.hasSheet ? (
         <span className="grid grid-cols-3 items-center gap-2 mt-2.5 pt-2.5 border-t border-zinc-700/40">
-          <span className="font-mono text-[9px] uppercase tracking-widest text-lime-500/80 whitespace-nowrap">
+          <span className="font-mono text-[9px] uppercase tracking-widest text-green-500/80 whitespace-nowrap">
             Pts {s.points ?? "–"}
           </span>
           <span className="flex items-center gap-1.5 min-w-0" title={`${s.current ?? s.base}/${s.base} HP`}>
@@ -184,7 +184,7 @@ function ArchiveRow({ cell }: { cell: ArchiveCell }) {
         {cell.href ? (
           <Link
             href={cell.href}
-            className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest rounded-md border border-zinc-700/50 px-2.5 py-1.5 text-zinc-400 hover:text-zinc-100 group-hover:border-zinc-600/60 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-lime-700/60"
+            className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest rounded-md border border-zinc-700/50 px-2.5 py-1.5 text-zinc-400 hover:text-zinc-100 group-hover:border-zinc-600/60 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-green-800/60"
           >
             Open
             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -195,7 +195,7 @@ function ArchiveRow({ cell }: { cell: ArchiveCell }) {
         {cell.addHref ? (
           <Link
             href={cell.addHref}
-            className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest rounded-md border border-lime-600/25 bg-lime-600/10 px-2.5 py-1.5 text-lime-400 hover:bg-lime-600/20 hover:text-lime-300 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-lime-700/60"
+            className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest rounded-md border border-green-700/25 bg-green-700/10 px-2.5 py-1.5 text-green-400 hover:bg-green-700/20 hover:text-green-300 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-green-800/60"
           >
             + {cell.addLabel}
           </Link>
@@ -333,9 +333,9 @@ export default async function TableOverviewPage({ params }: { params: Promise<{ 
       <section className="relative rounded-2xl border border-zinc-700/50 bg-gradient-to-b from-zinc-900/80 to-zinc-950">
         {/* ambience */}
         <div aria-hidden className="absolute inset-0 overflow-hidden rounded-2xl opacity-[0.06] pointer-events-none select-none">
-          <div className="absolute -top-10 -right-8 w-80 h-80 rounded-full border border-lime-600" />
-          <div className="absolute -top-2 -right-2 w-64 h-64 rounded-full border border-lime-600" />
-          <div className="absolute top-10 right-8 w-44 h-44 rounded-full border border-lime-600" />
+          <div className="absolute -top-10 -right-8 w-80 h-80 rounded-full border border-green-700" />
+          <div className="absolute -top-2 -right-2 w-64 h-64 rounded-full border border-green-700" />
+          <div className="absolute top-10 right-8 w-44 h-44 rounded-full border border-green-700" />
           <span className="hidden md:block absolute right-56 top-1/2 -translate-y-1/2 font-mono font-bold text-[150px] leading-none text-zinc-900/70">
             {hasChronicle ? roman(state.chapter) : "·"}
           </span>
@@ -347,7 +347,7 @@ export default async function TableOverviewPage({ params }: { params: Promise<{ 
               <div className="flex items-center gap-4 min-w-0">
                 <Sigil title={table?.title ?? "The Ledger"} name={sealer?.name || "GM"} />
                 <div className="min-w-0">
-                  <p className="font-mono text-[10px] tracking-widest uppercase text-lime-500/90">Campaign Ledger</p>
+                  <p className="font-mono text-[10px] tracking-widest uppercase text-green-500/90">Campaign Ledger</p>
                   <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500 mt-0.5 truncate">
                     {[sealer ? `Ruled by ${sealer.username}` : null, system ? system.toUpperCase() : null]
                       .filter(Boolean)
@@ -357,7 +357,7 @@ export default async function TableOverviewPage({ params }: { params: Promise<{ 
               </div>
               <Link
                 href={`/table/${id}/edit`}
-                className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-zinc-500 hover:text-zinc-200 transition-colors rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-lime-700/60 px-2 py-1.5 -m-1.5 shrink-0"
+                className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-zinc-500 hover:text-zinc-200 transition-colors rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-green-800/60 px-2 py-1.5 -m-1.5 shrink-0"
               >
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -366,7 +366,7 @@ export default async function TableOverviewPage({ params }: { params: Promise<{ 
               </Link>
             </div>
 
-            <h1 className="text-[clamp(26px,5vw,44px)] font-bold tracking-tight text-lime-100 leading-[1.05] mt-5">
+            <h1 className="text-[clamp(26px,5vw,44px)] font-bold tracking-tight text-green-100 leading-[1.05] mt-5">
               {table?.title || "The Ledger"}
             </h1>
 
@@ -384,7 +384,7 @@ export default async function TableOverviewPage({ params }: { params: Promise<{ 
         {hasChronicle ? (
           <>
             <span>
-              Chapter <span className="text-lime-500/80">{roman(state.chapter)}</span>
+              Chapter <span className="text-green-500/80">{roman(state.chapter)}</span>
             </span>
             <span className="text-zinc-700">·</span>
             <span>
@@ -412,7 +412,7 @@ export default async function TableOverviewPage({ params }: { params: Promise<{ 
             </p>
             <Link
               href={`/character/new?table_id=${id}`}
-              className="inline-flex items-center gap-1.5 mt-5 font-mono text-[10px] uppercase tracking-widest text-lime-400 border border-lime-600/30 bg-lime-600/10 rounded-md px-3 py-2 hover:bg-lime-600/20 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-lime-700/60"
+              className="inline-flex items-center gap-1.5 mt-5 font-mono text-[10px] uppercase tracking-widest text-green-400 border border-green-700/30 bg-green-700/10 rounded-md px-3 py-2 hover:bg-green-700/20 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-green-800/60"
             >
               + Place a character
             </Link>
@@ -452,7 +452,7 @@ export default async function TableOverviewPage({ params }: { params: Promise<{ 
       <div className="mt-8 flex justify-end">
         <Link
           href={`/table/${id}/sessions`}
-          className="inline-flex items-center gap-2 bg-lime-700 hover:bg-lime-600 text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors shadow-lg shadow-lime-900/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-lime-700/60"
+          className="inline-flex items-center gap-2 bg-green-800 hover:bg-green-700 text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors shadow-lg shadow-green-900/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-green-800/60"
         >
           {hasChronicle ? "Continue the chronicle" : "Open the chronicle"}
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

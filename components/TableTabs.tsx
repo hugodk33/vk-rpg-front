@@ -15,10 +15,10 @@ interface TrailTone {
 }
 
 const GREEN_TONE: TrailTone = {
-  ring: "focus-visible:ring-lime-700/60",
-  activeText: "text-lime-400",
-  hoverText: "hover:text-lime-300",
-  underline: "bg-lime-700",
+  ring: "focus-visible:ring-green-800/60",
+  activeText: "text-green-400",
+  hoverText: "hover:text-green-300",
+  underline: "bg-green-800",
 };
 
 const BLUE_TONE: TrailTone = {

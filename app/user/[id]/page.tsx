@@ -32,8 +32,8 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
               </svg>
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-lime-100">{user.username || "Unnamed User"}</h1>
-              <span className={`text-xs uppercase tracking-wider px-2 py-0.5 rounded ${user.type === 2 ? "bg-lime-900/40 text-lime-400" : "bg-emerald-900/40 text-emerald-300"}`}>
+              <h1 className="text-2xl font-bold text-green-100">{user.username || "Unnamed User"}</h1>
+              <span className={`text-xs uppercase tracking-wider px-2 py-0.5 rounded ${user.type === 2 ? "bg-green-900/40 text-green-400" : "bg-emerald-900/40 text-emerald-300"}`}>
                 {typeLabel}
               </span>
             </div>

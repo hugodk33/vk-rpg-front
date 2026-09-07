@@ -251,8 +251,8 @@ interface SceneTimelineProps {
 
 export default function SceneTimeline({ table, scenes, showEditButtons = true, role = "narrator" }: SceneTimelineProps) {
   const isPlayer = role === "player";
-  const titleCls = isPlayer ? "text-blue-100" : "text-lime-100";
-  const badgeCls = isPlayer ? "text-blue-300 border border-blue-700/40" : "text-lime-600/90 border border-lime-800/40";
+  const titleCls = isPlayer ? "text-blue-100" : "text-green-100";
+  const badgeCls = isPlayer ? "text-blue-300 border border-blue-700/40" : "text-green-600/90 border border-green-900/40";
   const chapters = new Map<number, Scene[]>();
   for (const scene of scenes) {
     const ch = scene.chapter || 1;

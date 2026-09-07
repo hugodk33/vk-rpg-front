@@ -478,9 +478,9 @@ export default function VisibilityPanel({
               key={p.key}
               type="button"
               onClick={() => setPerspective(p.key)}
-              className={`px-3 py-1.5 rounded-md font-mono text-[11px] uppercase tracking-[0.12em] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-lime-700/60 ${
+              className={`px-3 py-1.5 rounded-md font-mono text-[11px] uppercase tracking-[0.12em] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-green-800/60 ${
                 perspective === p.key
-                  ? "bg-lime-700/30 text-lime-400 border border-lime-600/40"
+                  ? "bg-green-800/30 text-green-400 border border-green-700/40"
                   : "bg-zinc-900 border border-zinc-800 text-zinc-500 hover:text-zinc-300 hover:border-zinc-600"
               }`}
             >
@@ -570,9 +570,9 @@ export default function VisibilityPanel({
                 key={t.key}
                 type="button"
                 onClick={() => setWorldTab(t.key)}
-                className={`px-3 py-2 text-xs font-mono uppercase tracking-wide border-b-2 -mb-px transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-lime-700/60 ${
+                className={`px-3 py-2 text-xs font-mono uppercase tracking-wide border-b-2 -mb-px transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-green-800/60 ${
                   worldTab === t.key
-                    ? "border-lime-600 text-lime-400"
+                    ? "border-green-700 text-green-400"
                     : "border-transparent text-zinc-500 hover:text-zinc-300"
                 }`}
               >
@@ -590,7 +590,7 @@ export default function VisibilityPanel({
         return (
           <section className="bg-zinc-900/60 border border-zinc-800 rounded-lg p-3">
             <div className="flex items-center gap-2 mb-2">
-              <h3 className="font-mono text-xs uppercase tracking-[0.15em] text-lime-500/80">
+              <h3 className="font-mono text-xs uppercase tracking-[0.15em] text-green-500/80">
                 {g.label}
                 <span className="ml-2 text-zinc-600">{g.rows.length}</span>
               </h3>
@@ -615,11 +615,11 @@ export default function VisibilityPanel({
                           ? "Hide the whole group"
                           : "Liberate the whole group"
                       }
-                      className={`relative inline-flex h-4 w-8 shrink-0 items-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-lime-700/60 disabled:opacity-40 disabled:cursor-not-allowed ${
+                      className={`relative inline-flex h-4 w-8 shrink-0 items-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-green-800/60 disabled:opacity-40 disabled:cursor-not-allowed ${
                         groupStateOf(g) === "on"
                           ? "bg-emerald-500/60"
                           : groupStateOf(g) === "mixed"
-                          ? "bg-lime-600/50"
+                          ? "bg-green-700/50"
                           : "bg-zinc-700"
                       }`}
                     >
@@ -659,7 +659,7 @@ export default function VisibilityPanel({
                         }
                         aria-pressed={revealed}
                         title={revealed ? "Hide this one" : "Liberate (reveal now)"}
-                        className={`relative inline-flex h-4 w-8 shrink-0 items-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-lime-700/60 ${
+                        className={`relative inline-flex h-4 w-8 shrink-0 items-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-green-800/60 ${
                           revealed ? "bg-emerald-500/60" : "bg-zinc-700"
                         }`}
                       >
@@ -681,7 +681,7 @@ export default function VisibilityPanel({
                           <button
                             key={s}
                             onClick={() => persist(row, s, valueOf(row))}
-                            className={`px-2 py-0.5 rounded border text-[11px] font-mono uppercase tracking-wide transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-lime-700/60 ${
+                            className={`px-2 py-0.5 rounded border text-[11px] font-mono uppercase tracking-wide transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-green-800/60 ${
                               status === s
                                 ? STATUS_META[s].buttonCls
                                 : "text-zinc-600 border-zinc-800 hover:text-zinc-300 hover:border-zinc-600"

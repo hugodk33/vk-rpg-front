@@ -65,7 +65,7 @@ export default function DiscoveryContext({
             setEnabled(now);
             if (!now) onChange({});
           }}
-          className="accent-lime-700"
+          className="accent-green-800"
         />
         <span className="font-mono uppercase tracking-[0.15em] text-[11px]">
           Record discovery moment
@@ -82,7 +82,7 @@ export default function DiscoveryContext({
             <select
               value={value.sceneId ?? ""}
               onChange={(e) => setScene(e.target.value)}
-              className="bg-zinc-950 border border-zinc-800 rounded-md px-2 py-1.5 text-xs text-zinc-200 normal-case font-sans focus:border-lime-600/50 focus:outline-none"
+              className="bg-zinc-950 border border-zinc-800 rounded-md px-2 py-1.5 text-xs text-zinc-200 normal-case font-sans focus:border-green-700/50 focus:outline-none"
             >
               <option value="">—</option>
               {sceneOptions.map((s) => (
@@ -99,7 +99,7 @@ export default function DiscoveryContext({
               value={value.narrationId ?? ""}
               onChange={(e) => setNarration(e.target.value)}
               disabled={narrationOptions.length === 0}
-              className="bg-zinc-950 border border-zinc-800 rounded-md px-2 py-1.5 text-xs text-zinc-200 normal-case font-sans focus:border-lime-600/50 focus:outline-none disabled:opacity-40"
+              className="bg-zinc-950 border border-zinc-800 rounded-md px-2 py-1.5 text-xs text-zinc-200 normal-case font-sans focus:border-green-700/50 focus:outline-none disabled:opacity-40"
             >
               <option value="">—</option>
               {narrationOptions.map((n, i) => (
@@ -111,7 +111,7 @@ export default function DiscoveryContext({
           </label>
           {value.moment != null ? (
             <p className="text-[10px] text-zinc-600 sm:col-span-2">
-              In-story moment: <span className="text-lime-500">{value.moment}</span>
+              In-story moment: <span className="text-green-500">{value.moment}</span>
             </p>
           ) : null}
         </div>

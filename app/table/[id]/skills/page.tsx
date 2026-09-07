@@ -68,7 +68,7 @@ export default function TableSkillsPage({ params }: { params: Promise<{ id: stri
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Filter skills..."
-            className="w-full bg-zinc-800/60 border border-zinc-700/50 rounded-lg pl-9 pr-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-lime-800/60"
+            className="w-full bg-zinc-800/60 border border-zinc-700/50 rounded-lg pl-9 pr-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-green-900/60"
           />
         </div>
         {search ? (

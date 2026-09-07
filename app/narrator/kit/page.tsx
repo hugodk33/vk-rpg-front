@@ -20,7 +20,7 @@ export default function NarratorKitPage() {
   return (
     <div className="max-w-5xl mx-auto p-6">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-lime-100">GM Kit</h1>
+        <h1 className="text-2xl font-bold text-green-100">GM Kit</h1>
         <p className="text-zinc-400 text-sm mt-1">
           Roll quick 3d6 checks against any target and jump straight into creating
           for your tables.
@@ -38,7 +38,7 @@ export default function NarratorKitPage() {
             <Link
               key={shortcut.href}
               href={shortcut.href}
-              className="group flex items-center justify-between gap-3 bg-zinc-800/40 hover:bg-zinc-800/70 border border-zinc-700/50 hover:border-lime-800/50 rounded-lg px-4 py-3 transition-colors"
+              className="group flex items-center justify-between gap-3 bg-zinc-800/40 hover:bg-zinc-800/70 border border-zinc-700/50 hover:border-green-900/50 rounded-lg px-4 py-3 transition-colors"
             >
               <span className="text-sm font-medium text-zinc-200 group-hover:text-zinc-100">
                 {shortcut.label}

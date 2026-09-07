@@ -467,12 +467,12 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
       {!isEdit ? (
         <div className="sticky top-14 z-40 bg-zinc-900/90 backdrop-blur-sm border-b border-zinc-700/50 -mx-4 px-4 py-3 mb-6">
           <div className="flex items-center justify-center gap-6 max-w-3xl mx-auto">
-            <div className="text-md font-bold text-lime-500 whitespace-nowrap">
+            <div className="text-md font-bold text-green-500 whitespace-nowrap">
               {spent} / {totalPoints}
             </div>
             <div className="flex-1 max-w-md">
               <div className="w-full bg-zinc-800 rounded-full h-3">
-                <div className="bg-lime-600 h-3 rounded-full transition-all" style={{ width: `${budgetPct}%` }} />
+                <div className="bg-green-700 h-3 rounded-full transition-all" style={{ width: `${budgetPct}%` }} />
               </div>
             </div>
           </div>
@@ -489,7 +489,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
             </a>
           ) : null}
           <div>
-            <h1 className="text-2xl font-bold text-lime-100">
+            <h1 className="text-2xl font-bold text-green-100">
               {isEdit ? "Edit Character" : "New Character"}
             </h1>
             <p className="text-zinc-400 text-sm">{isEdit ? "Save changes" : "Create a character for this table"}</p>
@@ -514,7 +514,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
             onClick={() => setActiveTab(key)}
             className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 -mb-px ${
               activeTab === key
-                ? "border-lime-600 text-lime-500"
+                ? "border-green-700 text-green-500"
                 : "border-transparent text-zinc-400 hover:text-zinc-200"
             }`}
           >
@@ -527,7 +527,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
         {activeTab === "bio" && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-5">
-              <h2 className="text-lg font-semibold text-lime-100 mb-3">Identity</h2>
+              <h2 className="text-lg font-semibold text-green-100 mb-3">Identity</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
               <div>
                 <label className={labelCls}>Name</label>
@@ -545,7 +545,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
           </div>
 
           <div className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-5">
-            <h2 className="text-lg font-semibold text-lime-100 mb-3">Character</h2>
+            <h2 className="text-lg font-semibold text-green-100 mb-3">Character</h2>
 
             {!isEdit && !tableId ? (
               <div className="mb-3">
@@ -580,7 +580,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                         value="pc"
                         checked={charType === "pc"}
                         onChange={() => setCharType("pc")}
-                        className="w-4 h-4 border-zinc-600 text-white0 focus:ring-lime-700 bg-zinc-900"
+                        className="w-4 h-4 border-zinc-600 text-white0 focus:ring-green-800 bg-zinc-900"
                       />
                       <span className="text-zinc-200 text-sm">Player Character</span>
                     </label>
@@ -591,7 +591,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                         value="npc"
                         checked={charType === "npc"}
                         onChange={() => setCharType("npc")}
-                        className="w-4 h-4 border-zinc-600 text-white0 focus:ring-lime-700 bg-zinc-900"
+                        className="w-4 h-4 border-zinc-600 text-white0 focus:ring-green-800 bg-zinc-900"
                       />
                       <span className="text-zinc-200 text-sm">NPC</span>
                     </label>
@@ -621,7 +621,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
         {activeTab === "sheet" && (
         <>
           <div className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-5">
-            <h2 className="text-lg font-semibold text-lime-100 mb-6">Attributes</h2>
+            <h2 className="text-lg font-semibold text-green-100 mb-6">Attributes</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-8">
               {ATTR_NAMES.map(({ key, label, color, svg }) => (
                 <div key={key} className="flex flex-col items-center gap-2">
@@ -639,7 +639,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                     >
                       −
                     </button>
-                    <span className="w-10 text-center text-xl font-bold text-lime-500">{attrs[key]}</span>
+                    <span className="w-10 text-center text-xl font-bold text-green-500">{attrs[key]}</span>
                     <button
                       type="button"
                       onClick={() => adjAttr(key, 1)}
@@ -654,19 +654,19 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
             <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-zinc-700/40">
               <div>
                 <label className={labelCls}>HP</label>
-                <div className="bg-zinc-700/40 rounded-lg px-4 py-2.5 text-lime-500 font-bold font-mono text-center">
+                <div className="bg-zinc-700/40 rounded-lg px-4 py-2.5 text-green-500 font-bold font-mono text-center">
                   {attrs.ht}
                 </div>
               </div>
               <div>
                 <label className={labelCls}>Basic Speed</label>
-                <div className="bg-zinc-700/40 rounded-lg px-4 py-2.5 text-lime-500 font-bold font-mono text-center">
+                <div className="bg-zinc-700/40 rounded-lg px-4 py-2.5 text-green-500 font-bold font-mono text-center">
                   {basicSpeed.toFixed(2)}
                 </div>
               </div>
               <div>
                 <label className={labelCls}>Move</label>
-                <div className="bg-zinc-700/40 rounded-lg px-4 py-2.5 text-lime-500 font-bold font-mono text-center">
+                <div className="bg-zinc-700/40 rounded-lg px-4 py-2.5 text-green-500 font-bold font-mono text-center">
                   {move.toFixed(2)}
                 </div>
               </div>
@@ -679,7 +679,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
               {([
                 { label: "Dodge", value: String(Math.floor(basicSpeed + 3)), color: "text-cyan-400", d: "M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" },
                 { label: "HP", value: String(attrs.ht), color: "text-red-400", d: "M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" },
-                { label: "FP", value: String(initial?.character?.sheet?.fatigue ?? 10), color: "text-lime-500", d: "M13 10V3L4 14h7v7l9-11h-7z" },
+                { label: "FP", value: String(initial?.character?.sheet?.fatigue ?? 10), color: "text-green-500", d: "M13 10V3L4 14h7v7l9-11h-7z" },
                 { label: "Basic Speed", value: basicSpeed.toFixed(2), suffix: "km/h", color: "text-emerald-400", d: "M13 5l7 7-7 7M5 5l7 7-7 7" },
                 { label: "Move", value: String(move), color: "text-blue-400", d: "M5 12h14M12 5l7 7-7 7" },
                 { label: "Encumbrance", value: ENCUMBRANCE_LABELS[encumbranceValue], sub: `${itemsWeight.toFixed(1)} kg`, color: "text-purple-400", d: "M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" },
@@ -702,7 +702,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                 <svg className="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                 </svg>
-                <h2 className="text-lg font-semibold text-lime-100">Advantages</h2>
+                <h2 className="text-lg font-semibold text-green-100">Advantages</h2>
                 <span className="text-sm text-zinc-500">{selAdv.length} selected</span>
               </div>
               <div className="flex items-center gap-2">
@@ -738,20 +738,20 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                       >
                         <label
                           className={`flex items-center gap-3 p-2 rounded-lg hover:bg-zinc-700/30 cursor-pointer ${
-                            isSelected ? "bg-zinc-700/40 border border-lime-600/30" : "border border-transparent"
+                            isSelected ? "bg-zinc-700/40 border border-green-700/30" : "border border-transparent"
                           }`}
                         >
                           <input
                             type="checkbox"
                             checked={isSelected}
                             onChange={(e) => toggleSelection("advantages", { id: a.id, name: a.name, cost_points: a.cost_points }, e.target.checked)}
-                            className="w-4 h-4 rounded border-zinc-600 text-white0 focus:ring-lime-700 bg-zinc-900"
+                            className="w-4 h-4 rounded border-zinc-600 text-white0 focus:ring-green-800 bg-zinc-900"
                           />
                           <div className="flex-1 min-w-0">
                             <div className="text-sm font-medium text-zinc-200 truncate">{a.name || "Unnamed"}</div>
                             {a.description ? <div className="text-xs text-zinc-500 truncate">{a.description}</div> : null}
                           </div>
-                          <span className="text-xs font-mono text-lime-500 font-bold shrink-0">
+                          <span className="text-xs font-mono text-green-500 font-bold shrink-0">
                             {a.cost_points != null ? (a.cost_points >= 0 ? "+" : "") + a.cost_points : "±0"}
                           </span>
                         </label>
@@ -788,7 +788,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                   <svg className="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
                   </svg>
-                  <h2 className="text-lg font-semibold text-lime-100">Disadvantages</h2>
+                  <h2 className="text-lg font-semibold text-green-100">Disadvantages</h2>
                   <span className="text-sm text-zinc-500">{selDis.length} selected</span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -825,20 +825,20 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                       >
                         <label
                           className={`flex items-center gap-3 p-2 rounded-lg hover:bg-zinc-700/30 cursor-pointer ${
-                            isSelected ? "bg-zinc-700/40 border border-lime-600/30" : "border border-transparent"
+                            isSelected ? "bg-zinc-700/40 border border-green-700/30" : "border border-transparent"
                           }`}
                         >
                           <input
                             type="checkbox"
                             checked={isSelected}
                             onChange={(e) => toggleSelection("disadvantages", { id: d.id, name: d.name, cost_points: d.cost_points }, e.target.checked)}
-                            className="w-4 h-4 rounded border-zinc-600 text-white0 focus:ring-lime-700 bg-zinc-900"
+                            className="w-4 h-4 rounded border-zinc-600 text-white0 focus:ring-green-800 bg-zinc-900"
                           />
                           <div className="flex-1 min-w-0">
                             <div className="text-sm font-medium text-zinc-200 truncate">{d.name || "Unnamed"}</div>
                             {d.description ? <div className="text-xs text-zinc-500 truncate">{d.description}</div> : null}
                           </div>
-                          <span className="text-xs font-mono text-lime-500 font-bold shrink-0">
+                          <span className="text-xs font-mono text-green-500 font-bold shrink-0">
                             {d.cost_points != null ? (d.cost_points > 0 ? `-${d.cost_points}` : String(d.cost_points)) : "±0"}
                           </span>
                         </label>
@@ -876,7 +876,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                   <svg className="w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
                   </svg>
-                  <h2 className="text-lg font-semibold text-lime-100">Quirks</h2>
+                  <h2 className="text-lg font-semibold text-green-100">Quirks</h2>
                   <span className="text-sm text-zinc-500">
                     {quirks.length} / {MAX_QUIRKS}
                   </span>
@@ -904,7 +904,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                           className={inputCls}
                           placeholder="ex: Night Owl"
                         />
-                        <span className="text-xs font-mono text-lime-500 font-bold shrink-0">-1</span>
+                        <span className="text-xs font-mono text-green-500 font-bold shrink-0">-1</span>
                       </div>
                     </div>
                   </div>
@@ -926,7 +926,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
         <div className="border-t border-zinc-700/40 pt-6">
           <span className="text-sm text-zinc-500 mb-2 block">{selSkills.length} selected</span>
           <div className="flex items-center gap-2 mb-1">
-            <h2 className="text-lg font-semibold text-lime-100">Skills</h2>
+            <h2 className="text-lg font-semibold text-green-100">Skills</h2>
             <SplitToggle active={splitSkills} onToggle={() => setSplitSkills((v) => !v)} />
             <button
               type="button"
@@ -999,14 +999,14 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                     >
                       <div
                         className={`flex flex-wrap items-center gap-x-2 gap-y-1 p-2 rounded-lg hover:bg-zinc-700/30 ${
-                          sel ? "bg-zinc-700/40 border border-lime-600/30" : "border border-transparent"
+                          sel ? "bg-zinc-700/40 border border-green-700/30" : "border border-transparent"
                         }`}
                       >
                         <input
                           type="checkbox"
                           checked={!!sel}
                           onChange={(e) => toggleSkill({ id: sk.id, name: sk.name }, e.target.checked)}
-                          className="w-4 h-4 rounded border-zinc-600 text-white0 focus:ring-lime-700 bg-zinc-900"
+                          className="w-4 h-4 rounded border-zinc-600 text-white0 focus:ring-green-800 bg-zinc-900"
                         />
                         <div className="flex-1 min-w-0">
                           <div className="text-sm font-medium text-zinc-200 truncate">{sk.name || "Unnamed"}</div>
@@ -1035,7 +1035,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                             >
                               −
                             </button>
-                            <span className="text-xs font-mono text-lime-500 font-bold text-center whitespace-nowrap w-20">
+                            <span className="text-xs font-mono text-green-500 font-bold text-center whitespace-nowrap w-20">
                               {sel ? `${rel} (${abs})` : "—"}
                             </span>
                             <button
@@ -1046,7 +1046,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                               +
                             </button>
                           </div>
-                          <span className="text-md font-mono text-lime-500 font-bold w-10 text-center whitespace-nowrap">
+                          <span className="text-md font-mono text-green-500 font-bold w-10 text-center whitespace-nowrap">
                             {sel ? formatPoints(sel.cost_points) : "0"}
                           </span>
                         </div>
@@ -1090,7 +1090,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                 {([
                   { label: "Dodge", value: String(Math.floor(basicSpeed + 3)), color: "text-cyan-400", d: "M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" },
                   { label: "HP", value: String(attrs.ht), color: "text-red-400", d: "M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" },
-                  { label: "FP", value: String(initial?.character?.sheet?.fatigue ?? 10), color: "text-lime-500", d: "M13 10V3L4 14h7v7l9-11h-7z" },
+                  { label: "FP", value: String(initial?.character?.sheet?.fatigue ?? 10), color: "text-green-500", d: "M13 10V3L4 14h7v7l9-11h-7z" },
                   { label: "Basic Speed", value: basicSpeed.toFixed(2), suffix: "km/h", color: "text-emerald-400", d: "M13 5l7 7-7 7M5 5l7 7-7 7" },
                   { label: "Move", value: String(move), color: "text-blue-400", d: "M5 12h14M12 5l7 7-7 7" },
                   { label: "Encumbrance", value: ENCUMBRANCE_LABELS[encumbranceValue], sub: `${itemsWeight.toFixed(1)} kg`, color: "text-purple-400", d: "M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" },
@@ -1171,7 +1171,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                     {armors.map((a) => (
                       <div key={a.id} className="flex justify-between text-xs">
                         <span className="text-zinc-300">{a.name}</span>
-                        <span className="text-lime-500/80">
+                        <span className="text-green-500/80">
                           {(a.value ?? "").replace("DR ", "")} {a.fit || ""}
                         </span>
                       </div>
@@ -1192,7 +1192,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                   return (
                     <div key={s.id} className="bg-zinc-900/50 rounded-lg border border-zinc-700/50 p-3">
                       <div className="flex items-center gap-2 mb-2">
-                        <svg className="w-3.5 h-3.5 text-lime-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-3.5 h-3.5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
                         </svg>
                         <span className="text-sm font-medium text-zinc-200 flex-1 truncate">{s.name}</span>
@@ -1245,7 +1245,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
           <div className="border-t border-zinc-700/40 pt-6">
             <div className="flex items-center justify-between mb-1">
               <div className="flex items-center gap-2">
-                <h2 className="text-lg font-semibold text-lime-100">Items</h2>
+                <h2 className="text-lg font-semibold text-green-100">Items</h2>
                 <SplitToggle active={splitItems} onToggle={() => setSplitItems((v) => !v)} />
                 <button
                   type="button"
@@ -1279,14 +1279,14 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                       >
                         <label
                           className={`flex items-center gap-3 p-2 rounded-lg hover:bg-zinc-700/30 cursor-pointer ${
-                            isSelected ? "bg-zinc-700/40 border border-lime-600/30" : "border border-transparent"
+                            isSelected ? "bg-zinc-700/40 border border-green-700/30" : "border border-transparent"
                           }`}
                         >
                           <input
                             type="checkbox"
                             checked={isSelected}
                             onChange={(e) => toggleItem({ id: item.id, name: item.name }, e.target.checked)}
-                            className="w-4 h-4 rounded border-zinc-600 text-white0 focus:ring-lime-700 bg-zinc-900"
+                            className="w-4 h-4 rounded border-zinc-600 text-white0 focus:ring-green-800 bg-zinc-900"
                           />
                           <div className="flex-1 min-w-0">
                             <div className="text-sm font-medium text-zinc-200 truncate">{item.name || "Unnamed"}</div>
@@ -1332,7 +1332,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
 
           <section className="mt-4">
             <div className="flex items-center gap-2 mb-2">
-              <svg className="w-4 h-4 text-lime-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
               </svg>
               <label className={labelCls}>
@@ -1347,7 +1347,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                   <div
                     key={label}
                     className={`text-center text-xs rounded-lg px-2 py-1.5 ${
-                      active ? "bg-lime-600/20 text-lime-300" : "bg-zinc-700/30 text-zinc-500"
+                      active ? "bg-green-700/20 text-green-300" : "bg-zinc-700/30 text-zinc-500"
                     }`}
                   >
                     {label}

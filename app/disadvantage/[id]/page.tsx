@@ -39,7 +39,7 @@ export default async function DisadvantageDetailPage({ params }: { params: Promi
         <div className="py-5 px-6 border-b border-zinc-700/40" style={{ borderBottomColor: colors.border }}>
           <div className="flex items-start justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-lime-100">{disadvantage.name || "Unnamed Disadvantage"}</h1>
+              <h1 className="text-2xl font-bold text-green-100">{disadvantage.name || "Unnamed Disadvantage"}</h1>
               {disadvantage.category ? (
                 <span className={`inline-block ${colors.badge} text-xs px-2 py-0.5 rounded-full mt-2`}>
                   {disadvantage.category}{disadvantage.subcategory ? ` / ${disadvantage.subcategory}` : ""}
@@ -83,7 +83,7 @@ export default async function DisadvantageDetailPage({ params }: { params: Promi
           </div>
 
           <div className="flex gap-3 pt-2">
-            <Link href={`/disadvantage/${disadvantage.id}/edit`} className="bg-lime-800/60 hover:bg-lime-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
+            <Link href={`/disadvantage/${disadvantage.id}/edit`} className="bg-green-900/60 hover:bg-green-800 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
               Edit
             </Link>
           </div>

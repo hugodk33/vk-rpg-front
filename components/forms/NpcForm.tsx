@@ -86,7 +86,7 @@ export default function NpcForm({ tableId, tables, initial }: NpcFormProps) {
   return (
     <div className="max-w-3xl mx-auto p-6">
       <div className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-6">
-        <h1 className="text-2xl font-bold text-lime-100 mb-6">
+        <h1 className="text-2xl font-bold text-green-100 mb-6">
           {isEdit ? "Editar NPC" : "Novo NPC"}
         </h1>
 

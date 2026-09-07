@@ -18,7 +18,7 @@ export default function Header() {
     : "/character/new";
 
   const linkClass =
-    "block px-4 py-2 text-sm text-zinc-300 hover:text-lime-500 hover:bg-zinc-700/50";
+    "block px-4 py-2 text-sm text-zinc-300 hover:text-green-500 hover:bg-zinc-700/50";
 
   return (
     <header className="bg-zinc-800/90 border-b border-zinc-700/50 sticky top-0 z-50 backdrop-blur-sm">
@@ -46,7 +46,7 @@ export default function Header() {
           </Link>
           <button
             onClick={() => setOpen((v) => !v)}
-            className="p-2 rounded-lg text-zinc-400 hover:text-lime-500 hover:bg-zinc-700/50 focus:outline-none"
+            className="p-2 rounded-lg text-zinc-400 hover:text-green-500 hover:bg-zinc-700/50 focus:outline-none"
             aria-label="Menu"
           >
             {open ? (

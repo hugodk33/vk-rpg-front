@@ -59,7 +59,7 @@ export default function InfoTooltip({ rows, children }: InfoTooltipProps) {
             >
               {visible.map((r) => (
                 <div key={r.label} className="text-xs mb-1.5 last:mb-0">
-                  <span className="font-semibold text-lime-500 uppercase tracking-wider text-[10px]">{r.label}</span>
+                  <span className="font-semibold text-green-500 uppercase tracking-wider text-[10px]">{r.label}</span>
                   <div className="text-zinc-300 whitespace-pre-wrap break-words">{r.value}</div>
                 </div>
               ))}
