@@ -29,9 +29,16 @@ export interface Sheet {
   iq?: number
   ht?: number
   fatigue?: number
+  fatigue_max?: number
+  fatigue_threshold?: number
+  fatigue_state?: "active" | "tired" | "exhausted"
   encumbrance?: string
   basic_speed?: number
   move?: number
+  dodge?: number
+  effective_st?: number
+  effective_move?: number
+  effective_dodge?: number
   base_hp?: number
   base_st?: number
   base_dx?: number
@@ -263,6 +270,12 @@ export interface Modifier {
   id: string
   name?: string
   description?: string
+  effect?: string
+  action_id?: string
+  character_id?: string
+  scene_id?: string
+  narration_id?: string
+  cost_points?: number
   hp?: number
   st?: number
   dx?: number
@@ -276,10 +289,22 @@ export interface Modifier {
   mod_iq?: number
   mod_ht?: number
   mod_fatigue?: number
+  mod_encumbrance?: string
   damage_value?: string
   skill_value?: string
+  armor_value?: string
+  advantage_value?: string
+  disadvantage_value?: string
   item_quantity?: number
+  item_dimension?: string
   item_weight?: number
+  item_range?: string
+  item_status?: string
+}
+
+export interface GameTableModifiers {
+  table: GameTable | null
+  modifiers: Modifier[]
 }
 
 export interface CharacterHistoryEvent extends Modifier {

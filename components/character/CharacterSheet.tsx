@@ -334,7 +334,7 @@ const attrCards = [
     label: "ST",
     color: "text-red-400",
     svg: "M13 10V3L4 14h7v7l9-11h-7z",
-    value: (s: Sheet) => s.st,
+    value: (s: Sheet) => s.effective_st ?? s.st,
     base: (s: Sheet) => s.base_st,
   },
   {
@@ -424,6 +424,8 @@ export default function CharacterSheet({ data, visibility }: CharacterSheetProps
   const name = s?.name || ch.name || "Character";
   const modifiers = ch.active_effects ?? [];
   const effects = modifiers.filter(activeEffects);
+  const fatigueState = s?.fatigue_state ?? "active";
+  const fatigued = fatigueState !== "active";
 
   const vis = visibility ? buildVisibilityMap(visibility) : null;
   const censored = (field: string): string => vis?.values.get(field) ?? "???";
@@ -583,15 +585,27 @@ export default function CharacterSheet({ data, visibility }: CharacterSheetProps
                   <span className="w-16 text-zinc-500 text-xs font-semibold uppercase shrink-0">FP</span>
                   <span className="text-blue-400 font-bold text-lg shrink-0">
                     {s?.fatigue ?? "-"}
-                    <span className="text-zinc-500 font-medium text-sm">/{s?.ht ?? "-"}</span>
+                    <span className="text-zinc-500 font-medium text-sm">/{s?.fatigue_max ?? s?.ht ?? "-"}</span>
                   </span>
                   <div className="w-full bg-zinc-700/50 rounded-full h-2">
                     <div
                       className="bg-blue-500/80 h-2 rounded-full"
-                      style={{ width: `${fpPct(s?.fatigue, s?.ht)}%` }}
+                      style={{ width: `${fpPct(s?.fatigue, s?.fatigue_max ?? s?.ht)}%` }}
                     />
                   </div>
                 </div>
+                {fatigued ? (
+                  <p
+                    title={
+                      fatigueState === "exhausted"
+                        ? "GURPS: 0 FP or less — at the brink of collapse; further FP loss costs 1 HP each."
+                        : "GURPS: FP below 1/3 of max — halve ST, Move and Dodge (round up)."
+                    }
+                    className="font-mono text-[9px] uppercase tracking-widest text-zinc-600"
+                  >
+                    {fatigueState === "exhausted" ? "at the brink of collapse" : "fatigued"} — ST, Move &amp; Dodge halved
+                  </p>
+                ) : null}
               </div>
 
               <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 mt-6 mb-3">
@@ -605,7 +619,7 @@ export default function CharacterSheet({ data, visibility }: CharacterSheetProps
                 </div>
                 <div className="flex flex-col items-center gap-1 p-2 bg-zinc-800/40 rounded-lg">
                   {footprintsIcon()}
-                  <span className="text-cyan-400 text-sm font-bold">{masked("move", s?.move)}</span>
+                  <span className="text-cyan-400 text-sm font-bold">{masked("move", fatigued ? s?.effective_move : s?.move)}</span>
                   <span className="text-zinc-500 text-[10px] font-semibold uppercase text-center">Move</span>
                 </div>
                 <div className="flex flex-col items-center gap-1 p-2 bg-zinc-800/40 rounded-lg">
@@ -633,7 +647,7 @@ export default function CharacterSheet({ data, visibility }: CharacterSheetProps
                 </div>
                 <div className="flex flex-col items-center gap-1 p-2 bg-zinc-800/40 rounded-lg">
                   {dodgeIcon()}
-                  <span className="text-amber-400 text-sm font-bold">{masked("dodge", s?.basic_speed == null ? null : passive.dodge)}</span>
+                  <span className="text-amber-400 text-sm font-bold">{masked("dodge", s?.basic_speed == null ? null : fatigued && s?.effective_dodge != null ? s.effective_dodge : passive.dodge)}</span>
                   <span className="text-zinc-500 text-[10px] font-semibold uppercase text-center">Dodge</span>
                 </div>
               </div>
