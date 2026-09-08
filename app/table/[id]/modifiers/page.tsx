@@ -39,8 +39,9 @@ export default async function TableModifiersPage({
         <h1 className="text-2xl font-bold tracking-tight">Modifiers</h1>
         <p className="text-sm text-zinc-500 mt-1">
           Shape characters through time without touching their base sheet.
-          Each modifier can be tied to a chapter, a scene or a narration — the
-          engine resolves them from the story-folder&apos;s last moment onward.
+          Each modifier can be tied to a chapter, a scene, a narration or a
+          specific action — the engine resolves them from the story
+          folder&apos;s last moment onward.
         </p>
       </div>
 
@@ -49,12 +50,14 @@ export default async function TableModifiersPage({
           <span className="font-mono uppercase tracking-widest text-green-500/80 text-[10px]">GURPS fatigue rule</span>
         </p>
         <p>
-          FP starts at <span className="text-zinc-200">HT</span>. Below{" "}
-          <span className="text-amber-300">1/3 of max</span> the character is{" "}
-          <span className="text-amber-300">tired</span> — ST, Move and Dodge are
-          halved (round up). At <span className="text-rose-300">0 FP</span> or less
-          they are <span className="text-rose-300">exhausted</span>: each further FP
-          lost costs 1 HP, and acting requires a Will roll. The character sheet
+          The FP bar tracks <span className="text-zinc-200">weariness</span>:
+          it starts at <span className="text-zinc-200">0</span> (rested) and
+          fills toward <span className="text-zinc-200">HT</span>. With less
+          than <span className="text-amber-300">1/3 of max</span> remaining the
+          character is <span className="text-amber-300">tired</span> — ST, Move
+          and Dodge are halved (round up). At the top of the bar (no FP left)
+          they are <span className="text-rose-300">exhausted</span>: each further
+          FP costs 1 HP, and acting requires a Will roll. The character sheet
           shows the effective values, never the base.
         </p>
       </div>

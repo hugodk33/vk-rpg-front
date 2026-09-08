@@ -109,6 +109,7 @@ interface FormState {
   chapter: string;
   scene_id: string;
   narration_id: string;
+  action_id: string;
   name: string;
   description: string;
   effect: string;
@@ -145,6 +146,7 @@ const emptyForm = (): FormState => ({
   chapter: "",
   scene_id: "",
   narration_id: "",
+  action_id: "",
   name: "",
   description: "",
   effect: "",
@@ -185,6 +187,7 @@ const toForm = (m: Modifier, scenes: GameTableScenes | null): FormState => {
     chapter: scene?.chapter != null ? String(scene.chapter) : "",
     scene_id: m.scene_id ?? "",
     narration_id: m.narration_id ?? "",
+    action_id: m.action_id ?? "",
     name: m.name ?? "",
     description: m.description ?? "",
     effect: m.effect ?? "",
@@ -236,6 +239,7 @@ export default function ModifiersPanel({
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [tab, setTab] = useState<"list" | "form">("list");
 
   const chapters = useMemo(() => {
     const set = new Set<number>();
@@ -257,12 +261,28 @@ export default function ModifiersPanel({
       visibleScenes.find((s) => s.id === form.scene_id)?.narrations ?? [],
     [visibleScenes, form.scene_id]
   );
+  const visibleActions = useMemo(
+    () =>
+      visibleNarrations.find((n) => n.id === form.narration_id)?.actions ?? [],
+    [visibleNarrations, form.narration_id]
+  );
 
   const nameOf = (id?: string) =>
     characters.find((c) => c.id === id) ?? null;
 
   const sceneOf = (id?: string) =>
     (scenes?.scenes ?? []).find((s) => s.id === id) ?? null;
+
+  const actionOf = (id?: string) => {
+    if (!id) return null;
+    for (const s of scenes?.scenes ?? []) {
+      for (const n of s.narrations ?? []) {
+        const action = (n.actions ?? []).find((a) => a.id === id);
+        if (action) return { scene: s, narration: n, action };
+      }
+    }
+    return null;
+  };
 
   const set = (field: keyof FormState, value: string) =>
     setForm((f) => ({ ...f, [field]: value }));
@@ -286,6 +306,7 @@ export default function ModifiersPanel({
       character_id: txt(form.character_id),
       scene_id: txt(form.scene_id),
       narration_id: txt(form.narration_id),
+      action_id: txt(form.action_id),
       name: form.name.trim() || "Modifier",
       description: txt(form.description) ?? "",
       effect: txt(form.effect) ?? "",
@@ -329,6 +350,7 @@ export default function ModifiersPanel({
       }
       setForm(emptyForm());
       setShowAdvanced(false);
+      setTab("list");
       await refetch();
     } catch {
       setError("Failed to save modifier.");
@@ -348,25 +370,38 @@ export default function ModifiersPanel({
         </div>
       ) : null}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* ---- list ---- */}
+      <div className="flex items-center gap-1 border-b border-zinc-800 mb-5">
+        <button
+          type="button"
+          onClick={() => setTab("list")}
+          className={`font-mono text-[10px] uppercase tracking-widest px-3 py-2 border-b-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-green-800/60 ${
+            tab === "list"
+              ? "text-green-400 border-green-600"
+              : "text-zinc-500 border-transparent hover:text-zinc-300"
+          }`}
+        >
+          On record
+          <span className="ml-2 text-zinc-600">{modifiers.length}</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setForm(emptyForm());
+            setShowAdvanced(false);
+            setTab("form");
+          }}
+          className={`font-mono text-[10px] uppercase tracking-widest px-3 py-2 border-b-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-green-800/60 ${
+            tab === "form"
+              ? "text-green-400 border-green-600"
+              : "text-zinc-500 border-transparent hover:text-zinc-300"
+          }`}
+        >
+          {form.id ? "Editing modifier" : "New modifier"}
+        </button>
+      </div>
+
+      {tab === "list" ? (
         <section>
-          <header className="flex items-center justify-between mb-3">
-            <h3 className="font-mono text-xs uppercase tracking-[0.15em] text-green-500/80">
-              On record
-              <span className="ml-2 text-zinc-600">{modifiers.length}</span>
-            </h3>
-            <button
-              type="button"
-              onClick={() => {
-                setForm(emptyForm());
-                setShowAdvanced(false);
-              }}
-              className="font-mono text-[10px] uppercase tracking-widest text-green-400 border border-green-700/30 bg-green-700/10 rounded-md px-2.5 py-1.5 hover:bg-green-700/20 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-green-800/60"
-            >
-              + New modifier
-            </button>
-          </header>
 
           {modifiers.length === 0 ? (
             <div className="rounded-xl border border-dashed border-zinc-700/60 px-4 py-10 text-center">
@@ -374,8 +409,8 @@ export default function ModifiersPanel({
                 No modifiers yet
               </p>
               <p className="text-sm text-zinc-400 mt-2">
-                Create one on the right — every effect is replayable from the
-                story moment it belongs to.
+                Every effect is replayable from the story moment it belongs
+                to. Create one on the New modifier tab.
               </p>
             </div>
           ) : (
@@ -386,6 +421,7 @@ export default function ModifiersPanel({
                 const narration = scene?.narrations.find(
                   (n) => n.id === m.narration_id
                 );
+                const actionRef = actionOf(m.action_id);
                 const chips = effectChips(m);
                 return (
                   <li
@@ -403,7 +439,11 @@ export default function ModifiersPanel({
                       </div>
                       <button
                         type="button"
-                        onClick={() => setForm(toForm(m, scenes))}
+                        onClick={() => {
+                          setForm(toForm(m, scenes));
+                          setShowAdvanced(false);
+                          setTab("form");
+                        }}
                         className="shrink-0 font-mono text-[10px] uppercase tracking-widest text-zinc-400 border border-zinc-700/60 rounded-md px-2 py-1 hover:text-zinc-100 hover:border-zinc-500 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-green-800/60"
                       >
                         Edit
@@ -432,6 +472,18 @@ export default function ModifiersPanel({
                       </p>
                     )}
 
+                    {actionRef ? (
+                      <p className="font-mono text-[9px] uppercase tracking-widest text-amber-300/80 mt-1">
+                        ⤷ after action{" "}
+                        {actionRef.action.queue != null
+                          ? `${actionRef.action.queue}.`
+                          : ""}{" "}
+                        {actionRef.action.description
+                          ? `“${actionRef.action.description}”`
+                          : "—"}
+                      </p>
+                    ) : null}
+
                     {chips.length > 0 ? (
                       <div className="flex flex-wrap gap-1 mt-2">
                         {chips.map((c) => (
@@ -450,8 +502,7 @@ export default function ModifiersPanel({
             </ul>
           )}
         </section>
-
-        {/* ---- form ---- */}
+      ) : (
         <section>
           <h3 className="font-mono text-xs uppercase tracking-[0.15em] text-green-500/80 mb-3">
             {form.id ? "Editing modifier" : "New modifier"}
@@ -487,7 +538,7 @@ export default function ModifiersPanel({
               </label>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-3">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-zinc-500">
                 Chapter
                 <select
@@ -496,6 +547,7 @@ export default function ModifiersPanel({
                     set("chapter", e.target.value);
                     set("scene_id", "");
                     set("narration_id", "");
+                    set("action_id", "");
                   }}
                   className={fieldCls}
                 >
@@ -514,6 +566,7 @@ export default function ModifiersPanel({
                   onChange={(e) => {
                     set("scene_id", e.target.value);
                     set("narration_id", "");
+                    set("action_id", "");
                   }}
                   disabled={visibleScenes.length === 0}
                   className={fieldCls}
@@ -530,7 +583,10 @@ export default function ModifiersPanel({
                 Narration
                 <select
                   value={form.narration_id}
-                  onChange={(e) => set("narration_id", e.target.value)}
+                  onChange={(e) => {
+                    set("narration_id", e.target.value);
+                    set("action_id", "");
+                  }}
                   disabled={visibleNarrations.length === 0}
                   className={fieldCls}
                 >
@@ -538,6 +594,24 @@ export default function ModifiersPanel({
                   {visibleNarrations.map((n) => (
                     <option key={n.id} value={n.id}>
                       {n.title || "Narration"}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-amber-300/70">
+                Action (after)
+                <select
+                  value={form.action_id}
+                  onChange={(e) => set("action_id", e.target.value)}
+                  disabled={visibleActions.length === 0}
+                  className={fieldCls}
+                >
+                  <option value="">—</option>
+                  {visibleActions.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.queue != null ? `${a.queue}. ` : ""}
+                      {a.description || "Action"}
+                      {a.result ? ` → ${a.result}` : ""}
                     </option>
                   ))}
                 </select>
@@ -681,6 +755,7 @@ export default function ModifiersPanel({
                   onClick={() => {
                     setForm(emptyForm());
                     setShowAdvanced(false);
+                    setTab("list");
                   }}
                   className="text-sm text-zinc-500 hover:text-zinc-200 transition-colors"
                 >
@@ -690,7 +765,7 @@ export default function ModifiersPanel({
             </div>
           </div>
         </section>
-      </div>
+      )}
     </div>
   );
 }

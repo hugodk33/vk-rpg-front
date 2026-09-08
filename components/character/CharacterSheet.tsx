@@ -598,8 +598,8 @@ export default function CharacterSheet({ data, visibility }: CharacterSheetProps
                   <p
                     title={
                       fatigueState === "exhausted"
-                        ? "GURPS: 0 FP or less — at the brink of collapse; further FP loss costs 1 HP each."
-                        : "GURPS: FP below 1/3 of max — halve ST, Move and Dodge (round up)."
+                        ? "GURPS: no FP left — at the brink of collapse; further FP costs 1 HP each."
+                        : "GURPS: less than 1/3 of max FP remaining — halve ST, Move and Dodge (round up)."
                     }
                     className="font-mono text-[9px] uppercase tracking-widest text-zinc-600"
                   >

@@ -120,6 +120,11 @@ export default function CharacterJourney({
                           {ev.narration_title ? (
                             <span className="text-zinc-500 italic">“{ev.narration_title}”</span>
                           ) : null}
+                          {ev.action_queue != null ? (
+                            <span className="font-mono text-[10px] text-amber-400/70">
+                              A{ev.action_queue}.
+                            </span>
+                          ) : null}
                           {ev.action_description ? <span>{ev.action_description}</span> : null}
                           {ev.action_result ? (
                             <span className="capitalize text-cyan-400/80">{ev.action_result}</span>

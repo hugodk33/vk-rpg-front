@@ -178,6 +178,26 @@ function RollSlip({ a, moment }: { a: NarrationAction; moment?: number }) {
             ))}
           </div>
         ) : null}
+
+        {a.modifier?.name || a.modifier?.effect ? (
+          <div className="mt-2 flex items-start gap-2 border-t border-dashed border-zinc-700/50 pt-2">
+            <span className="font-mono text-[9px] uppercase tracking-widest text-amber-300/80 shrink-0 mt-px">
+              consequence
+            </span>
+            <div className="min-w-0">
+              {a.modifier.name ? (
+                <span className="text-[12px] font-medium text-zinc-200">
+                  {a.modifier.name}
+                </span>
+              ) : null}
+              {a.modifier.effect ? (
+                <span className="font-mono text-[10px] text-amber-200/90 ml-2">
+                  {a.modifier.effect}
+                </span>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
       </div>
     </div>
   );

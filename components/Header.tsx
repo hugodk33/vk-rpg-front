@@ -46,7 +46,7 @@ export default function Header() {
           </Link>
           <button
             onClick={() => setOpen((v) => !v)}
-            className="p-2 rounded-lg text-zinc-400 hover:text-green-500 hover:bg-zinc-700/50 focus:outline-none"
+            className="p-2 rounded-lg text-zinc-400 hover:text-amber-400 hover:bg-zinc-700/50 focus:outline-none"
             aria-label="Menu"
           >
             {open ? (
