@@ -506,8 +506,8 @@ export default function CharacterSheet({ data, visibility }: CharacterSheetProps
 
   return (
     <>
-      <div className="bg-zinc-900/90 border border-zinc-700/50 shadow-2xl overflow-hidden">
-        <div className="flex flex-wrap items-start justify-between gap-4 px-6 pt-6">
+      <div>
+        <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold text-amber-100 tracking-tight">{name}</h1>
             {s?.bio ? <p className="text-lg text-zinc-400 mt-1">{s.bio}</p> : null}
@@ -519,7 +519,7 @@ export default function CharacterSheet({ data, visibility }: CharacterSheetProps
           </div>
         </div>
 
-        <div className="p-6">
+        <div className="mt-6 pt-6 border-t border-zinc-700/40">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div>
               <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-3">

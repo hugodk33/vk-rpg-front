@@ -31,7 +31,7 @@ export interface PlayerConsoleData {
   part: string;
   latestTitle: string;
   latestNarration: string;
-  visibility: VisibilityRule[];
+  visibility: VisibilityRule[] | null;
 }
 
 export async function loadPlayerConsole(characterId: string): Promise<PlayerConsoleData> {
@@ -40,7 +40,7 @@ export async function loadPlayerConsole(characterId: string): Promise<PlayerCons
   );
   const tableId = viewer?.table?.id ?? "";
 
-  const [scenesData, queue, charsData, visibility] = await Promise.all([
+  const [scenesData, queue, charsData] = await Promise.all([
     tableId
       ? api<GameTableScenes>(`/game-table-scenes/${tableId}`).catch(() => ({ table: null, scenes: [] }))
       : Promise.resolve({ table: null, scenes: [] }) as Promise<GameTableScenes>,
@@ -50,9 +50,6 @@ export async function loadPlayerConsole(characterId: string): Promise<PlayerCons
     tableId
       ? api<GameTableCharacters>(`/game-table-characters/${tableId}?viewer=${encodeURIComponent(characterId)}`).catch(() => ({ table: null, characters: [] }))
       : Promise.resolve({ table: null, characters: [] }) as Promise<GameTableCharacters>,
-    tableId
-      ? api<VisibilityRule[]>(`/game-table-visibility/${characterId}`).catch(() => [])
-      : Promise.resolve([]) as Promise<VisibilityRule[]>,
   ]);
 
   const state = getSessionState(scenesData.scenes);
@@ -70,6 +67,6 @@ export async function loadPlayerConsole(characterId: string): Promise<PlayerCons
     part: state.part,
     latestTitle: state.latestTitle,
     latestNarration: state.latestNarration,
-    visibility: visibility ?? [],
+    visibility: null,
   };
 }

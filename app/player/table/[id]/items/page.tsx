@@ -5,9 +5,16 @@ import TableTabs from "@/components/TableTabs";
 
 export const dynamic = "force-dynamic";
 
-export default async function PlayerTableItemsPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function PlayerTableItemsPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ character?: string; user?: string }>;
+}) {
   const { id } = await params;
-  const characterUrl = await getPlayerCharacterUrl(id);
+  const { character, user } = await searchParams;
+  const characterUrl = await getPlayerCharacterUrl(id, { characterId: character, userId: user });
   const viewerId = characterUrl?.split("/").pop() ?? "";
   const [data] = await Promise.all([
     api<GameTableItems>(`/game-table-items/${id}${viewerId ? `?viewer=${encodeURIComponent(viewerId)}` : ""}`),

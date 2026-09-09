@@ -42,7 +42,7 @@ interface PlayerConsoleProps {
   part: string;
   latestTitle: string;
   latestNarration: string;
-  visibility: VisibilityRule[];
+  visibility: VisibilityRule[] | null;
   basePath: string;
   initialTab?: PlayerTab;
 }

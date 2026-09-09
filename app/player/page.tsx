@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { api } from "@/lib/api";
 import type { GameTable, GameTableCharacters, GameTableNpcs, Sheet, TableCharacter, TableNpc } from "@/lib/types";
+import SeatPicker, { type SeatOption } from "@/components/player/SeatPicker";
 
 export const dynamic = "force-dynamic";
 
@@ -66,8 +67,26 @@ function hpBar(s: Sheet) {
   return { max, cur, pct };
 }
 
-export default async function PlayerDashboard() {
+function seatOptionsFrom(entries: PlayerEntry[]): SeatOption[] {
+  const seen = new Map<string, SeatOption>();
+  for (const { ch } of entries) {
+    const uid = ch.user?.id ?? ch.userId;
+    if (uid && !seen.has(uid)) {
+      seen.set(uid, { userId: uid, username: ch.user?.username ?? uid });
+    }
+  }
+  return Array.from(seen.values());
+}
+
+export default async function PlayerDashboard({
+  searchParams,
+}: {
+  searchParams: Promise<{ seat?: string }>;
+}) {
+  const { seat } = await searchParams;
   const entries = await loadPlayerEntries();
+  const seatOptions = seatOptionsFrom(entries);
+  const shown = seat ? entries.filter((e) => (e.ch.user?.id ?? e.ch.userId) === seat) : entries;
 
   return (
     <div className="max-w-5xl mx-auto px-6 py-10">
@@ -79,26 +98,33 @@ export default async function PlayerDashboard() {
         </div>
         <div className="relative">
           <p className="font-mono text-[10px] tracking-widest uppercase text-blue-300/90">At the table</p>
-          <h1 className="text-2xl md:text-3xl font-bold text-zinc-100 mt-1">Your Company</h1>
-          <p className="text-stone-400 text-sm mt-1.5">
-            {entries.length === 0
-              ? "No adventurers yet — claim a seat in a campaign."
-              : `${entries.length} ${entries.length === 1 ? "adventurer" : "adventurers"} ride under your banner.`}
-          </p>
+          <div className="flex flex-wrap items-end justify-between gap-4 mt-1">
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold text-zinc-100">Your Company</h1>
+              <p className="text-stone-400 text-sm mt-1.5">
+                {shown.length === 0
+                  ? "No adventurers yet — claim a seat in a campaign."
+                  : `${shown.length} ${shown.length === 1 ? "adventurer" : "adventurers"} ride under your banner.`}
+              </p>
+            </div>
+            {seatOptions.length > 0 ? <SeatPicker options={seatOptions} /> : null}
+          </div>
         </div>
       </div>
 
       {/* ---- company (characters only) ---- */}
-      {entries.length === 0 ? (
+      {shown.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-blue-700/40 text-center py-20 bg-zinc-900/40">
           <div className="font-mono text-[10px] tracking-widest uppercase text-blue-400/60">Empty roster</div>
           <p className="text-zinc-300 mt-2 max-w-sm mx-auto text-sm">
-            When a narrator adds you to a campaign and you claim a character, it will appear here.
+            {seat
+              ? "This user has no character seats yet — pick another user above."
+              : "When a narrator adds you to a campaign and you claim a character, it will appear here."}
           </p>
         </div>
       ) : (
         <div className="space-y-3">
-          {entries.map(({ table, ch }) => {
+          {shown.map(({ table, ch }) => {
             const s = ch.sheet ?? ({} as Sheet);
             const name = s.name || ch.name || "Unnamed adventurer";
             const hue = hueFor(name);
@@ -163,7 +189,7 @@ export default async function PlayerDashboard() {
                     Enter Session
                   </Link>
                   <Link
-                    href={`/player/table/${table.id}`}
+                    href={`/player/table/${table.id}?user=${encodeURIComponent(seat ?? (ch.user?.id ?? ch.userId ?? ""))}&character=${encodeURIComponent(ch.id)}`}
                     className="flex-1 sm:flex-none text-center border border-zinc-700 hover:border-blue-700/60 text-zinc-300 hover:text-blue-200 text-sm font-medium px-4 py-2 rounded-lg transition-colors"
                   >
                     Table

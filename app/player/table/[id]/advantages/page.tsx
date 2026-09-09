@@ -1,20 +1,26 @@
 "use client";
 
 import { use, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import type { Advantage, GameTableAdvantages } from "@/lib/types";
 import { getPlayerCharacterUrl } from "@/lib/table";
+import { readSeat } from "@/lib/seat";
 import TableTabs from "@/components/TableTabs";
 import { api } from "@/lib/api";
 
 export default function PlayerTableAdvantagesPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  const searchParams = useSearchParams();
+  const seat = readSeat();
+  const seatUserId = searchParams.get("user") ?? seat.userId;
+  const seatCharId = searchParams.get("character") ?? seat.characterId;
   const [data, setData] = useState<GameTableAdvantages | null>(null);
   const [characterUrl, setCharacterUrl] = useState<string | undefined>(undefined);
   const [search, setSearch] = useState("");
 
   useEffect(() => {
     let cancelled = false;
-    getPlayerCharacterUrl(id).then((url) => {
+    getPlayerCharacterUrl(id, { userId: seatUserId, characterId: seatCharId }).then((url) => {
       if (cancelled) return;
       setCharacterUrl(url);
       const viewerId = url?.split("/").pop() ?? "";
@@ -24,7 +30,7 @@ export default function PlayerTableAdvantagesPage({ params }: { params: Promise<
         .catch(() => { if (!cancelled) setData({ table: null, advantages: [] }); });
     }).catch(() => { if (!cancelled) setCharacterUrl(undefined); });
     return () => { cancelled = true; };
-  }, [id]);
+  }, [id, seatUserId, seatCharId]);
 
   const advantages = (data?.advantages ?? []).filter((a: Advantage) => {
     if (!search) return true;

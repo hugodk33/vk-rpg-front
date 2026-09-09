@@ -52,7 +52,7 @@ export default async function PlayerCharacterViewedPage({
       <CharacterSheet
         data={data}
         basePath={`/player/character/${id}`}
-        visibility={Array.isArray(visibility) ? visibility : []}
+        visibility={viewer === id ? null : Array.isArray(visibility) ? visibility : null}
       />
     </div>
   );
