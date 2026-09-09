@@ -49,6 +49,7 @@ export default async function PlayerTableSessionPage({
           actions={state.actions}
           queue={queue}
           npcIds={npcIds}
+          myCharacterId={viewerId || undefined}
         />
       </div>
     </>

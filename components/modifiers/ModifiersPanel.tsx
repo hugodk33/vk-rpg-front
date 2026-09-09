@@ -13,12 +13,14 @@
    read. Changes persist to POST/PUT /game-table-modifier.
    ============================================================ */
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
 import type {
   GameTableModifiers,
   GameTableScenes,
+  GameTableSkills,
   Modifier,
+  SkillItem,
   TableCharacter,
 } from "@/lib/types";
 
@@ -138,6 +140,8 @@ interface FormState {
   item_dimension: string;
   item_range: string;
   item_status: string;
+  skill_id: string;
+  apply_on_roll: number;
 }
 
 const emptyForm = (): FormState => ({
@@ -175,6 +179,8 @@ const emptyForm = (): FormState => ({
   item_dimension: "",
   item_range: "",
   item_status: "",
+  skill_id: "",
+  apply_on_roll: 0,
 });
 
 const toForm = (m: Modifier, scenes: GameTableScenes | null): FormState => {
@@ -216,6 +222,8 @@ const toForm = (m: Modifier, scenes: GameTableScenes | null): FormState => {
     item_dimension: m.item_dimension ?? "",
     item_range: m.item_range ?? "",
     item_status: m.item_status ?? "",
+    skill_id: m.skill_id ?? "",
+    apply_on_roll: m.apply_on_roll ? 1 : 0,
   };
 };
 
@@ -240,6 +248,19 @@ export default function ModifiersPanel({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<"list" | "form">("list");
+
+  const [skills, setSkills] = useState<SkillItem[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      const res = await api<GameTableSkills>(`/game-table-skills/${tableId}`).catch(
+        () => ({ table: null, skills: [] })
+      );
+      if (!cancelled) setSkills(res.skills ?? []);
+    };
+    load();
+    return () => { cancelled = true; };
+  }, [tableId]);
 
   const chapters = useMemo(() => {
     const set = new Set<number>();
@@ -335,6 +356,8 @@ export default function ModifiersPanel({
       item_dimension: txt(form.item_dimension),
       item_range: txt(form.item_range),
       item_status: txt(form.item_status),
+      skill_id: txt(form.skill_id),
+      apply_on_roll: form.apply_on_roll ? 1 : 0,
     };
     try {
       if (form.id) {
@@ -484,6 +507,12 @@ export default function ModifiersPanel({
                       </p>
                     ) : null}
 
+                    {m.apply_on_roll === 1 ? (
+                      <p className="font-mono text-[9px] uppercase tracking-widest text-green-400/90 mt-1">
+                        ⚡ applies when this skill&apos;s test succeeds
+                      </p>
+                    ) : null}
+
                     {chips.length > 0 ? (
                       <div className="flex flex-wrap gap-1 mt-2">
                         {chips.map((c) => (
@@ -617,6 +646,62 @@ export default function ModifiersPanel({
                 </select>
               </label>
             </div>
+
+            <div className="grid gap-3 sm:grid-cols-2 border-t border-zinc-800 pt-4">
+              <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-zinc-500">
+                Consequence skill
+                <span className="normal-case text-zinc-600 font-sans text-[10px]">
+                  Locks to a skill — the deltas apply when that skill&apos;s test passes.
+                </span>
+                <select
+                  value={form.skill_id}
+                  onChange={(e) => {
+                    set("skill_id", e.target.value);
+                    if (!e.target.value) setForm((f) => ({ ...f, apply_on_roll: 0 }));
+                  }}
+                  className={fieldCls}
+                >
+                  <option value="">—</option>
+                  {skills.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <div className="flex flex-col justify-center gap-1">
+                <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-500">
+                  Apply on test success
+                </span>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={form.apply_on_roll === 1}
+                  disabled={!form.skill_id}
+                  onClick={() =>
+                    setForm((f) => ({ ...f, apply_on_roll: f.apply_on_roll ? 0 : 1 }))
+                  }
+                  className={`w-12 h-6 rounded-full border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-green-800/60 ${
+                    form.apply_on_roll === 1
+                      ? "bg-green-600 border-green-500"
+                      : "bg-zinc-800 border-zinc-700"
+                  } ${form.skill_id ? "" : "opacity-30 cursor-not-allowed"}`}
+                >
+                  <span
+                    className={`block w-4 h-4 mt-[3px] rounded-full bg-zinc-100 transition-transform ${
+                      form.apply_on_roll === 1 ? "translate-x-6" : "translate-x-1"
+                    }`}
+                  />
+                </button>
+              </div>
+            </div>
+
+            {form.apply_on_roll === 1 && form.skill_id ? (
+              <p className="text-[10px] text-amber-300/70 -mt-2">
+                On a successful test of this skill, the deltas above are materialized as an active
+                effect on the character. Damage stays applied; the max HP/FP never changes.
+              </p>
+            ) : null}
 
             <div className="grid gap-3">
               <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-zinc-500">

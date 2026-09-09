@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import type { NarrationAction, QueueEntry, TableCharacter } from "@/lib/types";
+import { useRouter } from "next/navigation";
+import type { CharacterSkill, NarrationAction, QueueEntry, TableCharacter } from "@/lib/types";
+import { skillLabel, skillLevel } from "@/lib/skill";
 
 /* ============================================================
    Turn — the player's active scene console.
@@ -19,6 +21,7 @@ interface TurnPanelProps {
   queue: QueueEntry[];
   roster: TableCharacter[];
   myId: string;
+  mySkills: CharacterSkill[];
 }
 
 const queuePos = (e: QueueEntry): number => {
@@ -96,7 +99,9 @@ export default function TurnPanel({
   queue,
   roster,
   myId,
+  mySkills,
 }: TurnPanelProps) {
+  const router = useRouter();
   const pendingQueue = [...queue]
     .filter((e) => (e.status ?? "pending") !== "done")
     .sort((a, b) => queuePos(a) - queuePos(b));
@@ -116,6 +121,7 @@ export default function TurnPanel({
   const [rolls, setRolls] = useState<number[]>([]);
   const [total, setTotal] = useState<number | null>(null);
   const [judgment, setJudgment] = useState<Judgment | null>(null);
+  const [effectNote, setEffectNote] = useState<string | null>(null);
 
   const myEntry = pendingQueue.find((e) => e.character_id === myId);
   const testAttr = (myEntry?.test_attr as "st" | "dx" | "iq" | "ht") || "dx";
@@ -130,18 +136,48 @@ export default function TurnPanel({
     const attr = testAttr;
     return s?.[attr] ?? s?.[`base_${attr}` as "base_st"] ?? 10;
   };
-  const modValue = Math.floor((Number(attrib()) - 10) / 2) + testMod;
-  const attrHex = attrMeta[testAttr]?.hex ?? "#3b82f6";
+
+  const skillMode = myEntry?.test_kind === "skill" && !!myEntry.test_skill;
+  const skillData = skillMode && myEntry.test_skill
+    ? mySkills.find((sk) => sk.skill_id === myEntry.test_skill || sk.id === myEntry.test_skill) ?? null
+    : null;
+  const skillLevelVal = skillData ? skillLevel(skillData, myChar?.sheet ?? null) : null;
+  const target = skillMode ? (skillLevelVal ?? 10) : attrib();
+  const modValue = skillMode ? testMod : Math.floor((Number(attrib()) - 10) / 2) + testMod;
+  const attrHex = skillMode ? "#fbbf24" : (attrMeta[testAttr]?.hex ?? "#3b82f6");
   const rollDisabled = () => !isMyTurn || !myId;
 
   function performRoll(): { r: number[]; tot: number } {
     const die = parseInt(testDie, 10);
     if (rollDisabled()) return { r: [], tot: 0 };
     const { r, tot } = rollDice(testCount, die, modValue);
+    const j = judgeRoll(tot, target);
     setRolls(r);
     setTotal(tot);
-    setJudgment(judgeRoll(tot, attrib()));
+    setJudgment(j);
+    if (j.ok && skillMode && myEntry?.test_skill) {
+      void applySkillConsequence(myEntry.test_skill);
+      router.refresh();
+    }
     return { r, tot };
+  }
+
+  async function applySkillConsequence(skillIdToApply: string) {
+    try {
+      const res = await fetch("/api/game-table-roll-effect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ character_id: myId, skill_id: skillIdToApply }),
+      });
+      const j = await res.json();
+      if (j.success && Array.isArray(j.applied) && j.applied.length) {
+        setEffectNote(`Effect applied: ${j.applied.map((a: { name?: string }) => a.name || "Effect").join(", ")}`);
+      } else {
+        setEffectNote(null);
+      }
+    } catch {
+      setEffectNote(null);
+    }
   }
 
   const counts = new Map<number, number>();
@@ -292,7 +328,7 @@ export default function TurnPanel({
                 {pendingQueue[0] ? charName(pendingQueue[0].character_id) : "empty queue"}
               </span>
 <span className="ml-auto font-mono text-[10px] text-zinc-500 uppercase tracking-widest">
-                  target: <span style={{ color: attrHex }}>{attrib()}</span> ({attrMeta[testAttr]?.label})
+                  target: <span style={{ color: attrHex }}>{target}</span> ({skillMode ? (skillData ? skillLabel(skillData, myChar?.sheet ?? null) : "—") : attrMeta[testAttr]?.label})
                 </span>
             </div>
 
@@ -311,8 +347,10 @@ export default function TurnPanel({
                   <span className="inline-flex items-center justify-center min-w-[3.5rem] h-10 bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-3 text-zinc-100 text-sm font-mono">{testMod >= 0 ? `+${testMod}` : testMod}</span>
                 </div>
                 <div>
-                  <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Attribute</span>
-                  <span className="inline-flex items-center justify-center min-w-[3.5rem] h-10 bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-3 text-zinc-100 text-sm font-mono">{testAttr.toUpperCase()}</span>
+                  <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">{skillMode ? "Skill" : "Attribute"}</span>
+                  <span className="inline-flex items-center justify-center min-w-[3.5rem] h-10 bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-3 text-zinc-100 text-sm font-mono">
+                    {skillMode ? (skillData ? skillLabel(skillData, myChar?.sheet ?? null) : "—") : testAttr.toUpperCase()}
+                  </span>
                 </div>
                 <div className="w-full">
                   <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-600">
@@ -366,6 +404,12 @@ export default function TurnPanel({
                   {icon("M12 3l1.5 6.5L20 11l-6.5 1.5L12 19l-1.5-6.5L4 11l6.5-1.5L12 3z", "w-4 h-4 inline mr-1")}Roll {testCount}d{testDie}
                 </button>
               </div>
+
+              {effectNote ? (
+                <div className="mt-4 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-2.5">
+                  <span className="font-mono text-[11px] uppercase tracking-widest text-amber-300">{effectNote}</span>
+                </div>
+              ) : null}
 
               <div>
                 <div className="flex items-center gap-2 mb-1.5">

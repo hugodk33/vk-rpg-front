@@ -87,7 +87,6 @@ export default function PlayerConsole({
   initialTab = "sheet",
 }: PlayerConsoleProps) {
   const [tab, setTab] = useState<PlayerTab>(initialTab);
-  const myId = character?.id ?? "";
   const name = character?.sheet?.name || character?.name || "Your character";
 
   return (
@@ -135,7 +134,8 @@ export default function PlayerConsole({
           actions={actions}
           queue={queue}
           roster={roster}
-          myId={myId}
+          myId={character?.id ?? ""}
+          mySkills={character?.skills ?? []}
         />
       ) : null}
 

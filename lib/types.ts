@@ -275,6 +275,7 @@ export interface Modifier {
   character_id?: string
   scene_id?: string
   narration_id?: string
+  skill_id?: string
   cost_points?: number
   hp?: number
   st?: number
@@ -300,6 +301,7 @@ export interface Modifier {
   item_weight?: number
   item_range?: string
   item_status?: string
+  apply_on_roll?: number
 }
 
 export interface GameTableModifiers {
@@ -438,6 +440,8 @@ export interface QueueEntry {
   test_count?: number | null
   test_mod?: number | null
   test_attr?: string | null
+  test_kind?: "attr" | "skill" | string | null
+  test_skill?: string | null
 }
 
 export interface VisibilityRule {

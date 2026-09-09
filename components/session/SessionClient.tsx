@@ -1,9 +1,11 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import type { NarrationAction, QueueEntry, Sheet } from "@/lib/types";
+import type { CharacterSkill, CharacterViewer, NarrationAction, QueueEntry, Sheet } from "@/lib/types";
+import { api } from "@/lib/api";
+import { skillLabel, skillLevel } from "@/lib/skill";
 
 /* ============================================================
    Session Console
@@ -41,6 +43,7 @@ interface SessionClientProps {
   actions: NarrationAction[];
   queue?: QueueEntry[];
   npcIds?: string[];
+  myCharacterId?: string;
   role?: "narrator" | "player";
 }
 
@@ -108,6 +111,7 @@ export default function SessionClient({
   actions,
   queue = [],
   npcIds = [],
+  myCharacterId,
   role = "narrator",
 }: SessionClientProps) {
   const isPlayer = role === "player";
@@ -233,6 +237,8 @@ export default function SessionClient({
       test_count: diceCount,
       test_mod: diceMod,
       test_attr: actSkill,
+      test_kind: basis,
+      test_skill: basis === "skill" ? skillId || null : null,
     };
     try {
       const res = await fetch("/api/game-table-queue", {
@@ -253,9 +259,13 @@ export default function SessionClient({
   const [diceCount, setDiceCount] = useState(3);
   const [diceMod, setDiceMod] = useState(0);
   const [actSkill, setActSkill] = useState("dx");
+  const [rollBasis, setRollBasis] = useState<"attr" | "skill">("attr");
+  const [skillId, setSkillId] = useState<string>("");
+  const [actorSkills, setActorSkills] = useState<CharacterSkill[]>([]);
   const [rolls, setRolls] = useState<number[]>([]);
   const [total, setTotal] = useState<number | null>(null);
   const [judgment, setJudgment] = useState<Judgment | null>(null);
+  const [effectNote, setEffectNote] = useState<string | null>(null);
   const [actRoll, setActRoll] = useState("");
   const [actTarget, setActTarget] = useState("");
   const [actDesc, setActDesc] = useState("");
@@ -268,20 +278,75 @@ export default function SessionClient({
     const attr = actSkill as "st" | "dx" | "iq" | "ht";
     return selectedChar[attr] ?? selectedChar.sheet?.[attr] ?? 10;
   };
-  const modValue = isPlayer ? diceMod : Math.floor((Number(attrib()) - 10) / 2) + diceMod;
-  const attrHex = attrMeta[actSkill]?.hex ?? T.hex;
 
-  function performRollFn(): { r: number[]; tot: number } {
-    const { r, tot } = performRoll(diceCount, diceType, modValue);
-    setRolls(r);
-    setTotal(tot);
-    setJudgment(judgeRoll(tot, attrib()));
-    return { r, tot };
+  const allowSkill = !isPlayer || (myCharacterId ? actorCharId === myCharacterId : false);
+  const basis = allowSkill ? rollBasis : "attr";
+  const attrHex = basis === "skill" ? "#fbbf24" : (attrMeta[actSkill]?.hex ?? T.hex);
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      if (!actorCharId) return;
+      const viewer = await api<CharacterViewer>(
+        `/game-table-character/${actorCharId}${myCharacterId ? `?viewer=${encodeURIComponent(myCharacterId)}` : ""}`
+      ).catch(() => null);
+      if (cancelled) return;
+      setActorSkills(viewer?.character?.skills ?? []);
+      setSkillId((prev) =>
+        prev && (viewer?.character?.skills ?? []).some((s) => s.skill_id === prev || s.id === prev) ? prev : ""
+      );
+    };
+    load();
+    return () => { cancelled = true; };
+  }, [actorCharId, myCharacterId]);
+
+  const selectedSkill = actorSkills.find((s) => s.skill_id === skillId || s.id === skillId) ?? null;
+  const selectedSkillLevel = selectedSkill ? skillLevel(selectedSkill, selectedChar?.sheet ?? null) : null;
+  const seatSkillNote =
+    upEntry && upEntry.test_kind === "skill" && upEntry.test_skill
+      ? (() => {
+          const st = actorSkills.find((s) => s.skill_id === upEntry.test_skill || s.id === upEntry.test_skill);
+          return st ? skillLabel(st, selectedChar?.sheet ?? null) : "skill";
+        })()
+      : null;
+  const targetValue = (): number => (basis === "skill" ? (selectedSkillLevel ?? 10) : attrib());
+  const modValue = basis === "skill" ? diceMod : isPlayer ? diceMod : Math.floor((Number(attrib()) - 10) / 2) + diceMod;
+
+  async function applySkillConsequence(skillIdToApply: string) {
+    try {
+      const res = await fetch("/api/game-table-roll-effect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ character_id: actorCharId, skill_id: skillIdToApply }),
+      });
+      const j = await res.json();
+      if (j.success && Array.isArray(j.applied) && j.applied.length) {
+        setEffectNote(`Effect applied: ${j.applied.map((a: { name?: string }) => a.name || "Effect").join(", ")}`);
+      } else {
+        setEffectNote(null);
+      }
+    } catch {
+      setEffectNote(null);
+    }
   }
 
-  function rollBtn() {
-    const { r } = performRollFn();
+  function performRollFn(): { r: number[]; tot: number; j: Judgment } {
+    const { r, tot } = performRoll(diceCount, diceType, modValue);
+    const j = judgeRoll(tot, targetValue());
+    setRolls(r);
+    setTotal(tot);
+    setJudgment(j);
+    return { r, tot, j };
+  }
+
+  async function rollBtn() {
+    const { r, j } = performRollFn();
     setActRoll(`${diceCount}d${diceType} [ ${r.join(" , ")} ]`);
+    setEffectNote(null);
+    if (j.ok && basis === "skill" && skillId) {
+      await applySkillConsequence(skillId);
+      router.refresh();
+    }
   }
 
   async function copyRoll() {
@@ -364,7 +429,6 @@ export default function SessionClient({
 
   /* ---- helpers ---- */
   const actorIsNpc = npcIds.includes(actorCharId);
-  const attrMetaEntry = attrMeta[actSkill];
 
   const counts = new Map<number, number>();
   for (const s of rolls) counts.set(s, (counts.get(s) ?? 0) + 1);
@@ -541,7 +605,7 @@ export default function SessionClient({
               </span>
               {actorIsNpc ? <span className="font-mono text-[9px] uppercase tracking-widest px-1.5 py-px rounded bg-amber-400/15 text-amber-300">NPC</span> : null}
 <span className="ml-auto font-mono text-[10px] text-zinc-500 uppercase tracking-widest">
-                  target: <span style={{ color: attrHex }}>{attrib()}</span> ({attrMetaEntry?.label})
+                  target: <span style={{ color: attrHex }}>{targetValue()}</span> ({basis === "skill" ? (selectedSkill ? skillLabel(selectedSkill, selectedChar?.sheet ?? null) : "—") : (attrMeta[actSkill]?.label ?? "DX")})
                 </span>
             </div>
 
@@ -549,7 +613,11 @@ export default function SessionClient({
               <div className="flex items-center gap-2 mb-5 -mt-1">
                 <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-600">
                   {upEntry && (upEntry.test_dice ?? null) != null
-                    ? `Seat test: ${upEntry.test_count ?? 3}d${upEntry.test_dice ?? "6"}${(upEntry.test_mod ?? 0) >= 0 ? "+" : ""}${upEntry.test_mod ?? 0} (${(upEntry.test_attr ?? "dx").toUpperCase()})`
+                    ? `Seat test: ${upEntry.test_count ?? 3}d${upEntry.test_dice ?? "6"}${(upEntry.test_mod ?? 0) >= 0 ? "+" : ""}${upEntry.test_mod ?? 0}${
+                        upEntry.test_kind === "skill"
+                          ? ` · ${seatSkillNote ?? "skill"}`
+                          : ` (${(upEntry.test_attr ?? "dx").toUpperCase()})`
+                      }`
                     : "No test set for this seat yet"}
                 </span>
                 <span className="flex-1 h-px bg-zinc-700/40" />
@@ -587,13 +655,49 @@ export default function SessionClient({
                     <input type="number" value={diceMod} min={-20} max={20} readOnly={isPlayer} onChange={(e) => setDiceMod(Number(e.target.value))} className={`w-16 bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-2 py-2 text-zinc-100 text-sm text-center focus:outline-none ${T.inputBorder}`} />
                   </div>
                   <div>
-                    <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Attribute</span>
-                    <select value={actSkill} onChange={(e) => setActSkill(e.target.value)} className={`bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-3 py-2 text-zinc-100 text-sm focus:outline-none ${T.inputBorder}`}>
-                      {["st", "dx", "iq", "ht"].map((s) => (
-                        <option key={s} value={s} className="bg-zinc-800">{s.toUpperCase()}</option>
-                      ))}
-                    </select>
+                    <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Test basis</span>
+                    {allowSkill ? (
+                      <div className="flex items-center gap-1">
+                        {(["attr", "skill"] as const).map((b) => (
+                          <button
+                            key={b}
+                            onClick={() => setRollBasis(b)}
+                            className={`font-mono text-[11px] font-semibold uppercase tracking-widest px-3 py-2 rounded-lg border transition-colors ${
+                              basis === b ? T.borderCta + " text-zinc-100" : "border-zinc-700/50 text-zinc-500 hover:text-zinc-300"
+                            }`}
+                          >
+                            {b === "attr" ? "Attribute" : "Skill"}
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="inline-flex items-center font-mono text-[11px] font-semibold uppercase tracking-widest px-3 py-2 rounded-lg border border-zinc-700/50 text-zinc-400">
+                        Attribute
+                      </div>
+                    )}
                   </div>
+                  {basis === "skill" ? (
+                    <div>
+                      <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Skill (target level)</span>
+                      <select value={skillId} onChange={(e) => setSkillId(e.target.value)} className={`bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-3 py-2 text-zinc-100 text-sm focus:outline-none ${T.inputBorder}`}>
+                        <option value="" className="bg-zinc-800">Select…</option>
+                        {actorSkills.map((s) => (
+                          <option key={s.id} value={s.skill_id || s.id} className="bg-zinc-800">
+                            {skillLabel(s, selectedChar?.sheet ?? null)}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  ) : (
+                    <div>
+                      <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Attribute</span>
+                      <select value={actSkill} onChange={(e) => setActSkill(e.target.value)} className={`bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-3 py-2 text-zinc-100 text-sm focus:outline-none ${T.inputBorder}`}>
+                        {["st", "dx", "iq", "ht"].map((s) => (
+                          <option key={s} value={s} className="bg-zinc-800">{s.toUpperCase()}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                 </div>
 
                 {/* faces */}
@@ -629,6 +733,12 @@ export default function SessionClient({
                     <button onClick={copyRoll} className="bg-zinc-700 hover:bg-zinc-600 text-zinc-300 text-sm font-medium px-4 py-2.5 rounded-lg transition-colors">Copy</button>
                   </div>
                 </div>
+
+                {effectNote ? (
+                  <div className="mt-4 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-2.5">
+                    <span className="font-mono text-[11px] uppercase tracking-widest text-amber-300">{effectNote}</span>
+                  </div>
+                ) : null}
 
                 {/* curve */}
                 {isPlayer ? (
