@@ -14,7 +14,6 @@ import type {
 import TurnPanel from "@/components/player/PlayerSession";
 import SceneTimeline from "@/components/scenes/SceneTimeline";
 import CharacterSheet from "@/components/character/CharacterSheet";
-import PlayerTablePanel from "@/components/player/PlayerTablePanel";
 
 /* ============================================================
    Player Console — one panel per character.
@@ -53,6 +52,15 @@ const icon = (path: string, cls = "w-4 h-4") => (
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={path} />
   </svg>
 );
+
+const TABLE_LINKS: Array<{ key: string; label: string; path: string }> = [
+  { key: "items", label: "Items", path: "items" },
+  { key: "characters", label: "Characters", path: "characters" },
+  { key: "skills", label: "Skills", path: "skills" },
+  { key: "advantages", label: "Advantages", path: "advantages" },
+  { key: "disadvantages", label: "Disadvantages", path: "disadvantages" },
+  { key: "locations", label: "Locations", path: "locations" },
+];
 
 const TABS: Array<{ key: PlayerTab; label: string; icon: string }> = [
   { key: "turn", label: "Session", icon: "M4 5a2 2 0 012-2h12a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm0 8a2 2 0 012-2h12a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm0 8a2 2 0 012-2h6a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2z" },
@@ -135,7 +143,35 @@ export default function PlayerConsole({
         <SceneTimeline table={table} scenes={scenes} showEditButtons={false} role="player" />
       ) : null}
 
-      {tab === "table" ? <PlayerTablePanel tableId={tableId} viewerId={character?.id ?? ""} /> : null}
+      {tab === "table" ? (
+        <div className="rounded-2xl border border-zinc-700/50 bg-zinc-900/40 overflow-hidden">
+          <div className="px-5 py-6">
+            <p className="font-mono text-[10px] tracking-widest uppercase text-blue-300/90">The Table</p>
+            <h2 className="text-lg font-bold text-zinc-100 mt-1">{table?.title || "Table resources"}</h2>
+            <p className="text-sm text-zinc-400 mt-1.5 max-w-xl">
+              Everything the table shares outside your seat: items, companions, skills and the
+              party&rsquo;s advantages and disadvantages — read-only.
+            </p>
+            <Link
+              href={`/player/table/${tableId}`}
+              className="inline-flex items-center gap-2 mt-5 bg-blue-600 hover:bg-blue-500 text-blue-950 text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors shadow-lg shadow-blue-900/20"
+            >
+              Open the table {icon("M9 5l7 7-7 7", "w-4 h-4")}
+            </Link>
+            <div className="flex flex-wrap gap-2 mt-6">
+              {TABLE_LINKS.map((l) => (
+                <Link
+                  key={l.key}
+                  href={`/player/table/${tableId}/${l.path}`}
+                  className="px-3 py-1.5 rounded-md border border-zinc-700/50 text-xs text-zinc-300 hover:border-blue-700/60 hover:text-blue-200 transition-colors"
+                >
+                  {l.label}
+                </Link>
+              ))}
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {tab === "sheet" && viewer ? (
         <CharacterSheet data={viewer} basePath={basePath} visibility={visibility} />

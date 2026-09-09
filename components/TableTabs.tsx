@@ -96,8 +96,15 @@ export default function TableTabs({ tableId, role = "narrator", active, characte
       ) : null}
 
       <nav aria-label="Table navigation" className="flex gap-0.5 border-b border-zinc-800 mb-6">
-        {/* Table — resource group (narrator only; players see only their characters) */}
-        {role !== "player" ? (
+        {/* Table — narrator gets the resource dropdown; players get a plain link to the shared hub */}
+        {role === "player" ? (
+          <Link
+            href={`${prefix}/table/${tableId}`}
+            className={`${tabActive(active === "overview", tone)} ${active === "overview" ? underlineCls : ""}`}
+          >
+            {icon(ICONS.overview, "w-4 h-4")} Table
+          </Link>
+        ) : (
         <details className="group relative">
           <summary
             className="list-none cursor-pointer select-none inline-flex items-center gap-1.5 px-3 py-2.5 font-mono text-[12px] uppercase tracking-[0.12em] rounded-md text-zinc-400 hover:text-zinc-100 transition-colors"
@@ -134,7 +141,7 @@ export default function TableTabs({ tableId, role = "narrator", active, characte
             ))}
           </div>
         </details>
-        ) : null}
+        )}
 
         <Link href={`${prefix}/table/${tableId}/sessions`} className={`${tabActive(active === "sessions", tone)} ${active === "sessions" ? underlineCls : ""}`}>
           {icon(ICONS.sessions, "w-4 h-4")} Sessions

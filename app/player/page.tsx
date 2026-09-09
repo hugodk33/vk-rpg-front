@@ -163,6 +163,12 @@ export default async function PlayerDashboard() {
                     Enter Session
                   </Link>
                   <Link
+                    href={`/player/table/${table.id}`}
+                    className="flex-1 sm:flex-none text-center border border-zinc-700 hover:border-blue-700/60 text-zinc-300 hover:text-blue-200 text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+                  >
+                    Table
+                  </Link>
+                  <Link
                     href={sheetUrl}
                     className="flex-1 sm:flex-none text-center border border-zinc-700 hover:border-blue-700/60 text-zinc-300 hover:text-blue-200 text-sm font-medium px-4 py-2 rounded-lg transition-colors"
                   >
