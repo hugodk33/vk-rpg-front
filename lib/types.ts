@@ -252,9 +252,24 @@ export interface GameTable {
   }>
 }
 
+export interface LocationHexGrid {
+  sizeM?: number | null
+  width?: number | null
+  height?: number | null
+  centerQ?: number
+  centerR?: number
+  orientation?: "flat" | "pointy" | "square"
+  rotationDeg?: number
+}
+
 export interface Location {
   id: string
+  tableId?: string
   name: string
+  parentId?: string | null
+  kind?: string
+  level?: number
+  path?: string
   region?: string
   subRegion?: string
   address?: string
@@ -264,6 +279,10 @@ export interface Location {
   dimensions?: string
   description?: string
   other?: string
+  hex?: LocationHexGrid
+  isBattlemap?: boolean
+  ancestors?: Location[]
+  children?: Location[]
 }
 
 export interface Modifier {
@@ -422,6 +441,7 @@ export interface GameTableDisadvantages {
 export interface GameTableLocations {
   table: GameTable | null
   locations: Location[]
+  tree?: Location[]
 }
 
 export interface GameTableNpcs {

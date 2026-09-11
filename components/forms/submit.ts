@@ -1,8 +1,8 @@
-export async function submitJson<T>(path: string, method: "POST" | "PUT", body: unknown): Promise<T> {
+export async function submitJson<T>(path: string, method: "POST" | "PUT" | "DELETE", body?: unknown): Promise<T> {
   const res = await fetch(path, {
     method,
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
+    body: body === undefined ? undefined : JSON.stringify(body),
   });
   if (!res.ok) {
     let detail = "";
