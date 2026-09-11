@@ -7,6 +7,7 @@ import type {
   GameTableCharacters,
   GameTableDisadvantages,
   GameTableItems,
+  GameTableModifiers,
   GameTableNpcs,
   GameTableScenes,
   GameTableSkills,
@@ -222,7 +223,7 @@ function LedgerHeader({ title, meta }: { title: string; meta: string }) {
 export default async function TableOverviewPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
-  const [table, scenesRes, charsRes, itemsRes, advRes, disRes, skillsRes, npcsRes] = await Promise.all([
+  const [table, scenesRes, charsRes, itemsRes, advRes, disRes, skillsRes, npcsRes, modsRes] = await Promise.all([
     api<GameTable>(`/game-table/${id}`).catch(() => null as GameTable | null),
     api<GameTableScenes>(`/game-table-scenes/${id}`).catch(() => ({ table: null, scenes: [] })),
     api<GameTableCharacters>(`/game-table-characters/${id}`).catch(() => ({ table: null, characters: [] })),
@@ -231,6 +232,7 @@ export default async function TableOverviewPage({ params }: { params: Promise<{ 
     api<GameTableDisadvantages>(`/game-table-disadvantages/${id}`).catch(() => ({ table: null, disadvantages: [] })),
     api<GameTableSkills>(`/game-table-skills/${id}`).catch(() => ({ table: null, skills: [] })),
     api<GameTableNpcs>(`/game-table-npcs/${id}`).catch(() => ({ table: null, npcs: [] })),
+    api<GameTableModifiers>(`/game-table-modifiers/${id}`).catch(() => ({ table: null, modifiers: [] })),
   ]);
 
   const scenes = scenesRes?.scenes ?? [];
@@ -311,7 +313,8 @@ export default async function TableOverviewPage({ params }: { params: Promise<{ 
   const places = seenPlaces.size;
 
   const recordTotal =
-    characters.length + items.length + advantages.length + disadvantages.length + skills.length + places;
+    characters.length + items.length + advantages.length + disadvantages.length + skills.length + places +
+    (modsRes?.modifiers?.length ?? 0);
 
   const cells: ArchiveCell[] = [
     { group: "People", name: "Characters", unit: "dossiers", count: characters.length, seal: "#34d399", href: `/table/${id}/characters`, addHref: `/character/new?table_id=${id}`, addLabel: "New character" },
@@ -320,6 +323,7 @@ export default async function TableOverviewPage({ params }: { params: Promise<{ 
     { group: "Traits", name: "Disadvantages", unit: "records", count: disadvantages.length, seal: "#f87171", href: `/table/${id}/disadvantages`, addHref: `/disadvantage/new?table_id=${id}`, addLabel: "New disadvantage" },
     { group: "Study", name: "Skills", unit: "folios", count: skills.length, seal: "#a78bfa", href: `/table/${id}/skills` },
     { group: "Places", name: "Locations", unit: "places", count: places, seal: "#2dd4bf", href: `/table/${id}/locations` },
+    { group: "Conditions", name: "Modifiers", unit: "conditions", count: modsRes?.modifiers?.length ?? 0, seal: "#f472b6", href: `/table/${id}/modifiers` },
   ];
 
   const system = table?.system?.trim();

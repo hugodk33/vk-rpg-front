@@ -19,6 +19,7 @@ import type {
   GameTableModifiers,
   GameTableScenes,
   GameTableSkills,
+  Location,
   Modifier,
   SkillItem,
   TableCharacter,
@@ -142,6 +143,7 @@ interface FormState {
   item_status: string;
   skill_id: string;
   apply_on_roll: number;
+  location_id: string;
 }
 
 const emptyForm = (): FormState => ({
@@ -181,6 +183,7 @@ const emptyForm = (): FormState => ({
   item_status: "",
   skill_id: "",
   apply_on_roll: 0,
+  location_id: "",
 });
 
 const toForm = (m: Modifier, scenes: GameTableScenes | null): FormState => {
@@ -224,6 +227,7 @@ const toForm = (m: Modifier, scenes: GameTableScenes | null): FormState => {
     item_status: m.item_status ?? "",
     skill_id: m.skill_id ?? "",
     apply_on_roll: m.apply_on_roll ? 1 : 0,
+    location_id: m.location_id ?? "",
   };
 };
 
@@ -234,6 +238,7 @@ interface ModifiersPanelProps {
   initialModifiers: Modifier[];
   characters: TableCharacter[];
   scenes: GameTableScenes | null;
+  locations?: Location[];
 }
 
 export default function ModifiersPanel({
@@ -241,6 +246,7 @@ export default function ModifiersPanel({
   initialModifiers,
   characters,
   scenes,
+  locations,
 }: ModifiersPanelProps) {
   const [modifiers, setModifiers] = useState<Modifier[]>(initialModifiers);
   const [form, setForm] = useState<FormState>(emptyForm);
@@ -248,6 +254,12 @@ export default function ModifiersPanel({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<"list" | "form">("list");
+
+  const locationNameOf = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const l of locations ?? []) if (l.id) m.set(String(l.id), l.name || "Unnamed");
+    return (id?: string | null) => (id ? m.get(String(id)) ?? null : null);
+  }, [locations]);
 
   const [skills, setSkills] = useState<SkillItem[]>([]);
   useEffect(() => {
@@ -316,8 +328,8 @@ export default function ModifiersPanel({
   };
 
   const save = async () => {
-    if (!form.character_id) {
-      setError("Pick a character to receive the modifier.");
+    if (!form.character_id && !form.location_id) {
+      setError("Pick a character or a location to receive the modifier.");
       return;
     }
     setSaving(true);
@@ -358,6 +370,7 @@ export default function ModifiersPanel({
       item_status: txt(form.item_status),
       skill_id: txt(form.skill_id),
       apply_on_roll: form.apply_on_roll ? 1 : 0,
+      location_id: form.location_id ? txt(form.location_id) ?? null : null,
     };
     try {
       if (form.id) {
@@ -441,6 +454,7 @@ export default function ModifiersPanel({
               {modifiers.map((m) => {
                 const char = nameOf(m.character_id);
                 const scene = sceneOf(m.scene_id);
+                const locName = locationNameOf(m.location_id);
                 const narration = scene?.narrations.find(
                   (n) => n.id === m.narration_id
                 );
@@ -479,6 +493,12 @@ export default function ModifiersPanel({
                       </p>
                     ) : null}
 
+                    {locName ? (
+                      <p className="font-mono text-[9px] uppercase tracking-widest text-teal-300/80 mt-1.5">
+                        ◍ At {locName}
+                      </p>
+                    ) : null}
+
                     {scene ? (
                       <p className="font-mono text-[9px] uppercase tracking-widest text-zinc-500 mt-1.5">
                         {scene.chapter != null ? `Ch.${scene.chapter}` : "Any"}
@@ -488,6 +508,10 @@ export default function ModifiersPanel({
                           : narration?.id === m.narration_id
                           ? " / this narration"
                           : ""}
+                      </p>
+                    ) : locName ? (
+                      <p className="font-mono text-[9px] uppercase tracking-widest text-zinc-600 mt-1.5">
+                        This place, no story moment
                       </p>
                     ) : (
                       <p className="font-mono text-[9px] uppercase tracking-widest text-zinc-600 mt-1.5">

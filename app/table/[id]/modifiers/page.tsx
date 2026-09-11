@@ -1,6 +1,7 @@
 import { api } from "@/lib/api";
 import type {
   GameTableCharacters,
+  GameTableLocations,
   GameTableModifiers,
   GameTableScenes,
 } from "@/lib/types";
@@ -16,7 +17,7 @@ export default async function TableModifiersPage({
 }) {
   const { id } = await params;
 
-  const [mods, chars, scenes] = await Promise.all([
+  const [mods, chars, scenes, locations] = await Promise.all([
     api<GameTableModifiers>(`/game-table-modifiers/${id}`).catch(() => ({
       table: null,
       modifiers: [],
@@ -28,6 +29,10 @@ export default async function TableModifiersPage({
     api<GameTableScenes>(`/game-table-scenes/${id}`).catch(() => ({
       table: null,
       scenes: [],
+    })),
+    api<GameTableLocations>(`/game-table-locations/${id}`).catch(() => ({
+      table: null,
+      locations: [],
     })),
   ]);
 
@@ -67,6 +72,7 @@ export default async function TableModifiersPage({
         initialModifiers={mods?.modifiers ?? []}
         characters={chars?.characters ?? []}
         scenes={scenes ?? null}
+        locations={locations?.locations ?? []}
       />
     </div>
   );

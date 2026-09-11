@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { absoluteHex } from "@/lib/location";
 import { submitJson } from "@/components/forms/submit";
+import LocationVisibility from "@/components/location/LocationVisibility";
+import LocationModifiers from "@/components/location/LocationModifiers";
 
 /* ============================================================
    The Survey Plate
@@ -69,6 +71,17 @@ const KIND_LABELS: Record<string, string> = {
   battlemap: "Battle Map",
   point: "Point",
 };
+
+/* The plate's ledgers as in-plate views: the Survey itself, then the
+   narrator-only records — Knowledge (who knows this place) and
+   Field conditions (what is true of this place). */
+const PLATE_TABS = [
+  { key: "survey", label: "Survey" },
+  { key: "knowledge", label: "Knowledge" },
+  { key: "conditions", label: "Field conditions" },
+] as const;
+
+type PlateView = (typeof PLATE_TABS)[number]["key"];
 
 function formatScale(m?: number | null): string {
   if (m == null) return "—";
@@ -164,8 +177,9 @@ function SurveyRow({ label, value, emphasize, hex }: { label: string; value?: st
   );
 }
 
-function TerritoryCrumbs({ chain, accent }: { chain: Loc[]; accent: string }) {
+function TerritoryCrumbs({ chain, accent, mode }: { chain: Loc[]; accent: string; mode: "narrator" | "player" }) {
   if (chain.length <= 1) return null;
+  const hrefOf = (id?: string) => (mode === "player" ? `/player/location/${id}` : `/location/${id}`);
   return (
     <nav aria-label="Territory chain" className="exhibit-reveal flex items-center flex-wrap gap-1.5">
       {chain.map((loc, i) => {
@@ -182,7 +196,7 @@ function TerritoryCrumbs({ chain, accent }: { chain: Loc[]; accent: string }) {
             ) : (
               <>
                 <Link
-                  href={`/location/${loc.id}`}
+                  href={hrefOf(loc.id)}
                   className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 hover:text-amber-400 transition-colors"
                 >
                   {label}
@@ -197,10 +211,11 @@ function TerritoryCrumbs({ chain, accent }: { chain: Loc[]; accent: string }) {
   );
 }
 
-export default function LocationPlate({ location, tableId }: { location: Loc; tableId?: string }) {
+export default function LocationPlate({ location, tableId, mode = "narrator" }: { location: Loc; tableId?: string; mode?: "narrator" | "player" }) {
   const router = useRouter();
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [view, setView] = useState<PlateView>("survey");
   const indoor = location.isIndoor != null ? !!location.isIndoor : !!location.is_indoor;
   const env = indoor ? INDOOR : EXTERIOR;
   const accent = env.hex;
@@ -212,15 +227,21 @@ export default function LocationPlate({ location, tableId }: { location: Loc; ta
   const children = location.children ?? [];
   const abs = absoluteHex(location);
   const baseTableId = tableId ?? location.tableId ?? location.table_id;
+  const isPlayer = mode === "player";
+  const showSurvey = isPlayer || view === "survey";
+  const locationHref = (id: string) => (isPlayer ? `/player/location/${id}` : `/location/${id}`);
+  const backHref = isPlayer
+    ? `/player/table/${baseTableId}/locations`
+    : `/table/${baseTableId}/locations`;
 
   return (
     <div className="relative max-w-5xl mx-auto">
       <div className="bg-zinc-900/90 border border-zinc-700/50 shadow-2xl overflow-hidden">
         {/* top strip */}
         <div className="exhibit-reveal flex items-center justify-between px-6 pt-6 lg:px-8">
-          {tableId ? (
+          {baseTableId ? (
             <Link
-              href={`/table/${tableId}/locations`}
+              href={backHref}
               className="inline-flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-widest text-zinc-500 hover:text-amber-400 transition-colors"
             >
               <span aria-hidden>←</span> Back to locations
@@ -235,12 +256,37 @@ export default function LocationPlate({ location, tableId }: { location: Loc; ta
           </div>
         </div>
 
+        {/* in-plate views (narrator only) */}
+        {!isPlayer ? (
+          <div role="tablist" aria-label="Survey plate views" className="mt-4 flex items-center gap-1 border-b border-zinc-700/40 px-6 lg:px-8">
+            {PLATE_TABS.map((t) => (
+              <button
+                key={t.key}
+                role="tab"
+                type="button"
+                aria-selected={view === t.key}
+                onClick={() => setView(t.key)}
+                className={`relative px-3 py-2 font-mono text-[10px] uppercase tracking-widest transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-800/60 rounded-md ${
+                  view === t.key ? "text-zinc-100" : "text-zinc-500 hover:text-zinc-300"
+                }`}
+              >
+                {t.label}
+                {view === t.key ? (
+                  <span aria-hidden className="absolute inset-x-2 bottom-0 h-0.5 rounded-full" style={{ background: accent }} />
+                ) : null}
+              </button>
+            ))}
+          </div>
+        ) : null}
+
+        {showSurvey ? (
+        <>
         {/* territory chain */}
         <div className="px-6 lg:px-8 mt-4">
           <div className="flex items-center justify-between gap-4">
-            <TerritoryCrumbs chain={chain} accent={accent} />
+            <TerritoryCrumbs chain={chain} accent={accent} mode={isPlayer ? "player" : "narrator"} />
             <div className="flex items-center gap-3 shrink-0">
-              {location.id ? (
+              {location.id && !isPlayer ? (
                 <Link
                   href={`/location/${location.id}/edit`}
                   className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 hover:text-amber-400 transition-colors"
@@ -248,7 +294,7 @@ export default function LocationPlate({ location, tableId }: { location: Loc; ta
                   Edit
                 </Link>
               ) : null}
-              {baseTableId && location.id ? (
+              {baseTableId && location.id && !isPlayer ? (
                 <Link
                   href={`/table/${baseTableId}/locations/new?parent_id=${location.id}`}
                   className="font-mono text-[10px] tracking-widest uppercase text-amber-500/80 hover:text-amber-400 transition-colors"
@@ -256,7 +302,7 @@ export default function LocationPlate({ location, tableId }: { location: Loc; ta
                   ✦ Subdivision
                 </Link>
               ) : null}
-              {location.id ? (
+              {location.id && !isPlayer ? (
                 children.length > 0 ? (
                   <span
                     title="Esta divisão contém subdivisões — remova-as primeiro."
@@ -395,7 +441,7 @@ export default function LocationPlate({ location, tableId }: { location: Loc; ta
                   {children.map((child) => (
                     <Link
                       key={child.id}
-                      href={`/location/${child.id}`}
+                      href={locationHref(child.id!)}
                       className="group flex items-center justify-between gap-3 bg-zinc-800/40 hover:bg-zinc-800/70 border border-zinc-700/40 hover:border-zinc-600/60 rounded-lg px-4 py-2.5 transition-all"
                     >
                       <div className="flex items-center gap-3 min-w-0">
@@ -444,6 +490,18 @@ export default function LocationPlate({ location, tableId }: { location: Loc; ta
             </div>
           </div>
         </div>
+        </>
+        ) : null}
+
+        {!isPlayer && location.id && view !== "survey" ? (
+          <div className="px-6 py-8 lg:px-8" role="tabpanel">
+            {view === "knowledge" ? (
+              <LocationVisibility locationId={location.id} tableId={baseTableId} />
+            ) : (
+              <LocationModifiers locationId={location.id} tableId={baseTableId} />
+            )}
+          </div>
+        ) : null}
       </div>
     </div>
   );
