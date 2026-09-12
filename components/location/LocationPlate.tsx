@@ -7,6 +7,8 @@ import { absoluteHex } from "@/lib/location";
 import { submitJson } from "@/components/forms/submit";
 import LocationVisibility from "@/components/location/LocationVisibility";
 import LocationModifiers from "@/components/location/LocationModifiers";
+import LocationMap from "@/components/location/LocationMap";
+import LocationShop from "@/components/location/LocationShop";
 
 /* ============================================================
    The Survey Plate
@@ -53,6 +55,8 @@ interface Loc {
   other?: string;
   hex?: LocHex;
   isBattlemap?: boolean;
+  shopName?: string | null;
+  shop_name?: string;
   ancestors?: Loc[];
   children?: Loc[];
 }
@@ -72,13 +76,17 @@ const KIND_LABELS: Record<string, string> = {
   point: "Point",
 };
 
-/* The plate's ledgers as in-plate views: the Survey itself, then the
-   narrator-only records — Knowledge (who knows this place) and
-   Field conditions (what is true of this place). */
+/* The plate's views: the Survey itself, the narrator-only records
+   (Knowledge — who knows this place; Field conditions — what is true
+   of this place), and two conditional tab kinds that only appear when
+   the location justifies them: Map (a local tactical grid) and Shop
+   (a named place of commerce, with its staff and stock). */
 const PLATE_TABS = [
   { key: "survey", label: "Survey" },
   { key: "knowledge", label: "Knowledge" },
   { key: "conditions", label: "Field conditions" },
+  { key: "map", label: "Map" },
+  { key: "shop", label: "Shop" },
 ] as const;
 
 type PlateView = (typeof PLATE_TABS)[number]["key"];
@@ -228,7 +236,15 @@ export default function LocationPlate({ location, tableId, mode = "narrator" }: 
   const abs = absoluteHex(location);
   const baseTableId = tableId ?? location.tableId ?? location.table_id;
   const isPlayer = mode === "player";
-  const showSurvey = isPlayer || view === "survey";
+  const isShop = !!(location.shopName ?? location.shop_name);
+  const showSurvey = view === "survey";
+  const tabs = PLATE_TABS.filter((t) => {
+    if (t.key === "survey") return true;
+    if (t.key === "knowledge" || t.key === "conditions") return !isPlayer;
+    if (t.key === "map") return isBattlemap;
+    if (t.key === "shop") return isShop;
+    return false;
+  });
   const locationHref = (id: string) => (isPlayer ? `/player/location/${id}` : `/location/${id}`);
   const backHref = isPlayer
     ? `/player/table/${baseTableId}/locations`
@@ -252,14 +268,14 @@ export default function LocationPlate({ location, tableId, mode = "narrator" }: 
           <div className="flex items-center gap-3 text-[10px] font-mono uppercase tracking-widest text-zinc-500">
             {location.table_title ? <span className="hidden sm:inline">{location.table_title}</span> : null}
             <span className="hidden sm:inline text-zinc-700">/</span>
-            <span>Survey</span>
+            <span>{tabs.find((t) => t.key === view)?.label ?? "Survey"}</span>
           </div>
         </div>
 
-        {/* in-plate views (narrator only) */}
-        {!isPlayer ? (
+        {/* in-plate views */}
+        {tabs.length > 1 ? (
           <div role="tablist" aria-label="Survey plate views" className="mt-4 flex items-center gap-1 border-b border-zinc-700/40 px-6 lg:px-8">
-            {PLATE_TABS.map((t) => (
+            {tabs.map((t) => (
               <button
                 key={t.key}
                 role="tab"
@@ -493,13 +509,32 @@ export default function LocationPlate({ location, tableId, mode = "narrator" }: 
         </>
         ) : null}
 
-        {!isPlayer && location.id && view !== "survey" ? (
+        {view === "knowledge" && !isPlayer && location.id ? (
           <div className="px-6 py-8 lg:px-8" role="tabpanel">
-            {view === "knowledge" ? (
-              <LocationVisibility locationId={location.id} tableId={baseTableId} />
-            ) : (
-              <LocationModifiers locationId={location.id} tableId={baseTableId} />
-            )}
+            <LocationVisibility locationId={location.id} tableId={baseTableId} />
+          </div>
+        ) : null}
+
+        {view === "conditions" && !isPlayer && location.id ? (
+          <div className="px-6 py-8 lg:px-8" role="tabpanel">
+            <LocationModifiers locationId={location.id} tableId={baseTableId} />
+          </div>
+        ) : null}
+
+        {view === "map" && isBattlemap ? (
+          <div className="px-6 py-8 lg:px-8" role="tabpanel">
+            <LocationMap hex={hex} abs={abs} accent={accent} />
+          </div>
+        ) : null}
+
+        {view === "shop" && isShop && location.id ? (
+          <div className="px-6 py-8 lg:px-8" role="tabpanel">
+            <LocationShop
+              locationId={location.id}
+              tableId={baseTableId}
+              shopName={location.shopName ?? location.shop_name}
+              accent={accent}
+            />
           </div>
         ) : null}
       </div>

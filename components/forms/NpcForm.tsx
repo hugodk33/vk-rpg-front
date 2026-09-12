@@ -1,15 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { api } from "@/lib/api";
 import { submitJson } from "./submit";
-import { cancelCls, disabledSubmitCls, inputCls, labelCls, submitCls } from "./formStyles";
-import type { NpcViewer } from "@/lib/types";
+import { cancelCls, inputCls, labelCls, submitCls } from "./formStyles";
+import type { GameTableLocations, NpcViewer } from "@/lib/types";
 
 export interface NpcFormProps {
   tableId?: string;
   tables?: Array<{ id: string; title: string }>;
   initial?: NpcViewer;
+  defaultLocationId?: string;
 }
 
 const STATUSES = [
@@ -26,12 +28,14 @@ const ATTRS: Array<{ key: "st" | "dx" | "iq" | "ht"; label: string }> = [
   { key: "ht", label: "HT" },
 ];
 
-export default function NpcForm({ tableId, tables, initial }: NpcFormProps) {
+export default function NpcForm({ tableId, tables, initial, defaultLocationId }: NpcFormProps) {
   const router = useRouter();
   const isEdit = !!initial;
   const sheet = initial?.character?.sheet;
 
   const [currentTableId, setCurrentTableId] = useState(tableId ?? initial?.table?.id ?? "");
+  const [locationId, setLocationId] = useState(initial?.npc?.location_id ?? defaultLocationId ?? "");
+  const [locationOptions, setLocationOptions] = useState<Array<{ id: string; name: string }>>([]);
   const [name, setName] = useState(sheet?.name ?? initial?.character?.name ?? "");
   const [points, setPoints] = useState(sheet?.points != null ? String(sheet.points) : "");
   const [status, setStatus] = useState(initial?.npc?.status ?? "neutral");
@@ -44,6 +48,23 @@ export default function NpcForm({ tableId, tables, initial }: NpcFormProps) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (!currentTableId) return;
+    let cancel = false;
+    api<GameTableLocations>(`/game-table-locations/${currentTableId}`)
+      .then((d) => {
+        if (cancel) return;
+        setLocationOptions((d.locations ?? []).map((l) => ({ id: l.id, name: l.name })));
+      })
+      .catch(() => {
+        if (cancel) return;
+        setLocationOptions([]);
+      });
+    return () => {
+      cancel = true;
+    };
+  }, [currentTableId]);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!currentTableId) {
@@ -52,29 +73,37 @@ export default function NpcForm({ tableId, tables, initial }: NpcFormProps) {
     }
     setSaving(true);
     setError(null);
-    const payload = {
-      table_id: currentTableId,
-      user_id: null,
-      status,
-      sheet: {
-        name,
-        bio: "",
-        backstory: "",
-        points: points === "" ? 0 : Number(points),
-        hp: hp === "" ? 10 : Number(hp),
-        st: st === "" ? 10 : Number(st),
-        dx: dx === "" ? 10 : Number(dx),
-        iq: iq === "" ? 10 : Number(iq),
-        ht: ht === "" ? 10 : Number(ht),
-        fatigue: fatigue === "" ? 10 : Number(fatigue),
-        encumbrance: "None",
-      },
-      advantages: [],
-      disadvantages: [],
-      skills: [],
-    };
+    const payload = isEdit
+      ? {
+          id: initial!.npc.id,
+          character_id: initial!.character.id,
+          status,
+          location_id: locationId || null,
+        }
+      : {
+          table_id: currentTableId,
+          user_id: null,
+          status,
+          location_id: locationId || null,
+          sheet: {
+            name,
+            bio: "",
+            backstory: "",
+            points: points === "" ? 0 : Number(points),
+            hp: hp === "" ? 10 : Number(hp),
+            st: st === "" ? 10 : Number(st),
+            dx: dx === "" ? 10 : Number(dx),
+            iq: iq === "" ? 10 : Number(iq),
+            ht: ht === "" ? 10 : Number(ht),
+            fatigue: fatigue === "" ? 10 : Number(fatigue),
+            encumbrance: "None",
+          },
+          advantages: [],
+          disadvantages: [],
+          skills: [],
+        };
     try {
-      await submitJson<{ success?: boolean }>("/api/game-table-npc", "POST", payload);
+      await submitJson<{ success?: boolean }>("/api/game-table-npc", isEdit ? "PUT" : "POST", payload);
       router.push(`/table/${currentTableId}/scenes`);
       router.refresh();
     } catch (err: unknown) {
@@ -91,10 +120,9 @@ export default function NpcForm({ tableId, tables, initial }: NpcFormProps) {
         </h1>
 
         {isEdit ? (
-          <div className="mb-6 rounded-lg bg-zinc-900 border border-zinc-600 px-4 py-3 text-sm text-zinc-400">
-            O backend ainda não expõe rota de edição de NPC (PUT). A edição está indisponível por
-            enquanto — o salvamento está desabilitado.
-          </div>
+          <p className="text-[11px] text-zinc-500 mb-4">
+            A edição atual permite alterar Status e Local. Para mudar ficha/atributos, exclua e recrie o NPC.
+          </p>
         ) : null}
 
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -124,7 +152,7 @@ export default function NpcForm({ tableId, tables, initial }: NpcFormProps) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className={labelCls}>Nome</label>
-                <input value={name} onChange={(e) => setName(e.target.value)} required className={inputCls} />
+                <input value={name} onChange={(e) => setName(e.target.value)} required disabled={isEdit} className={inputCls} />
               </div>
               <div>
                 <label className={labelCls}>Pontos</label>
@@ -132,6 +160,7 @@ export default function NpcForm({ tableId, tables, initial }: NpcFormProps) {
                   type="number"
                   value={points}
                   onChange={(e) => setPoints(e.target.value)}
+                  disabled={isEdit}
                   className={inputCls}
                 />
               </div>
@@ -146,6 +175,22 @@ export default function NpcForm({ tableId, tables, initial }: NpcFormProps) {
                 ))}
               </select>
             </div>
+            {locationOptions.length > 0 ? (
+              <div className="mt-4">
+                <label className={labelCls}>Local (opcional)</label>
+                <select value={locationId} onChange={(e) => setLocationId(e.target.value)} className={inputCls}>
+                  <option value="">— Nenhum local —</option>
+                  {locationOptions.map((l) => (
+                    <option key={l.id} value={l.id}>
+                      {l.name}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[11px] text-zinc-600 mt-1">
+                  Vincula o NPC a um local — ex: a equipe de uma loja aparece na aba “Loja”.
+                </p>
+              </div>
+            ) : null}
           </div>
 
           <div>
@@ -166,6 +211,7 @@ export default function NpcForm({ tableId, tables, initial }: NpcFormProps) {
                       type="number"
                       value={value}
                       onChange={(e) => setters[key](e.target.value)}
+                      disabled={isEdit}
                       className={`${inputCls} text-center`}
                     />
                   </div>
@@ -177,7 +223,7 @@ export default function NpcForm({ tableId, tables, initial }: NpcFormProps) {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className={labelCls}>HP</label>
-              <input type="number" value={hp} onChange={(e) => setHp(e.target.value)} className={inputCls} />
+              <input type="number" value={hp} onChange={(e) => setHp(e.target.value)} disabled={isEdit} className={inputCls} />
             </div>
             <div>
               <label className={labelCls}>FP</label>
@@ -185,6 +231,7 @@ export default function NpcForm({ tableId, tables, initial }: NpcFormProps) {
                 type="number"
                 value={fatigue}
                 onChange={(e) => setFatigue(e.target.value)}
+                disabled={isEdit}
                 className={inputCls}
               />
             </div>
@@ -193,15 +240,9 @@ export default function NpcForm({ tableId, tables, initial }: NpcFormProps) {
           {error && <p className="text-red-400 text-sm">{error}</p>}
 
           <div className="flex items-center gap-3 pt-2">
-            {isEdit ? (
-              <button type="button" disabled className={disabledSubmitCls}>
-                Salvar Alterações
-              </button>
-            ) : (
-              <button type="submit" disabled={saving} className={`${submitCls} disabled:opacity-50`}>
-                {saving ? "Salvando..." : "Criar NPC"}
-              </button>
-            )}
+            <button type="submit" disabled={saving} className={`${submitCls} disabled:opacity-50`}>
+              {saving ? "Salvando..." : isEdit ? "Salvar Alterações" : "Criar NPC"}
+            </button>
             <a href={currentTableId ? `/table/${currentTableId}/scenes` : "/narrator"} className={cancelCls}>
               Cancel
             </a>

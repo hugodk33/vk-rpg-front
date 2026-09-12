@@ -7,9 +7,10 @@ export const dynamic = "force-dynamic";
 export default async function NewNpcPage({
   searchParams,
 }: {
-  searchParams: Promise<{ table_id?: string }>;
+  searchParams: Promise<{ table_id?: string; table?: string; location?: string }>;
 }) {
-  const { table_id } = await searchParams;
+  const sp = await searchParams;
+  const tableId = sp.table_id ?? sp.table;
 
   let tables: Array<{ id: string; title: string }> = [];
   try {
@@ -19,5 +20,5 @@ export default async function NewNpcPage({
     tables = [];
   }
 
-  return <NpcForm tableId={table_id} tables={tables} />;
+  return <NpcForm tableId={tableId} tables={tables} defaultLocationId={sp.location} />;
 }

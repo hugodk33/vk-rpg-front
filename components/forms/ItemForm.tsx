@@ -1,16 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { api } from "@/lib/api";
 import { submitJson } from "./submit";
 import { cancelCls, inputCls, labelCls, submitCls } from "./formStyles";
 import { FIT_OPTIONS } from "@/lib/fit";
-import type { ArmorData, Item, Weapon, WeaponAttack } from "@/lib/types";
+import type { ArmorData, GameTableLocations, Item, Weapon, WeaponAttack } from "@/lib/types";
 
 export interface ItemFormProps {
   initial?: Item;
   tableId?: string;
   tables?: Array<{ id: string; title: string }>;
+  defaultLocationId?: string;
 }
 
 const KINDS: Array<{ value: string; label: string; desc: string }> = [
@@ -69,11 +71,13 @@ function emptyAttack(): WeaponAttack {
   };
 }
 
-export default function ItemForm({ initial, tableId, tables }: ItemFormProps) {
+export default function ItemForm({ initial, tableId, tables, defaultLocationId }: ItemFormProps) {
   const router = useRouter();
   const isEdit = !!initial;
 
   const [currentTableId, setCurrentTableId] = useState(tableId ?? initial?.table_id ?? "");
+  const [locationId, setLocationId] = useState(initial?.location_id ?? defaultLocationId ?? "");
+  const [locationOptions, setLocationOptions] = useState<Array<{ id: string; name: string }>>([]);
   const [name, setName] = useState(initial?.name ?? "");
   const [kind, setKind] = useState(initial?.kind ?? "equipment");
   const [category, setCategory] = useState(initial?.category ?? "");
@@ -107,6 +111,23 @@ export default function ItemForm({ initial, tableId, tables }: ItemFormProps) {
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!currentTableId) return;
+    let cancel = false;
+    api<GameTableLocations>(`/game-table-locations/${currentTableId}`)
+      .then((d) => {
+        if (cancel) return;
+        setLocationOptions((d.locations ?? []).map((l) => ({ id: l.id, name: l.name })));
+      })
+      .catch(() => {
+        if (cancel) return;
+        setLocationOptions([]);
+      });
+    return () => {
+      cancel = true;
+    };
+  }, [currentTableId]);
 
   function setAttackField(index: number, patch: Partial<WeaponAttack>) {
     setAttacks((prev) => prev.map((a, i) => (i === index ? { ...a, ...patch } : a)));
@@ -197,6 +218,7 @@ export default function ItemForm({ initial, tableId, tables }: ItemFormProps) {
     const payload = {
       ...(isEdit && initial ? { id: initial.id } : {}),
       table_id: currentTableId,
+      location_id: locationId || null,
       name,
       kind,
       category,
@@ -245,6 +267,23 @@ export default function ItemForm({ initial, tableId, tables }: ItemFormProps) {
                   </option>
                 ))}
               </select>
+            </div>
+          ) : null}
+
+          {locationOptions.length > 0 ? (
+            <div>
+              <label className={labelCls}>Local (opcional)</label>
+              <select value={locationId} onChange={(e) => setLocationId(e.target.value)} className={inputCls}>
+                <option value="">— Nenhum local —</option>
+                {locationOptions.map((l) => (
+                  <option key={l.id} value={l.id}>
+                    {l.name}
+                  </option>
+                ))}
+              </select>
+              <p className="text-[11px] text-zinc-600 mt-1">
+                Vincula o item a um local — ex: uma loja exibe na aba “Loja” tudo o que aponta pra ela.
+              </p>
             </div>
           ) : null}
 

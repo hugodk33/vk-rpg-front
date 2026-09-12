@@ -192,8 +192,8 @@ function Plate({
 }) {
   const hasChildren = (node.children?.length ?? 0) > 0;
   const battle = !!node.isBattlemap;
-  const inner = (
-    <>
+  return (
+    <div className="group relative flex h-full flex-col rounded-xl border border-zinc-700/40 bg-zinc-800/40 px-4 py-3.5 transition-all hover:bg-zinc-800/70 hover:border-zinc-600/60">
       <div className="flex items-start justify-between gap-2">
         <svg className="w-4 h-4 shrink-0 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.6" d={kindIcon(node.kind)} />
@@ -218,31 +218,29 @@ function Plate({
       </p>
       {trail ? <div className="mt-1"><Trail chain={trail} /></div> : null}
 
-      <div className="mt-3 flex items-center justify-between gap-2 border-t border-zinc-700/40 pt-2.5">
-        <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-600">
-          {formatScale(node.hex?.sizeM)}
-        </span>
-        <span
-          className={`font-mono text-[10px] tracking-widest uppercase transition-colors ${
-            hasChildren ? "text-teal-300/90 group-hover:text-teal-200" : "text-zinc-600 group-hover:text-zinc-400"
-          }`}
-        >
-          {hasChildren ? "Zoom in" : "Open map"}
-        </span>
+      <div className="mt-3 font-mono text-[10px] tracking-widest uppercase text-zinc-600">
+        {formatScale(node.hex?.sizeM)}
       </div>
-    </>
-  );
 
-  const base = "group relative block w-full text-left rounded-xl border border-zinc-700/40 bg-zinc-800/40 px-4 py-3.5 transition-all hover:bg-zinc-800/70 hover:border-zinc-600/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600/60";
-
-  return hasChildren ? (
-    <button type="button" onClick={() => onZoom(node.id)} className={base}>
-      {inner}
-    </button>
-  ) : (
-    <Link href={`/location/${node.id}`} className={base}>
-      {inner}
-    </Link>
+      <div className="mt-3 flex items-center gap-2 border-t border-zinc-700/40 pt-2.5 mt-auto">
+        <button
+          type="button"
+          onClick={() => onZoom(node.id)}
+          disabled={!hasChildren}
+          title={hasChildren ? "Abrir subdivisões" : "Esta division não contém subdivisões"}
+          className="flex-1 inline-flex items-center justify-center gap-1 rounded-md border border-teal-400/25 bg-teal-400/5 px-2 py-1.5 font-mono text-[10px] tracking-widest uppercase text-teal-300/90 transition-colors hover:bg-teal-400/10 hover:text-teal-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600/60 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-teal-400/5 disabled:hover:text-teal-300/90"
+        >
+          ◱ Sublocations
+        </button>
+        <Link
+          href={`/location/${node.id}`}
+          title={`Abrir ${node.name || "location"} em página própria`}
+          className="flex-1 inline-flex items-center justify-center gap-1 rounded-md border border-zinc-700/50 bg-zinc-800/60 px-2 py-1.5 font-mono text-[10px] tracking-widest uppercase text-zinc-300 transition-colors hover:border-amber-700/50 hover:text-amber-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600/60"
+        >
+          Open →
+        </Link>
+      </div>
+    </div>
   );
 }
 

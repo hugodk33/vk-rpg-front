@@ -50,6 +50,7 @@ export default function LocationForm({
   const [dimensions, setDimensions] = useState(initial?.dimensions ?? "");
   const [description, setDescription] = useState(initial?.description ?? "");
   const [other, setOther] = useState(initial?.other ?? "");
+  const [shopName, setShopName] = useState(initial?.shopName ?? "");
   const [indoor, setIndoor] = useState(!!initial?.isIndoor);
   const [sizeM, setSizeM] = useState(h?.sizeM != null ? String(h.sizeM) : "");
   const [width, setWidth] = useState(h?.width != null ? String(h.width) : "");
@@ -126,6 +127,7 @@ export default function LocationForm({
       dimensions,
       description,
       other,
+      shop_name: shopName.trim() || null,
       is_indoor: indoor ? 1 : 0,
       hex: {
         sizeM: sizeNum,
@@ -291,6 +293,20 @@ export default function LocationForm({
                 <input value={dimensions} onChange={(e) => setDimensions(e.target.value)} className={inputCls} />
               </div>
             </div>
+          </div>
+
+          <div className="space-y-3 border border-zinc-700/40 rounded-xl p-4 bg-zinc-800/30">
+            <h3 className="text-sm font-semibold text-zinc-300 uppercase tracking-wider">Loja (opcional)</h3>
+            <p className="text-[11px] text-zinc-600">
+              Se preenchido, o local vira uma loja e a ficha ganha a aba “Loja”, com os NPCs da
+              equipe e o estoque de itens vinculados a ele.
+            </p>
+            <input
+              value={shopName}
+              onChange={(e) => setShopName(e.target.value)}
+              className={inputCls}
+              placeholder="ex: A Flecha de Bronze"
+            />
           </div>
 
           <div className="space-y-4">

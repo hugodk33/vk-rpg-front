@@ -281,6 +281,7 @@ export interface Location {
   other?: string
   hex?: LocationHexGrid
   isBattlemap?: boolean
+  shopName?: string | null
   ancestors?: Location[]
   children?: Location[]
 }
@@ -415,6 +416,7 @@ export interface GameTableCharacters {
 export interface TableNpc {
   id: string
   character_id?: string
+  location_id?: string
   name?: string
   status?: string
 }
@@ -493,7 +495,7 @@ export interface CharacterViewer {
 }
 
 export interface NpcViewer {
-  npc: { id: string; status: string }
+  npc: { id: string; status: string; location_id?: string | null }
   character: TableCharacter
   table: GameTable | null
   peculiarities: Peculiarity[]
@@ -518,6 +520,7 @@ export interface SkillItem {
 export interface Item {
   id: string
   table_id?: string
+  location_id?: string
   name: string
   kind?: string
   category?: string
