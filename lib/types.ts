@@ -445,6 +445,7 @@ export interface GameTableLocations {
   table: GameTable | null
   locations: Location[]
   tree?: Location[]
+  defaultLocationId?: string | null
 }
 
 export interface GameTableNpcs {

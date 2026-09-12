@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { GameTableLocations, Location } from "@/lib/types";
 import TableTabs from "@/components/TableTabs";
 import { api } from "@/lib/api";
+import { submitJson } from "@/components/forms/submit";
 
 const KIND_LABELS: Record<string, string> = {
   world: "World",
@@ -184,11 +185,17 @@ function Trail({ chain }: { chain: Location[] }) {
 function Plate({
   node,
   onZoom,
+  onSetDefault,
   trail,
+  isDefault = false,
+  busy = false,
 }: {
   node: Location;
   onZoom: (id: string) => void;
+  onSetDefault: (id: string) => void;
   trail?: Location[];
+  isDefault?: boolean;
+  busy?: boolean;
 }) {
   const hasChildren = (node.children?.length ?? 0) > 0;
   const battle = !!node.isBattlemap;
@@ -199,6 +206,22 @@ function Plate({
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.6" d={kindIcon(node.kind)} />
         </svg>
         <div className="flex items-center gap-1.5 shrink-0">
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => onSetDefault(node.id)}
+            title={isDefault ? "Location padrão dos players — clique para remover" : "Definir como location padrão dos players"}
+            className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 font-mono text-[9px] tracking-widest uppercase transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-600/60 disabled:opacity-40 ${
+              isDefault
+                ? "bg-amber-400/15 text-amber-300 hover:bg-amber-400/25"
+                : "text-zinc-600 hover:text-amber-300/80 hover:bg-amber-400/10"
+            }`}
+          >
+            <svg className="w-3 h-3" viewBox="0 0 24 24" fill={isDefault ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+<path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+          </svg>
+          <span>Padrão</span>
+        </button>
           {battle ? (
             <span className="font-mono text-[9px] tracking-widest uppercase px-1.5 py-0.5 rounded-full bg-amber-400/10 text-amber-400">
               Battle
@@ -244,7 +267,7 @@ function Plate({
   );
 }
 
-function CurrentMapStrip({ node }: { node: Location }) {
+function CurrentMapStrip({ node, isDefault = false }: { node: Location; isDefault?: boolean }) {
   const hex = node.hex;
   return (
     <div className="flex items-center gap-3 rounded-xl border border-teal-400/20 bg-teal-400/[0.04] px-4 py-3">
@@ -255,6 +278,14 @@ function CurrentMapStrip({ node }: { node: Location }) {
           <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 hidden sm:inline">
             {KIND_LABELS[node.kind ?? "site"] ?? node.kind ?? "Location"} · {formatScale(hex?.sizeM)}
           </span>
+          {isDefault ? (
+            <span className="inline-flex items-center gap-1 font-mono text-[9px] tracking-widest uppercase px-1.5 py-0.5 rounded-full bg-amber-400/15 text-amber-300 shrink-0">
+              <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1.8">
+                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+              </svg>
+              Padrão
+            </span>
+          ) : null}
         </div>
         <div className="font-mono text-[10px] tracking-widest uppercase text-zinc-600 mt-0.5 truncate">
           {node.region ?? node.subRegion ?? node.address ?? node.country ?? "—"}
@@ -281,11 +312,16 @@ export default function TableLocationsPage({ params }: { params: Promise<{ id: s
   const [data, setData] = useState<GameTableLocations | null>(null);
   const [search, setSearch] = useState("");
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [defaultId, setDefaultId] = useState<string | null>(null);
+  const [settingDefault, setSettingDefault] = useState(false);
   const platesRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     api<GameTableLocations>(`/game-table-locations/${id}`)
-      .then(setData)
+      .then((d) => {
+        setData(d);
+        setDefaultId(d?.defaultLocationId ?? null);
+      })
       .catch(() => setData(null));
   }, [id]);
 
@@ -306,6 +342,24 @@ export default function TableLocationsPage({ params }: { params: Promise<{ id: s
     setActiveId(nodeId);
     const reduced = typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     platesRef.current?.scrollIntoView({ block: "start", behavior: reduced ? "auto" : "smooth" });
+  };
+
+  const toggleDefault = async (nodeId: string) => {
+    if (settingDefault) return;
+    setSettingDefault(true);
+    try {
+      const next = defaultId === nodeId ? null : nodeId;
+      const res = await submitJson<{ success: boolean; defaultLocationId: string | null }>(
+        "/api/game-table-locations/default",
+        "POST",
+        { tableId: id, locationId: next ?? null }
+      );
+      setDefaultId(res.defaultLocationId ?? null);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSettingDefault(false);
+    }
   };
 
   const plates = active ? (active.node.children ?? []) : (data?.tree ?? []);
@@ -361,7 +415,15 @@ export default function TableLocationsPage({ params }: { params: Promise<{ id: s
         ) : (
           <div ref={platesRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3" aria-live="polite">
             {filtered.map(({ node, chain }) => (
-              <Plate key={node.id} node={node} onZoom={zoom} trail={chain.slice(0, -1)} />
+              <Plate
+                key={node.id}
+                node={node}
+                onZoom={zoom}
+                onSetDefault={toggleDefault}
+                trail={chain.slice(0, -1)}
+                isDefault={defaultId === node.id}
+                busy={settingDefault}
+              />
             ))}
           </div>
         )
@@ -375,20 +437,24 @@ export default function TableLocationsPage({ params }: { params: Promise<{ id: s
             Multiple worlds — open one to survey it
           </p>
           <div ref={platesRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {plates.map((node) => <Plate key={node.id} node={node} onZoom={zoom} />)}
+            {plates.map((node) => (
+              <Plate key={node.id} node={node} onZoom={zoom} onSetDefault={toggleDefault} isDefault={defaultId === node.id} busy={settingDefault} />
+            ))}
           </div>
         </div>
       ) : (
         <div ref={platesRef} className="space-y-4">
           {active ? <ZoomRuler chain={active.chain} onJump={zoom} /> : null}
-          {active ? <CurrentMapStrip node={active.node} /> : null}
+          {active ? <CurrentMapStrip node={active.node} isDefault={defaultId === active.node.id} /> : null}
           {plates.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-zinc-500 text-sm">No divisions inside {active?.node.name ?? "this territory"} yet.</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {plates.map((node) => <Plate key={node.id} node={node} onZoom={zoom} />)}
+{plates.map((node) => (
+            <Plate key={node.id} node={node} onZoom={zoom} onSetDefault={toggleDefault} isDefault={defaultId === node.id} busy={settingDefault} />
+          ))}
             </div>
           )}
         </div>
