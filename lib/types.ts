@@ -331,6 +331,10 @@ export interface GameTableModifiers {
 }
 
 export interface CharacterHistoryEvent extends Modifier {
+  kind?: "consequence" | "test"
+  test_kind?: string | null
+  test_skill?: string | null
+  test_skill_name?: string | null
   narration_moment?: number | null
   narration_title?: string | null
   narration_body?: string | null
@@ -340,7 +344,20 @@ export interface CharacterHistoryEvent extends Modifier {
   action_description?: string | null
   action_result?: string | null
   action_dice_roll?: string | null
+  state_before?: CharacterStatsSnapshot
+  state_after?: CharacterStatsSnapshot
 }
+
+export interface CharacterStatsSnapshot {
+  hp?: number
+  st?: number
+  dx?: number
+  iq?: number
+  ht?: number
+  fatigue?: number
+}
+
+export type CharacterHistoryBaseline = CharacterStatsSnapshot
 
 export interface CharacterHistory {
   character: {
@@ -349,6 +366,7 @@ export interface CharacterHistory {
     user?: { id?: string; username?: string | null } | null
   }
   table?: GameTable | null
+  baseline?: CharacterHistoryBaseline
   events: CharacterHistoryEvent[]
 }
 

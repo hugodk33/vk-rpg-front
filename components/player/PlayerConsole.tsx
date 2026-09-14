@@ -14,11 +14,13 @@ import type {
 import TurnPanel from "@/components/player/PlayerSession";
 import SceneTimeline from "@/components/scenes/SceneTimeline";
 import CharacterSheet from "@/components/character/CharacterSheet";
+import CharacterJourney from "@/components/character/CharacterJourney";
 
 /* ============================================================
    Player Console — one panel per character.
    A single tab bar unifies the player's flow:
      · SESSION  — the scene console (queue + dice, turn-gated).
+     · JOURNEY  — the character's own evolution, moment by moment.
      · CHRONICLE— the table's timeline, read-only.
      · TABLE    — the table's sandbox: items, npcs, skills,
                   advantages and disadvantages (read-only).
@@ -27,7 +29,7 @@ import CharacterSheet from "@/components/character/CharacterSheet";
    around waiting for their moment.
    ============================================================ */
 
-export type PlayerTab = "turn" | "chronicle" | "table" | "sheet";
+export type PlayerTab = "turn" | "journey" | "chronicle" | "table" | "sheet";
 
 interface PlayerConsoleProps {
   character: TableCharacter | null;
@@ -64,6 +66,7 @@ const TABLE_LINKS: Array<{ key: string; label: string; path: string }> = [
 
 const TABS: Array<{ key: PlayerTab; label: string; icon: string }> = [
   { key: "turn", label: "Session", icon: "M4 5a2 2 0 012-2h12a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm0 8a2 2 0 012-2h12a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm0 8a2 2 0 012-2h6a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2z" },
+  { key: "journey", label: "Journey", icon: "M3 3v18h18M7 14l4-5 3 3 5-8" },
   { key: "chronicle", label: "Chronicle", icon: "M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" },
   { key: "table", label: "Table", icon: "M3 6h18v12H3V6zm0 0V4m0 2v2m18-2V4m0 2v2M3 10h18M3 14h18M3 18h18M7 4v2M12 4v2M17 4v2" },
   { key: "sheet", label: "Sheet", icon: "M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 16a3.001 3.001 0 00-2.83-2M15 11a2 2 0 11-4 0 2 2 0 014 0z" },
@@ -141,6 +144,20 @@ export default function PlayerConsole({
 
       {tab === "chronicle" ? (
         <SceneTimeline table={table} scenes={scenes} showEditButtons={false} role="player" />
+      ) : null}
+
+      {tab === "journey" ? (
+        <div className="rounded-2xl border border-zinc-700/50 bg-zinc-900/40 overflow-hidden">
+          <div className="px-5 py-6">
+            <p className="font-mono text-[10px] tracking-widest uppercase text-blue-300/90">Your journey</p>
+            <h2 className="text-lg font-bold text-zinc-100 mt-1">Evolution</h2>
+            <p className="text-sm text-zinc-400 mt-1.5 max-w-xl mb-5">
+              Each mark is a moment the dice or the story moved you — HP, FP and attributes
+              tracked before and after, chapter by chapter.
+            </p>
+            <CharacterJourney characterId={character?.id ?? ""} selectedMoment={null} />
+          </div>
+        </div>
       ) : null}
 
       {tab === "table" ? (
