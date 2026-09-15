@@ -155,7 +155,7 @@ export default function PlayerConsole({
               Each mark is a moment the dice or the story moved you — HP, FP and attributes
               tracked before and after, chapter by chapter.
             </p>
-            <CharacterJourney characterId={character?.id ?? ""} selectedMoment={null} />
+            <CharacterJourney characterId={character?.id ?? ""} selectedMoment={null} viewerId={character?.id ?? undefined} />
           </div>
         </div>
       ) : null}

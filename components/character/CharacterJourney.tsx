@@ -2,7 +2,16 @@
 
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import type { CharacterHistory, CharacterHistoryBaseline, CharacterHistoryEvent, CharacterStatsSnapshot } from "@/lib/types";
+import { skillLevel } from "@/lib/skill";
+import type {
+  CharacterHistory,
+  CharacterHistoryBaseline,
+  CharacterHistoryEvent,
+  CharacterStatsSnapshot,
+  CharacterSkill,
+  CharacterViewer,
+  Sheet,
+} from "@/lib/types";
 
 function signed(n: number): string {
   return `${n >= 0 ? "+" : ""}${n}`;
@@ -111,9 +120,8 @@ function StateStrip({ before, after, baseline }: { before?: CharacterStatsSnapsh
 }
 
 /* ============================================================
-   Mini ficha — the sheet as it stood at a given moment. Reuses
-   the real sheet's attribute colors/icons and bar logic, fed by
-   the accumulated snapshots (baseline → … → event).
+   Mini ficha — the sheet's live core as it stood at a given
+   moment. Reuses the real sheet's attribute colors/icons.
    ============================================================ */
 
 const ATTR_CARDS: Array<{ key: "st" | "dx" | "iq" | "ht"; label: string; color: string; svg: string }> = [
@@ -140,7 +148,7 @@ function MomentFicha({
   const fpBefore = Math.max(0, fpMax - (before.fatigue ?? 0));
 
   return (
-    <div className="rounded-xl border border-blue-400/20 bg-blue-400/[0.04] p-4">
+    <div className="rounded-xl border border-blue-400/20 bg-blue-400/[0.04] p-3">
       <div className="flex items-center gap-2">
         <svg className="w-4 h-4 text-blue-300/80 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.7" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -152,12 +160,12 @@ function MomentFicha({
         ) : null}
       </div>
 
-      <div className="mt-3 space-y-1.5">
+      <div className="mt-2.5 space-y-1.5">
         <StateBar label="HP" before={hpBefore} after={hp} max={maxHp} tone="amber" big />
         <StateBar label="FP" before={fpBefore} after={fp} max={fpMax} tone="sky" big />
       </div>
 
-      <div className="mt-3 grid grid-cols-2 gap-2">
+      <div className="mt-2.5 grid grid-cols-2 gap-2">
         {ATTR_CARDS.map(({ key, label, color, svg }) => {
           const b = before[key];
           const a = after[key];
@@ -194,11 +202,149 @@ function MomentFicha({
 }
 
 /* ============================================================
+   Full ficha at a moment — the core (above) plus the filled
+   profile: skills with levels recomputed from that moment's
+   attributes, advantages/disadvantages and carried gear.
+   ============================================================ */
+
+function attrsSheet(ev: CharacterHistoryEvent | null | undefined, baseline?: CharacterHistoryBaseline | null): Sheet {
+  const s = ev?.state_after ?? {};
+  return {
+    st: s.st ?? baseline?.st ?? 10,
+    dx: s.dx ?? baseline?.dx ?? 10,
+    iq: s.iq ?? baseline?.iq ?? 10,
+    ht: s.ht ?? baseline?.ht ?? 10,
+  } as Sheet;
+}
+
+function SkillsBlock({ skills, sheet, matchSheet }: { skills: CharacterSkill[]; sheet: Sheet; matchSheet: Sheet | null }) {
+  if (!skills || skills.length === 0) return null;
+  return (
+    <div>
+      <p className="font-mono text-[9px] tracking-widest uppercase text-zinc-500 mb-1.5">Skills</p>
+      <div className="flex flex-wrap gap-1">
+        {skills.map((sk) => {
+          const name = sk.skill_name || sk.name || "Skill";
+          const lv = skillLevel(sk, sheet);
+          const lvM = matchSheet ? skillLevel(sk, matchSheet) : null;
+          const changed = lv != null && lvM != null && lv !== lvM;
+          return (
+            <span
+              key={sk.id}
+              className={`font-mono text-[10px] rounded border px-1.5 py-0.5 bg-zinc-900/60 ${
+                lv == null ? "text-zinc-500 border-zinc-700/40" : "text-zinc-200 border-zinc-700/50"
+              }`}
+            >
+              {name}
+              {lv != null ? ` ${lv}` : " ·"}
+              {changed ? (
+                <span className={lv > lvM ? "text-emerald-400" : "text-red-400"}> ({lvM}→{lv})</span>
+              ) : null}
+            </span>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function TagChips({ title, items }: { title: string; items: Array<{ id: string; name: string; cost_points?: number | null }> }) {
+  if (!items || items.length === 0) return null;
+  return (
+    <div>
+      <p className="font-mono text-[9px] tracking-widest uppercase text-zinc-500 mb-1.5">{title}</p>
+      <div className="flex flex-wrap gap-1">
+        {items.map((it) => (
+          <span key={it.id} className="font-mono text-[10px] rounded border border-zinc-700/40 bg-zinc-900/60 px-1.5 py-0.5 text-zinc-300">
+            {it.name}
+            {it.cost_points != null ? <span className="text-zinc-500"> ({it.cost_points})</span> : null}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function GearBlock({ items }: { items: Array<{ id: string; name?: string; quantity?: number; equipment_status?: string }> }) {
+  if (!items || items.length === 0) return null;
+  const dot = (s?: string) =>
+    s === "wielded" ? "bg-amber-400" : s === "worn" ? "bg-sky-400" : "bg-zinc-600";
+  return (
+    <div>
+      <p className="font-mono text-[9px] tracking-widest uppercase text-zinc-500 mb-1.5">Gear</p>
+      <ul className="space-y-1">
+        {items.map((it) => (
+          <li key={it.id} className="flex items-center gap-2 text-[11px] text-zinc-300">
+            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dot(it.equipment_status)}`} />
+            <span className="truncate">{it.name}</span>
+            {it.quantity != null && it.quantity > 1 ? (
+              <span className="font-mono text-[10px] text-zinc-500 shrink-0">×{it.quantity}</span>
+            ) : null}
+            {it.equipment_status ? (
+              <span className="font-mono text-[9px] uppercase tracking-widest text-zinc-500 shrink-0">{it.equipment_status}</span>
+            ) : null}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function FullFicha({
+  ev,
+  profile,
+  match,
+  baseline,
+  tag,
+}: {
+  ev: CharacterHistoryEvent;
+  profile: CharacterViewer | null;
+  match: CharacterHistoryEvent | null;
+  baseline?: CharacterHistoryBaseline | null;
+  tag?: string;
+}) {
+  const ch = profile?.character;
+  const sheet = attrsSheet(ev, baseline);
+  const matchSheet = match ? attrsSheet(match, baseline) : null;
+  return (
+    <div className="flex flex-col gap-3 rounded-xl border border-zinc-700/50 bg-zinc-900/45 p-3">
+      <div className="flex items-center gap-2">
+        {tag ? (
+          <span className="font-mono text-[9px] uppercase tracking-widest rounded border border-blue-700/40 px-1 py-0.5 text-blue-300/90">
+            {tag}
+          </span>
+        ) : null}
+        <span className="text-sm font-semibold text-zinc-100 truncate">{ch?.name ?? "Ficha"}</span>
+        <span aria-hidden className="flex-1 h-px" style={{ background: "linear-gradient(90deg, rgba(255,255,255,.12), transparent)" }} />
+        {ev.chapter != null ? <span className="font-mono text-[9px] text-zinc-500 shrink-0">C{ev.chapter}</span> : null}
+        {ev.narration_moment != null ? (
+          <span className="font-mono text-[9px] text-amber-300/80 shrink-0">M.{ev.narration_moment}</span>
+        ) : null}
+      </div>
+
+      <MomentFicha ev={ev} baseline={baseline} />
+
+      {ch ? (
+        <>
+          <SkillsBlock skills={ch.skills ?? []} sheet={sheet} matchSheet={matchSheet} />
+          <TagChips title="Advantages" items={ch.advantages ?? []} />
+          <TagChips title="Disadvantages" items={ch.disadvantages ?? []} />
+          <GearBlock items={ch.items ?? []} />
+        </>
+      ) : (
+        <p className="text-[10px] text-zinc-600 italic">Loading the full sheet…</p>
+      )}
+    </div>
+  );
+}
+
+/* ============================================================
    The horizontal "escala" — every event becomes a node on a
    time-scale, like the locations breadcrumb. The top strip draws
    the HP (amber) and FP (sky) rivers; the middle strip draws the
    ST/DX/IQ/HT attributes; the bottom row holds the clickable
-   nodes. Clicking a node reveals the ficha at that moment.
+   nodes. Below: a compare mode with two full ficha cards locked
+   to any two moments (e.g. first vs last).
    ============================================================ */
 
 const CELL = 176;
@@ -227,16 +373,22 @@ const ATTR_STROKES: Array<{ key: "st" | "dx" | "iq" | "ht"; color: string; label
 export default function CharacterJourney({
   characterId,
   selectedMoment,
+  viewerId,
 }: {
   characterId: string;
   selectedMoment: number | null;
+  viewerId?: string;
 }) {
   const [data, setData] = useState<CharacterHistory | null>(null);
+  const [profile, setProfile] = useState<CharacterViewer | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [cmpA, setCmpA] = useState<string | null>(null);
+  const [cmpB, setCmpB] = useState<string | null>(null);
 
   useEffect(() => {
     let alive = true;
+    const q = viewerId ? `?viewer=${encodeURIComponent(viewerId)}` : "";
     api<CharacterHistory>(`/game-table-character/${characterId}/history`)
       .then((d) => {
         if (alive) setData(d);
@@ -244,10 +396,17 @@ export default function CharacterJourney({
       .catch((e: unknown) => {
         if (alive) setError(e instanceof Error ? e.message : String(e));
       });
+    api<CharacterViewer>(`/game-table-character/${characterId}${q}`)
+      .then((d) => {
+        if (alive) setProfile(d);
+      })
+      .catch(() => {
+        if (alive) setProfile(null);
+      });
     return () => {
       alive = false;
     };
-  }, [characterId]);
+  }, [characterId, viewerId]);
 
   if (error) {
     return <p className="text-xs text-zinc-600 italic">The chronicle is out of reach right now.</p>;
@@ -268,6 +427,8 @@ export default function CharacterJourney({
   const maxHp = Math.max(1, baseline?.hp ?? 10);
   const fpMax = Math.max(1, (baseline?.fatigue ?? 0) > 0 ? baseline!.fatigue! : (baseline?.ht ?? 10));
   const selected = events.find((e) => e.id === selectedId) ?? events[events.length - 1];
+  const ca = events.find((e) => e.id === cmpA) ?? events[0];
+  const cb = events.find((e) => e.id === cmpB) ?? events[events.length - 1];
 
   const W = events.length * CELL;
   const xOf = (i: number) => i * CELL + CELL / 2;
@@ -318,6 +479,16 @@ export default function CharacterJourney({
 
   const totalH = RIVER.h + ATTR_H + LABEL_H;
 
+  const compareRows = [
+    { label: "HP", a: ca.state_after?.hp ?? maxHp, b: cb.state_after?.hp ?? maxHp },
+    { label: "FP", a: Math.max(0, fpMax - (ca.state_after?.fatigue ?? 0)), b: Math.max(0, fpMax - (cb.state_after?.fatigue ?? 0)) },
+    ...ATTRS.map(({ key, label }) => ({
+      label,
+      a: ca.state_after?.[key] ?? baseline?.[key] ?? 10,
+      b: cb.state_after?.[key] ?? baseline?.[key] ?? 10,
+    })),
+  ];
+
   return (
     <div>
       <div className="flex items-center gap-2 mb-3">
@@ -329,7 +500,7 @@ export default function CharacterJourney({
       </div>
 
       {/* ---- horizontal scale ---- */}
-      <div className="relative overflow-x-auto rounded-lg border border-zinc-700/40 bg-zinc-900/25">
+      <div className="relative overflow-x-auto scroll-thin rounded-lg border border-zinc-700/40 bg-zinc-900/25">
         <div className="relative" style={{ width: W, height: totalH }}>
           {/* HP + FP rivers */}
           <svg width={W} height={RIVER.h} className="absolute left-0 top-0 block">
@@ -400,9 +571,18 @@ export default function CharacterJourney({
           {/* node rows */}
           {events.map((ev, i) => {
             const isSelected = selected.id === ev.id;
+            const isCmpA = ca.id === ev.id;
+            const isCmpB = cb.id === ev.id;
             const isTest = ev.kind === "test";
             const hp = ev.state_after?.hp ?? maxHp;
             const firstInChapter = i === 0 || ev.chapter !== events[i - 1].chapter;
+            const ringCls = isSelected
+              ? "ring-2 ring-blue-500/60"
+              : isCmpB
+                ? "ring-2 ring-sky-500/50"
+                : isCmpA
+                  ? "ring-2 ring-emerald-500/50"
+                  : "";
             return (
               <button
                 key={ev.id}
@@ -410,8 +590,8 @@ export default function CharacterJourney({
                 onClick={() => setSelectedId(ev.id)}
                 title={nodeTitle(ev)}
                 className={`absolute rounded-md px-1 pb-1.5 text-center transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/70 ${
-                  isSelected ? "bg-blue-500/10 ring-2 ring-blue-500/60" : "hover:bg-zinc-800/70"
-                } ${dimmed(ev) ? "opacity-40" : ""}`}
+                  isSelected ? "bg-blue-500/10" : "hover:bg-zinc-800/70"
+                } ${ringCls} ${dimmed(ev) ? "opacity-40" : ""}`}
                 style={{ left: i * CELL, width: CELL, top: RIVER.h + ATTR_H, height: LABEL_H }}
               >
                 {firstInChapter ? (
@@ -509,6 +689,82 @@ export default function CharacterJourney({
           <MomentFicha ev={selected} baseline={baseline} />
         </div>
       </div>
+
+      {/* ---- compare full ficha between two moments ---- */}
+      {events.length >= 2 ? (
+        <div className="mt-5 rounded-xl border border-zinc-700/40 bg-zinc-900/30 p-4">
+          <div className="flex items-center gap-2 flex-wrap">
+            <svg className="w-4 h-4 text-blue-300/80 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.7" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+            </svg>
+            <span className="font-mono text-[10px] tracking-widest uppercase text-blue-300/80">
+              Ficha completa — compare momentos
+            </span>
+            <span aria-hidden className="flex-1 h-px" style={{ background: "linear-gradient(90deg, rgba(96,165,250,.3), transparent)" }} />
+          </div>
+
+          <div className="mt-3 flex items-center gap-2 flex-wrap font-mono text-[11px]">
+            <label className="flex items-center gap-1.5 text-zinc-500">
+              <span className="uppercase tracking-widest text-emerald-400/90">From</span>
+              <select
+                value={ca.id}
+                onChange={(e) => setCmpA(e.target.value || null)}
+                className="bg-zinc-800 border border-zinc-700/50 rounded-md px-2 py-1 text-zinc-200 focus:outline-none focus:border-emerald-600/70"
+              >
+                {events.map((ev) => (
+                  <option key={ev.id} value={ev.id}>
+                    {momentLabel(ev)} · {nodeTitle(ev)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <span className="text-zinc-600" aria-hidden>→</span>
+            <label className="flex items-center gap-1.5 text-zinc-500">
+              <span className="uppercase tracking-widest text-sky-400/90">To</span>
+              <select
+                value={cb.id}
+                onChange={(e) => setCmpB(e.target.value || null)}
+                className="bg-zinc-800 border border-zinc-700/50 rounded-md px-2 py-1 text-zinc-200 focus:outline-none focus:border-sky-600/70"
+              >
+                {events.map((ev) => (
+                  <option key={ev.id} value={ev.id}>
+                    {momentLabel(ev)} · {nodeTitle(ev)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <span className="text-[10px] text-zinc-600 italic ml-auto hidden sm:block">
+              Skills are recomputed with the attributes of each moment.
+            </span>
+          </div>
+
+          <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_auto_1fr] items-stretch">
+            <FullFicha ev={ca} profile={profile} match={cb} baseline={baseline} tag="From" />
+
+            <div className="flex flex-row lg:flex-col items-center justify-center gap-1.5 lg:px-1.5">
+              {compareRows.map((row) => {
+                const cls =
+                  row.b > row.a ? "text-emerald-400" : row.b < row.a ? "text-red-400" : "text-zinc-500";
+                return (
+                  <span
+                    key={row.label}
+                    className="font-mono text-[10px] rounded border border-zinc-700/40 bg-zinc-900/60 px-1.5 py-0.5 whitespace-nowrap"
+                  >
+                    <span className="text-zinc-500">{row.label}</span>{" "}
+                    <span className={cls}>{row.a} → {row.b}</span>
+                  </span>
+                );
+              })}
+            </div>
+
+            <FullFicha ev={cb} profile={profile} match={ca} baseline={baseline} tag="To" />
+          </div>
+
+          <p className="mt-3 text-[10px] text-zinc-600 italic">
+            Skills, advantages and gear reflect the current table record — the core stats (HP/FP/ST/DX/IQ/HT) and derived skill levels are shown exactly as they stood at each selected moment.
+          </p>
+        </div>
+      ) : null}
     </div>
   );
 }
