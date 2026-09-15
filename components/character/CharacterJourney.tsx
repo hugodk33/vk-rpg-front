@@ -426,9 +426,13 @@ export default function CharacterJourney({
   const baseline = data.baseline ?? null;
   const maxHp = Math.max(1, baseline?.hp ?? 10);
   const fpMax = Math.max(1, (baseline?.fatigue ?? 0) > 0 ? baseline!.fatigue! : (baseline?.ht ?? 10));
-  const selected = events.find((e) => e.id === selectedId) ?? events[events.length - 1];
-  const ca = events.find((e) => e.id === cmpA) ?? events[0];
-  const cb = events.find((e) => e.id === cmpB) ?? events[events.length - 1];
+  const keyOf = (ev: CharacterHistoryEvent, i: number) => `${ev.kind === "test" ? "t" : "c"}-${ev.id ?? i}`;
+  const byKey = new Map(events.map((ev, i) => [keyOf(ev, i), ev]));
+  const selected = (selectedId ? byKey.get(selectedId) : undefined) ?? events[events.length - 1];
+  const ca = (cmpA ? byKey.get(cmpA) : undefined) ?? events[0];
+  const cb = (cmpB ? byKey.get(cmpB) : undefined) ?? events[events.length - 1];
+  const caKey = keyOf(ca, events.indexOf(ca));
+  const cbKey = keyOf(cb, events.indexOf(cb));
 
   const W = events.length * CELL;
   const xOf = (i: number) => i * CELL + CELL / 2;
@@ -570,9 +574,9 @@ export default function CharacterJourney({
 
           {/* node rows */}
           {events.map((ev, i) => {
-            const isSelected = selected.id === ev.id;
-            const isCmpA = ca.id === ev.id;
-            const isCmpB = cb.id === ev.id;
+            const isSelected = keyOf(selected, events.indexOf(selected)) === keyOf(ev, i);
+            const isCmpA = caKey === keyOf(ev, i);
+            const isCmpB = cbKey === keyOf(ev, i);
             const isTest = ev.kind === "test";
             const hp = ev.state_after?.hp ?? maxHp;
             const firstInChapter = i === 0 || ev.chapter !== events[i - 1].chapter;
@@ -585,9 +589,9 @@ export default function CharacterJourney({
                   : "";
             return (
               <button
-                key={ev.id}
+                key={keyOf(ev, i)}
                 type="button"
-                onClick={() => setSelectedId(ev.id)}
+                onClick={() => setSelectedId(keyOf(ev, i))}
                 title={nodeTitle(ev)}
                 className={`absolute rounded-md px-1 pb-1.5 text-center transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/70 ${
                   isSelected ? "bg-blue-500/10" : "hover:bg-zinc-800/70"
@@ -707,12 +711,12 @@ export default function CharacterJourney({
             <label className="flex items-center gap-1.5 text-zinc-500">
               <span className="uppercase tracking-widest text-emerald-400/90">From</span>
               <select
-                value={ca.id}
+                value={caKey}
                 onChange={(e) => setCmpA(e.target.value || null)}
                 className="bg-zinc-800 border border-zinc-700/50 rounded-md px-2 py-1 text-zinc-200 focus:outline-none focus:border-emerald-600/70"
               >
-                {events.map((ev) => (
-                  <option key={ev.id} value={ev.id}>
+                {events.map((ev, i) => (
+                  <option key={keyOf(ev, i)} value={keyOf(ev, i)}>
                     {momentLabel(ev)} · {nodeTitle(ev)}
                   </option>
                 ))}
@@ -722,12 +726,12 @@ export default function CharacterJourney({
             <label className="flex items-center gap-1.5 text-zinc-500">
               <span className="uppercase tracking-widest text-sky-400/90">To</span>
               <select
-                value={cb.id}
+                value={cbKey}
                 onChange={(e) => setCmpB(e.target.value || null)}
                 className="bg-zinc-800 border border-zinc-700/50 rounded-md px-2 py-1 text-zinc-200 focus:outline-none focus:border-sky-600/70"
               >
-                {events.map((ev) => (
-                  <option key={ev.id} value={ev.id}>
+                {events.map((ev, i) => (
+                  <option key={keyOf(ev, i)} value={keyOf(ev, i)}>
                     {momentLabel(ev)} · {nodeTitle(ev)}
                   </option>
                 ))}
