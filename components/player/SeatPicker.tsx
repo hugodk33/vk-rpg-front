@@ -7,7 +7,7 @@ import { readSeat, writeSeat } from "@/lib/seat";
 /* ============================================================
    SeatPicker — "who am I" for the player dashboard.
    Persists the seat (player USER) so the pill, the console and
-   every /player/table hub agree on whose character is mine.
+   every player page agree on whose character is mine.
    ============================================================ */
 
 export interface SeatOption {

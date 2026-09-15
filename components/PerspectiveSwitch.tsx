@@ -18,27 +18,14 @@ import { readSeat, writeSeat, type Seat } from "@/lib/seat";
    Landing rules, switching INTO the player side:
      · /character/<id>   → /player/character/<id>  (your own console,
                             sheet open by default — your sheet).
-     · /table/<id>/...   → /player/table/<id>?character=<your seat>,
-                            so the hub's Character tab points at you.
+     · /table/<id>/...   → /player/character/<your seat>  (console
+                            open, table resources accessible from there).
      · anything else     → /player.
    ============================================================ */
 
 type Role = "narrator" | "player";
 
 const ROLE_KEY = "vkrpg.role";
-
-/* sub-pages shared by both route trees; narrator-only pages
-   (visibility, edit, ...) fall back to the table home. */
-const SHARED_SUBS = new Set([
-  "sessions",
-  "scenes",
-  "characters",
-  "items",
-  "skills",
-  "advantages",
-  "disadvantages",
-  "locations",
-]);
 
 function currentRole(pathname: string): Role {
   return pathname.startsWith("/player") ? "player" : "narrator";
@@ -47,10 +34,9 @@ function currentRole(pathname: string): Role {
 function siblingPath(pathname: string, target: Role): string {
   const table = pathname.match(/^\/(?:table|player\/table)\/([^/]+)(?:\/([^/]+))?/);
   if (table) {
-    const [, tableId, sub] = table;
-    const keep = sub && SHARED_SUBS.has(sub) ? sub : "";
-    const base = target === "player" ? `/player/table/${tableId}` : `/table/${tableId}`;
-    return keep ? `${base}/${keep}` : base;
+    const [, tableId] = table;
+    if (target === "player") return "/player";
+    return `/table/${tableId}`;
   }
 
   const playerChar = pathname.match(/^\/player\/character\/([^/]+)(?:\/(session|view))?/);
@@ -141,8 +127,11 @@ export default function PerspectiveSwitch() {
         if (tableRoute && tableRoute[1]) {
           const seat = await adoptSeat(tableRoute[1]);
           if (seat) writeSeat(seat);
-          const q = seat?.characterId ? `?character=${encodeURIComponent(seat.characterId)}` : "";
-          router.push(`/player/table/${tableRoute[1]}${q}`);
+          if (seat?.characterId) {
+            router.push(`/player/character/${seat.characterId}`);
+          } else {
+            router.push("/player");
+          }
           return;
         }
         router.push("/player");

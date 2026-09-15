@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { CharacterSkill, NarrationAction, QueueEntry, TableCharacter } from "@/lib/types";
 import { skillLabel, skillLevel } from "@/lib/skill";
+import QueueProcession from "@/components/session/QueueProcession";
 
 /* ============================================================
    Turn — the player's active scene console.
@@ -17,6 +18,7 @@ interface TurnPanelProps {
   part: string;
   latestTitle: string;
   latestNarration: string;
+  latestNarrationId: string;
   actions: NarrationAction[];
   queue: QueueEntry[];
   roster: TableCharacter[];
@@ -53,32 +55,6 @@ function judgeRoll(total: number, target: number): Judgment {
     : { crit: false, ok: false, text: `Failed by ${-m}` };
 }
 
-function SheetSummary({ c }: { c: TableCharacter }) {
-  const s = c.sheet;
-  if (!s) return (
-    <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-600">No sheet</span>
-  );
-  const attrs = [
-    { label: "ST", value: s.st ?? s.base_st, hex: "#f87171" },
-    { label: "DX", value: s.dx ?? s.base_dx, hex: "#34d399" },
-    { label: "IQ", value: s.iq ?? s.base_iq, hex: "#60a5fa" },
-    { label: "HT", value: s.ht ?? s.base_ht, hex: "#a78bfa" },
-  ];
-  return (
-    <span className="flex items-center gap-2.5">
-      {attrs.map((a) => (
-        <span key={a.label} className="inline-flex items-baseline gap-0.5">
-          <span className="font-mono text-[9px] uppercase text-zinc-600">{a.label}</span>
-          <span className="font-mono text-sm font-bold tabular-nums" style={{ color: a.hex }}>{a.value ?? "–"}</span>
-        </span>
-      ))}
-      {s.current_hp != null && s.hp ? (
-        <span className="font-mono text-[10px] text-zinc-500 ml-1">HP {s.current_hp}/{s.hp}</span>
-      ) : null}
-    </span>
-  );
-}
-
 function rollDice(count: number, die: number, mod: number): { r: number[]; tot: number } {
   const r: number[] = [];
   let sum = 0;
@@ -95,6 +71,7 @@ export default function TurnPanel({
   part,
   latestTitle,
   latestNarration,
+  latestNarrationId,
   actions,
   queue,
   roster,
@@ -115,37 +92,62 @@ export default function TurnPanel({
     const c = roster.find((x) => x.id === id);
     return c?.sheet?.name || c?.name || c?.user?.username || id;
   };
-  const charIsMine = (id?: string | null): boolean => id === myId;
 
-  /* ---- dice (narrator-controlled test) ---- */
+  /* ---- dice ---- */
   const [rolls, setRolls] = useState<number[]>([]);
   const [total, setTotal] = useState<number | null>(null);
   const [judgment, setJudgment] = useState<Judgment | null>(null);
   const [effectNote, setEffectNote] = useState<string | null>(null);
+  const [actDesc, setActDesc] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [committed, setCommitted] = useState(false);
+  const [commitError, setCommitError] = useState<string | null>(null);
 
   const myEntry = pendingQueue.find((e) => e.character_id === myId);
-  const testAttr = (myEntry?.test_attr as "st" | "dx" | "iq" | "ht") || "dx";
   const testDie = myEntry?.test_dice || "6";
   const testCount = Math.max(1, Number(myEntry?.test_count ?? 3) || 3);
   const testMod = Number(myEntry?.test_mod ?? 0) || 0;
   const testSet = (myEntry?.test_dice ?? null) != null;
 
+  /* ---- test basis — the narrator locks the dice, the player
+       picks what to test it against (attribute or their skill). */
+  const lockKind = myEntry?.test_kind ?? null;
+  const lockAttr = (myEntry?.test_attr as "st" | "dx" | "iq" | "ht" | null) ?? null;
+  const lockSkill = myEntry?.test_skill ?? null;
+
+  const [basis, setBasis] = useState<"attr" | "skill">(
+    lockKind === "skill" && !!lockSkill ? "skill" : "attr"
+  );
+  const [actAttr, setActAttr] = useState<"st" | "dx" | "iq" | "ht">(lockAttr || "dx");
+  const [selSkill, setSelSkill] = useState<string>(lockKind === "skill" && lockSkill ? lockSkill : "");
+
+  useEffect(() => {
+    // The narrator may set or change the seat test between renders.
+    // Sync the player's default attribute/skill to that lock.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setBasis(lockKind === "skill" && !!lockSkill ? "skill" : "attr");
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setActAttr(lockAttr || "dx");
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setSelSkill(lockKind === "skill" && lockSkill ? lockSkill : "");
+  }, [lockKind, lockAttr, lockSkill]);
+
   const myChar = roster.find((c) => c.id === myId);
   const s = myChar?.sheet;
   const attrib = (): number => {
-    const attr = testAttr;
+    const attr = actAttr;
     return s?.[attr] ?? s?.[`base_${attr}` as "base_st"] ?? 10;
   };
 
-  const skillMode = myEntry?.test_kind === "skill" && !!myEntry.test_skill;
-  const skillData = skillMode && myEntry.test_skill
-    ? mySkills.find((sk) => sk.skill_id === myEntry.test_skill || sk.id === myEntry.test_skill) ?? null
+  const skillMode = basis === "skill";
+  const skillData = skillMode && selSkill
+    ? mySkills.find((sk) => sk.skill_id === selSkill || sk.id === selSkill) ?? null
     : null;
   const skillLevelVal = skillData ? skillLevel(skillData, myChar?.sheet ?? null) : null;
   const target = skillMode ? (skillLevelVal ?? 10) : attrib();
   const modValue = skillMode ? testMod : Math.floor((Number(attrib()) - 10) / 2) + testMod;
-  const attrHex = skillMode ? "#fbbf24" : (attrMeta[testAttr]?.hex ?? "#3b82f6");
-  const rollDisabled = () => !isMyTurn || !myId;
+  const attrHex = skillMode ? "#fbbf24" : (attrMeta[actAttr]?.hex ?? "#3b82f6");
+  const rollDisabled = () => !isMyTurn || !myId || committed;
 
   function performRoll(): { r: number[]; tot: number } {
     const die = parseInt(testDie, 10);
@@ -155,11 +157,50 @@ export default function TurnPanel({
     setRolls(r);
     setTotal(tot);
     setJudgment(j);
-    if (j.ok && skillMode && myEntry?.test_skill) {
-      void applySkillConsequence(myEntry.test_skill);
+    setCommitted(false);
+    setCommitError(null);
+    setActDesc("");
+    if (j.ok && skillMode && selSkill) {
+      void applySkillConsequence(selSkill);
       router.refresh();
     }
     return { r, tot };
+  }
+
+  const rollLog = () =>
+    `${testCount}d${testDie} [ ${rolls.join(" , ")} ]`;
+
+  async function commitAction() {
+    if (!isMyTurn || !myEntry || rolls.length === 0 || total === null || !judgment) return;
+    setSubmitting(true);
+    setCommitError(null);
+    const defaultDesc = `${skillMode ? (skillData ? skillLabel(skillData, myChar?.sheet ?? null) : "Skill") : actAttr.toUpperCase()} test — ${judgment.ok ? "success" : "failure"}.`;
+    const description = actDesc.trim() || defaultDesc;
+    try {
+      const res = await fetch("/api/game-table-end-turn", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          character_id: myId,
+          narrations_id: latestNarrationId || null,
+          description,
+          dice_roll: rollLog(),
+          result: String(total),
+          queue: Number(myEntry.queue) || 0,
+          target: null,
+          multitarget: false,
+        }),
+      });
+      const j = await res.json();
+      if (!j.success) throw new Error(j.error || "Failed to end your turn");
+      setCommitted(true);
+      setActDesc("");
+      router.refresh();
+    } catch (err: unknown) {
+      setCommitError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   async function applySkillConsequence(skillIdToApply: string) {
@@ -229,70 +270,13 @@ export default function TurnPanel({
       </div>
 
       {/* queue procession */}
-      <section aria-label="Initiative queue">
-        <div className="flex items-center gap-3 mb-3">
-          <span className="font-mono text-[11px] tracking-widest uppercase text-zinc-400">Turn order</span>
-          <span className="flex-1 h-px bg-zinc-700/40" />
-          <span className="font-mono text-[10px] text-zinc-600">{pendingQueue.length} in queue</span>
-        </div>
-
-        {pendingQueue.length === 0 ? (
-          <div className="border border-dashed border-zinc-700/60 rounded-xl px-5 py-10 text-center">
-            <p className="text-sm text-zinc-500">The queue is empty &mdash; the scene hasn&apos;t opened yet.</p>
-          </div>
-        ) : (
-          <div className="relative space-y-2.5 pl-5">
-            <span aria-hidden className="absolute left-[7px] top-2 bottom-2 w-px bg-zinc-800" />
-            {pendingQueue.map((entry, i) => {
-              const cid = entry.character_id || "";
-              const mine = charIsMine(cid);
-              const up = i === 0;
-              return (
-                <div
-                  key={entry.id}
-                  className={`relative flex items-center gap-3 rounded-xl border px-3.5 py-2.5 transition-colors ${
-                    up
-                      ? "border-blue-600/50 bg-blue-700/10"
-                      : mine
-                        ? "border-blue-700/50 bg-blue-900/10"
-                        : "border-zinc-700/40 bg-zinc-900/50"
-                  }`}
-                >
-                  <span
-                    className={`absolute -left-[21px] top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full border-2 ${
-                      up
-                        ? "border-blue-400 bg-blue-500 beacon"
-                        : mine
-                          ? "border-blue-500 bg-zinc-950"
-                          : "border-zinc-600 bg-zinc-800"
-                    }`}
-                    style={up ? { boxShadow: "0 0 10px rgba(59,130,246,.6)" } : undefined}
-                  />
-                  <span className="font-mono text-[11px] text-zinc-500 w-6 text-right shrink-0">
-                    {up ? <span className="text-blue-400 font-bold">NOW</span> : `#${i + 1}`}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <div className={`text-sm font-semibold truncate ${mine ? "text-blue-200" : "text-zinc-200"}`}>
-                      {charName(cid)}
-                      {mine ? <span className="ml-2 font-mono text-[9px] uppercase tracking-widest text-blue-400">you</span> : null}
-                    </div>
-                    <div className="mt-0.5">
-                      {roster.find((r) => r.id === cid) ? (
-                        <SheetSummary c={roster.find((r) => r.id === cid)!} />
-                      ) : null}
-                    </div>
-                  </div>
-                  {up && mine ? (
-                    <span className="shrink-0 font-mono text-[10px] uppercase tracking-widest text-blue-300">Roll now</span>
-                  ) : up ? (
-                    <span className="shrink-0 font-mono text-[10px] uppercase tracking-widest text-blue-400/70">acting</span>
-                  ) : null}
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </section>
+      <QueueProcession
+          entries={queue}
+          roster={roster}
+          tone="blue"
+          myId={myId}
+          emptyText="The queue is empty — the scene hasn't opened yet."
+        />
 
       {/* status banner */}
       {waitingText ? (
@@ -328,7 +312,7 @@ export default function TurnPanel({
                 {pendingQueue[0] ? charName(pendingQueue[0].character_id) : "empty queue"}
               </span>
 <span className="ml-auto font-mono text-[10px] text-zinc-500 uppercase tracking-widest">
-                  target: <span style={{ color: attrHex }}>{target}</span> ({skillMode ? (skillData ? skillLabel(skillData, myChar?.sheet ?? null) : "—") : attrMeta[testAttr]?.label})
+                  target: <span style={{ color: attrHex }}>{target}</span> ({skillMode ? (skillData ? skillLabel(skillData, myChar?.sheet ?? null) : "—") : attrMeta[actAttr]?.label})
                 </span>
             </div>
 
@@ -347,16 +331,62 @@ export default function TurnPanel({
                   <span className="inline-flex items-center justify-center min-w-[3.5rem] h-10 bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-3 text-zinc-100 text-sm font-mono">{testMod >= 0 ? `+${testMod}` : testMod}</span>
                 </div>
                 <div>
-                  <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">{skillMode ? "Skill" : "Attribute"}</span>
-                  <span className="inline-flex items-center justify-center min-w-[3.5rem] h-10 bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-3 text-zinc-100 text-sm font-mono">
-                    {skillMode ? (skillData ? skillLabel(skillData, myChar?.sheet ?? null) : "—") : testAttr.toUpperCase()}
-                  </span>
+                  <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Test basis</span>
+                  <div className="flex items-center gap-1">
+                    {(["attr", "skill"] as const).map((b) => (
+                      <button
+                        key={b}
+                        type="button"
+                        onClick={() => setBasis(b)}
+                        disabled={committed}
+                        className={`font-mono text-[11px] font-semibold uppercase tracking-widest px-3 py-2 rounded-lg border transition-colors disabled:opacity-50 ${
+                          basis === b
+                            ? "border-blue-600/70 text-blue-300"
+                            : "border-zinc-700/50 text-zinc-500 hover:text-zinc-300"
+                        }`}
+                      >
+                        {b === "attr" ? "Attribute" : "Skill"}
+                      </button>
+                    ))}
+                  </div>
                 </div>
+                {basis === "skill" ? (
+                  <div>
+                    <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Skill</span>
+                    <select
+                      value={selSkill}
+                      onChange={(e) => setSelSkill(e.target.value)}
+                      disabled={committed}
+                      className="w-48 bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-3 py-2 text-zinc-100 text-sm focus:outline-none focus:border-blue-600/70 transition-colors disabled:opacity-50"
+                    >
+                      <option value="" className="bg-zinc-800">Select…</option>
+                      {mySkills.map((sk) => (
+                        <option key={sk.id} value={sk.skill_id || sk.id} className="bg-zinc-800">
+                          {skillLabel(sk, myChar?.sheet ?? null)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ) : (
+                  <div>
+                    <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Attribute</span>
+                    <select
+                      value={actAttr}
+                      onChange={(e) => setActAttr(e.target.value as "st" | "dx" | "iq" | "ht")}
+                      disabled={committed}
+                      className="w-24 bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-3 py-2 text-zinc-100 text-sm focus:outline-none focus:border-blue-600/70 transition-colors disabled:opacity-50"
+                    >
+                      {(["st", "dx", "iq", "ht"] as const).map((a) => (
+                        <option key={a} value={a} className="bg-zinc-800">{a.toUpperCase()}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
                 <div className="w-full">
                   <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-600">
                     {testSet
-                      ? "Locked by the narrator — roll with these."
-                      : "No test set yet — defaults locked until the narrator tunes it."}
+                      ? `Seat test locked (${testCount}d${testDie}${testMod >= 0 ? `+${testMod}` : testMod}) — the dice come from the narrator; pick an attribute or skill to roll against.`
+                      : "No seat test set yet — dice default until the narrator tunes it. You pick the attribute or skill."}
                   </span>
                 </div>
               </div>
@@ -396,7 +426,7 @@ export default function TurnPanel({
                   onClick={performRoll}
                   disabled={rollDisabled()}
                   className={`${
-                    isMyTurn
+                    isMyTurn && !committed
                       ? "bg-blue-600 hover:bg-blue-500 text-blue-950 shadow-lg shadow-blue-900/30"
                       : "bg-zinc-800 text-zinc-500 cursor-not-allowed"
                   } text-sm font-bold px-6 py-2.5 rounded-lg transition-colors`}
@@ -404,6 +434,63 @@ export default function TurnPanel({
                   {icon("M12 3l1.5 6.5L20 11l-6.5 1.5L12 19l-1.5-6.5L4 11l6.5-1.5L12 3z", "w-4 h-4 inline mr-1")}Roll {testCount}d{testDie}
                 </button>
               </div>
+
+              {rolls.length > 0 && isMyTurn && !committed ? (
+                <div className="mt-5 rounded-xl border border-blue-500/30 bg-blue-500/[0.05] p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="w-2.5 h-2.5 rounded-full bg-blue-400 shrink-0" />
+                    <span className="font-mono text-[10px] tracking-widest uppercase text-blue-300/90">Finish your turn</span>
+                    <span aria-hidden className="flex-1 h-px" style={{ background: "linear-gradient(90deg, rgba(96,165,250,.3), transparent)" }} />
+                  </div>
+                  <p className="text-[12px] text-zinc-400 mb-3">
+                    Describe what you did and pass the spotlight to the next adventurer.
+                  </p>
+                  <input
+                    type="text"
+                    value={actDesc}
+                    onChange={(e) => setActDesc(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !submitting && rolls.length > 0) {
+                        e.preventDefault();
+                        void commitAction();
+                      }
+                    }}
+                    placeholder="What did you do? (optional)"
+                    className="w-full bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-blue-600/70 transition-colors"
+                  />
+                  <div className="mt-3 flex items-center gap-3 flex-wrap">
+                    <button
+                      onClick={() => void commitAction()}
+                      disabled={submitting || rolls.length === 0}
+                      className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-blue-950 text-sm font-bold px-5 py-2.5 rounded-lg transition-colors shadow-lg shadow-blue-900/20 disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      {icon("M5 13l4 4L19 7", "w-4 h-4")}
+                      {submitting ? "Logging…" : "Log action & end turn"}
+                    </button>
+                    <span className="text-[10px] font-mono uppercase tracking-widest text-zinc-600">
+                      {skillMode && skillData
+                        ? `${skillLabel(skillData, myChar?.sheet ?? null)} · `
+                        : ""}
+                      {rolls.join("+")}={total ?? 0} {judgment?.text ?? ""}
+                    </span>
+                  </div>
+                  {commitError ? (
+                    <p className="mt-2 text-[11px] text-red-400">{commitError}</p>
+                  ) : null}
+                </div>
+              ) : null}
+
+              {committed ? (
+                <div className="mt-5 rounded-xl border border-emerald-500/30 bg-emerald-500/[0.05] p-4 flex items-center gap-3">
+                  {icon("M5 13l4 4L19 7", "w-5 h-5 text-emerald-400")}
+                  <div>
+                    <p className="text-sm font-medium text-emerald-300">Turn logged — you&apos;re out of the queue.</p>
+                    <p className="text-[11px] text-zinc-500 mt-0.5">
+                      The roll is in the chronicle. The narrator will call you back in for the next round.
+                    </p>
+                  </div>
+                </div>
+              ) : null}
 
               {effectNote ? (
                 <div className="mt-4 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-2.5">

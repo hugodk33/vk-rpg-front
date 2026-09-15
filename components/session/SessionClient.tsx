@@ -6,6 +6,7 @@ import Link from "next/link";
 import type { CharacterSkill, CharacterViewer, NarrationAction, QueueEntry, Sheet } from "@/lib/types";
 import { api } from "@/lib/api";
 import { skillLabel, skillLevel } from "@/lib/skill";
+import QueueProcession from "@/components/session/QueueProcession";
 
 /* ============================================================
    Session Console
@@ -501,68 +502,20 @@ export default function SessionClient({
       {/* ================= TURN ================= */}
       {tab === "turn" ? (
         <div className="space-y-4">
-          {pendingQueue.length ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {pendingQueue.map((entry, i) => {
-                const charId = entry.character_id || "";
-                const name = charName(charId);
-                const isNext = i === 0;
-                const isNpc = npcIds.includes(charId);
-                return (
-                  <div
-                    key={entry.id}
-                    className={`relative rounded-xl border p-4 transition-colors ${
-                      isNext
-                        ? `${T.softBorder} ${T.softBg} shadow-[0_0_0_1px_${T.shadowCardA},0_10px_30px_-18px_${T.shadowCardB}]`
-                        : "border-zinc-700/40 bg-zinc-800/40 hover:bg-zinc-800/60"
-                    }`}
-                  >
-                    {isNext ? (
-                      <span className={`absolute -top-2.5 left-3 font-mono text-[9px] tracking-widest uppercase px-1.5 py-px rounded-full ${T.badge} font-bold`}>
-                        Up now
-                      </span>
-                    ) : null}
-                    <div className="flex items-center gap-3">
-                      <span
-                        className={`w-3 h-3 rounded-full shrink-0 ${isNpc ? "bg-amber-400" : "bg-blue-400"}`}
-                        style={{ boxShadow: isNext ? `0 0 8px ${T.shadow}` : undefined }}
-                      />
-                      <div className="min-w-0 flex-1">
-                        <div className="text-sm font-semibold text-zinc-100 truncate">
-                          {charId ? (
-                            <Link href={`/character/${charId}`} className={T.linkHover}>{name}</Link>
-                          ) : name}
-                        </div>
-                        <div className="font-mono text-[10px] uppercase tracking-wider text-zinc-500">
-                          {isNpc ? "NPC" : "Player"}
-                        </div>
-                      </div>
-                      {!isPlayer && !isNext ? (
-                        <button
-                          onClick={() => removeFromQueue(entry)}
-                          aria-label={`Remove ${name} from queue`}
-                          className="text-zinc-600 hover:text-red-400 transition-colors p-1 rounded"
-                        >
-                          {icon("M6 18L18 6M6 6l12 12", "w-4 h-4")}
-                        </button>
-                      ) : null}
-                    </div>
-                    <div className="mt-3 flex items-center gap-2">
-                      <span className="font-mono text-[10px] text-zinc-600 uppercase tracking-widest">Order #{i + 1}</span>
-                      <span className="flex-1 h-px bg-zinc-700/40" />
-                      {isNext ? (
-                        <span className={`font-mono text-[10px] uppercase tracking-widest ${T.text}`}>Now</span>
-                      ) : null}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="border border-dashed border-zinc-700/60 rounded-xl px-5 py-8 text-center">
-              <p className="text-sm text-zinc-500">The queue is empty — pick who acts next.</p>
-            </div>
-          )}
+          <QueueProcession
+            entries={pendingQueue}
+            roster={characters}
+            tone={isPlayer ? "blue" : "green"}
+            myId={isPlayer ? myCharacterId : undefined}
+            npcIds={npcIds}
+            linkHref={(charId) => `/character/${charId}`}
+            onRemove={!isPlayer ? removeFromQueue : undefined}
+            emptyText={
+              isPlayer
+                ? "The queue is empty — the scene hasn't opened yet."
+                : "The queue is empty — pick who acts next."
+            }
+          />
 
           {!isPlayer ? (
             <div className="flex items-center gap-2 rounded-xl border border-zinc-700/40 bg-zinc-800/40 p-3">

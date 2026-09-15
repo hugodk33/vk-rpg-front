@@ -6,6 +6,7 @@ export interface SessionState {
   latestTitle: string;
   latestNarration: string;
   latestSceneId: string;
+  latestNarrationId: string;
   latestMoment: number;
   actions: NarrationAction[];
 }
@@ -31,5 +32,6 @@ export function getSessionState(scenes: Scene[] | null | undefined): SessionStat
     latestSceneId,
     latestMoment,
     actions: latestNarration?.actions ?? [],
+    latestNarrationId: latestNarration?.id ?? "",
   };
 }

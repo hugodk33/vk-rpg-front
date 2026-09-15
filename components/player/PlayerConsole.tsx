@@ -3,18 +3,25 @@
 import Link from "next/link";
 import { useState } from "react";
 import type {
+  Advantage,
   CharacterViewer,
+  Disadvantage,
   GameTable,
+  Item,
+  Location,
   NarrationAction,
   QueueEntry,
   Scene,
+  SkillItem,
   TableCharacter,
+  TableNpc,
   VisibilityRule,
 } from "@/lib/types";
 import TurnPanel from "@/components/player/PlayerSession";
 import SceneTimeline from "@/components/scenes/SceneTimeline";
 import CharacterSheet from "@/components/character/CharacterSheet";
 import CharacterJourney from "@/components/character/CharacterJourney";
+import TableResources from "@/components/player/TableResources";
 
 /* ============================================================
    Player Console — one panel per character.
@@ -22,8 +29,9 @@ import CharacterJourney from "@/components/character/CharacterJourney";
      · SESSION  — the scene console (queue + dice, turn-gated).
      · JOURNEY  — the character's own evolution, moment by moment.
      · CHRONICLE— the table's timeline, read-only.
-     · TABLE    — the table's sandbox: items, npcs, skills,
-                  advantages and disadvantages (read-only).
+     · TABLE    — the table's sandbox inline: characters, items,
+                  skills, advantages, disadvantages and locations
+                  (read-only, through the player's eyes).
      · SHEET    — the player's own sheet, visibility-aware.
    The narrator sees a full desk; the player sees a ritual built
    around waiting for their moment.
@@ -44,7 +52,14 @@ interface PlayerConsoleProps {
   part: string;
   latestTitle: string;
   latestNarration: string;
+  latestNarrationId: string;
   visibility: VisibilityRule[] | null;
+  items: Item[];
+  skills: SkillItem[];
+  advantages: Advantage[];
+  disadvantages: Disadvantage[];
+  locations: Location[];
+  npcs: TableNpc[];
   basePath: string;
   initialTab?: PlayerTab;
 }
@@ -54,15 +69,6 @@ const icon = (path: string, cls = "w-4 h-4") => (
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={path} />
   </svg>
 );
-
-const TABLE_LINKS: Array<{ key: string; label: string; path: string }> = [
-  { key: "items", label: "Items", path: "items" },
-  { key: "characters", label: "Characters", path: "characters" },
-  { key: "skills", label: "Skills", path: "skills" },
-  { key: "advantages", label: "Advantages", path: "advantages" },
-  { key: "disadvantages", label: "Disadvantages", path: "disadvantages" },
-  { key: "locations", label: "Locations", path: "locations" },
-];
 
 const TABS: Array<{ key: PlayerTab; label: string; icon: string }> = [
   { key: "turn", label: "Session", icon: "M4 5a2 2 0 012-2h12a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm0 8a2 2 0 012-2h12a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm0 8a2 2 0 012-2h6a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2z" },
@@ -85,7 +91,14 @@ export default function PlayerConsole({
   part,
   latestTitle,
   latestNarration,
+  latestNarrationId,
   visibility,
+  items,
+  skills,
+  advantages,
+  disadvantages,
+  locations,
+  npcs,
   basePath,
   initialTab = "sheet",
 }: PlayerConsoleProps) {
@@ -134,6 +147,7 @@ export default function PlayerConsole({
           part={part}
           latestTitle={latestTitle}
           latestNarration={latestNarration}
+          latestNarrationId={latestNarrationId}
           actions={actions}
           queue={queue}
           roster={roster}
@@ -160,32 +174,25 @@ export default function PlayerConsole({
         </div>
       ) : null}
 
-      {tab === "table" ? (
+      {tab === "table" && tableId ? (
         <div className="rounded-2xl border border-zinc-700/50 bg-zinc-900/40 overflow-hidden">
           <div className="px-5 py-6">
             <p className="font-mono text-[10px] tracking-widest uppercase text-blue-300/90">The Table</p>
             <h2 className="text-lg font-bold text-zinc-100 mt-1">{table?.title || "Table resources"}</h2>
-            <p className="text-sm text-zinc-400 mt-1.5 max-w-xl">
-              Everything the table shares outside your seat: items, companions, skills and the
-              party&rsquo;s advantages and disadvantages — read-only.
+            <p className="text-sm text-zinc-400 mt-1.5 max-w-xl mb-5">
+              Everything the table shares with your seat: characters, items, skills and the
+              party&rsquo;s advantages and disadvantages — read-only, through your own eyes.
             </p>
-            <Link
-              href={`/player/table/${tableId}`}
-              className="inline-flex items-center gap-2 mt-5 bg-blue-600 hover:bg-blue-500 text-blue-950 text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors shadow-lg shadow-blue-900/20"
-            >
-              Open the table {icon("M9 5l7 7-7 7", "w-4 h-4")}
-            </Link>
-            <div className="flex flex-wrap gap-2 mt-6">
-              {TABLE_LINKS.map((l) => (
-                <Link
-                  key={l.key}
-                  href={`/player/table/${tableId}/${l.path}`}
-                  className="px-3 py-1.5 rounded-md border border-zinc-700/50 text-xs text-zinc-300 hover:border-blue-700/60 hover:text-blue-200 transition-colors"
-                >
-                  {l.label}
-                </Link>
-              ))}
-            </div>
+            <TableResources
+              roster={roster}
+              myId={character?.id ?? undefined}
+              npcs={npcs}
+              items={items}
+              skills={skills}
+              advantages={advantages}
+              disadvantages={disadvantages}
+              locations={locations}
+            />
           </div>
         </div>
       ) : null}

@@ -187,7 +187,7 @@ function SurveyRow({ label, value, emphasize, hex }: { label: string; value?: st
 
 function TerritoryCrumbs({ chain, accent, mode }: { chain: Loc[]; accent: string; mode: "narrator" | "player" }) {
   if (chain.length <= 1) return null;
-  const hrefOf = (id?: string) => (mode === "player" ? `/player/location/${id}` : `/location/${id}`);
+  const hrefOf = (id?: string) => (mode === "player" ? `/player` : `/location/${id}`);
   return (
     <nav aria-label="Territory chain" className="exhibit-reveal flex items-center flex-wrap gap-1.5">
       {chain.map((loc, i) => {
@@ -245,9 +245,9 @@ export default function LocationPlate({ location, tableId, mode = "narrator" }: 
     if (t.key === "shop") return isShop;
     return false;
   });
-  const locationHref = (id: string) => (isPlayer ? `/player/location/${id}` : `/location/${id}`);
+  const locationHref = (id: string) => (isPlayer ? `/player` : `/location/${id}`);
   const backHref = isPlayer
-    ? `/player/table/${baseTableId}/locations`
+    ? `/player`
     : `/table/${baseTableId}/locations`;
 
   return (

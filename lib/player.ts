@@ -1,11 +1,23 @@
 import type {
+  Advantage,
   CharacterViewer,
+  Disadvantage,
   GameTable,
+  GameTableAdvantages,
   GameTableCharacters,
+  GameTableDisadvantages,
+  GameTableItems,
+  GameTableLocations,
+  GameTableNpcs,
   GameTableScenes,
+  GameTableSkills,
+  Item,
+  Location,
   NarrationAction,
   QueueEntry,
+  SkillItem,
   TableCharacter,
+  TableNpc,
   VisibilityRule,
 } from "./types";
 import { api } from "./api";
@@ -14,8 +26,11 @@ import { getSessionState } from "./session";
 /* ============================================================
    Player console data loader (server-side).
    Resolves a character's table, roster, scenes, queue, session
-   state, and the character's OWN visibility rules (what the
-   player knows). Shared by the sheet and session routes.
+   state, the character's OWN visibility rules (what the player
+   knows), and the table's shared resources (items, skills,
+   advantages, disadvantages, locations) shaped through the
+   player's eyes — every endpoint echoes its table reference.
+   Shared by the sheet and session routes.
    ============================================================ */
 
 export interface PlayerConsoleData {
@@ -31,7 +46,14 @@ export interface PlayerConsoleData {
   part: string;
   latestTitle: string;
   latestNarration: string;
+  latestNarrationId: string;
   visibility: VisibilityRule[] | null;
+  items: Item[];
+  skills: SkillItem[];
+  advantages: Advantage[];
+  disadvantages: Disadvantage[];
+  locations: Location[];
+  npcs: TableNpc[];
 }
 
 export async function loadPlayerConsole(characterId: string): Promise<PlayerConsoleData> {
@@ -40,17 +62,36 @@ export async function loadPlayerConsole(characterId: string): Promise<PlayerCons
   );
   const tableId = viewer?.table?.id ?? "";
 
-  const [scenesData, queue, charsData] = await Promise.all([
-    tableId
-      ? api<GameTableScenes>(`/game-table-scenes/${tableId}`).catch(() => ({ table: null, scenes: [] }))
-      : Promise.resolve({ table: null, scenes: [] }) as Promise<GameTableScenes>,
-    tableId
-      ? api<QueueEntry[]>(`/game-table-queue/${tableId}`).catch(() => [])
-      : Promise.resolve([]) as Promise<QueueEntry[]>,
-    tableId
-      ? api<GameTableCharacters>(`/game-table-characters/${tableId}?viewer=${encodeURIComponent(characterId)}`).catch(() => ({ table: null, characters: [] }))
-      : Promise.resolve({ table: null, characters: [] }) as Promise<GameTableCharacters>,
-  ]);
+  const [scenesData, queue, charsData, itemsData, skillsData, advData, disData, locData, npcsData] =
+    await Promise.all([
+      tableId
+        ? api<GameTableScenes>(`/game-table-scenes/${tableId}`).catch(() => ({ table: null, scenes: [] }))
+        : Promise.resolve({ table: null, scenes: [] }) as Promise<GameTableScenes>,
+      tableId
+        ? api<QueueEntry[]>(`/game-table-queue/${tableId}`).catch(() => [])
+        : Promise.resolve([]) as Promise<QueueEntry[]>,
+      tableId
+        ? api<GameTableCharacters>(`/game-table-characters/${tableId}?viewer=${encodeURIComponent(characterId)}`).catch(() => ({ table: null, characters: [] }))
+        : Promise.resolve({ table: null, characters: [] }) as Promise<GameTableCharacters>,
+      tableId
+        ? api<GameTableItems>(`/game-table-items/${tableId}?viewer=${encodeURIComponent(characterId)}`).catch(() => ({ table: null, items: [] }))
+        : Promise.resolve({ table: null, items: [] }) as Promise<GameTableItems>,
+      tableId
+        ? api<GameTableSkills>(`/game-table-skills/${tableId}?viewer=${encodeURIComponent(characterId)}`).catch(() => ({ table: null, skills: [] }))
+        : Promise.resolve({ table: null, skills: [] }) as Promise<GameTableSkills>,
+      tableId
+        ? api<GameTableAdvantages>(`/game-table-advantages/${tableId}?viewer=${encodeURIComponent(characterId)}`).catch(() => ({ table: null, advantages: [] }))
+        : Promise.resolve({ table: null, advantages: [] }) as Promise<GameTableAdvantages>,
+      tableId
+        ? api<GameTableDisadvantages>(`/game-table-disadvantages/${tableId}?viewer=${encodeURIComponent(characterId)}`).catch(() => ({ table: null, disadvantages: [] }))
+        : Promise.resolve({ table: null, disadvantages: [] }) as Promise<GameTableDisadvantages>,
+      tableId
+        ? api<GameTableLocations>(`/game-table-locations/${tableId}?viewer=${encodeURIComponent(characterId)}`).catch(() => ({ table: null, locations: [], tree: [], defaultLocationId: null }))
+        : Promise.resolve({ table: null, locations: [], tree: [], defaultLocationId: null }) as Promise<GameTableLocations>,
+      tableId
+        ? api<GameTableNpcs>(`/game-table-npcs/${tableId}`).catch(() => ({ table: null, npcs: [] }))
+        : Promise.resolve({ table: null, npcs: [] }) as Promise<GameTableNpcs>,
+    ]);
 
   const state = getSessionState(scenesData.scenes);
 
@@ -67,6 +108,13 @@ export async function loadPlayerConsole(characterId: string): Promise<PlayerCons
     part: state.part,
     latestTitle: state.latestTitle,
     latestNarration: state.latestNarration,
+    latestNarrationId: state.latestNarrationId,
     visibility: null,
+    items: itemsData?.items ?? [],
+    skills: skillsData?.skills ?? [],
+    advantages: advData?.advantages ?? [],
+    disadvantages: disData?.disadvantages ?? [],
+    locations: locData?.locations ?? [],
+    npcs: npcsData?.npcs ?? [],
   };
 }
