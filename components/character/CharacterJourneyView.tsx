@@ -27,52 +27,50 @@ export default function CharacterJourneyView({
   tab,
 }: CharacterJourneyViewProps) {
   return (
-    <div className="bg-zinc-900/90 border border-zinc-700/50 shadow-2xl overflow-hidden">
-      <div className="p-4">
-        {moments.length > 0 ? (
-          <div className="mb-4">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs font-semibold uppercase tracking-wider text-zinc-500 mr-1">
-                History
-              </span>
-              <Link
-                href={characterTabHref(basePath, tab, null)}
-                className={`px-2.5 py-1 text-xs rounded-md transition-colors ${
-                  !selectedMoment
-                    ? "bg-green-800/30 text-green-400 border border-green-800/50"
-                    : "bg-zinc-800/60 text-zinc-400 border border-zinc-700/50 hover:text-zinc-200"
-                }`}
-              >
-                Present
-              </Link>
-              {[...moments].reverse().map((m, i, arr) => {
-                const label = i === arr.length - 1 ? "Starting" : `${m}`;
-                const isSel = selectedMoment === m;
-                return (
-                  <Link
-                    key={m}
-                    href={characterTabHref(basePath, tab, m)}
-                    className={`px-2.5 py-1 text-xs rounded-md transition-colors ${
-                      isSel
-                        ? "bg-green-800/30 text-green-400 border border-green-800/50"
-                        : "bg-zinc-800/60 text-zinc-400 border border-zinc-700/50 hover:text-zinc-200"
-                    }`}
-                  >
-                    {label}
-                  </Link>
-                );
-              })}
-            </div>
-            {selectedMoment != null ? (
-              <p className="text-xs text-zinc-500 mt-2">
-                Viewing character state at{" "}
-                <span className="text-green-500 font-medium">Moment {selectedMoment}</span>
-              </p>
-            ) : null}
+    <div className="flex flex-col gap-5">
+      {moments.length > 0 ? (
+        <div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs font-semibold uppercase tracking-wider text-zinc-500 mr-1">
+              History
+            </span>
+            <Link
+              href={characterTabHref(basePath, tab, null)}
+              className={`px-2.5 py-1 text-xs rounded-md transition-colors ${
+                !selectedMoment
+                  ? "bg-green-800/30 text-green-400 border border-green-800/50"
+                  : "bg-zinc-800/60 text-zinc-400 border border-zinc-700/50 hover:text-zinc-200"
+              }`}
+            >
+              Present
+            </Link>
+            {[...moments].reverse().map((m, i, arr) => {
+              const label = i === arr.length - 1 ? "Starting" : `${m}`;
+              const isSel = selectedMoment === m;
+              return (
+                <Link
+                  key={m}
+                  href={characterTabHref(basePath, tab, m)}
+                  className={`px-2.5 py-1 text-xs rounded-md transition-colors ${
+                    isSel
+                      ? "bg-green-800/30 text-green-400 border border-green-800/50"
+                      : "bg-zinc-800/60 text-zinc-400 border border-zinc-700/50 hover:text-zinc-200"
+                  }`}
+                >
+                  {label}
+                </Link>
+              );
+            })}
           </div>
-        ) : null}
-        <CharacterJourney characterId={characterId} selectedMoment={selectedMoment} />
-      </div>
+          {selectedMoment != null ? (
+            <p className="text-xs text-zinc-500 mt-2">
+              Viewing character state at{" "}
+              <span className="text-green-500 font-medium">Moment {selectedMoment}</span>
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+      <CharacterJourney characterId={characterId} selectedMoment={selectedMoment} />
     </div>
   );
 }

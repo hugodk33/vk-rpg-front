@@ -134,9 +134,11 @@ const ATTR_CARDS: Array<{ key: "st" | "dx" | "iq" | "ht"; label: string; color: 
 function MomentFicha({
   ev,
   baseline,
+  embedded = false,
 }: {
   ev: CharacterHistoryEvent;
   baseline?: CharacterHistoryBaseline | null;
+  embedded?: boolean;
 }) {
   const before = ev.state_before ?? {};
   const after = ev.state_after ?? {};
@@ -148,12 +150,12 @@ function MomentFicha({
   const fpBefore = Math.max(0, fpMax - (before.fatigue ?? 0));
 
   return (
-    <div className="rounded-xl border border-blue-400/20 bg-blue-400/[0.04] p-3">
+    <div className={embedded ? "flex flex-col gap-3" : "rounded-xl border border-blue-400/20 bg-blue-400/[0.04] p-3"}>
       <div className="flex items-center gap-2">
         <svg className="w-4 h-4 text-blue-300/80 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.7" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
         </svg>
-        <span className="font-mono text-[10px] tracking-widest uppercase text-blue-300/80">Ficha</span>
+        <span className="font-mono text-[10px] tracking-widest uppercase text-blue-300/80">Sheet</span>
         <span aria-hidden className="flex-1 h-px" style={{ background: "linear-gradient(90deg, rgba(96,165,250,.3), transparent)" }} />
         {ev.narration_moment != null ? (
           <span className="font-mono text-[10px] text-amber-300/80 shrink-0">M.{ev.narration_moment}</span>
@@ -165,7 +167,7 @@ function MomentFicha({
         <StateBar label="FP" before={fpBefore} after={fp} max={fpMax} tone="sky" big />
       </div>
 
-      <div className="mt-2.5 grid grid-cols-2 gap-2">
+      <div className={embedded ? "mt-2.5 grid grid-cols-2 gap-x-4 gap-y-2.5" : "mt-2.5 grid grid-cols-2 gap-2"}>
         {ATTR_CARDS.map(({ key, label, color, svg }) => {
           const b = before[key];
           const a = after[key];
@@ -173,7 +175,7 @@ function MomentFicha({
           const base = baseline?.[key] != null ? baseline![key]! : value;
           const delta = a != null && b != null && a !== b ? (a as number) - (b as number) : null;
           return (
-            <div key={key} className="flex items-center gap-2.5 rounded-lg border border-zinc-700/40 bg-zinc-900/50 px-2.5 py-2">
+            <div key={key} className={embedded ? "flex items-center gap-2.5 py-1" : "flex items-center gap-2.5 rounded-lg border border-zinc-700/40 bg-zinc-900/50 px-2.5 py-2"}>
               <svg className={`w-5 h-5 ${color} shrink-0`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.7" d={svg} />
               </svg>
@@ -307,14 +309,14 @@ function FullFicha({
   const sheet = attrsSheet(ev, baseline);
   const matchSheet = match ? attrsSheet(match, baseline) : null;
   return (
-    <div className="flex flex-col gap-3 rounded-xl border border-zinc-700/50 bg-zinc-900/45 p-3">
+    <div className="flex flex-col gap-3 rounded-xl border border-zinc-700/40 bg-zinc-900/25 p-3">
       <div className="flex items-center gap-2">
         {tag ? (
           <span className="font-mono text-[9px] uppercase tracking-widest rounded border border-blue-700/40 px-1 py-0.5 text-blue-300/90">
             {tag}
           </span>
         ) : null}
-        <span className="text-sm font-semibold text-zinc-100 truncate">{ch?.name ?? "Ficha"}</span>
+        <span className="text-sm font-medium text-zinc-100 truncate">{nodeTitle(ev)}</span>
         <span aria-hidden className="flex-1 h-px" style={{ background: "linear-gradient(90deg, rgba(255,255,255,.12), transparent)" }} />
         {ev.chapter != null ? <span className="font-mono text-[9px] text-zinc-500 shrink-0">C{ev.chapter}</span> : null}
         {ev.narration_moment != null ? (
@@ -322,7 +324,7 @@ function FullFicha({
         ) : null}
       </div>
 
-      <MomentFicha ev={ev} baseline={baseline} />
+      <MomentFicha ev={ev} baseline={baseline} embedded />
 
       {ch ? (
         <>
@@ -347,20 +349,20 @@ function FullFicha({
    to any two moments (e.g. first vs last).
    ============================================================ */
 
-const CELL = 176;
-const RIVER = { h: 58, top: 10, bottom: 42 };
-const ATTR_H = 46;
-const ATTR_TOP = 8;
-const ATTR_BOTTOM = 38;
-const LABEL_H = 56;
+const CELL = 220;
+const RIVER = { h: 96, top: 14, bottom: 82 };
+const ATTR_H = 76;
+const ATTR_TOP = 14;
+const ATTR_BOTTOM = 64;
+const LABEL_H = 96;
 
 function momentLabel(ev: CharacterHistoryEvent): string {
   return ev.narration_moment != null ? `M.${ev.narration_moment}` : "—";
 }
 
 function nodeTitle(ev: CharacterHistoryEvent): string {
-  if (ev.kind === "test") return ev.test_skill_name ?? ev.test_skill ?? "Teste";
-  return ev.name || "Evento";
+  if (ev.kind === "test") return ev.test_skill_name ?? ev.test_skill ?? "Test";
+  return ev.name || "Event";
 }
 
 const ATTR_STROKES: Array<{ key: "st" | "dx" | "iq" | "ht"; color: string; label: string }> = [
@@ -521,16 +523,16 @@ export default function CharacterJourney({
             <line x1={0} y1={RIVER.bottom} x2={W} y2={RIVER.bottom} stroke="#3f3f46" strokeWidth="1" strokeDasharray="3 3" />
             {hpArea ? <path d={hpArea} fill="url(#journeyHpGrad)" /> : null}
             {fpArea ? <path d={fpArea} fill="url(#journeyFpGrad)" /> : null}
-            {hpLine ? <path d={hpLine} fill="none" stroke="#fbbf24" strokeWidth="1.6" /> : null}
-            {fpLine ? <path d={fpLine} fill="none" stroke="#38bdf8" strokeWidth="1.4" strokeDasharray="4 3" /> : null}
+            {hpLine ? <path d={hpLine} fill="none" stroke="#fbbf24" strokeWidth="1.8" /> : null}
+            {fpLine ? <path d={fpLine} fill="none" stroke="#38bdf8" strokeWidth="1.5" strokeDasharray="4 3" /> : null}
             {pts.map((p, i) => (
-              <circle key={`h${i}`} cx={p.x} cy={hpY(p.hp)} r={2.6} fill="#fbbf24" />
+              <circle key={`h${i}`} cx={p.x} cy={hpY(p.hp)} r={3.1} fill="#fbbf24" />
             ))}
             {pts.map((p, i) => (
-              <circle key={`f${i}`} cx={p.x} cy={fpY(p.fp)} r={1.7} fill="#38bdf8" />
+              <circle key={`f${i}`} cx={p.x} cy={fpY(p.fp)} r={2.1} fill="#38bdf8" />
             ))}
           </svg>
-          <div className="absolute top-1 left-1.5 flex items-center gap-2 font-mono text-[9px] tracking-widest uppercase">
+          <div className="absolute top-1.5 left-1.5 flex items-center gap-2 font-mono text-[9px] tracking-widest uppercase text-zinc-500">
             <span className="text-amber-400/90">HP · base {maxHp}</span>
             <span className="text-zinc-700">/</span>
             <span className="text-sky-400/80">FP · base {fpMax}</span>
@@ -543,17 +545,17 @@ export default function CharacterJourney({
               const line = series.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
               return (
                 <g key={ATTR_STROKES[si].key}>
-                  <path d={line} fill="none" stroke={ATTR_STROKES[si].color} strokeWidth="1.2" opacity="0.85" />
+                  <path d={line} fill="none" stroke={ATTR_STROKES[si].color} strokeWidth="1.4" opacity="0.85" />
                   {series.map((p, i) =>
                     p.moved ? (
-                      <circle key={`${si}-${i}`} cx={p.x} cy={p.y} r={2.2} fill={ATTR_STROKES[si].color} />
+                      <circle key={`${si}-${i}`} cx={p.x} cy={p.y} r={2.8} fill={ATTR_STROKES[si].color} />
                     ) : null
                   )}
                 </g>
               );
             })}
           </svg>
-          <div className="absolute flex items-center gap-2 font-mono text-[9px] tracking-widest uppercase" style={{ top: RIVER.h + 2, right: 6 }}>
+          <div className="absolute flex items-center gap-2.5 font-mono text-[9px] tracking-widest uppercase" style={{ top: RIVER.h + 4, right: 8 }}>
             {ATTR_STROKES.map(({ key, label, color }) => (
               <span key={key} style={{ color }}>
                 {label} {baseline?.[key] ?? 10}
@@ -593,25 +595,25 @@ export default function CharacterJourney({
                 type="button"
                 onClick={() => setSelectedId(keyOf(ev, i))}
                 title={nodeTitle(ev)}
-                className={`absolute rounded-md px-1 pb-1.5 text-center transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/70 ${
+                className={`absolute rounded-md px-1.5 pb-2 text-center transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/70 ${
                   isSelected ? "bg-blue-500/10" : "hover:bg-zinc-800/70"
                 } ${ringCls} ${dimmed(ev) ? "opacity-40" : ""}`}
                 style={{ left: i * CELL, width: CELL, top: RIVER.h + ATTR_H, height: LABEL_H }}
               >
                 {firstInChapter ? (
-                  <span className="absolute top-1 left-1.5 font-mono text-[8px] text-zinc-500 border border-zinc-600/60 rounded px-0.5">
+                  <span className="absolute top-1.5 left-1.5 font-mono text-[8px] text-zinc-500 border border-zinc-600/60 rounded px-0.5">
                     C{ev.chapter ?? "—"}
                   </span>
                 ) : null}
-                <div className="absolute bottom-1.5 left-0 right-0 px-1.5">
-                  <div className={`font-mono text-[9px] uppercase tracking-widest ${isTest ? "text-sky-300/80" : "text-amber-300/80"}`}>
+                <div className="absolute bottom-2 left-0 right-0 px-2">
+                  <div className={`font-mono text-[10px] uppercase tracking-widest ${isTest ? "text-sky-300/80" : "text-amber-300/80"}`}>
                     {momentLabel(ev)}
                     {isTest ? " · test" : ""}
                   </div>
-                  <div className={`text-[11px] font-medium leading-tight truncate ${isSelected ? "text-blue-100" : "text-zinc-300"}`}>
+                  <div className={`text-[12px] font-medium leading-tight truncate ${isSelected ? "text-blue-100" : "text-zinc-300"}`}>
                     {nodeTitle(ev)}
                   </div>
-                  <div className="font-mono text-[10px] tabular-nums text-zinc-500">
+                  <div className="font-mono text-[11px] tabular-nums text-zinc-500">
                     {hp}
                     <span className="text-zinc-600">/{maxHp}</span>
                   </div>
@@ -623,14 +625,14 @@ export default function CharacterJourney({
       </div>
 
       {/* ---- detail + ficha at the moment ---- */}
-      <div className="mt-4 grid gap-4 lg:grid-cols-5">
-        <div className="lg:col-span-3 rounded-lg border border-zinc-700/40 bg-zinc-800/50 px-3 py-2.5">
+      <div className="mt-6 grid gap-6 lg:grid-cols-5">
+        <div className="lg:col-span-3 min-w-0">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
                 {selected.kind === "test" ? (
                   <span className="text-[9px] font-mono uppercase tracking-widest text-sky-300/90 border border-sky-700/40 rounded px-1 py-0.5 shrink-0">
-                    Teste
+                    Test
                   </span>
                 ) : null}
                 <span className="text-sm font-medium text-zinc-100">{nodeTitle(selected)}</span>
@@ -696,13 +698,13 @@ export default function CharacterJourney({
 
       {/* ---- compare full ficha between two moments ---- */}
       {events.length >= 2 ? (
-        <div className="mt-5 rounded-xl border border-zinc-700/40 bg-zinc-900/30 p-4">
+        <div className="mt-7">
           <div className="flex items-center gap-2 flex-wrap">
             <svg className="w-4 h-4 text-blue-300/80 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.7" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
             </svg>
             <span className="font-mono text-[10px] tracking-widest uppercase text-blue-300/80">
-              Ficha completa — compare momentos
+              Full sheet — compare moments
             </span>
             <span aria-hidden className="flex-1 h-px" style={{ background: "linear-gradient(90deg, rgba(96,165,250,.3), transparent)" }} />
           </div>

@@ -243,7 +243,7 @@ export default function PlayerConsole({
       ) : null}
 
       {tab === "sheet" && viewer ? (
-        <CharacterSheet data={viewer} basePath={basePath} visibility={null} />
+        <CharacterSheet data={viewer} basePath={basePath} visibility={null} showName={false} />
       ) : null}
     </div>
   );

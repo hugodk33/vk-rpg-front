@@ -34,6 +34,24 @@ export default async function CharacterViewerPage({
           &larr; Back to table
         </Link>
       ) : null}
+
+      <div className="flex flex-wrap items-end justify-between gap-4 mb-5">
+        <div>
+          <p className="font-mono text-[10px] tracking-widest uppercase text-green-300/90">Character record</p>
+          <h1 className="text-2xl md:text-3xl font-bold text-zinc-100 mt-1">
+            {data.character.sheet?.name || data.character.name || "Character"}
+          </h1>
+          {data.table?.title ? (
+            <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500 mt-0.5">{data.table.title}</p>
+          ) : null}
+        </div>
+        {data.character.user?.username ? (
+          <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-500 border border-zinc-700/50 rounded-md px-2 py-1">
+            {data.character.user.username}
+          </span>
+        ) : null}
+      </div>
+
       <CharacterTabs basePath={basePath} active={activeTab} moment={momentNum} />
       {activeTab === "inventory" ? (
         <GearPanel data={data} historic={!!moment} />
@@ -47,7 +65,7 @@ export default async function CharacterViewerPage({
         />
       ) : (
         <>
-          <CharacterSheet data={data} basePath={basePath} />
+          <CharacterSheet data={data} basePath={basePath} showName={false} />
           <CharacterVisibilityDrawer tableId={tableId} targetId={data.character.id} />
         </>
       )}

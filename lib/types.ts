@@ -109,6 +109,10 @@ export interface CharacterItem {
   equipment_location?: string
   equipment_quantity?: number
   equipment_rendered_st?: number | null
+  /** Optional curated icon override (lucide name or image). */
+  icon_key?: string | null
+  /** Future: narrator image upload. When set, the image wins over the SVG. */
+  image_url?: string | null
 }
 
 export interface CharacterArmor {
@@ -552,6 +556,10 @@ export interface Item {
   condition?: string
   weapon?: Weapon | null
   armor?: ArmorData | null
+  /** Optional curated icon override (lucide name or image). */
+  icon_key?: string | null
+  /** Future: narrator image upload. When set, the image wins over the SVG. */
+  image_url?: string | null
 }
 
 export interface Advantage {

@@ -3,6 +3,7 @@ import type { CharacterViewer, Sheet, VisibilityRule } from "@/lib/types";
 import RadarChart from "@/components/RadarChart";
 import { buildVisibilityMap, isItemHidden, isSkillHidden, isAttributeHidden, isAdvantageHidden, isDisadvantageHidden } from "@/lib/visibility";
 import { resolveAttack, DAMAGE_TYPES } from "@/lib/damage";
+import ItemIcon from "@/components/items/ItemIcon";
 
 function statDiff(base: number | undefined, current: number | undefined): React.ReactNode {
   if (base == null || current == null || base === current) return null;
@@ -416,9 +417,12 @@ interface CharacterSheetProps {
   data: CharacterViewer;
   basePath: string;
   visibility?: VisibilityRule[] | null;
+  /** The page already shows the name in its own header — hide the
+      sheet's identity banner so the name is never duplicated. */
+  showName?: boolean;
 }
 
-export default function CharacterSheet({ data, visibility }: CharacterSheetProps) {
+export default function CharacterSheet({ data, visibility, showName = true }: CharacterSheetProps) {
   const ch = data.character;
   const s = ch.sheet;
   const name = s?.name || ch.name || "Character";
@@ -488,12 +492,29 @@ export default function CharacterSheet({ data, visibility }: CharacterSheetProps
       locations: it.equipment_location || it.armor?.locations || "",
     }));
   const visibleArmors = vis ? fittedArmors.filter((a) => !itemHidden(ch.items?.find((it) => (it.armor?.id || it.id) === a.id)?.id)) : fittedArmors;
-  const equipmentItems = (ch.items ?? []).filter(
-    (it) =>
-      isCarried(it) &&
-      !(it.weapon && it.weapon.attacks.length > 0) &&
-      !it.armor
-  );
+  const gearGroups = [
+    {
+      label: "Wielded",
+      icon: swordsIcon(),
+      items: (ch.items ?? []).filter((it) => it.equipment_status === "wielded"),
+    },
+    {
+      label: "Equipped",
+      icon: shieldIcon("w-4 h-4 text-cyan-400"),
+      items: (ch.items ?? []).filter((it) => it.equipment_status === "equipped"),
+    },
+    {
+      label: "In bag",
+      icon: (
+        <svg className="w-4 h-4 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+        </svg>
+      ),
+      items: (ch.items ?? []).filter(
+        (it) => it.equipment_status !== "wielded" && it.equipment_status !== "equipped"
+      ),
+    },
+  ].filter((g) => g.items.length > 0);
   const visibleSkills = vis
     ? (ch.skills ?? []).filter((sk) => !skillHidden(sk.skill_id ?? sk.id))
     : ch.skills;
@@ -509,7 +530,9 @@ export default function CharacterSheet({ data, visibility }: CharacterSheetProps
       <div>
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-amber-100 tracking-tight">{name}</h1>
+            {showName ? (
+              <h1 className="text-2xl md:text-3xl font-bold text-zinc-100">{name}</h1>
+            ) : null}
             {s?.bio ? <p className="text-lg text-zinc-400 mt-1">{s.bio}</p> : null}
             {s?.backstory ? <p className="text-zinc-500 text-sm mt-1 max-w-2xl">{s.backstory}</p> : null}
           </div>
@@ -942,29 +965,56 @@ export default function CharacterSheet({ data, visibility }: CharacterSheetProps
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                 </svg>
               )}
-              {equipmentItems.length === 0 ? (
+              {gearGroups.length === 0 ? (
                 <p className="text-zinc-600 text-sm italic">Nothing carried</p>
               ) : (
-                equipmentItems.map((it) => (
-                  <div
-                    key={it.id}
-                    className="bg-zinc-800/60 rounded-lg border border-zinc-700/40 px-3 py-2 mb-1.5"
-                  >
-                    <div className="flex justify-between items-center">
-                      <span className="text-zinc-200 text-sm font-medium">
-                        {it.name || "Unidentified item"}
-                      </span>
-                      {it.equipment_quantity != null ? (
-                        <span className="text-zinc-500 text-xs">×{it.equipment_quantity}</span>
-                      ) : null}
+                gearGroups.map((g) => {
+                  const statusCls =
+                    g.label === "Wielded"
+                      ? "text-amber-300/90"
+                      : g.label === "Equipped"
+                        ? "text-cyan-300/90"
+                        : "text-zinc-500";
+                  return (
+                    <div key={g.label} className="mb-3 last:mb-0">
+                      <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-zinc-500 mb-1.5">
+                        {g.icon}
+                        <span className={statusCls}>{g.label}</span>
+                        <span className="text-zinc-700">({g.items.length})</span>
+                      </div>
+                      <div className="space-y-1">
+                        {g.items.map((it) => {
+                          return (
+                            <div
+                              key={it.id}
+                              className="flex items-center gap-2 rounded-lg border border-zinc-700/40 bg-zinc-800/60 px-2.5 py-1.5"
+                            >
+                              <span className="shrink-0">
+                                <ItemIcon item={it} className="w-4 h-4" imgClassName="w-4 h-4 object-cover rounded" />
+                              </span>
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center justify-between gap-2">
+                                  <span className="text-zinc-200 text-sm font-medium truncate">
+                                    {it.name || "Unidentified item"}
+                                  </span>
+                                  {it.equipment_quantity != null && it.equipment_quantity > 1 ? (
+                                    <span className="text-zinc-500 text-xs shrink-0">×{it.equipment_quantity}</span>
+                                  ) : null}
+                                </div>
+                                <div className="flex items-center gap-2 text-[10px] uppercase tracking-wide text-zinc-500">
+                                  {it.weight_lb != null ? <span>{it.weight_lb} lb</span> : null}
+                                  {it.equipment_status !== "in_inventory" && it.equipment_location ? (
+                                    <span>{it.equipment_location.replace(/_/g, " ")}</span>
+                                  ) : null}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
-                    {it.weight_lb != null ? (
-                      <span className="text-zinc-500 text-[10px] uppercase tracking-wide">
-                        {it.weight_lb} lb
-                      </span>
-                    ) : null}
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           </div>

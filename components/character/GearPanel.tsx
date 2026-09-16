@@ -6,6 +6,7 @@ import type { CharacterItem, CharacterViewer } from "@/lib/types";
 import { api } from "@/lib/api";
 import { resolveAttack, DAMAGE_TYPES } from "@/lib/damage";
 import { fitLabel } from "@/lib/fit";
+import ItemIcon from "@/components/items/ItemIcon";
 
 const KIND_BADGES: Record<string, { label: string; class: string }> = {
   weapon: { label: "Weapon", class: "bg-red-400/10 text-red-400 border border-red-400/20" },
@@ -18,12 +19,6 @@ const STATUS_LABELS: Record<string, string> = {
   in_inventory: "Inventory",
   equipped: "Equipped",
   wielded: "Wielded",
-};
-
-const STATUS_DOTS: Record<string, string> = {
-  in_inventory: "bg-zinc-400",
-  equipped: "bg-emerald-400",
-  wielded: "bg-amber-400",
 };
 
 const BODY_PARTS = [
@@ -85,188 +80,6 @@ function partFor(item: CharacterItem): BodyPart | null {
   if (/(leg|thigh|knee|hip)/.test(l)) return BODY_PARTS[4];
   if (/(foot|feet|ankle)/.test(l)) return BODY_PARTS[5];
   return null;
-}
-
-interface IconDef {
-  key: string;
-  label: string;
-  cls: string;
-  match: RegExp;
-  paths: string[];
-}
-
-const DEFAULT_WEAPON_ICON: IconDef = {
-  key: "other",
-  label: "Weapon",
-  cls: "text-zinc-300",
-  match: /$^/,
-  paths: ["M12 3v3", "M12 18v3", "M3 12h3", "M18 12h3", "M12 9a3 3 0 100 6 3 3 0 000-6z"],
-};
-
-const WEAPON_ICONS: IconDef[] = [
-  {
-    key: "shield",
-    label: "Shield",
-    cls: "text-orange-300",
-    match: /shield/,
-    paths: [
-      "M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 01-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 011-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 011.52 0C14.51 3.81 17 5 19 5a1 1 0 011 1z",
-    ],
-  },
-  {
-    key: "gun",
-    label: "Firearm",
-    cls: "text-zinc-100",
-    match: /(gun|rifle|pistol|shotgun|carbine|smg|revolver|musket|machine)/,
-    paths: [
-      "M3 11a1 1 0 011-1h6l6-3v4h3a2 2 0 012 2v2H3v-4z",
-      "M12 16l-2.5 4",
-      "M9 13.5l-.5 2",
-    ],
-  },
-  {
-    key: "bow",
-    label: "Bow",
-    cls: "text-lime-300",
-    match: /(bow|crossbow|sling|arrow)/,
-    paths: [
-      "M6 4c-3 3.5-3 12 0 16",
-      "M18 4c3 3.5 3 12 0 16",
-      "M6 4l12 16",
-      "M18 4l-12 16",
-      "M12 6v12",
-    ],
-  },
-  {
-    key: "spear",
-    label: "Spear",
-    cls: "text-emerald-300",
-    match: /(spear|polearm|lance|javelin|halberd|glaive|pike|trident)/,
-    paths: ["M12 3 8 9h8z", "M8 9h8", "M12 10v11"],
-  },
-  {
-    key: "dagger",
-    label: "Dagger",
-    cls: "text-sky-300",
-    match: /(knife|dagger|blade|dirk|bayonet)/,
-    paths: ["M12 2l3 5v3l-3 4-3-4V7z", "M9.5 14h5", "M12 14v7"],
-  },
-  {
-    key: "axe",
-    label: "Axe",
-    cls: "text-red-300",
-    match: /(axe|mace|flail|hammer|maul|poleaxe)/,
-    paths: [
-      "M14 12l-8.5 8.5a2.12 2.12 0 11-3-3L11 9",
-      "M15 13 9 7l4-4 6 6h3a8 8 0 01-7 7z",
-    ],
-  },
-  {
-    key: "sword",
-    label: "Sword",
-    cls: "text-violet-300",
-    match: /(sword|rapier|saber|sabre|katana|scimitar|falchion|broadsword|shortsword|longsword|greatsword)/,
-    paths: ["M14.5 17.5 3 6V3h3l11.5 11.5", "M13 19l6-6", "M16 16l4 4"],
-  },
-  {
-    key: "staff",
-    label: "Staff",
-    cls: "text-amber-300",
-    match: /(staff|bo staff|quarterstaff)/,
-    paths: ["M12 3l-2.5 4h5z", "M12 7v14", "M10 17h4"],
-  },
-  {
-    key: "club",
-    label: "Club",
-    cls: "text-teal-300",
-    match: /(club|baton|whip|truncheon)/,
-    paths: [
-      "M8.5 19.5a3.5 3.5 0 013.5-3.5 3.5 3.5 0 013.5 3.5",
-      "M12 16V5a1 1 0 011-1h1",
-    ],
-  },
-];
-
-const ARMOR_ICONS: IconDef[] = [
-  {
-    key: "head",
-    label: "Helmet",
-    cls: "text-sky-300",
-    match: /(head|skull|helmet|face|neck)/,
-    paths: [
-      "M12 2c4 0 6.5 2.5 6.5 6 0 4.5-2.2 6.2-2.2 10h-8.6c0-3.8-2.2-5.5-2.2-10C5.5 4.5 8 2 12 2z",
-      "M9 8h6",
-      "M12 11v5",
-    ],
-  },
-  {
-    key: "torso",
-    label: "Cuirass",
-    cls: "text-amber-300",
-    match: /(torso|chest|body|abdomen|groin|vitals)/,
-    paths: [
-      "M12 3c3.5 0 6 2 6 5 0 3.8-2.5 5.5-2.5 8.5 0 2.4-1.5 4.5-3.5 4.5s-3.5-2.1-3.5-4.5C8.5 13.5 6 11.8 6 8c0-3 2.5-5 6-5z",
-      "M12 3v18",
-    ],
-  },
-  {
-    key: "arm",
-    label: "Bracer",
-    cls: "text-rose-300",
-    match: /(arm|elbow|shoulder)/,
-    paths: ["M7 21V8l2-6 2 6v2", "M3 8c1 .5 1.5 1 1.7 2", "M11 15l6 2"],
-  },
-  {
-    key: "hand",
-    label: "Gauntlet",
-    cls: "text-emerald-300",
-    match: /(hand|wrist|finger)/,
-    paths: [
-      "M7.5 11V6.5a1.5 1.5 0 013 0V11m0-4.5a1.5 1.5 0 013 0v4m0-2.5a1.5 1.5 0 013 0V13c0 3.5-2.5 7-6 7-2.5 0-3.5-1-5-2.5L8 15",
-      "M8 19l1 2 2-1.5",
-    ],
-  },
-  {
-    key: "leg",
-    label: "Greaves",
-    cls: "text-violet-300",
-    match: /(leg|thigh|knee|hip)/,
-    paths: ["M10 3c1.5 0 2.5 1 2.5 2.5V17c0 2-1 4-2.5 4V3z", "M7 7c.8.3 1.3 1 1.5 1.8", "M12.5 15l-3 1"],
-  },
-  {
-    key: "foot",
-    label: "Boots",
-    cls: "text-cyan-300",
-    match: /(foot|feet|ankle)/,
-    paths: [
-      "M4 21h11v-3c0-2.5-1.5-4-4-4H8c-2.2 0-3.8 1.4-4 3.5V21z",
-      "M8 14c-.7-.8-1-1.8-.9-3",
-      "M15 17.5h4V21h-2",
-    ],
-  },
-];
-
-function weaponIconFor(item: CharacterItem): IconDef {
-  const kind = kindOf(item);
-  const hay = `${kind} ${item.category ?? ""} ${item.name ?? ""} ${item.weapon?.skill ?? ""}`.toLowerCase();
-  return WEAPON_ICONS.find((d) => d.match.test(hay)) ?? DEFAULT_WEAPON_ICON;
-}
-
-function armorIconFor(item: CharacterItem): IconDef {
-  const locations = item.armor?.locations?.toLowerCase() ?? "";
-  return ARMOR_ICONS.find((d) => d.match.test(locations)) ?? ARMOR_ICONS[1];
-}
-
-function Glyph({ cls, label, paths, className = "w-[18px] h-[18px]" }: { cls: string; label: string; paths: string[]; className?: string }) {
-  return (
-    <span title={label} className="shrink-0">
-      <svg className={`${className} ${cls}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        {paths.map((d, i) => (
-          <path key={i} strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.7" d={d} />
-        ))}
-      </svg>
-    </span>
-  );
 }
 
 interface GearPanelProps {
@@ -365,9 +178,9 @@ export default function GearPanel({ data, historic }: GearPanelProps) {
           <span className="ml-auto text-xs text-zinc-500">{owned.length} item{owned.length !== 1 ? "s" : ""}</span>
         </div>
 
-        <div className="divide-y divide-zinc-800/80">
+        <div className="p-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {owned.length === 0 ? (
-            <p className="text-zinc-600 text-sm italic px-4 py-4">No items in inventory.</p>
+            <p className="text-zinc-600 text-sm italic col-span-full px-1 py-2">No items in inventory.</p>
           ) : null}
           {owned.map((i) => {
             const stt = i.equipment_status ?? "in_inventory";
@@ -378,57 +191,114 @@ export default function GearPanel({ data, historic }: GearPanelProps) {
             const kind = kindOf(i);
             const isWeaponish = kind === "weapon" || kind === "shield";
             const isArmor = kind === "armor";
-            const wicon = isWeaponish ? weaponIconFor(i) : null;
-            const aicon = isArmor ? armorIconFor(i) : null;
+            const w = i.weapon;
+            const a = i.armor;
+            const wicon = isWeaponish;
+            const aicon = isArmor;
+            const statLine = w
+              ? [
+                  w.skill,
+                  w.handedness === 2 ? "2H" : w.handedness === 1 ? "1H" : null,
+                  w.reach ? `reach ${w.reach}` : null,
+                  w.parry ? `parry ${w.parry}` : null,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")
+              : a
+                ? [`DR ${a.dr ?? 0}`, a.locations ? a.locations.replace(/_/g, " ") : "torso"]
+                    .concat(a.fit ? [fitLabel(a.fit)] : [])
+                    .join(" · ")
+                : i.weight_lb != null
+                  ? `${i.weight_lb} lb`
+                  : "";
             return (
               <div
                 key={i.equipment_id || i.id}
                 onClick={() => toggleCompare(keyOf(i))}
-                className={`flex items-center gap-3 px-4 py-2.5 flex-wrap cursor-pointer transition-colors ${
-                  isCmp ? "bg-amber-500/5 ring-1 ring-inset ring-amber-500/40" : "hover:bg-zinc-800/40"
+                className={`group relative flex flex-col rounded-xl border px-3 pb-3 pt-4 text-center cursor-pointer transition-all ${
+                  isCmp
+                    ? "border-amber-500/50 bg-amber-500/5 ring-1 ring-inset ring-amber-500/40"
+                    : "border-zinc-700/40 bg-zinc-900/40 hover:border-zinc-600/60 hover:bg-zinc-900/70"
                 }`}
               >
-                <span className={`w-2 h-2 rounded-full shrink-0 ${STATUS_DOTS[stt] ?? "bg-zinc-400"}`} />
-                {wicon ? <Glyph cls={wicon.cls} label={wicon.label} paths={wicon.paths} /> : null}
-                {aicon ? <Glyph cls={aicon.cls} label={aicon.label} paths={aicon.paths} /> : null}
+                <div
+                  className={`flex items-center justify-center ${
+                    isCmp ? "opacity-90" : "group-hover:opacity-90"
+                  }`}
+                >
+                  <span
+                    className={`flex items-center justify-center w-14 h-14 rounded-xl border bg-zinc-950/60 transition-colors ${
+                      wicon ? "border-zinc-700/60" : aicon ? "border-cyan-700/50" : "border-zinc-700/40"
+                    }`}
+                  >
+                    <ItemIcon
+                      item={i}
+                      className="w-8 h-8 transition-transform group-hover:scale-110"
+                      imgClassName="w-10 h-10 object-cover rounded-lg"
+                    />
+                  </span>
+                </div>
 
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-sm font-medium text-zinc-200 truncate">{nameOf(i)}</span>
+                <div className="mt-2.5 min-w-0">
+                  <p className="text-sm font-semibold text-zinc-100 truncate" title={nameOf(i)}>
+                    {nameOf(i)}
+                  </p>
+                  <div className="mt-1 flex items-center justify-center gap-1 flex-wrap">
                     {badge ? (
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded ${badge.class}`}>{badge.label}</span>
+                      <span className={`text-[9px] px-1.5 py-0.5 rounded ${badge.class}`}>{badge.label}</span>
                     ) : null}
+                    <span className={`text-[9px] uppercase tracking-widest ${
+                      stt === "in_inventory" ? "text-zinc-500" : stt === "wielded" ? "text-amber-300/90" : "text-emerald-300/90"
+                    }`}>
+                      {STATUS_LABELS[stt] ?? stt}
+                    </span>
                     {isCmp ? (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-600/30 text-amber-200 border border-amber-600/50">
+                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-600/30 text-amber-200 border border-amber-600/50">
                         In compare
                       </span>
                     ) : null}
-                    {i.quality && i.quality !== "new" ? (
-                      <span className="text-[10px] uppercase text-amber-400/80">{i.quality}</span>
-                    ) : null}
-                    {fit ? (
-                      <span className="text-[10px] text-zinc-400 uppercase tracking-wide">{fitLabel(fit)}</span>
-                    ) : null}
                   </div>
-                  <div className="text-[11px] text-zinc-500">
-                    {STATUS_LABELS[stt] ?? stt}
-                    {i.quantity != null && i.quantity > 1 ? <span> · x{i.quantity}</span> : null}
-                  </div>
+                  {fit ? (
+                    <p className="text-[9px] uppercase tracking-wide text-zinc-500 mt-0.5">{fitLabel(fit)}</p>
+                  ) : null}
                 </div>
+
+                {statLine ? (
+                  <p className="mt-1.5 font-mono text-[10px] text-zinc-400 truncate" title={statLine}>
+                    {statLine}
+                  </p>
+                ) : null}
+                {w && w.attacks && w.attacks.length > 0 ? (
+                  <p className="mt-1 font-mono text-sm font-bold text-red-400">
+                    {resolveAttack(w.attacks[0], st, w.rated_st)}
+                    <span className="text-zinc-500 font-semibold text-[10px] ml-1 uppercase">
+                      {DAMAGE_TYPES[w.attacks[0].damage_type] || w.attacks[0].damage_type}
+                    </span>
+                  </p>
+                ) : null}
+                {i.quality && i.quality !== "new" ? (
+                  <p className="text-[9px] uppercase tracking-widest text-amber-400/80 mt-0.5">{i.quality}</p>
+                ) : null}
+                {i.quantity != null && i.quantity > 1 ? (
+                  <p className="text-[10px] text-zinc-500 mt-0.5">×{i.quantity}</p>
+                ) : null}
 
                 {part && stt !== "in_inventory" ? (
                   <div
-                    className={`flex flex-col items-center justify-center gap-0.5 min-w-[52px] px-2 py-1.5 rounded-lg border ${part.cls}`}
+                    className={`mt-2 inline-flex items-center justify-center gap-1 self-center rounded-md border px-1.5 py-0.5 ${part.cls}`}
                     title={i.equipment_location?.replace(/_/g, " ")}
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.7" d={part.icon} />
                     </svg>
                     <span className="text-[8px] font-semibold uppercase tracking-widest">{part.label}</span>
                   </div>
                 ) : null}
 
-                <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+                <div
+                  className="mt-2.5 flex items-center justify-center gap-1.5 border-t border-zinc-800/80 pt-2.5"
+                  onClick={(e) => e.stopPropagation()}
+                >
                   {stt === "in_inventory" ? (
                     <>
                       {isWeaponish ? (
@@ -436,7 +306,7 @@ export default function GearPanel({ data, historic }: GearPanelProps) {
                           type="button"
                           disabled={busy[keyOf(i)]}
                           onClick={() => mutate(keyOf(i), "wielded", "right_hand")}
-                          className="text-[11px] px-2 py-1 rounded-md bg-amber-600/50 hover:bg-amber-600 text-amber-100 transition-colors disabled:opacity-50"
+                          className="text-[11px] px-2.5 py-1 rounded-md bg-amber-600/50 hover:bg-amber-600 text-amber-100 transition-colors disabled:opacity-50"
                         >
                           Wield
                         </button>
@@ -445,7 +315,7 @@ export default function GearPanel({ data, historic }: GearPanelProps) {
                         type="button"
                         disabled={busy[keyOf(i)]}
                         onClick={() => mutate(keyOf(i), "equipped", "any")}
-                        className="text-[11px] px-2 py-1 rounded-md bg-emerald-700/50 hover:bg-emerald-700 text-emerald-100 transition-colors disabled:opacity-50"
+                        className="text-[11px] px-2.5 py-1 rounded-md bg-emerald-700/50 hover:bg-emerald-700 text-emerald-100 transition-colors disabled:opacity-50"
                       >
                         Equip
                       </button>
@@ -455,7 +325,7 @@ export default function GearPanel({ data, historic }: GearPanelProps) {
                       type="button"
                       disabled={busy[keyOf(i)]}
                       onClick={() => mutate(keyOf(i), "in_inventory", "none")}
-                      className="text-[11px] px-2 py-1 rounded-md bg-zinc-700/50 hover:bg-zinc-700 text-zinc-300 transition-colors disabled:opacity-50"
+                      className="text-[11px] px-2.5 py-1 rounded-md bg-zinc-700/50 hover:bg-zinc-700 text-zinc-300 transition-colors disabled:opacity-50"
                     >
                       Unwield
                     </button>
@@ -464,7 +334,7 @@ export default function GearPanel({ data, historic }: GearPanelProps) {
                       type="button"
                       disabled={busy[keyOf(i)]}
                       onClick={() => mutate(keyOf(i), "in_inventory", "none")}
-                      className="text-[11px] px-2 py-1 rounded-md bg-zinc-700/50 hover:bg-zinc-700 text-zinc-300 transition-colors disabled:opacity-50"
+                      className="text-[11px] px-2.5 py-1 rounded-md bg-zinc-700/50 hover:bg-zinc-700 text-zinc-300 transition-colors disabled:opacity-50"
                     >
                       Store
                     </button>
@@ -507,14 +377,11 @@ function GearCard({ item, st, status }: { item: CharacterItem; st: number; statu
   const badge = KIND_BADGES[kind];
   const w = item.weapon;
   const a = item.armor;
-  const wicon = w || kind === "shield" ? weaponIconFor(item) : null;
-  const aicon = kind === "armor" ? armorIconFor(item) : null;
 
   return (
     <div>
       <div className="flex items-center gap-2 mb-2 flex-wrap">
-        {wicon ? <Glyph cls={wicon.cls} label={wicon.label} paths={wicon.paths} /> : null}
-        {aicon ? <Glyph cls={aicon.cls} label={aicon.label} paths={aicon.paths} /> : null}
+        <ItemIcon item={item} className="w-[18px] h-[18px]" imgClassName="w-5 h-5 object-cover rounded" />
         <span className="text-sm font-semibold text-amber-100">{nameOf(item)}</span>
         {badge ? (
           <span className={`text-[10px] px-1.5 py-0.5 rounded ${badge.class}`}>{badge.label}</span>
