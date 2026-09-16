@@ -15,6 +15,11 @@ import type {
 } from "@/lib/types";
 import { getSessionState } from "@/lib/session";
 import TableTabs from "@/components/TableTabs";
+import StoryRail from "@/components/scenes/StoryRail";
+import TableQuickActions, {
+  type QuickItem,
+  type QuickTarget,
+} from "@/components/table/TableQuickActions";
 
 export const dynamic = "force-dynamic";
 
@@ -296,6 +301,33 @@ export default async function TableOverviewPage({ params }: { params: Promise<{ 
     })
   );
 
+  /* gm quick actions — every sheet-bearing character as a target */
+  const quickTargets: QuickTarget[] = [
+    ...seats
+      .filter((s) => s.hasSheet && s.id)
+      .map((s) => ({
+        id: s.id,
+        name: s.name,
+        kind: "player" as const,
+        hp: s.current ?? null,
+        baseHp: s.base ?? null,
+        points: s.points ?? null,
+      })),
+    ...npcSeats
+      .filter((s) => s.hasSheet && s.id)
+      .map((s) => ({
+        id: s.id,
+        name: s.name,
+        kind: "npc" as const,
+        hp: s.current ?? null,
+        baseHp: s.base ?? null,
+        points: s.points ?? null,
+      })),
+  ];
+  const quickItems: QuickItem[] = itemsRes?.items
+    ? itemsRes.items.map((i) => ({ id: i.id, name: i.name }))
+    : [];
+
   /* records on file */
   const characters = charsRes?.characters ?? [];
   const items = itemsRes?.items ?? [];
@@ -403,6 +435,19 @@ export default async function TableOverviewPage({ params }: { params: Promise<{ 
           {recordTotal} record{recordTotal === 1 ? "" : "s"} on file
         </span>
       </div>
+
+      {/* ---- chronicle rail ---- */}
+      {hasChronicle ? (
+        <section className="mt-8">
+          <StoryRail tableId={id} scenes={scenes} state={state} />
+        </section>
+      ) : null}
+
+      {/* ---- gm quick actions ---- */}
+      <section className="mt-8">
+        <LedgerHeader title="GM Quick Actions" meta="status · item · experience" />
+        <TableQuickActions tableId={id} targets={quickTargets} items={quickItems} />
+      </section>
 
       {/* ---- seating (players) ---- */}
       <section className="mt-8">

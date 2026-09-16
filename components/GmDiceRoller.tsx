@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import DiceMystery from "@/components/session/DiceMystery";
 
 type Judgment = {
   crit: boolean;
@@ -26,6 +27,7 @@ export default function GmDiceRoller() {
   const [judgment, setJudgment] = useState<Judgment | null>(null);
   const [rollId, setRollId] = useState(0);
   const [history, setHistory] = useState<number[]>([]);
+  const [revealed, setRevealed] = useState(false);
 
   function roll() {
     const d = [
@@ -37,6 +39,7 @@ export default function GmDiceRoller() {
     setDice(d);
     setSum(total);
     setJudgment(judge(total, target));
+    setRevealed(false);
     setRollId((id) => id + 1);
     setHistory((h) => [...h, total]);
   }
@@ -47,6 +50,7 @@ export default function GmDiceRoller() {
     setJudgment(null);
     setHistory([]);
     setRollId(0);
+    setRevealed(false);
   }
 
   const counts = new Map<number, number>();
@@ -87,16 +91,28 @@ export default function GmDiceRoller() {
 
       <div className="mt-5 flex items-center gap-5 flex-wrap">
         <div className="flex gap-2" aria-hidden>
-          {[0, 1, 2].map((i) => (
-            <span
-              key={`${rollId}-${i}`}
-              className={`flex w-14 h-14 items-center justify-center rounded-lg border-2 bg-zinc-800/60 font-mono text-2xl font-bold ${
-                dice ? "border-green-800/70 text-zinc-100" : "border-zinc-700 text-zinc-600"
-              }`}
-            >
-              {dice ? dice[i] : "–"}
-            </span>
-          ))}
+          {rollId === 0 ? (
+            [0, 1, 2].map((i) => (
+              <span
+                key={`rest-${i}`}
+                className={`flex w-14 h-14 items-center justify-center rounded-lg border-2 bg-zinc-800/60 font-mono text-2xl font-bold border-zinc-700 text-zinc-600`}
+              >
+                {"–"}
+              </span>
+            ))
+          ) : (
+            <DiceMystery
+              burn={rollId}
+              count={3}
+              die={6}
+              faces={dice ?? []}
+              onReveal={() => setRevealed(true)}
+              chipClass="border-green-900/70 bg-zinc-800/70"
+              faceClass="text-zinc-100"
+              glowColor="rgba(52,211,153,0.35)"
+              size={56}
+            />
+          )}
         </div>
         <p
           key={rollId}
@@ -109,7 +125,7 @@ export default function GmDiceRoller() {
               : "text-zinc-500"
           }`}
         >
-          {sum !== null && judgment ? (
+          {revealed && sum !== null && judgment ? (
             <>
               <span className={`block text-2xl font-bold tabular-nums ${judgment.crit ? "" : "text-zinc-100"}`}>
                 = {sum}
@@ -117,7 +133,10 @@ export default function GmDiceRoller() {
               <span className="uppercase">{judgment.text}</span>
             </>
           ) : (
-            "Set a target and roll."
+            <>
+              <span className="block text-base">{rollId === 0 ? "Set a target and roll." : "The dice are still in the air…"}</span>
+              <span className="text-zinc-600 uppercase text-[11px] tracking-wider">{rollId === 0 ? "" : `3d6 vs target ${target}`}</span>
+            </>
           )}
         </p>
       </div>
@@ -134,7 +153,7 @@ export default function GmDiceRoller() {
         {Array.from({ length: 16 }, (_, i) => {
           const face = i + 3;
           const count = counts.get(face) ?? 0;
-          const isCurrent = sum === face;
+          const isCurrent = revealed && sum === face;
           return (
             <span key={face} className="flex h-full flex-1 items-end">
               <span
@@ -157,9 +176,10 @@ export default function GmDiceRoller() {
         <button
           type="button"
           onClick={roll}
-          className="bg-green-900/60 hover:bg-green-800 text-white text-sm font-medium px-6 py-2.5 rounded-lg transition-colors"
+          disabled={rollId > 0 && !revealed}
+          className="bg-green-900/60 hover:bg-green-800 text-white text-sm font-medium px-6 py-2.5 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          Roll 3d6
+          {rollId > 0 && !revealed ? "Rolling…" : "Roll 3d6"}
         </button>
         {history.length > 0 ? (
           <button

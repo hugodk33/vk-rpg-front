@@ -8,7 +8,11 @@ export const dynamic = "force-dynamic";
 interface PlayerEntry {
   table: GameTable;
   ch: TableCharacter;
+  /** Set when the entry is an allied NPC (status `ally`). */
+  npcStatus?: string;
 }
+
+const ALLY_NPC_STATUS = "ally";
 
 async function loadPlayerEntries(): Promise<PlayerEntry[]> {
   try {
@@ -19,9 +23,17 @@ async function loadPlayerEntries(): Promise<PlayerEntry[]> {
         api<GameTableCharacters>(`/game-table-characters/${t.id}`),
         api<GameTableNpcs>(`/game-table-npcs/${t.id}`).catch(() => ({ table: null, npcs: [] })),
       ]);
-      const npcIds = new Set((npcs?.npcs ?? []).map((n: TableNpc) => n.character_id));
+      const npcOf = new Map<string, TableNpc>();
+      for (const n of npcs?.npcs ?? []) if (n.character_id) npcOf.set(n.character_id, n);
       for (const ch of chars?.characters ?? []) {
-        if (!npcIds.has(ch.id)) entries.push({ table: t, ch });
+        const npc = npcOf.get(ch.id);
+        if (npc) {
+          // Companhia só inclui NPCs aliados — inimigos/neutros/bosses ficam
+          // fora do painel do jogador até o mestre liberá-los como ally.
+          if (npc.status === ALLY_NPC_STATUS) entries.push({ table: t, ch: { ...ch, isNpc: true }, npcStatus: npc.status });
+        } else {
+          entries.push({ table: t, ch });
+        }
       }
     }
     return entries;
@@ -60,11 +72,54 @@ function statRow(s: Sheet) {
   ];
 }
 
+/** HP current = effective `hp` (base + active modifiers); max = original `base_hp`. */
 function hpBar(s: Sheet) {
-  const max = s.hp ?? s.base_hp ?? 0;
-  const cur = s.current_hp ?? max;
+  const max = s.base_hp ?? s.hp ?? 0;
+  const cur = s.hp ?? max;
   const pct = max ? Math.max(0, Math.min(1, cur / max)) : 0;
   return { max, cur, pct };
+}
+
+interface EffectChip {
+  key: string;
+  label: string;
+  value: string;
+  cls: string;
+}
+
+function effectDeltas(m: {
+  mod_hp?: number;
+  mod_st?: number;
+  mod_dx?: number;
+  mod_iq?: number;
+  mod_ht?: number;
+}): EffectChip[] {
+  const chips: EffectChip[] = [];
+  if (m.mod_hp != null) chips.push({ key: "hp", label: "HP", value: signed(m.mod_hp), cls: "text-red-400" });
+  if (m.mod_st != null) chips.push({ key: "st", label: "ST", value: signed(m.mod_st), cls: "text-red-400" });
+  if (m.mod_dx != null) chips.push({ key: "dx", label: "DX", value: signed(m.mod_dx), cls: "text-emerald-400" });
+  if (m.mod_iq != null) chips.push({ key: "iq", label: "IQ", value: signed(m.mod_iq), cls: "text-blue-400" });
+  if (m.mod_ht != null) chips.push({ key: "ht", label: "HT", value: signed(m.mod_ht), cls: "text-purple-400" });
+  return chips;
+}
+
+function effectSign(m: {
+  mod_hp?: number;
+  mod_st?: number;
+  mod_dx?: number;
+  mod_iq?: number;
+  mod_ht?: number;
+}): -1 | 0 | 1 {
+  const deltas = [m.mod_hp, m.mod_st, m.mod_dx, m.mod_iq, m.mod_ht]
+    .filter((n): n is number => n != null);
+  if (!deltas.length) return 0;
+  if (deltas.some((n) => n < 0) && !deltas.some((n) => n > 0)) return -1;
+  if (deltas.some((n) => n > 0) && !deltas.some((n) => n < 0)) return 1;
+  return 0;
+}
+
+function signed(n: number): string {
+  return `${n >= 0 ? "+" : ""}${n}`;
 }
 
 function seatOptionsFrom(entries: PlayerEntry[]): SeatOption[] {
@@ -141,20 +196,28 @@ export default async function PlayerDashboard({
         </div>
       ) : (
         <div className="space-y-3">
-          {shown.map(({ table, ch }) => {
+          {shown.map(({ table, ch, npcStatus }) => {
             const s = ch.sheet ?? ({} as Sheet);
             const name = s.name || ch.name || "Unnamed adventurer";
             const hue = hueFor(name);
             const hp = hpBar(s);
             const attrs = statRow(s);
+            const isNpc = !!ch.isNpc || npcStatus === ALLY_NPC_STATUS;
             const isMine = mine(ch);
             const sessionUrl = `/player/character/${ch.id}/session`;
             const sheetUrl = `/player/character/${ch.id}`;
             const observerId = !isMine && seat && table ? observerByTable.get(table.id) ?? null : null;
             const viewUrl = observerId
               ? `/player/character/${ch.id}/view?viewer=${encodeURIComponent(observerId)}`
-              : sheetUrl;
+              : isNpc
+                ? `/player/character/${ch.id}/view`
+                : sheetUrl;
             const ownerName = ch.user?.username ?? (ch.user?.id ?? ch.userId);
+            const effects = (ch.active_effects ?? []).map((m) => ({
+              m,
+              deltas: effectDeltas(m),
+              sign: effectSign(m),
+            }));
             return (
               <div
                 key={ch.id}
@@ -181,7 +244,11 @@ export default async function PlayerDashboard({
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <h2 className="text-lg font-bold text-zinc-100 leading-tight truncate">{name}</h2>
-                          {seat ? (
+                          {isNpc ? (
+                            <span className="font-mono text-[9px] uppercase tracking-widest text-amber-300/80 border border-amber-500/30 rounded px-1.5 py-0.5">
+                              Ally NPC
+                            </span>
+                          ) : seat ? (
                             isMine ? (
                               <span className="font-mono text-[9px] uppercase tracking-widest text-blue-300/80 border border-blue-500/30 rounded px-1.5 py-0.5">
                                 You
@@ -195,7 +262,7 @@ export default async function PlayerDashboard({
                         </div>
                         <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500 mt-0.5">
                           {table ? table.title : "Unknown table"}
-                          {ownerName ? ` · ${ownerName}` : ""}
+                          {isNpc ? "" : ownerName ? ` · ${ownerName}` : ""}
                         </p>
                       </div>
                       {hp.max ? (
@@ -214,12 +281,56 @@ export default async function PlayerDashboard({
                         </span>
                       ))}
                     </div>
+
+                    {effects.length > 0 ? (
+                      <div className="flex flex-wrap gap-1.5 mt-2.5">
+                        {effects.map(({ m, deltas, sign }) => {
+                          const dot =
+                            sign < 0 ? "bg-rose-400 shadow-[0_0_6px_rgba(251,113,133,0.7)]" :
+                            sign > 0 ? "bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.7)]" :
+                            "bg-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.6)]";
+                          return (
+                            <span
+                              key={m.id}
+                              className="inline-flex items-center gap-1.5 bg-zinc-800/50 border border-zinc-700/40 rounded-md px-2 py-1"
+                            >
+                              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dot}`} />
+                              <span className="text-zinc-300 text-xs font-medium">{m.name || "Effect"}</span>
+                              {deltas.length > 0 ? (
+                                <span className="flex items-center gap-1.5">
+                                  {deltas.map((d) => (
+                                    <span key={d.key} className={`font-mono text-[10px] ${d.cls}`}>
+                                      {d.label} {d.value}
+                                    </span>
+                                  ))}
+                                </span>
+                              ) : null}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    ) : null}
                   </div>
                 </div>
 
                 {/* actions */}
                 <div className="flex sm:flex-col items-center sm:items-stretch gap-3 px-5 pb-5 sm:pb-0 sm:pr-5 sm:justify-center shrink-0">
-                  {isMine || !seat ? (
+                  {isNpc ? (
+                    <>
+                      <Link
+                        href={viewUrl}
+                        className="w-full text-center bg-blue-600 hover:bg-blue-500 text-blue-950 text-sm font-semibold px-4 py-2 rounded-lg transition-colors shadow-lg shadow-blue-900/20"
+                      >
+                        View sheet
+                      </Link>
+                      {observerId ? (
+                        <p className="text-[11px] leading-snug text-zinc-500 text-center sm:text-right">
+                          As you see them — only what your character
+                          has discovered in play is shown.
+                        </p>
+                      ) : null}
+                    </>
+                  ) : isMine || !seat ? (
                     <>
                       <Link
                         href={sessionUrl}
@@ -240,19 +351,19 @@ export default async function PlayerDashboard({
                       </div>
                     </>
                   ) : (
-                    <Link
-                      href={viewUrl}
-                      className="w-full text-center bg-blue-600 hover:bg-blue-500 text-blue-950 text-sm font-semibold px-4 py-2 rounded-lg transition-colors shadow-lg shadow-blue-900/20"
-                    >
-                      View sheet
-                    </Link>
+                    <>
+                      <Link
+                        href={viewUrl}
+                        className="w-full text-center bg-blue-600 hover:bg-blue-500 text-blue-950 text-sm font-semibold px-4 py-2 rounded-lg transition-colors shadow-lg shadow-blue-900/20"
+                      >
+                        View sheet
+                      </Link>
+                      <p className="text-[11px] leading-snug text-zinc-500 text-center sm:text-right">
+                        As you see them — only what your character
+                        has discovered in play is shown.
+                      </p>
+                    </>
                   )}
-                  {!isMine && observerId ? (
-                    <p className="text-[11px] leading-snug text-zinc-500 text-center sm:text-right">
-                      As you see them — only what your character
-                      has discovered in play is shown.
-                    </p>
-                  ) : null}
                 </div>
               </div>
             );

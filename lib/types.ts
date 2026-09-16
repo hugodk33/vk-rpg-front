@@ -266,6 +266,29 @@ export interface LocationHexGrid {
   rotationDeg?: number
 }
 
+export type HexTileKind = "open" | "grass" | "water" | "forest" | "stone" | "wall" | "door" | "rubble"
+
+export interface HexTile {
+  q: number
+  r: number
+  t: HexTileKind
+}
+
+export interface DrawShape {
+  type: "path" | "rect" | "ellipse"
+  d?: string
+  x?: number
+  y?: number
+  w?: number
+  h?: number
+  cx?: number
+  cy?: number
+  rx?: number
+  ry?: number
+  size: number
+  color: string
+}
+
 export interface Location {
   id: string
   tableId?: string
@@ -286,6 +309,8 @@ export interface Location {
   hex?: LocationHexGrid
   isBattlemap?: boolean
   shopName?: string | null
+  tiles?: HexTile[]
+  drawing?: DrawShape[]
   ancestors?: Location[]
   children?: Location[]
 }

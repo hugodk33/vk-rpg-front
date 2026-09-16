@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { absoluteHex } from "@/lib/location";
+import type { DrawShape, HexTile } from "@/lib/types";
 import { submitJson } from "@/components/forms/submit";
 import LocationVisibility from "@/components/location/LocationVisibility";
 import LocationModifiers from "@/components/location/LocationModifiers";
@@ -59,6 +60,8 @@ interface Loc {
   shop_name?: string;
   ancestors?: Loc[];
   children?: Loc[];
+  tiles?: HexTile[];
+  drawing?: DrawShape[];
 }
 
 const KIND_LABELS: Record<string, string> = {
@@ -541,7 +544,23 @@ export default function LocationPlate({ location, tableId, mode = "narrator" }: 
 
         {view === "map" && isBattlemap ? (
           <div className="px-6 py-8 lg:px-8" role="tabpanel">
-            <LocationMap hex={hex} abs={abs} accent={accent} />
+            <div className="flex items-center justify-between gap-3 mb-4">
+              <div>
+                <h2 className="font-mono text-[13px] font-bold uppercase tracking-wider text-zinc-200">Tactical plate</h2>
+                <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-600 mt-0.5">
+                  {location.tiles?.length || 0} painted cells · {location.drawing?.length || 0} strokes
+                </p>
+              </div>
+              {!isPlayer && location.id ? (
+                <Link
+                  href={`/location/${location.id}/edit`}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-amber-600/60 bg-amber-600/10 px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest text-amber-300 transition-colors hover:bg-amber-600/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-600/60"
+                >
+                  Edit map
+                </Link>
+              ) : null}
+            </div>
+            <LocationMap hex={hex} abs={abs} accent={accent} tiles={location.tiles} drawing={location.drawing} />
           </div>
         ) : null}
 

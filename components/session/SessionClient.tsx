@@ -7,6 +7,7 @@ import type { CharacterSkill, CharacterViewer, NarrationAction, QueueEntry, Shee
 import { api } from "@/lib/api";
 import { skillLabel, skillLevel } from "@/lib/skill";
 import QueueProcession from "@/components/session/QueueProcession";
+import DiceMystery from "@/components/session/DiceMystery";
 
 /* ============================================================
    Session Console
@@ -134,6 +135,7 @@ export default function SessionClient({
         inputBorder: "focus:border-blue-700/60",
         diceText: "text-blue-300",
         diceBorder: "#3b82f655",
+        diceChip: "border-blue-500/40 bg-blue-950/50",
         shadow: "rgba(59,130,246,.6)",
         shadowCardA: "rgba(59,130,246,.15)",
         shadowCardB: "rgba(59,130,246,.35)",
@@ -158,6 +160,7 @@ export default function SessionClient({
         inputBorder: "focus:border-green-900/60",
         diceText: "text-green-400",
         diceBorder: "#16a34a55",
+        diceChip: "border-green-700/40 bg-green-950/50",
         shadow: "rgba(22,101,52,.6)",
         shadowCardA: "rgba(22,101,52,.15)",
         shadowCardB: "rgba(22,101,52,.35)",
@@ -271,6 +274,9 @@ export default function SessionClient({
   const [actRoll, setActRoll] = useState("");
   const [actTarget, setActTarget] = useState("");
   const [actDesc, setActDesc] = useState("");
+  const [revealKey, setRevealKey] = useState(0);
+  const [revealed, setRevealed] = useState(false);
+  const [lastDice, setLastDice] = useState({ count: 3, die: "6" });
 
   const actorCharId = pendingQueue[0]?.character_id || "";
   const upEntry = pendingQueue[0];
@@ -338,6 +344,9 @@ export default function SessionClient({
     setRolls(r);
     setTotal(tot);
     setJudgment(j);
+    setLastDice({ count: diceCount, die: diceType });
+    setRevealed(false);
+    setRevealKey((k) => k + 1);
     return { r, tot, j };
   }
 
@@ -666,20 +675,23 @@ export default function SessionClient({
                   {rolls.length === 0 ? (
                     <div className="flex items-center gap-2 text-sm text-zinc-500">{icon("M12 3l1.5 6.5L20 11l-6.5 1.5L12 19l-1.5-6.5L4 11l6.5-1.5L12 3z", "w-7 h-7 text-zinc-600")} Roll? Your faces appear here.</div>
                   ) : (
-                    rolls.map((r, i) => (
-                      <div key={i} className="flex items-center gap-2">
-                        <div className={`w-12 h-12 rounded-lg border bg-zinc-800 flex items-center justify-center text-xl font-bold font-mono ${T.diceText} shadow-inner`} style={{ borderColor: T.diceBorder }}>
-                          {r}
-                        </div>
-                        {i < rolls.length - 1 ? <span className="text-zinc-600">+</span> : null}
-                      </div>
-                    ))
+                    <DiceMystery
+                      burn={revealKey}
+                      count={lastDice.count}
+                      die={Number(lastDice.die)}
+                      faces={rolls}
+                      onReveal={() => setRevealed(true)}
+                      chipClass={T.diceChip}
+                      faceClass={T.diceText}
+                      glowColor={T.shadow}
+                      size={48}
+                    />
                   )}
                 </div>
 
                 {/* result */}
                 <div className="flex items-center gap-4 flex-wrap">
-                  {total !== null && judgment ? (
+                  {revealed && total !== null && judgment ? (
                     <div className={`rounded-lg border px-4 py-2.5 ${judgment.ok ? "border-emerald-500/50 bg-emerald-500/10" : "border-red-500/50 bg-red-500/10"}`}>
                       <span className={`font-mono text-2xl font-bold tabular-nums ${judgment.ok ? "text-emerald-300" : "text-red-300"}`}>= {total}</span>
                       <span className={`block font-mono text-[11px] uppercase tracking-widest ${judgment.ok ? "text-emerald-400" : "text-red-400"}`}>
@@ -687,10 +699,12 @@ export default function SessionClient({
                       </span>
                     </div>
                   ) : (
-                    <span className="text-sm text-zinc-600">Click <span className={`${T.textSofter} font-semibold`}>Roll</span> to test.</span>
+                    <span className="text-sm text-zinc-600">
+                      {revealKey > 0 ? "The dice are still in the air…" : <>Click <span className={`${T.textSofter} font-semibold`}>Roll</span> to test.</>}
+                    </span>
                   )}
                   <div className="flex gap-2 flex-wrap">
-                    <button onClick={rollBtn} className={`${T.btnFill} text-sm font-bold px-5 py-2.5 rounded-lg transition-colors`}>{icon("M12 3l1.5 6.5L20 11l-6.5 1.5L12 19l-1.5-6.5L4 11l6.5-1.5L12 3z", "w-4 h-4 inline mr-1")}Roll {diceCount}d{diceType}</button>
+                    <button onClick={rollBtn} disabled={revealKey > 0 && !revealed} className={`${T.btnFill} text-sm font-bold px-5 py-2.5 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}>{icon("M12 3l1.5 6.5L20 11l-6.5 1.5L12 19l-1.5-6.5L4 11l6.5-1.5L12 3z", "w-4 h-4 inline mr-1")}{revealKey > 0 && !revealed ? "Rolling…" : `Roll ${diceCount}d${diceType}`}</button>
                     <button onClick={copyRoll} className="bg-zinc-700 hover:bg-zinc-600 text-zinc-300 text-sm font-medium px-4 py-2.5 rounded-lg transition-colors">Copy</button>
                   </div>
                 </div>
@@ -712,7 +726,7 @@ export default function SessionClient({
                       {Array.from({ length: 16 }, (_, i) => {
                         const face = i + 3;
                         const c = counts.get(face) ?? 0;
-                        const isCurrent = total === face;
+                        const isCurrent = revealed && total === face;
                         return (
                           <span key={face} className="flex-1 h-full flex items-end" title={`=${face}`}>
                             <span className={`w-full rounded-t-sm transition-[height] ${isCurrent ? (judgment?.ok ? "bg-emerald-400" : "bg-red-400") : c ? T.curve : "bg-zinc-800"}`} style={{ height: `${c ? Math.max(8, (c / maxCount) * 100) : 3}%` }} />
