@@ -133,6 +133,20 @@ const EXTERIOR = {
   line: "#7dd3fc",
   label: "Exterior",
 };
+/* Narrator trail glows green (the GM palette used across the master
+   flow); the player trail keeps the surveyor amber/sky chroma. */
+const NARR_INDOOR = {
+  hex: "#4ade80",
+  sky: ["#131a10", "#0d120c"],
+  line: "#86efac",
+  label: "Interior",
+};
+const NARR_EXTERIOR = {
+  hex: "#4ade80",
+  sky: ["#0b1511", "#101f18"],
+  line: "#86efac",
+  label: "Exterior",
+};
 
 function SiteCrest({ indoor, hex, line }: { indoor: boolean; hex: string; line: string }) {
   return (
@@ -185,7 +199,7 @@ function SurveyRow({ label, value, emphasize, hex }: { label: string; value?: st
   );
 }
 
-function TerritoryCrumbs({ chain, accent, mode }: { chain: Loc[]; accent: string; mode: "narrator" | "player" }) {
+function TerritoryCrumbs({ chain, accent, mode, hoverCls }: { chain: Loc[]; accent: string; mode: "narrator" | "player"; hoverCls: string }) {
   if (chain.length <= 1) return null;
   const hrefOf = (id?: string) => (mode === "player" ? `/player` : `/location/${id}`);
   return (
@@ -205,7 +219,7 @@ function TerritoryCrumbs({ chain, accent, mode }: { chain: Loc[]; accent: string
               <>
                 <Link
                   href={hrefOf(loc.id)}
-                  className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 hover:text-amber-400 transition-colors"
+                  className={`font-mono text-[10px] tracking-widest uppercase text-zinc-500 ${hoverCls} transition-colors`}
                 >
                   {label}
                 </Link>
@@ -224,9 +238,14 @@ export default function LocationPlate({ location, tableId, mode = "narrator" }: 
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [view, setView] = useState<PlateView>("survey");
+  const isPlayer = mode === "player";
   const indoor = location.isIndoor != null ? !!location.isIndoor : !!location.is_indoor;
-  const env = indoor ? INDOOR : EXTERIOR;
+  const env = isPlayer
+    ? indoor ? INDOOR : EXTERIOR
+    : indoor ? NARR_INDOOR : NARR_EXTERIOR;
   const accent = env.hex;
+  const chromeHover = isPlayer ? "hover:text-amber-400" : "hover:text-green-400";
+  const titleCls = isPlayer ? "text-amber-100" : "text-green-100";
   const hex = location.hex;
   const kind = location.kind ?? "site";
   const kindLabel = KIND_LABELS[kind] ?? kind;
@@ -235,7 +254,6 @@ export default function LocationPlate({ location, tableId, mode = "narrator" }: 
   const children = location.children ?? [];
   const abs = absoluteHex(location);
   const baseTableId = tableId ?? location.tableId ?? location.table_id;
-  const isPlayer = mode === "player";
   const isShop = !!(location.shopName ?? location.shop_name);
   const showSurvey = view === "survey";
   const tabs = PLATE_TABS.filter((t) => {
@@ -258,7 +276,7 @@ export default function LocationPlate({ location, tableId, mode = "narrator" }: 
           {baseTableId ? (
             <Link
               href={backHref}
-              className="inline-flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-widest text-zinc-500 hover:text-amber-400 transition-colors"
+              className={`inline-flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-widest text-zinc-500 ${chromeHover} transition-colors`}
             >
               <span aria-hidden>←</span> Back to locations
             </Link>
@@ -282,7 +300,7 @@ export default function LocationPlate({ location, tableId, mode = "narrator" }: 
                 type="button"
                 aria-selected={view === t.key}
                 onClick={() => setView(t.key)}
-                className={`relative px-3 py-2 font-mono text-[10px] uppercase tracking-widest transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-800/60 rounded-md ${
+                className={`relative px-3 py-2 font-mono text-[10px] uppercase tracking-widest transition-colors focus:outline-none focus-visible:ring-2 rounded-md ${isPlayer ? "focus-visible:ring-amber-800/60" : "focus-visible:ring-green-800/60"} ${
                   view === t.key ? "text-zinc-100" : "text-zinc-500 hover:text-zinc-300"
                 }`}
               >
@@ -300,12 +318,12 @@ export default function LocationPlate({ location, tableId, mode = "narrator" }: 
         {/* territory chain */}
         <div className="px-6 lg:px-8 mt-4">
           <div className="flex items-center justify-between gap-4">
-            <TerritoryCrumbs chain={chain} accent={accent} mode={isPlayer ? "player" : "narrator"} />
+            <TerritoryCrumbs chain={chain} accent={accent} mode={isPlayer ? "player" : "narrator"} hoverCls={chromeHover} />
             <div className="flex items-center gap-3 shrink-0">
               {location.id && !isPlayer ? (
                 <Link
                   href={`/location/${location.id}/edit`}
-                  className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 hover:text-amber-400 transition-colors"
+                  className={`font-mono text-[10px] tracking-widest uppercase text-zinc-500 ${chromeHover} transition-colors`}
                 >
                   Edit
                 </Link>
@@ -313,7 +331,7 @@ export default function LocationPlate({ location, tableId, mode = "narrator" }: 
               {baseTableId && location.id && !isPlayer ? (
                 <Link
                   href={`/table/${baseTableId}/locations/new?parent_id=${location.id}`}
-                  className="font-mono text-[10px] tracking-widest uppercase text-amber-500/80 hover:text-amber-400 transition-colors"
+                  className={`font-mono text-[10px] tracking-widest uppercase ${isPlayer ? "text-amber-500/80 hover:text-amber-400" : "text-green-400/80 hover:text-green-300"} transition-colors`}
                 >
                   ✦ Subdivision
                 </Link>
@@ -397,7 +415,7 @@ export default function LocationPlate({ location, tableId, mode = "narrator" }: 
             <Panel>
               <div className="flex items-start gap-4 flex-wrap">
                 <div className="min-w-0 flex-1">
-                  <h1 className="text-[clamp(26px,5vw,40px)] leading-none font-bold tracking-tight text-amber-100">
+                  <h1 className={`text-[clamp(26px,5vw,40px)] leading-none font-bold tracking-tight ${titleCls}`}>
                     {location.name || "Unmapped location"}
                   </h1>
                   <div className="mt-2 flex items-center gap-2 flex-wrap">
@@ -470,7 +488,7 @@ export default function LocationPlate({ location, tableId, mode = "narrator" }: 
                           </span>
                         </div>
                       </div>
-                      <span className="text-zinc-600 group-hover:text-amber-400 transition-colors" aria-hidden>→</span>
+                      <span className={`text-zinc-600 transition-colors ${isPlayer ? "group-hover:text-amber-400" : "group-hover:text-green-400"}`} aria-hidden>→</span>
                     </Link>
                   ))}
                 </div>
