@@ -86,7 +86,24 @@ export default async function PlayerDashboard({
   const { seat } = await searchParams;
   const entries = await loadPlayerEntries();
   const seatOptions = seatOptionsFrom(entries);
-  const shown = seat ? entries.filter((e) => (e.ch.user?.id ?? e.ch.userId) === seat) : entries;
+
+  // With a seat picked, "your company" = your own characters plus the
+  // rest of the party at the same tables. Companions open their sheet
+  // filtered through this player's own visibility layers.
+  const myEntries = seat ? entries.filter((e) => (e.ch.user?.id ?? e.ch.userId) === seat) : entries;
+  const myTableIds = new Set<string>(myEntries.map((e) => e.table?.id).filter((t): t is string => !!t));
+  const shown = seat ? entries.filter((e) => (e.table?.id && myTableIds.has(e.table.id)) || myEntries.includes(e)) : entries;
+
+  const mySeats = new Set<string>();
+  const observerByTable = new Map<string, string>();
+  if (seat) {
+    for (const { table, ch } of entries) {
+      if ((ch.user?.id ?? ch.userId) !== seat) continue;
+      mySeats.add(ch.id);
+      if (table && !observerByTable.has(table.id)) observerByTable.set(table.id, ch.id);
+    }
+  }
+  const mine = (ch: TableCharacter) => seat ? mySeats.has(ch.id) : false;
 
   return (
     <div className="max-w-5xl mx-auto px-6 py-10">
@@ -130,8 +147,14 @@ export default async function PlayerDashboard({
             const hue = hueFor(name);
             const hp = hpBar(s);
             const attrs = statRow(s);
+            const isMine = mine(ch);
             const sessionUrl = `/player/character/${ch.id}/session`;
             const sheetUrl = `/player/character/${ch.id}`;
+            const observerId = !isMine && seat && table ? observerByTable.get(table.id) ?? null : null;
+            const viewUrl = observerId
+              ? `/player/character/${ch.id}/view?viewer=${encodeURIComponent(observerId)}`
+              : sheetUrl;
+            const ownerName = ch.user?.username ?? (ch.user?.id ?? ch.userId);
             return (
               <div
                 key={ch.id}
@@ -156,9 +179,23 @@ export default async function PlayerDashboard({
                   <div className="min-w-0 flex-1 w-full">
                     <div className="flex items-start justify-between gap-3 flex-wrap">
                       <div className="min-w-0">
-                        <h2 className="text-lg font-bold text-zinc-100 leading-tight truncate">{name}</h2>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h2 className="text-lg font-bold text-zinc-100 leading-tight truncate">{name}</h2>
+                          {seat ? (
+                            isMine ? (
+                              <span className="font-mono text-[9px] uppercase tracking-widest text-blue-300/80 border border-blue-500/30 rounded px-1.5 py-0.5">
+                                You
+                              </span>
+                            ) : (
+                              <span className="font-mono text-[9px] uppercase tracking-widest text-zinc-500 border border-zinc-700/50 rounded px-1.5 py-0.5">
+                                Companion
+                              </span>
+                            )
+                          ) : null}
+                        </div>
                         <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500 mt-0.5">
                           {table ? table.title : "Unknown table"}
+                          {ownerName ? ` · ${ownerName}` : ""}
                         </p>
                       </div>
                       {hp.max ? (
@@ -181,25 +218,41 @@ export default async function PlayerDashboard({
                 </div>
 
                 {/* actions */}
-                <div className="flex sm:flex-col gap-2 px-5 pb-5 sm:pb-0 sm:pr-5 sm:justify-center shrink-0">
-                  <Link
-                    href={sessionUrl}
-                    className="flex-1 sm:flex-none text-center bg-blue-600 hover:bg-blue-500 text-blue-950 text-sm font-semibold px-4 py-2 rounded-lg transition-colors shadow-lg shadow-blue-900/20"
-                  >
-                    Enter Session
-                  </Link>
-                  <Link
-                    href={`/player/character/${ch.id}?tab=table`}
-                    className="flex-1 sm:flex-none text-center border border-zinc-700 hover:border-blue-700/60 text-zinc-300 hover:text-blue-200 text-sm font-medium px-4 py-2 rounded-lg transition-colors"
-                  >
-                    Table
-                  </Link>
-                  <Link
-                    href={sheetUrl}
-                    className="flex-1 sm:flex-none text-center border border-zinc-700 hover:border-blue-700/60 text-zinc-300 hover:text-blue-200 text-sm font-medium px-4 py-2 rounded-lg transition-colors"
-                  >
-                    Sheet
-                  </Link>
+                <div className="flex sm:flex-col items-center sm:items-stretch gap-3 px-5 pb-5 sm:pb-0 sm:pr-5 sm:justify-center shrink-0">
+                  {isMine || !seat ? (
+                    <>
+                      <Link
+                        href={sessionUrl}
+                        className="w-full text-center bg-blue-600 hover:bg-blue-500 text-blue-950 text-sm font-semibold px-4 py-2 rounded-lg transition-colors shadow-lg shadow-blue-900/20"
+                      >
+                        Enter Session
+                      </Link>
+                      <div className="flex items-center justify-center gap-4 sm:flex-col sm:gap-1.5 font-mono text-[11px] uppercase tracking-widest">
+                        <Link
+                          href={`/player/character/${ch.id}?tab=table`}
+                          className="text-zinc-500 hover:text-blue-300 transition-colors"
+                        >
+                          Table
+                        </Link>
+                        <Link href={sheetUrl} className="text-zinc-500 hover:text-blue-300 transition-colors">
+                          Sheet
+                        </Link>
+                      </div>
+                    </>
+                  ) : (
+                    <Link
+                      href={viewUrl}
+                      className="w-full text-center bg-blue-600 hover:bg-blue-500 text-blue-950 text-sm font-semibold px-4 py-2 rounded-lg transition-colors shadow-lg shadow-blue-900/20"
+                    >
+                      View sheet
+                    </Link>
+                  )}
+                  {!isMine && observerId ? (
+                    <p className="text-[11px] leading-snug text-zinc-500 text-center sm:text-right">
+                      As you see them — only what your character
+                      has discovered in play is shown.
+                    </p>
+                  ) : null}
                 </div>
               </div>
             );
