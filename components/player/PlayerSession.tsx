@@ -22,6 +22,7 @@ interface TurnPanelProps {
   actions: NarrationAction[];
   queue: QueueEntry[];
   roster: TableCharacter[];
+  targets?: TableCharacter[];
   myId: string;
   mySkills: CharacterSkill[];
 }
@@ -75,6 +76,7 @@ export default function TurnPanel({
   actions,
   queue,
   roster,
+  targets,
   myId,
   mySkills,
 }: TurnPanelProps) {
@@ -99,6 +101,7 @@ export default function TurnPanel({
   const [judgment, setJudgment] = useState<Judgment | null>(null);
   const [effectNote, setEffectNote] = useState<string | null>(null);
   const [actDesc, setActDesc] = useState("");
+  const [actTarget, setActTarget] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [committed, setCommitted] = useState(false);
   const [commitError, setCommitError] = useState<string | null>(null);
@@ -187,7 +190,7 @@ export default function TurnPanel({
           dice_roll: rollLog(),
           result: String(total),
           queue: Number(myEntry.queue) || 0,
-          target: null,
+          target: actTarget || null,
           multitarget: false,
         }),
       });
@@ -195,6 +198,7 @@ export default function TurnPanel({
       if (!j.success) throw new Error(j.error || "Failed to end your turn");
       setCommitted(true);
       setActDesc("");
+      setActTarget("");
       router.refresh();
     } catch (err: unknown) {
       setCommitError(err instanceof Error ? err.message : String(err));
@@ -221,9 +225,6 @@ export default function TurnPanel({
     }
   }
 
-  const counts = new Map<number, number>();
-  for (const v of rolls) counts.set(v, (counts.get(v) ?? 0) + 1);
-  const maxCount = Math.max(1, ...counts.values());
   const sortedActions = [...actions].sort((a, b) => (a.queue ?? 0) - (b.queue ?? 0));
 
   const waitingText = notInQueue
@@ -458,6 +459,23 @@ export default function TurnPanel({
                     placeholder="What did you do? (optional)"
                     className="w-full bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-blue-600/70 transition-colors"
                   />
+                  <div className="mt-3">
+                    <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-500 block mb-1">Target</span>
+                    <select
+                      value={actTarget}
+                      onChange={(e) => setActTarget(e.target.value)}
+                      className="w-full bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:border-blue-600/70 transition-colors"
+                    >
+                      <option value="" className="bg-zinc-800">—</option>
+                      {(targets ?? roster)
+                        .filter((c) => c.id !== myId)
+                        .map((c) => (
+                          <option key={c.id} value={c.id} className="bg-zinc-800">
+                            {c.sheet?.name || c.name || c.user?.username || c.id}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
                   <div className="mt-3 flex items-center gap-3 flex-wrap">
                     <button
                       onClick={() => void commitAction()}
@@ -497,25 +515,6 @@ export default function TurnPanel({
                   <span className="font-mono text-[11px] uppercase tracking-widest text-amber-300">{effectNote}</span>
                 </div>
               ) : null}
-
-              <div>
-                <div className="flex items-center gap-2 mb-1.5">
-                  <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">3d6 curve</span>
-                  <span className="flex-1 h-px bg-zinc-700/40" />
-                </div>
-                <div className="flex h-16 items-end gap-0.5 border-b border-zinc-700/40">
-                  {Array.from({ length: 16 }, (_, i) => {
-                    const face = i + 3;
-                    const c = counts.get(face) ?? 0;
-                    const isCurrent = total === face;
-                    return (
-                      <span key={face} className="flex-1 h-full flex items-end" title={`=${face}`}>
-                        <span className={`w-full rounded-t-sm transition-[height] ${isCurrent ? (judgment?.ok ? "bg-emerald-400" : "bg-red-400") : c ? "bg-blue-500/50" : "bg-zinc-800"}`} style={{ height: `${c ? Math.max(8, (c / maxCount) * 100) : 3}%` }} />
-                      </span>
-                    );
-                  })}
-                </div>
-              </div>
             </div>
           </div>
 

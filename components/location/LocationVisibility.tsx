@@ -11,7 +11,16 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
-import type { GameTableCharacters, TableCharacter, VisibilityRule } from "@/lib/types";
+import type {
+  GameTableCharacters,
+  GameTableScenes,
+  TableCharacter,
+  VisibilityRule,
+} from "@/lib/types";
+import DiscoveryContext, {
+  discoveryFromRule,
+  type DiscoverySelection,
+} from "@/components/visibility/DiscoveryContext";
 
 type VisStatus = "unknown" | "known" | "specialist";
 
@@ -44,11 +53,14 @@ export default function LocationVisibility({
 }) {
   const [characters, setCharacters] = useState<TableCharacter[]>([]);
   const [rules, setRules] = useState<VisibilityRule[]>([]);
+  const [scenes, setScenes] = useState<GameTableScenes | null>(null);
   const [savingKey, setSavingKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [rowDiscovery, setRowDiscovery] = useState<Record<string, DiscoverySelection>>({});
+  const [rowMomentOpen, setRowMomentOpen] = useState<Record<string, boolean>>({});
 
   const observers = useMemo(
-    () => (characters ?? []).filter((c) => c.user?.id),
+    () => (characters ?? []).filter((c) => !c.isNpc && c.user?.id),
     [characters]
   );
 
@@ -58,6 +70,9 @@ export default function LocationVisibility({
     api<GameTableCharacters>(`/game-table-characters/${tableId}`)
       .then((d) => { if (!cancel) setCharacters(d.characters ?? []); })
       .catch(() => { if (!cancel) setCharacters([]); });
+    api<GameTableScenes>(`/game-table-scenes/${tableId}`)
+      .then((d) => { if (!cancel) setScenes(d ?? null); })
+      .catch(() => { if (!cancel) setScenes(null); });
     return () => { cancel = true; };
   }, [tableId]);
 
@@ -86,12 +101,16 @@ export default function LocationVisibility({
 
   const persist = async (observerId: string, status: VisStatus, value: string) => {
     const existing = index.get(observerId);
+    const d = rowDiscovery[observerId];
     const body: Omit<VisibilityRule, "id"> = {
       character_id: observerId,
       other_character_id: null,
       location_id: locationId,
       status,
       value: value ?? "",
+      scene_id: d ? d.sceneId ?? null : existing ? undefined : null,
+      narration_id: d ? d.narrationId ?? null : existing ? undefined : null,
+      moment: d ? d.moment ?? null : existing ? undefined : null,
     };
     setSavingKey(`${observerId}:${status}`);
     setError(null);
@@ -180,6 +199,57 @@ export default function LocationVisibility({
                   <span className="text-[10px] font-mono text-zinc-600 uppercase shrink-0">alias</span>
                 </div>
               ) : null}
+              {(() => {
+                const fromRule = discoveryFromRule(rule);
+                const d = rowDiscovery[o.id] ?? fromRule ?? {};
+                const attached = !!rowDiscovery[o.id]
+                  ? !!(rowDiscovery[o.id]!.sceneId || rowDiscovery[o.id]!.narrationId)
+                  : !!fromRule;
+                const open = !!rowMomentOpen[o.id];
+                return (
+                  <>
+                    <div className="flex items-center gap-2 pl-0.5">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setRowMomentOpen((p) => ({ ...p, [o.id]: !p[o.id] }))
+                        }
+                        aria-expanded={open}
+                        title="Attach / edit when this place became known"
+                        className={`inline-flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-wider rounded-full px-2 py-0.5 border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600/60 ${
+                          attached
+                            ? "text-teal-300 border-teal-700/50 bg-teal-500/5"
+                            : "text-zinc-500 border-zinc-800 hover:text-zinc-300 hover:border-zinc-600"
+                        }`}
+                      >
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"
+                          />
+                        </svg>
+                        {attached ? "moment attached" : "moment"}
+                        {fromRule && fromRule.moment != null ? (
+                          <span className="text-[9px] text-zinc-500">· {fromRule.moment}</span>
+                        ) : null}
+                      </button>
+                    </div>
+                    {open ? (
+                      <div className="pl-0.5">
+                        <DiscoveryContext
+                          scenes={scenes}
+                          value={d}
+                          onChange={(sel) =>
+                            setRowDiscovery((p) => ({ ...p, [o.id]: sel }))
+                          }
+                        />
+                      </div>
+                    ) : null}
+                  </>
+                );
+              })()}
             </li>
           );
         })}

@@ -392,6 +392,7 @@ export interface NarrationCharacter {
   name: string
   userId: string
   username: string
+  conscious?: boolean
 }
 
 export interface NarrationNpc {

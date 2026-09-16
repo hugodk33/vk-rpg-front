@@ -177,6 +177,7 @@ export default function SessionClient({
   const [modal, setModal] = useState<null | "chapter" | "moment" | "narration">(null);
   const [modalTitle, setModalTitle] = useState("");
   const [narrationChars, setNarrationChars] = useState<string[]>([]);
+  const [narrationConsc, setNarrationConsc] = useState<Record<string, boolean>>({});
   const [narrationText, setNarrationText] = useState("");
 
   const [queueChar, setQueueChar] = useState("");
@@ -393,10 +394,17 @@ export default function SessionClient({
     const res = await fetch("/api/game-table-narration", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ table_id: tableId, scene_id: latestSceneId, title: modalTitle, narration: prefix + narrationText, moment: latestMoment }),
+      body: JSON.stringify({
+        table_id: tableId,
+        scene_id: latestSceneId,
+        title: modalTitle,
+        narration: prefix + narrationText,
+        moment: latestMoment,
+        present: narrationChars.map((id) => ({ character_id: id, conscious: narrationConsc[id] !== false })),
+      }),
     });
     const j = await res.json();
-    if (j.success) { setModal(null); setModalTitle(""); setNarrationChars([]); setNarrationText(""); router.refresh(); }
+    if (j.success) { setModal(null); setModalTitle(""); setNarrationChars([]); setNarrationConsc({}); setNarrationText(""); router.refresh(); }
     else alert("Error: " + (j.error || "Unknown"));
   }
 
@@ -810,14 +818,34 @@ export default function SessionClient({
                             <input
                               type="checkbox"
                               checked={checked}
-                              onChange={() =>
+                              onChange={() => {
                                 setNarrationChars((prev) =>
                                   checked ? prev.filter((id) => id !== c.id) : [...prev, c.id]
-                                )
+                                );
+                                if (!checked) setNarrationConsc((prev) => ({ ...prev, [c.id]: true }));
+                              }}
+                              className={T.accent}
+                            />
+                            <span className={checked ? "text-zinc-100" : "text-zinc-400"}>
+                              {c.name || c.username || "Unknown"}
+                              {npcIds.includes(c.id) ? " — NPC" : ""}
+                            </span>
+                            <input
+                              type="checkbox"
+                              title="Conscious"
+                              checked={checked ? (narrationConsc[c.id] !== false) : true}
+                              disabled={!checked}
+                              onChange={() =>
+                                setNarrationConsc((prev) => ({
+                                  ...prev,
+                                  [c.id]: prev[c.id] !== false ? false : true,
+                                }))
                               }
                               className={T.accent}
                             />
-                            <span className={checked ? "text-zinc-100" : "text-zinc-400"}>{c.name || c.username || "Unknown"}</span>
+                            <span className={`text-[10px] uppercase tracking-wider ${checked ? (narrationConsc[c.id] !== false ? "text-emerald-400/80" : "text-red-400/80") : "text-zinc-600"}`}>
+                              {checked ? (narrationConsc[c.id] !== false ? "conscious" : "unconscious") : "—"}
+                            </span>
                           </label>
                         );
                       })}

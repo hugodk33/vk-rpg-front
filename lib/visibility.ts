@@ -86,6 +86,56 @@ export function isAttributeHidden(vis: VisibilityMap, a?: string | null): boolea
 }
 
 /* ============================================================
+   Chronicle masking (observer rules → beat names/locations).
+   The /game-table-scenes payload is unfiltered; the player
+   chronicle shapes it client-side with the viewer's OWN rules.
+   ============================================================ */
+
+function attrNamesOf(r: VisibilityRule): string[] {
+  return String(r.attribute ?? "")
+    .split(",")
+    .concat(String(r.additionals_attributes ?? "").split(","))
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+/** How a target character's name reads to the observer:
+    specialist → real; known → the masked alias; otherwise "???". */
+export function maskedTargetName(
+  rules: VisibilityRule[] | null | undefined,
+  targetId: string,
+  real: string
+): string {
+  if (!rules?.length) return real;
+  for (const r of rules) {
+    if (!attrNamesOf(r).includes("name")) continue;
+    if (r.other_character_id && r.other_character_id !== targetId) continue;
+    if (r.status === "specialist") return real;
+    if (r.status === "known") return r.value || real;
+    return "???";
+  }
+  return "???";
+}
+
+/** How a location reads to the observer: specialist → real name,
+    known → alias; otherwise "…" (knows they were somewhere, not where). */
+export function maskedLocationName(
+  rules: VisibilityRule[] | null | undefined,
+  locId: string,
+  real: string
+): string {
+  if (!rules?.length) return real;
+  for (const r of rules) {
+    if (r.location_id && String(r.location_id) === String(locId)) {
+      if (r.status === "specialist") return real;
+      if (r.status === "known") return r.value || real;
+      return "…";
+    }
+  }
+  return "…";
+}
+
+/* ============================================================
    NPC list shaping (player "table > NPC" lists).
    ============================================================ */
 

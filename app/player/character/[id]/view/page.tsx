@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { api } from "@/lib/api";
 import type { CharacterViewer, VisibilityRule } from "@/lib/types";
 import CharacterSheet from "@/components/character/CharacterSheet";
@@ -15,19 +16,20 @@ export default async function PlayerCharacterViewedPage({
   const { viewer } = await searchParams;
 
   if (!viewer) {
-    return (
-      <div className="max-w-5xl mx-auto p-6">
-        <p className="text-sm text-zinc-500">
-          Missing <code className="text-blue-400">viewer</code> — who is
-          looking?
-        </p>
-      </div>
-    );
+    redirect("/player");
   }
 
-  const data = await api<CharacterViewer>(
-    `/game-table-character/${id}?viewer=${encodeURIComponent(viewer)}`
-  );
+  let data: CharacterViewer;
+  try {
+    data = await api<CharacterViewer>(
+      `/game-table-character/${id}?viewer=${encodeURIComponent(viewer)}`
+    );
+  } catch {
+    redirect("/player");
+  }
+  if (!data.character) {
+    redirect("/player");
+  }
   const visibility = await api<VisibilityRule[]>(
     `/game-table-visibility/${viewer}`
   );

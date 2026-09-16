@@ -1,14 +1,15 @@
 "use client";
 
 /* ============================================================
-   DiscoveryContext — optional narrator picker for "when was this
-   known". Lets the narrator attach a scene + narration (the exact
-   moment of the story) to a visibility change. This seeds the
-   future timeline ("before this moment nobody knew; from here on
-   they knew"). Nothing is required — a rule can keep no context.
+   DiscoveryContext — per-record picker for "when was this known".
+   Attaches a scene + narration (the exact moment of the story) to
+   a SINGLE visibility change, so each discovery carries its own
+   moment (e.g. "Elric saw Lyra's ST lifting the stone"). Nothing
+   is required — a rule can keep no context. The global shared box
+   is gone: every record edits its repertory, its own instant.
    ============================================================ */
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import type { GameTableScenes } from "@/lib/types";
 
 export interface DiscoverySelection {
@@ -17,19 +18,32 @@ export interface DiscoverySelection {
   moment?: number | null;
 }
 
+export function discoveryFromRule(r?: {
+  scene_id?: string | null;
+  narration_id?: string | null;
+  moment?: number | null;
+}): DiscoverySelection | null {
+  if (!r) return null;
+  const { scene_id: sceneId, narration_id: narrationId, moment } = r;
+  if (!sceneId && narrationId == null && moment == null) return null;
+  return {
+    sceneId: sceneId ?? undefined,
+    narrationId: narrationId ?? undefined,
+    moment: moment ?? null,
+  };
+}
+
 export default function DiscoveryContext({
   scenes,
   value,
   onChange,
+  allowClear = true,
 }: {
   scenes: GameTableScenes | null;
   value: DiscoverySelection;
   onChange: (sel: DiscoverySelection) => void;
+  allowClear?: boolean;
 }) {
-  const [enabled, setEnabled] = useState(
-    !!(value.sceneId || value.narrationId)
-  );
-
   const sceneOptions = useMemo(() => scenes?.scenes ?? [], [scenes]);
   const narrationOptions = useMemo(() => {
     const scene = sceneOptions.find((s) => s.id === value.sceneId);
@@ -54,68 +68,69 @@ export default function DiscoveryContext({
     });
   };
 
-  return (
-    <div className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-3 mb-4">
-      <label className="flex items-center gap-2 text-xs text-zinc-400 cursor-pointer select-none">
-        <input
-          type="checkbox"
-          checked={enabled}
-          onChange={(e) => {
-            const now = e.target.checked;
-            setEnabled(now);
-            if (!now) onChange({});
-          }}
-          className="accent-green-800"
-        />
-        <span className="font-mono uppercase tracking-[0.15em] text-[11px]">
-          Record discovery moment
-        </span>
-        <span className="text-zinc-600 text-[10px] ml-1">
-          (attach the scene where this becomes known — for the timeline)
-        </span>
-      </label>
+  const attached = !!(value.sceneId || value.narrationId);
 
-      {enabled ? (
-        <div className="grid gap-2 sm:grid-cols-2 mt-3">
-          <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-zinc-500">
-            Scene
-            <select
-              value={value.sceneId ?? ""}
-              onChange={(e) => setScene(e.target.value)}
-              className="bg-zinc-950 border border-zinc-800 rounded-md px-2 py-1.5 text-xs text-zinc-200 normal-case font-sans focus:border-green-700/50 focus:outline-none"
-            >
-              <option value="">—</option>
-              {sceneOptions.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.chapter != null ? `Ch.${s.chapter} · ` : ""}
-                  {s.title || "Untitled scene"}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-zinc-500">
-            Narration
-            <select
-              value={value.narrationId ?? ""}
-              onChange={(e) => setNarration(e.target.value)}
-              disabled={narrationOptions.length === 0}
-              className="bg-zinc-950 border border-zinc-800 rounded-md px-2 py-1.5 text-xs text-zinc-200 normal-case font-sans focus:border-green-700/50 focus:outline-none disabled:opacity-40"
-            >
-              <option value="">—</option>
-              {narrationOptions.map((n, i) => (
-                <option key={n.id} value={n.id}>
-                  {n.title || `Narration ${(n.moment ?? i) + 1}`}
-                </option>
-              ))}
-            </select>
-          </label>
-          {value.moment != null ? (
-            <p className="text-[10px] text-zinc-600 sm:col-span-2">
-              In-story moment: <span className="text-green-500">{value.moment}</span>
-            </p>
-          ) : null}
-        </div>
-      ) : null}
+  return (
+    <div className="rounded-md border border-zinc-800 bg-zinc-900/50 p-2.5 mt-1.5">
+      <div className="flex items-center justify-between gap-2">
+        <span className="font-mono text-[10px] uppercase tracking-[0.15em] text-zinc-500">
+          {attached ? (
+            <span className="inline-flex items-center gap-1.5 text-green-400">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-500" /> moment attached
+            </span>
+          ) : (
+            "Discovery moment"
+          )}
+        </span>
+        {attached && allowClear ? (
+          <button
+            type="button"
+            onClick={() => onChange({})}
+            className="text-[10px] font-mono uppercase tracking-wider text-zinc-500 hover:text-zinc-200 transition-colors"
+          >
+            clear
+          </button>
+        ) : null}
+      </div>
+      <div className="grid gap-2 sm:grid-cols-2 mt-2">
+        <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-zinc-500">
+          Scene
+          <select
+            value={value.sceneId ?? ""}
+            onChange={(e) => setScene(e.target.value)}
+            className="bg-zinc-950 border border-zinc-800 rounded-md px-2 py-1.5 text-xs text-zinc-200 normal-case font-sans focus:border-green-700/50 focus:outline-none"
+          >
+            <option value="">—</option>
+            {sceneOptions.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.chapter != null ? `Ch.${s.chapter} · ` : ""}
+                {s.title || "Untitled scene"}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-zinc-500">
+          Narration
+          <select
+            value={value.narrationId ?? ""}
+            onChange={(e) => setNarration(e.target.value)}
+            disabled={narrationOptions.length === 0}
+            className="bg-zinc-950 border border-zinc-800 rounded-md px-2 py-1.5 text-xs text-zinc-200 normal-case font-sans focus:border-green-700/50 focus:outline-none disabled:opacity-40"
+          >
+            <option value="">—</option>
+            {narrationOptions.map((n, i) => (
+              <option key={n.id} value={n.id}>
+                {n.title || `Narration ${(n.moment ?? i) + 1}`}
+              </option>
+            ))}
+          </select>
+        </label>
+        {value.moment != null ? (
+          <p className="text-[10px] text-zinc-600 sm:col-span-2">
+            In-story moment: <span className="text-green-500">{value.moment}</span>
+          </p>
+        ) : null}
+      </div>
     </div>
   );
 }

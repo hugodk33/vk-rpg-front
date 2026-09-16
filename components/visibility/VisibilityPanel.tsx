@@ -40,6 +40,7 @@ import type {
   VisibilityRule,
 } from "@/lib/types";
 import DiscoveryContext, {
+  discoveryFromRule,
   type DiscoverySelection,
 } from "./DiscoveryContext";
 
@@ -191,7 +192,7 @@ export default function VisibilityPanel({
   perspective: lockedPerspective,
 }: VisibilityPanelProps) {
   const observers = useMemo(
-    () => characters.filter((c) => c.user?.id),
+    () => characters.filter((c) => !c.isNpc && c.user?.id),
     [characters]
   );
   const npcIds = useMemo(
@@ -208,7 +209,8 @@ export default function VisibilityPanel({
   const [saving, setSaving] = useState(false);
   const [bulkApplying, setBulkApplying] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [discovery, setDiscovery] = useState<DiscoverySelection>({});
+  const [rowDiscovery, setRowDiscovery] = useState<Record<string, DiscoverySelection>>({});
+  const [rowMomentOpen, setRowMomentOpen] = useState<Record<string, boolean>>({});
 
   const curObserver = observerId ?? observers[0]?.id ?? null;
   const targetOptions = useMemo(
@@ -370,6 +372,9 @@ export default function VisibilityPanel({
     const existing = index.get(ruleKey(row.target.type, row.target.id));
     const isGlobalTarget = GLOBAL_ROWS.includes(row.target.type);
     if (!curObserver) return;
+    // Cada descoberta carrega o seu próprio momento: usa a seleção da
+    // linha se houver; senão, no update, preserva a da regra existente.
+    const d = rowDiscovery[ruleKey(row.target.type, row.target.id)];
     const body: Omit<VisibilityRule, "id"> = {
       character_id: curObserver,
       // NPC knowledge targets the NPC's own character row; global rows
@@ -383,9 +388,9 @@ export default function VisibilityPanel({
           : curTarget ?? null,
       status,
       value: value ?? "",
-      scene_id: discovery.sceneId ?? null,
-      narration_id: discovery.narrationId ?? null,
-      moment: discovery.moment ?? null,
+      scene_id: d ? d.sceneId ?? null : existing ? undefined : null,
+      narration_id: d ? d.narrationId ?? null : existing ? undefined : null,
+      moment: d ? d.moment ?? null : existing ? undefined : null,
       ...entityField(row.target),
     };
     if (existing) {
@@ -553,12 +558,6 @@ export default function VisibilityPanel({
         single entity.
       </p>
 
-      <DiscoveryContext
-        scenes={scenes ?? null}
-        value={discovery}
-        onChange={setDiscovery}
-      />
-
       {/* World tab bar */}
       {perspective === "world" ? (
         <div className="flex flex-wrap gap-1 mb-4 border-b border-zinc-800">
@@ -711,6 +710,67 @@ export default function VisibilityPanel({
                         </span>
                       </div>
                     ) : null}
+                    {(() => {
+                      const oneKey = ruleKey(row.target.type, row.target.id);
+                      const existing = index.get(oneKey);
+                      const fromRule = discoveryFromRule(existing);
+                      const d = rowDiscovery[oneKey] ?? fromRule ?? {};
+                      const attached = !!rowDiscovery[oneKey]
+                        ? !!(rowDiscovery[oneKey]!.sceneId || rowDiscovery[oneKey]!.narrationId)
+                        : !!fromRule;
+                      const open = !!rowMomentOpen[oneKey];
+                      return (
+                        <>
+                          <div className="flex items-center gap-2 mt-1 pl-4">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setRowMomentOpen((p) => ({
+                                  ...p,
+                                  [oneKey]: !p[oneKey],
+                                }))
+                              }
+                              aria-expanded={open}
+                              title="Attach / edit this discovery's own moment"
+                              className={`inline-flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-wider rounded-full px-2 py-0.5 border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-green-800/60 ${
+                                attached
+                                  ? "text-green-400 border-green-700/50 bg-green-500/5"
+                                  : "text-zinc-500 border-zinc-800 hover:text-zinc-300 hover:border-zinc-600"
+                              }`}
+                            >
+                              <svg
+                                className="w-3 h-3"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth="2"
+                                  d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"
+                                />
+                              </svg>
+                              {attached ? "moment attached" : "moment"}
+                              {fromRule ? (
+                                <span className="text-[9px] text-zinc-500">· {fromRule.moment ?? "?"}</span>
+                              ) : null}
+                            </button>
+                          </div>
+                          {open ? (
+                            <div className="pl-4">
+                              <DiscoveryContext
+                                scenes={scenes ?? null}
+                                value={d}
+                                onChange={(sel) =>
+                                  setRowDiscovery((p) => ({ ...p, [oneKey]: sel }))
+                                }
+                              />
+                            </div>
+                          ) : null}
+                        </>
+                      );
+                    })()}
                   </li>
                 );
               })}

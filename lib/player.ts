@@ -62,7 +62,7 @@ export async function loadPlayerConsole(characterId: string): Promise<PlayerCons
   );
   const tableId = viewer?.table?.id ?? "";
 
-  const [scenesData, queue, charsData, itemsData, skillsData, advData, disData, locData, npcsData] =
+  const [scenesData, queue, charsData, itemsData, skillsData, advData, disData, locData, npcsData, visibilityData] =
     await Promise.all([
       tableId
         ? api<GameTableScenes>(`/game-table-scenes/${tableId}`).catch(() => ({ table: null, scenes: [] }))
@@ -91,6 +91,9 @@ export async function loadPlayerConsole(characterId: string): Promise<PlayerCons
       tableId
         ? api<GameTableNpcs>(`/game-table-npcs/${tableId}`).catch(() => ({ table: null, npcs: [] }))
         : Promise.resolve({ table: null, npcs: [] }) as Promise<GameTableNpcs>,
+      characterId
+        ? api<VisibilityRule[]>(`/game-table-visibility/${encodeURIComponent(characterId)}`).catch(() => [])
+        : Promise.resolve([]) as Promise<VisibilityRule[]>,
     ]);
 
   const state = getSessionState(scenesData.scenes);
@@ -109,7 +112,7 @@ export async function loadPlayerConsole(characterId: string): Promise<PlayerCons
     latestTitle: state.latestTitle,
     latestNarration: state.latestNarration,
     latestNarrationId: state.latestNarrationId,
-    visibility: null,
+    visibility: Array.isArray(visibilityData) ? visibilityData : null,
     items: itemsData?.items ?? [],
     skills: skillsData?.skills ?? [],
     advantages: advData?.advantages ?? [],

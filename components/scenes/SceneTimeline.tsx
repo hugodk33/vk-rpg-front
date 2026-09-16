@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useRef } from "react";
-import type { GameTable, Location, Modifier, NarrationAction, Scene } from "@/lib/types";
+import type { GameTable, Location, Modifier, NarrationAction, Scene, VisibilityRule } from "@/lib/types";
+import { maskedLocationName, maskedTargetName } from "@/lib/visibility";
 
 /* ============================================================
    The Chronicle
@@ -47,29 +48,34 @@ function roman(n: number): string {
 
 /* ---------- location / cast ---------- */
 
-function locationPin(loc: Location | null) {
+function locationPin(loc: Location | null, shownName?: string | null) {
   if (!loc) return null;
+  const masked = shownName != null && shownName !== loc.name;
   return (
     <span className="inline-flex items-center gap-1.5 text-[11px] text-zinc-400 bg-zinc-800/40 border border-zinc-700/40 rounded-full pl-2 pr-3 py-1">
       <svg className="w-3.5 h-3.5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0zM15 11a3 3 0 11-6 0 3 3 0 016 0z" />
       </svg>
-      <Link href={`/location/${loc.id}`} className="text-blue-300 hover:text-blue-200 truncate">{loc.name}</Link>
-      {loc.region ? <span className="text-zinc-500 hidden sm:inline">· {loc.region}</span> : null}
+      {masked ? (
+        <span className="text-zinc-500">{shownName}</span>
+      ) : (
+        <Link href={`/location/${loc.id}`} className="text-blue-300 hover:text-blue-200 truncate">{loc.name}</Link>
+      )}
+      {!masked && loc.region ? <span className="text-zinc-500 hidden sm:inline">· {loc.region}</span> : null}
     </span>
   );
 }
 
-function CastChips({ chars, npcs, moment }: { chars: { id: string; name: string }[]; npcs: { characterId: string; name: string; status: string }[]; moment?: number }) {
+function CastChips({ chars, npcs, moment, mask, viewerId }: { chars: { id: string; name: string }[]; npcs: { characterId: string; name: string; status: string }[]; moment?: number; mask: (id: string, real: string) => string; viewerId?: string }) {
   const players = chars.map((c) => ({
     id: c.id,
-    name: c.name || "Player",
+    name: viewerId && c.id === viewerId ? c.name : mask(c.id, c.name || "Player"),
     sub: "Player",
     color: "#60a5fa",
   }));
   const npcList = npcs.map((n) => ({
     id: n.characterId,
-    name: n.name || "NPC",
+    name: mask(n.characterId, n.name || "NPC"),
     sub: n.status || "NPC",
     color: n.status && /mort|death|fallen|dead/i.test(n.status) ? "#f87171" : "#fbbf24",
   }));
@@ -129,9 +135,15 @@ function rollTone(a: NarrationAction): { hex: string; tag: string } {
   return { hex: "#a1a1aa", tag: "record" };
 }
 
-function RollSlip({ a, moment }: { a: NarrationAction; moment?: number }) {
+function RollSlip({ a, moment, mask, viewerId }: { a: NarrationAction; moment?: number; mask: (id: string, real: string) => string; viewerId?: string }) {
   const char = a.character;
-  const charName = char?.name || char?.username || "Someone";
+  const shownName =
+    char && viewerId && char.id === viewerId
+      ? char?.name || char?.username || "Someone"
+      : char
+      ? mask(char.id, char?.name || char?.username || "Someone")
+      : "Someone";
+  const charName = shownName;
   const charId = char?.id ?? "";
   const charUrl = charId ? `/character/${charId}${moment != null ? `?moment=${moment}` : ""}` : "";
   const tone = rollTone(a);
@@ -205,21 +217,42 @@ function RollSlip({ a, moment }: { a: NarrationAction; moment?: number }) {
 
 /* ---------- beat (narration) ---------- */
 
-function Beat({ n }: { n: { narration: string; title?: string; moment?: number; location: Location | null; characters: { id: string; name: string }[]; npcs: { characterId: string; name: string; status: string }[]; actions: NarrationAction[] } }) {
+function Beat({ n, viewerId, mask, rules }: { n: { narration: string; title?: string; moment?: number; location: Location | null; characters: { id: string; name: string; conscious?: boolean }[]; npcs: { characterId: string; name: string; status: string }[]; actions: NarrationAction[] }; viewerId?: string; mask: (id: string, real: string) => string; rules?: VisibilityRule[] }) {
+  const you = viewerId ? n.characters.find((c) => c.id === viewerId) : undefined;
+  const wasElsewhere = !!viewerId && !you;
+  const wasUnconscious = !!you && you.conscious === false;
+  const shownLocation = n.location
+    ? maskedLocationName(rules, n.location.id, n.location.name)
+    : null;
   return (
     <Panel>
       <div className="min-w-0 relative">
+        {wasUnconscious ? (
+          <div className="mb-2 inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-red-400/80 border border-red-500/30 bg-red-500/5 rounded-full pl-2 pr-3 py-1">
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            you were here, unconscious
+          </div>
+        ) : wasElsewhere ? (
+          <div className="mb-2 inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-zinc-600 border border-zinc-700/50 rounded-full pl-2 pr-3 py-1">
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1" />
+            </svg>
+            you were elsewhere
+          </div>
+        ) : null}
         <p className="text-[15px] leading-relaxed text-zinc-300">{n.narration}</p>
 
-        {n.location ? <div className="mt-2.5">{locationPin(n.location)}</div> : null}
-        <CastChips chars={n.characters} npcs={n.npcs} moment={n.moment} />
+        {n.location ? <div className="mt-2.5">{locationPin(n.location, shownLocation)}</div> : null}
+        <CastChips chars={n.characters} npcs={n.npcs} moment={n.moment} mask={mask} viewerId={viewerId} />
 
         {n.actions?.length ? (
           <div className="mt-3 space-y-1.5">
             {[...n.actions]
               .sort((a, b) => (a.queue ?? 0) - (b.queue ?? 0))
               .map((a) => (
-                <RollSlip key={a.id} a={a} moment={n.moment} />
+                <RollSlip key={a.id} a={a} moment={n.moment} mask={mask} viewerId={viewerId} />
               ))}
           </div>
         ) : null}
@@ -230,7 +263,7 @@ function Beat({ n }: { n: { narration: string; title?: string; moment?: number; 
 
 /* ---------- scene ---------- */
 
-function SceneCard({ scene, showEdit, badgeCls }: { scene: Scene; showEdit: boolean; badgeCls: string }) {
+function SceneCard({ scene, showEdit, badgeCls, viewerId, mask, rules }: { scene: Scene; showEdit: boolean; badgeCls: string; viewerId?: string; mask: (id: string, real: string) => string; rules?: VisibilityRule[] }) {
   const sceneNum = scene.moment != null ? scene.moment + 1 : "—";
   return (
     <div className="mb-8">
@@ -251,7 +284,7 @@ function SceneCard({ scene, showEdit, badgeCls }: { scene: Scene; showEdit: bool
         ) : (
           <div className="space-y-5">
             {scene.narrations.map((n) => (
-              <Beat key={n.id} n={n} />
+              <Beat key={n.id} n={n} viewerId={viewerId} mask={mask} rules={rules} />
             ))}
           </div>
         )}
@@ -267,12 +300,20 @@ interface SceneTimelineProps {
   scenes: Scene[];
   showEditButtons?: boolean;
   role?: "narrator" | "player";
+  viewerId?: string;
+  /** The viewer's OWN visibility rules (what that character knows).
+      Only applied when role === "player"; narrators see the full record. */
+  visibility?: VisibilityRule[];
 }
 
-export default function SceneTimeline({ table, scenes, showEditButtons = true, role = "narrator" }: SceneTimelineProps) {
+export default function SceneTimeline({ table, scenes, showEditButtons = true, role = "narrator", viewerId, visibility }: SceneTimelineProps) {
   const isPlayer = role === "player";
   const titleCls = isPlayer ? "text-blue-100" : "text-green-100";
   const badgeCls = isPlayer ? "text-blue-300 border border-blue-700/40" : "text-green-600/90 border border-green-900/40";
+  const rules = isPlayer && visibility?.length ? visibility : undefined;
+  const mask: (id: string, real: string) => string = rules
+    ? (id, real) => maskedTargetName(rules, id, real)
+    : (id, real) => real;
   const chapters = new Map<number, Scene[]>();
   for (const scene of scenes) {
     const ch = scene.chapter || 1;
@@ -318,7 +359,7 @@ export default function SceneTimeline({ table, scenes, showEditButtons = true, r
             </div>
 
             {chapterScenes.map((scene) => (
-              <SceneCard key={scene.id} scene={scene} showEdit={showEditButtons} badgeCls={badgeCls} />
+              <SceneCard key={scene.id} scene={scene} showEdit={showEditButtons} badgeCls={badgeCls} viewerId={viewerId} mask={mask} rules={rules} />
             ))}
           </Panel>
         ))

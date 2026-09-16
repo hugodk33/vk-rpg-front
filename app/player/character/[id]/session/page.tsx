@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { loadPlayerConsole } from "@/lib/player";
 import PlayerConsole from "@/components/player/PlayerConsole";
 
@@ -10,6 +11,10 @@ export default async function PlayerCharacterSessionPage({
 }) {
   const { id } = await params;
   const data = await loadPlayerConsole(id);
+
+  if (!data.character) {
+    redirect("/player");
+  }
   const basePath = `/player/character/${id}`;
 
   return (
