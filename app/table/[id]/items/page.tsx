@@ -6,6 +6,7 @@ import type { GameTableItems, Item } from "@/lib/types";
 import TableTabs from "@/components/TableTabs";
 import { api } from "@/lib/api";
 import { fitLabel } from "@/lib/fit";
+import ItemIcon from "@/components/items/ItemIcon";
 
 const KIND_BADGES: Record<string, { label: string; class: string }> = {
   weapon: { label: "Weapon", class: "bg-red-400/10 text-red-400 border border-red-400/20" },
@@ -98,9 +99,7 @@ export default function TableItemsPage({ params }: { params: Promise<{ id: strin
               >
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-3 min-w-0">
-                    <svg className="w-4 h-4 shrink-0 text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                    </svg>
+                    <ItemIcon item={i} className="w-4 h-4 shrink-0" imgClassName="w-4 h-4 object-cover rounded" />
                     <span className="text-sm font-medium text-zinc-200 group-hover:text-zinc-100 truncate">
                       {i.name || "Unnamed"}
                     </span>

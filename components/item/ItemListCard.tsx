@@ -1,5 +1,5 @@
 import type { Item } from "@/lib/types";
-import ItemGlyph from "./ItemGlyph";
+import ItemIcon from "@/components/items/ItemIcon";
 import { classify, GROUP_UI, conditionLedger, itemParticulars, qualityStyle } from "./itemIdentity";
 
 /* ============================================================
@@ -36,7 +36,7 @@ export default function ItemListCard({ item }: { item: Item }) {
           className="w-10 h-10 shrink-0 grid place-items-center rounded-full border border-dashed"
           style={{ borderColor: `${tint}66`, background: "radial-gradient(circle at 50% 40%, #27272a, #18181b)" }}
         >
-          <ItemGlyph group={group} size={24} />
+          <ItemIcon item={item} className="w-6 h-6" imgClassName="w-6 h-6 object-cover rounded-full" />
         </div>
 
         <div className="min-w-0 flex-1">

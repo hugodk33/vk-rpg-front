@@ -10,6 +10,7 @@ import type {
   TableCharacter,
   TableNpc,
 } from "@/lib/types";
+import ItemIcon from "@/components/items/ItemIcon";
 
 /* ============================================================
    Table Resources — the table's shared encyclopedia, inline in
@@ -136,9 +137,12 @@ export default function TableResources({
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {items.map((i) => (
               <div key={i.id} className="bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-4 py-3">
-                <div className="flex justify-between items-start mb-1">
-                  <span className="text-zinc-200 font-medium">{i.name || "Unnamed"}</span>
-                  {i.weight_lb != null ? <span className="text-zinc-500 text-xs">{i.weight_lb} lb</span> : null}
+                <div className="flex justify-between items-start mb-1 gap-2">
+                  <span className="flex items-center gap-2 text-zinc-200 font-medium min-w-0">
+                    <ItemIcon item={i} className="w-4 h-4 shrink-0" imgClassName="w-4 h-4 object-cover rounded" />
+                    <span className="truncate">{i.name || "Unnamed"}</span>
+                  </span>
+                  {i.weight_lb != null ? <span className="text-zinc-500 text-xs shrink-0">{i.weight_lb} lb</span> : null}
                 </div>
                 {i.category || i.quality || i.condition ? (
                   <div className="flex flex-wrap gap-x-3 text-xs text-zinc-500 mb-1">

@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { CharacterItem, CharacterViewer, TableCharacter } from "@/lib/types";
 import { api } from "@/lib/api";
+import ItemIcon from "@/components/items/ItemIcon";
 
 /* ============================================================
    Player Inventory — the player's own gear, managed from the
@@ -23,12 +24,6 @@ const STATUS_LABELS: Record<string, string> = {
   in_inventory: "Inventory",
   equipped: "Equipped",
   wielded: "Wielded",
-};
-
-const STATUS_DOTS: Record<string, string> = {
-  in_inventory: "bg-blue-400",
-  equipped: "bg-emerald-400",
-  wielded: "bg-amber-400",
 };
 
 const KIND_BADGES: Record<string, { label: string; class: string }> = {
@@ -237,7 +232,7 @@ export default function PlayerInventory({ items, characterId, roster, targets }:
             return (
               <div key={i.equipment_id || i.id} className="px-4 py-3">
                 <div className="flex items-center gap-3 flex-wrap min-w-0">
-                  <span className={`w-2 h-2 rounded-full shrink-0 ${STATUS_DOTS[stt] ?? "bg-zinc-400"}`} />
+                  <ItemIcon item={i} className="w-5 h-5 shrink-0" imgClassName="w-5 h-5 object-cover rounded" />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-sm font-medium text-zinc-200 truncate">

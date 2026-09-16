@@ -12,6 +12,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import type { GameTableItems, GameTableNpcs, Item, TableNpc } from "@/lib/types";
+import ItemIcon from "@/components/items/ItemIcon";
 
 const STATUS_META: Record<string, { label: string; cls: string }> = {
   enemy: { label: "Enemy", cls: "text-red-300 border-red-500/40 bg-red-500/10" },
@@ -143,14 +144,17 @@ export default function LocationShop({
             <ul>
               {items.map((it) => (
                 <li key={it.id} className="flex items-center justify-between gap-3 border-b border-zinc-700/40 py-2.5 last:border-b-0">
-                  <div className="min-w-0">
-                    <span className="block truncate text-sm text-zinc-200">{it.name || "Unnamed"}</span>
-                    {it.kind ? (
-                      <span className="font-mono text-[9px] uppercase tracking-widest text-zinc-600">
-                        {KIND_LABELS[it.kind] ?? it.kind}
-                        {it.category ? ` · ${it.category}` : ""}
-                      </span>
-                    ) : null}
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <ItemIcon item={it} className="w-4 h-4 shrink-0" imgClassName="w-4 h-4 object-cover rounded" />
+                    <div className="min-w-0">
+                      <span className="block truncate text-sm text-zinc-200">{it.name || "Unnamed"}</span>
+                      {it.kind ? (
+                        <span className="font-mono text-[9px] uppercase tracking-widest text-zinc-600">
+                          {KIND_LABELS[it.kind] ?? it.kind}
+                          {it.category ? ` · ${it.category}` : ""}
+                        </span>
+                      ) : null}
+                    </div>
                   </div>
                   <span className="shrink-0 font-mono text-[11px] text-zinc-300">{money(it.cost)}</span>
                 </li>

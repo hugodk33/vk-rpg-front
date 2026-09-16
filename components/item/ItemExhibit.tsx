@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef } from "react";
 import type { Item, WeaponAttack } from "@/lib/types";
 import { DAMAGE_TYPES, GURPS_DAMAGE_TABLE, resolveAttack } from "@/lib/damage";
-import ItemGlyph from "./ItemGlyph";
+import ItemIcon from "@/components/items/ItemIcon";
 import { classify, GROUP_UI, conditionLedger, qualityStyle, HANDEDNESS } from "./itemIdentity";
 
 /* ============================================================
@@ -143,7 +143,7 @@ export default function ItemExhibit({ item, tableId }: { item: Item; tableId?: s
                   className="w-[72px] h-[72px] grid place-items-center rounded-full border border-dashed mb-4"
                   style={{ borderColor: `${tint}66`, background: "radial-gradient(circle at 50% 40%, #27272a, #18181b)" }}
                 >
-                  <ItemGlyph group={group} />
+                  <ItemIcon item={item} className="w-9 h-9" imgClassName="w-12 h-12 object-cover rounded-full" />
                 </div>
 
                 {/* quality stamp */}

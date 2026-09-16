@@ -12,6 +12,7 @@ import type {
   CharacterViewer,
   Sheet,
 } from "@/lib/types";
+import ItemIcon from "@/components/items/ItemIcon";
 
 function signed(n: number): string {
   return `${n >= 0 ? "+" : ""}${n}`;
@@ -267,17 +268,24 @@ function TagChips({ title, items }: { title: string; items: Array<{ id: string; 
   );
 }
 
-function GearBlock({ items }: { items: Array<{ id: string; name?: string; quantity?: number; equipment_status?: string }> }) {
+function GearBlock({ items }: { items: Array<{ id: string; name?: string; quantity?: number; equipment_status?: string; kind?: string }> }) {
   if (!items || items.length === 0) return null;
-  const dot = (s?: string) =>
-    s === "wielded" ? "bg-amber-400" : s === "worn" ? "bg-sky-400" : "bg-zinc-600";
   return (
     <div>
       <p className="font-mono text-[9px] tracking-widest uppercase text-zinc-500 mb-1.5">Gear</p>
       <ul className="space-y-1">
         {items.map((it) => (
           <li key={it.id} className="flex items-center gap-2 text-[11px] text-zinc-300">
-            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dot(it.equipment_status)}`} />
+            <ItemIcon
+              item={{
+                name: it.name,
+                kind:
+                  it.kind ??
+                  (it.equipment_status === "wielded" ? "weapon" : it.equipment_status === "equipped" || it.equipment_status === "worn" ? "armor" : "equipment"),
+              }}
+              className="w-3.5 h-3.5 shrink-0"
+              imgClassName="w-3.5 h-3.5 object-cover rounded"
+            />
             <span className="truncate">{it.name}</span>
             {it.quantity != null && it.quantity > 1 ? (
               <span className="font-mono text-[10px] text-zinc-500 shrink-0">×{it.quantity}</span>
@@ -506,7 +514,7 @@ export default function CharacterJourney({
       </div>
 
       {/* ---- horizontal scale ---- */}
-      <div className="relative overflow-x-auto scroll-thin rounded-lg border border-zinc-700/40 bg-zinc-900/25">
+      <div className="relative overflow-x-auto scroll-thin rounded-lg border border-zinc-700/40 bg-zinc-900/25 pb-3">
         <div className="relative" style={{ width: W, height: totalH }}>
           {/* HP + FP rivers */}
           <svg width={W} height={RIVER.h} className="absolute left-0 top-0 block">

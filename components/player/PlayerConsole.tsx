@@ -230,15 +230,15 @@ export default function PlayerConsole({
       ) : null}
 
       {tab === "gear" && character?.id ? (
-        <div className="rounded-2xl border border-zinc-700/50 bg-zinc-900/40 overflow-hidden">
-          <div className="px-5 py-6">
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-1">
             <p className="font-mono text-[10px] tracking-widest uppercase text-blue-300/90">Your gear</p>
-            <h2 className="text-lg font-bold text-zinc-100 mt-1">Inventory</h2>
-            <p className="text-sm text-zinc-400 mt-1.5 max-w-xl mb-5">
+            <h2 className="text-lg font-bold text-zinc-100">Inventory</h2>
+            <p className="text-sm text-zinc-400 max-w-xl">
               Equip, store, discard, sell or trade the items your character carries.
             </p>
-            <PlayerInventory items={character.items ?? []} characterId={character.id} roster={roster} targets={presentTargets} />
           </div>
+          <PlayerInventory items={character.items ?? []} characterId={character.id} roster={roster} targets={presentTargets} />
         </div>
       ) : null}
 
