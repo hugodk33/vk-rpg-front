@@ -6,38 +6,7 @@ import type { GameTableLocations, Location } from "@/lib/types";
 import TableTabs from "@/components/TableTabs";
 import { api } from "@/lib/api";
 import { submitJson } from "@/components/forms/submit";
-
-const KIND_LABELS: Record<string, string> = {
-  world: "World",
-  continent: "Continent",
-  nation: "Nation",
-  region: "Region",
-  biome: "Biome",
-  province: "Province",
-  city: "City",
-  district: "District",
-  locale: "Locale",
-  site: "Site",
-  battlemap: "Battle Map",
-  point: "Point",
-};
-
-function kindIcon(kind?: string) {
-  switch (kind) {
-    case "world":
-    case "continent":
-      return "M12 2L2 7l10 5 10-5-10-5z";
-    case "nation":
-      return "M3 21l9-9M9 21H21M20 3l-5 5m-4.5 4L20 3m-9.5 9l4.5-4.5M3 7h6m0 0l3-3";
-    case "city":
-    case "district":
-      return "M3 21V9l6-4 6 4v12M3 21h18M9 21v-4h6v4M9 11h.01M15 11h.01M9 15h.01M15 15h.01";
-    case "site":
-      return "M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0zM15 11a3 3 0 11-6 0 3 3 0 016 0z";
-    default:
-      return "M12 21v-9m0 0a3 3 0 10-3-3 3 3 0 003 3zm0 0V3";
-  }
-}
+import { KindGlyph, KIND_LABELS, KIND_TINT } from "@/lib/location-glyphs";
 
 function formatScale(m?: number | null): string {
   if (m == null) return "—";
@@ -200,12 +169,21 @@ function Plate({
   const hasChildren = (node.children?.length ?? 0) > 0;
   const battle = !!node.isBattlemap;
   return (
-    <div className="group relative flex h-full flex-col rounded-xl border border-zinc-700/40 bg-zinc-800/40 px-4 py-3.5 transition-all hover:bg-zinc-800/70 hover:border-zinc-600/60">
-      <div className="flex items-start justify-between gap-2">
-        <svg className="w-4 h-4 shrink-0 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.6" d={kindIcon(node.kind)} />
-        </svg>
-        <div className="flex items-center gap-1.5 shrink-0">
+    <div className="group relative flex h-full gap-3 rounded-xl border border-zinc-700/40 bg-zinc-800/40 px-4 py-3.5 transition-all hover:bg-zinc-800/70 hover:border-zinc-600/60">
+      {/* kind seal — rings around a glyph, tinted per kin; the divider
+          below keeps each card reading like an emblem on the map */}
+      <div className={`relative shrink-0 ${KIND_TINT[node.kind ?? "site"] ?? "text-zinc-500"}`} aria-hidden>
+        <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-[52px] w-[52px] rounded-full border border-current opacity-20 transition-all duration-300 group-hover:scale-105 group-hover:opacity-70" />
+        <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-8 w-8 rounded-full border border-current opacity-25 transition-all duration-300 group-hover:opacity-55" />
+        <span className="absolute inset-x-0 top-1/2 h-px bg-current opacity-10 transition-opacity duration-300 group-hover:opacity-30" />
+        <KindGlyph
+          kind={node.kind}
+          className="relative mt-1.5 h-11 w-11 opacity-90 transition-all duration-300 group-hover:opacity-100 group-hover:drop-shadow-[0_0_10px_currentColor]"
+        />
+      </div>
+
+      <div className="flex min-w-0 flex-1 flex-col">
+        <div className="flex flex-wrap items-center justify-end gap-1.5">
           <button
             type="button"
             disabled={busy}
@@ -233,35 +211,38 @@ function Plate({
             </span>
           ) : null}
         </div>
-      </div>
 
-      <span className="block mt-2.5 text-sm font-medium text-zinc-200 truncate">{node.name || "Unnamed"}</span>
-      <p className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 mt-0.5">
-        {KIND_LABELS[node.kind ?? "site"] ?? node.kind ?? "Location"}
-      </p>
-      {trail ? <div className="mt-1"><Trail chain={trail} /></div> : null}
+        <span className="block mt-2 text-sm font-medium text-zinc-200 truncate">{node.name || "Unnamed"}</span>
+        <p className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 mt-0.5 truncate">
+          {KIND_LABELS[node.kind ?? "site"] ?? node.kind ?? "Location"}
+          {node.region ?? node.subRegion ? (
+            <span className="text-zinc-600"> · {node.region ?? node.subRegion}</span>
+          ) : null}
+        </p>
+        {trail ? <div className="mt-1"><Trail chain={trail} /></div> : null}
 
-      <div className="mt-3 font-mono text-[10px] tracking-widest uppercase text-zinc-600">
-        {formatScale(node.hex?.sizeM)}
-      </div>
+        <div className="mt-3 font-mono text-[10px] tracking-widest uppercase text-zinc-600">
+          {formatScale(node.hex?.sizeM)}
+        </div>
 
-      <div className="mt-3 flex items-center gap-2 border-t border-zinc-700/40 pt-2.5 mt-auto">
-        <button
-          type="button"
-          onClick={() => onZoom(node.id)}
-          disabled={!hasChildren}
-          title={hasChildren ? "Abrir subdivisões" : "Esta division não contém subdivisões"}
-          className="flex-1 inline-flex items-center justify-center gap-1 rounded-md border border-teal-400/25 bg-teal-400/5 px-2 py-1.5 font-mono text-[10px] tracking-widest uppercase text-teal-300/90 transition-colors hover:bg-teal-400/10 hover:text-teal-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600/60 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-teal-400/5 disabled:hover:text-teal-300/90"
-        >
-          ◱ Sublocations
-        </button>
-        <Link
-          href={`/location/${node.id}`}
-          title={`Abrir ${node.name || "location"} em página própria`}
-          className="flex-1 inline-flex items-center justify-center gap-1 rounded-md border border-zinc-700/50 bg-zinc-800/60 px-2 py-1.5 font-mono text-[10px] tracking-widest uppercase text-zinc-300 transition-colors hover:border-amber-700/50 hover:text-amber-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600/60"
-        >
-          Open →
-        </Link>
+        <div className="mt-3 flex items-center gap-2 border-t border-zinc-700/40 pt-2.5 mt-auto">
+          <button
+            type="button"
+            onClick={() => onZoom(node.id)}
+            disabled={!hasChildren}
+            title={hasChildren ? "Abrir subdivisões" : "Esta division não contém subdivisões"}
+            className="flex-1 inline-flex items-center justify-center gap-1 rounded-md border border-teal-400/25 bg-teal-400/5 px-2 py-1.5 font-mono text-[10px] tracking-widest uppercase text-teal-300/90 transition-colors hover:bg-teal-400/10 hover:text-teal-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600/60 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-teal-400/5 disabled:hover:text-teal-300/90"
+          >
+            ◱ Sublocations
+          </button>
+          <Link
+            href={`/location/${node.id}`}
+            title={`Abrir ${node.name || "location"} em página própria`}
+            className="flex-1 inline-flex items-center justify-center gap-1 rounded-md border border-zinc-700/50 bg-zinc-800/60 px-2 py-1.5 font-mono text-[10px] tracking-widest uppercase text-zinc-300 transition-colors hover:border-amber-700/50 hover:text-amber-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600/60"
+          >
+            Open →
+          </Link>
+        </div>
       </div>
     </div>
   );

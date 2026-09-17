@@ -42,6 +42,46 @@ details > summary::-webkit-details-marker {
 }
 
 /* =========================================================
+   Region map — the surveyor's chart inside the location plate.
+   SVG regions behave like cartographic cells: border glow on
+   hover/focus, name brightens, kind label tightens.
+   ========================================================= */
+.location-region {
+  cursor: pointer;
+}
+.location-region polygon {
+  transition: fill 0.18s ease, fill-opacity 0.18s ease, stroke-opacity 0.18s ease, stroke-width 0.18s ease;
+  vector-effect: non-scaling-stroke;
+}
+.location-region-name,
+.location-region-kind {
+  transition: fill 0.18s ease, fill-opacity 0.18s ease, letter-spacing 0.18s ease;
+}
+.location-region:hover polygon:nth-of-type(1),
+.location-region:focus-visible polygon:nth-of-type(1) {
+  stroke-opacity: 0.7;
+  stroke-width: 1.6;
+}
+.location-region:hover polygon:nth-of-type(2),
+.location-region:focus-visible polygon:nth-of-type(2) {
+  fill-opacity: 0.12;
+  stroke-opacity: 0.95;
+  stroke-width: 1.6;
+}
+.location-region:hover .location-region-name,
+.location-region:focus-visible .location-region-name {
+  fill: #ffffff;
+}
+.location-region:hover .location-region-kind,
+.location-region:focus-visible .location-region-kind {
+  fill-opacity: 1;
+  letter-spacing: 3px;
+}
+.mono-label {
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+}
+
+/* =========================================================
    The Armory Exhibit — item maker's plate & spec ledger
    Scoped to the item detail page; unique prefixed classes.
    Palette mirrors the Character page (zinc + semantic accents).

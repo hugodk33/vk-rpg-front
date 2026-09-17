@@ -10,6 +10,8 @@ import LocationVisibility from "@/components/location/LocationVisibility";
 import LocationModifiers from "@/components/location/LocationModifiers";
 import LocationMap from "@/components/location/LocationMap";
 import LocationShop from "@/components/location/LocationShop";
+import RegionMap from "@/components/location/RegionMap";
+import { KIND_LABELS } from "@/lib/location-glyphs";
 
 /* ============================================================
    The Survey Plate
@@ -63,21 +65,6 @@ interface Loc {
   tiles?: HexTile[];
   drawing?: DrawShape[];
 }
-
-const KIND_LABELS: Record<string, string> = {
-  world: "World",
-  continent: "Continent",
-  nation: "Nation",
-  region: "Region",
-  biome: "Biome",
-  province: "Province",
-  city: "City",
-  district: "District",
-  locale: "Locale",
-  site: "Site",
-  battlemap: "Battle Map",
-  point: "Point",
-};
 
 /* The plate's views: the Survey itself, the narrator-only records
    (Knowledge — who knows this place; Field conditions — what is true
@@ -470,33 +457,11 @@ export default function LocationPlate({ location, tableId, mode = "narrator" }: 
               </Panel>
             ) : null}
 
-            {/* -------- CONTAINS (subdivisions) -------- */}
-            {children.length > 0 ? (
-              <Panel>
-                <SectionTitle icon="▦" tint={accent} label="Contains" />
-                <div className="space-y-2">
-                  {children.map((child) => (
-                    <Link
-                      key={child.id}
-                      href={locationHref(child.id!)}
-                      className="group flex items-center justify-between gap-3 bg-zinc-800/40 hover:bg-zinc-800/70 border border-zinc-700/40 hover:border-zinc-600/60 rounded-lg px-4 py-2.5 transition-all"
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: `${accent}aa`, boxShadow: `0 0 6px ${accent}66` }} />
-                        <div className="min-w-0">
-                          <span className="block text-sm text-zinc-200 group-hover:text-zinc-100 truncate">{child.name || "Unnamed"}</span>
-                          <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-600">
-                            {KIND_LABELS[child.kind ?? "site"] ?? child.kind ?? "Location"}
-                            {!child.hex?.sizeM ? "" : ` · ${formatScale(child.hex.sizeM)}`}
-                          </span>
-                        </div>
-                      </div>
-                      <span className={`text-zinc-600 transition-colors ${isPlayer ? "group-hover:text-amber-400" : "group-hover:text-green-400"}`} aria-hidden>→</span>
-                    </Link>
-                  ))}
-                </div>
-              </Panel>
-            ) : null}
+            {/* -------- TERRITORY (subdivisions as an SVG chart) -------- */}
+            <Panel>
+              <SectionTitle icon="◫" tint={accent} label="Territory" />
+              <RegionMap regions={children} accent={accent} hrefOf={locationHref} />
+            </Panel>
           </div>
 
           {/* -------- SURVEY COORDINATES -------- */}
