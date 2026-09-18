@@ -89,6 +89,24 @@ export function cubeRound(qf: number, rf: number): { q: number; r: number } {
   return { q: rx, r: rz };
 }
 
+/** Vizinhança axial (coords q,r) — ordem horária começando no Leste. */
+export const AXIAL_DIRS: Array<[number, number]> = [
+  [1, 0],
+  [1, -1],
+  [0, -1],
+  [-1, 0],
+  [-1, 1],
+  [0, 1],
+];
+
+/** Direção (0-5) que leva `from` a `to` num movimento de 1 hex. */
+export function hexDir(from: { q: number; r: number }, to: { q: number; r: number }): number {
+  const dq = to.q - from.q;
+  const dr = to.r - from.r;
+  const i = AXIAL_DIRS.findIndex(([a, b]) => a === dq && b === dr);
+  return i >= 0 ? i : 0;
+}
+
 /** Point exchange at `pivot`, by `deg` degrees (SVG clockwise). */
 export function rotatePoint(p: { x: number; y: number }, pivot: { x: number; y: number }, deg: number): { x: number; y: number } {
   if (!deg) return p;

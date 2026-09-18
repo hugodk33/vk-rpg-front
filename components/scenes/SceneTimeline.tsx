@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { useEffect, useRef } from "react";
-import type { GameTable, Location, Modifier, NarrationAction, Scene, VisibilityRule } from "@/lib/types";
+import type { GameTable, Location, Modifier, Narration, NarrationAction, Scene, VisibilityRule } from "@/lib/types";
 import { maskedLocationName, maskedTargetName } from "@/lib/visibility";
+import { narrationBoard } from "@/lib/board";
+import TacticalPlate from "@/components/tactical/TacticalPlate";
 
 /* ============================================================
    The Chronicle
@@ -217,13 +219,15 @@ function RollSlip({ a, moment, mask, viewerId }: { a: NarrationAction; moment?: 
 
 /* ---------- beat (narration) ---------- */
 
-function Beat({ n, viewerId, mask, rules }: { n: { narration: string; title?: string; moment?: number; location: Location | null; characters: { id: string; name: string; conscious?: boolean }[]; npcs: { characterId: string; name: string; status: string }[]; actions: NarrationAction[] }; viewerId?: string; mask: (id: string, real: string) => string; rules?: VisibilityRule[] }) {
+function Beat({ n, viewerId, mask, rules }: { n: { narration: string; title?: string; moment?: number; location: Location | null; characters: { id: string; name: string; conscious?: boolean; q?: number | null; r?: number | null; facing?: number | null }[]; npcs: { characterId: string; name: string; status: string; q?: number | null; r?: number | null; facing?: number | null }[]; actions: NarrationAction[] }; viewerId?: string; mask: (id: string, real: string) => string; rules?: VisibilityRule[] }) {
   const you = viewerId ? n.characters.find((c) => c.id === viewerId) : undefined;
   const wasElsewhere = !!viewerId && !you;
   const wasUnconscious = !!you && you.conscious === false;
   const shownLocation = n.location
     ? maskedLocationName(rules, n.location.id, n.location.name)
     : null;
+  const board = narrationBoard(n as unknown as Narration);
+  const hasGrid = !!board.location?.hex?.width && !!board.location?.hex?.height;
   return (
     <Panel>
       <div className="min-w-0 relative">
@@ -242,9 +246,21 @@ function Beat({ n, viewerId, mask, rules }: { n: { narration: string; title?: st
             you were elsewhere
           </div>
         ) : null}
+
+        {n.title ? (
+          <h4 className={`text-[15px] font-semibold mb-1.5 ${wasUnconscious ? "text-zinc-500" : "text-zinc-100"}`}>
+            {n.title}
+          </h4>
+        ) : null}
         <p className="text-[15px] leading-relaxed text-zinc-300">{n.narration}</p>
 
         {n.location ? <div className="mt-2.5">{locationPin(n.location, shownLocation)}</div> : null}
+
+        {hasGrid ? (
+          <div className="mt-3">
+            <TacticalPlate location={board.location} tokens={board.tokens} trail={board.trail} accent="#38bdf8" R={14} M={8} />
+          </div>
+        ) : null}
         <CastChips chars={n.characters} npcs={n.npcs} moment={n.moment} mask={mask} viewerId={viewerId} />
 
         {n.actions?.length ? (

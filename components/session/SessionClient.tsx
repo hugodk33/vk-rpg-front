@@ -3,9 +3,13 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import type { CharacterSkill, CharacterViewer, NarrationAction, QueueEntry, Sheet } from "@/lib/types";
+import type { CharacterSkill, CharacterViewer, Location, Narration, NarrationAction, QueueEntry, Sheet } from "@/lib/types";
 import { api } from "@/lib/api";
 import { skillLabel, skillLevel } from "@/lib/skill";
+import { narrationBoard, tokenAt } from "@/lib/board";
+import type { BoardToken } from "@/lib/board";
+import { hexDir } from "@/lib/hexgrid";
+import TacticalPlate from "@/components/tactical/TacticalPlate";
 import QueueProcession from "@/components/session/QueueProcession";
 import DiceMystery from "@/components/session/DiceMystery";
 
@@ -39,17 +43,21 @@ interface SessionClientProps {
   part: string;
   latestTitle: string;
   latestNarration: string;
+  latestNarrationId?: string;
+  /** última narration (com location/tokens) — alimenta o mapa */
+  latestBeat?: Narration | null;
   latestSceneId: string;
   latestMoment: number;
   characters: SessionChar[];
   actions: NarrationAction[];
   queue?: QueueEntry[];
   npcIds?: string[];
+  locations?: Location[];
   myCharacterId?: string;
   role?: "narrator" | "player";
 }
 
-type SessionTab = "turn" | "dice" | "journal";
+type SessionTab = "turn" | "dice" | "map" | "journal";
 
 const queuePos = (entry: QueueEntry): number => {
   const n = Number(entry.queue);
@@ -68,6 +76,7 @@ const icon = (path: string, cls = "w-4 h-4") => (
 const TABS: Array<{ key: SessionTab; label: string; icon: string }> = [
   { key: "turn", label: "Turn", icon: "M4 5a2 2 0 012-2h12a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm0 8a2 2 0 012-2h12a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm0 8a2 2 0 012-2h6a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2z" },
   { key: "dice", label: "Dice", icon: "M12 3l1.5 6.5L20 11l-6.5 1.5L12 19l-1.5-6.5L4 11l6.5-1.5L12 3zM5 20l1-1M19 20l1-1" },
+  { key: "map", label: "Map", icon: "M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.553-.894L9 7m0 13l6-3m-6 3V7m6 10l4.447 2.724A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L16 4m-1 13V4" },
   { key: "journal", label: "Journal", icon: "M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" },
 ];
 
@@ -107,12 +116,15 @@ export default function SessionClient({
   part,
   latestTitle,
   latestNarration,
+  latestNarrationId = "",
+  latestBeat = null,
   latestSceneId,
   latestMoment,
   characters,
   actions,
   queue = [],
   npcIds = [],
+  locations = [],
   myCharacterId,
   role = "narrator",
 }: SessionClientProps) {
@@ -400,6 +412,15 @@ export default function SessionClient({
     const prefix = opted.length
       ? `**${opted.map((c) => c.name || c.username || "Unknown").join(", ")}**: `
       : "";
+    const moved = new Map(mapTokens.map((t) => [t.id, t]));
+    const present = opted.map((c) => ({
+      character_id: c.id,
+      conscious: narrationConsc[c.id] !== false,
+      q: moved.get(c.id)?.q ?? null,
+      r: moved.get(c.id)?.r ?? null,
+      facing: moved.get(c.id)?.facing ?? 0,
+    }));
+    const loc = narrationLocation || defaultLocation?.id || latestBeat?.location?.id || null;
     const res = await fetch("/api/game-table-narration", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -409,11 +430,12 @@ export default function SessionClient({
         title: modalTitle,
         narration: prefix + narrationText,
         moment: latestMoment,
-        present: narrationChars.map((id) => ({ character_id: id, conscious: narrationConsc[id] !== false })),
+        location_id: loc,
+        present,
       }),
     });
     const j = await res.json();
-    if (j.success) { setModal(null); setModalTitle(""); setNarrationChars([]); setNarrationConsc({}); setNarrationText(""); router.refresh(); }
+    if (j.success) { setModal(null); setModalTitle(""); setNarrationChars([]); setNarrationConsc({}); setNarrationText(""); setNarrationLocation(defaultLocation?.id ?? ""); router.refresh(); }
     else alert("Error: " + (j.error || "Unknown"));
   }
 
@@ -453,6 +475,83 @@ export default function SessionClient({
   const maxCount = Math.max(1, ...counts.values());
 
   const sortedActions = [...actions].sort((a, b) => (a.queue ?? 0) - (b.queue ?? 0));
+
+  /* ---- floor plan / map ---- */
+  const defaultLocation =
+    latestBeat?.location ??
+    locations.find((l) => !!l.hex?.width && !!l.hex?.height) ??
+    locations[0] ??
+    null;
+
+  const [narrationLocation, setNarrationLocation] = useState<string>(() => defaultLocation?.id ?? "");
+  const [locSel, setLocSel] = useState<string | undefined>(() => defaultLocation?.id ?? undefined);
+  const [moveTarget, setMoveTarget] = useState<null | { q: number; r: number }>(null);
+  const [moveActor, setMoveActor] = useState<string>(() => pendingQueue[0]?.character_id || "");
+
+  const mapLocation = locations.find((l) => l.id === locSel) ?? defaultLocation;
+  const board = narrationBoard(latestBeat, mapLocation);
+
+  // posições vêm da narration (replay das actions); o roster completa quem ainda não tem token
+  const rosterTokens = characters.map((c) => ({
+    id: c.id,
+    name: c.name || c.username || "Unknown",
+    isPlayer: !npcIds.includes(c.id),
+    status: npcIds.includes(c.id) ? "npc" : undefined,
+    unconscious: false,
+  }));
+  const tokenById = new Map<string, BoardToken>(rosterTokens.map((t) => [t.id, t]));
+  for (const bt of board.tokens) {
+    tokenById.set(bt.id, { ...(tokenById.get(bt.id) ?? { id: bt.id, name: bt.name, isPlayer: !npcIds.includes(bt.id) }), ...bt });
+  }
+  const mapTokens: BoardToken[] = [...tokenById.values()];
+
+  const actorPos = (moveActor || actorCharId) ? tokenAt(mapTokens, moveActor || actorCharId) : null;
+
+  function setMapLocation(id: string) {
+    setLocSel(id);
+    setMoveTarget(null);
+  }
+
+  async function logMove() {
+    const loc = mapLocation;
+    if (!loc?.id) { alert("No floor plan selected for this session."); return; }
+    const actor = moveActor || actorCharId;
+    if (!actor) { alert("Pick who moves."); return; }
+    if (!moveTarget) { alert("Click a destination hex on the map first."); return; }
+    const from = tokenAt(mapTokens, actor);
+    const facing = from ? hexDir(from, moveTarget) : 0;
+    const payload = {
+      narrations_id: latestNarrationId || null,
+      character_id: actor,
+      description: `Moves to hex ${moveTarget.q},${moveTarget.r}`,
+      queue: nextQueuePos,
+      location_id: loc.id,
+      q: moveTarget.q,
+      r: moveTarget.r,
+      facing,
+    };
+    try {
+      const res = await fetch("/api/game-table-action", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const j = await res.json();
+      if (j.success) {
+        if (pendingQueue.some((q) => q.character_id === actor)) {
+          try { await advanceQueue(actor); } catch { /* ignore */ }
+        }
+        setMoveTarget(null);
+        router.refresh();
+      } else {
+        alert("Error: " + (j.error || "Unknown"));
+      }
+    } catch (err: unknown) {
+      alert("Network error: " + (err instanceof Error ? err.message : "Unknown"));
+    }
+  }
+
+  const shownActor = moveActor || actorCharId;
 
   return (
     <>
@@ -767,6 +866,101 @@ export default function SessionClient({
         </div>
       ) : null}
 
+      {/* ================= MAP ================= */}
+      {tab === "map" ? (
+        <div className="space-y-4">
+          <div className="bg-zinc-900/80 border border-zinc-700/40 rounded-xl p-5">
+            <div className="flex flex-wrap items-center gap-3 mb-4">
+              <span className={`w-2.5 h-2.5 rounded-full ${T.dot}`} style={{ boxShadow: `0 0 8px ${T.shadow}` }} />
+              <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">Floor plan</span>
+              {locations.length > 1 ? (
+                <select
+                  value={mapLocation?.id ?? ""}
+                  onChange={(e) => setMapLocation(e.target.value)}
+                  className={`${inputCls(T.inputBorder)} max-w-xs`}
+                >
+                  {locations.map((l) => (
+                    <option key={l.id} value={l.id} className="bg-zinc-800">
+                      {l.name || "Unnamed"}
+                    </option>
+                  ))}
+                </select>
+              ) : mapLocation ? (
+                <span className="text-sm font-semibold text-zinc-100">{mapLocation.name}</span>
+              ) : (
+                <span className="text-sm text-zinc-500 italic">No floor plan registered yet</span>
+              )}
+              {mapLocation?.hex?.width != null ? (
+                <span className="ml-auto font-mono text-[10px] text-zinc-500 uppercase tracking-widest">
+                  {mapLocation.hex.width}×{mapLocation.hex.height} hex · {mapLocation.hex.sizeM ?? 1}m/hex
+                </span>
+              ) : null}
+            </div>
+
+            {mapLocation ? (
+              <TacticalPlate
+                location={mapLocation}
+                tokens={mapTokens}
+                trail={board.trail}
+                mark={moveTarget}
+                accent={T.hex}
+                R={22}
+                M={14}
+                onHexClick={!isPlayer ? (q, r) => setMoveTarget({ q, r }) : undefined}
+              />
+            ) : (
+              <p className="text-sm text-zinc-600 font-mono italic">
+                Register a location with a hex grid to open the tactical map.
+              </p>
+            )}
+          </div>
+
+          {!isPlayer ? (
+            <div className="bg-zinc-900/80 border border-zinc-700/40 rounded-xl p-5">
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">Move</span>
+                <select
+                  value={moveActor}
+                  onChange={(e) => { setMoveActor(e.target.value); setMoveTarget(null); }}
+                  className={`${inputCls(T.inputBorder)} max-w-xs`}
+                >
+                  <option value="" className="bg-zinc-800">
+                    {actorCharId ? `Current: ${charName(actorCharId)}` : "Pick who moves…"}
+                  </option>
+                  {characters
+                    .filter((c) => moveActor !== "" || c.id !== actorCharId)
+                    .map((c) => (
+                      <option key={c.id} value={c.id} className="bg-zinc-800">
+                        {c.name || c.username || "Unknown"}{npcIds.includes(c.id) ? " — NPC" : ""}
+                      </option>
+                    ))}
+                </select>
+                <span className="text-sm text-zinc-500 flex-1 min-w-0">
+                  {shownActor ? <b className="text-zinc-200">{charName(shownActor)}</b> : null} {actorPos ? (
+                    <span className="font-mono text-[12px] text-zinc-400">at hex {actorPos.q},{actorPos.r}</span>
+                  ) : (
+                    <span className="text-zinc-600 italic">not placed yet</span>
+                  )}
+                  {moveTarget ? (
+                    <span className="font-mono text-[12px] text-emerald-300 ml-2">→ {moveTarget.q},{moveTarget.r}</span>
+                  ) : null}
+                </span>
+                <button
+                  onClick={logMove}
+                  disabled={!moveTarget}
+                  className={`${T.btnFill} text-sm font-bold px-4 py-2 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed`}
+                >
+                  Log move {moveTarget ? `→ ${moveTarget.q},${moveTarget.r}` : "· click a hex"}
+                </button>
+              </div>
+              <p className="mt-2 font-mono text-[10px] text-zinc-600 uppercase tracking-widest">
+                each logged move becomes an action: who? {shownActor ? charName(shownActor) : "—"} · where? {mapLocation?.name ?? "—"} · from {actorPos ? `${actorPos.q},${actorPos.r}` : "—"} → {moveTarget ? `${moveTarget.q},${moveTarget.r}` : "click a hex"}
+              </p>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
       {/* ================= JOURNAL ================= */}
       {tab === "journal" ? (
         <div className="space-y-5">
@@ -822,6 +1016,17 @@ export default function SessionClient({
               </div>
               {modal === "narration" ? (
                 <>
+                  <div>
+                    <label className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Floor plan (location)</label>
+                    <select value={narrationLocation} onChange={(e) => setNarrationLocation(e.target.value)} className={inputCls(T.inputBorder)}>
+                      <option value="" className="bg-zinc-800">No map</option>
+                      {locations.map((l) => (
+                        <option key={l.id} value={l.id} className="bg-zinc-800">
+                          {l.name || "Unnamed"}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                   <div>
                     <label className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Characters in scene</label>
                     <div className="space-y-1.5 max-h-40 overflow-y-auto border border-zinc-700/50 rounded-lg p-2">

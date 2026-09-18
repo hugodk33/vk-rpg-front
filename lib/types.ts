@@ -275,7 +275,13 @@ export interface HexTile {
 }
 
 export interface DrawShape {
-  type: "path" | "rect" | "ellipse"
+  type: "path" | "rect" | "ellipse" | "line"
+  /**
+   * "hexR" = normalized unit space: 1 unit = 1 hex radius, origin at the
+   * center of hex (0,0). Legacy shapes without `unit` are authored in raw
+   * pixels at R = 24 and are scaled at render time by R / 24.
+   */
+  unit?: "hexR"
   d?: string
   x?: number
   y?: number
@@ -412,6 +418,12 @@ export interface NarrationAction {
   result?: string
   description?: string
   dice_roll?: string
+  /** planta baixa onde a action aconteceu */
+  locationId?: string | null
+  /** hex de destino (movimento na malha hexagonal) */
+  q?: number | null
+  r?: number | null
+  facing?: number | null
   character: ActionCharacter | null
   modifier: Modifier | null
 }
@@ -422,6 +434,10 @@ export interface NarrationCharacter {
   userId: string
   username: string
   conscious?: boolean
+  /** posição inicial do token na planta baixa */
+  q?: number | null
+  r?: number | null
+  facing?: number | null
 }
 
 export interface NarrationNpc {
@@ -429,6 +445,9 @@ export interface NarrationNpc {
   characterId: string
   name: string
   status: string
+  q?: number | null
+  r?: number | null
+  facing?: number | null
 }
 
 export interface Narration {

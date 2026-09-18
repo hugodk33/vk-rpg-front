@@ -1,4 +1,4 @@
-import type { NarrationAction, Scene } from "./types";
+import type { Narration, NarrationAction, Scene } from "./types";
 
 export interface SessionState {
   chapter: number;
@@ -9,6 +9,8 @@ export interface SessionState {
   latestNarrationId: string;
   latestMoment: number;
   actions: NarrationAction[];
+  /** narration mais recente (com location + tokens) — alimenta o mapa */
+  latestBeat: Narration | null;
 }
 
 export function getSessionState(scenes: Scene[] | null | undefined): SessionState {
@@ -33,5 +35,6 @@ export function getSessionState(scenes: Scene[] | null | undefined): SessionStat
     latestMoment,
     actions: latestNarration?.actions ?? [],
     latestNarrationId: latestNarration?.id ?? "",
+    latestBeat: latestNarration ?? null,
   };
 }

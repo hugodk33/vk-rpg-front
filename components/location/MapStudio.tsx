@@ -1,35 +1,47 @@
 "use client";
 
 /* ============================================================
-   MapStudio — the full plate editor for a battlemap location.
-   Layers, back to front:
+   MapStudio — the full plate editor for a battlemap location,
+   rendered on a 2D <canvas> (lib/canvasgrid). Layers:
 
-   1. HEX TILES   — paint terrain onto each cell (open/grass/water/
-                    forest/stone/wall/door/rubble). The tilemap is a
-                    list of { q, r, t } in the plate's own grid.
-   2. DRAWING     — SVG strokes over the grid: pen, line, rect,
-                    ellipse, in a chosen color and weight. Stored as
-                    { type, …geometry, size, color }.
-   3. GRID        — footprint, orientation, hex scale, rotation and
-                    the center cell (q,r) that seams the plate into
-                    the territory chain (multi-scale absolute coords
-                    shown live under the cursor).
+   1. HEX TILES   — paint terrain onto each cell. Stored as
+                    { q, r, t } in the plate's own grid.
+   2. DRAWING     — vector strokes over the grid: pen, line, rect,
+                    ellipse, in a chosen color/weight. All shapes
+                    are stored NORMALIZED (unit:"hexR"; 1 unit =
+                    1 hex radius, origin = center of hex (0,0)) so
+                    viewers at any radius stay aligned. Legacy
+                    pixel shapes (authored at R = 24) are converted
+                    on load.
+   3. SELECT      — click a stroke to select it, drag to move,
+                    Delete/Backspace removes it.
+   4. GRID        — footprint, orientation, scale, rotation and
+                    the center cell that seams the plate into the
+                    territory chain. Snapping (hex centers for boxes,
+                    vertices for lines) keeps strokes on the lattice.
 
-   Saving posts a partial update to PUT /api/table-location/:id —
-   the repository keeps every field the studio does not touch.
+   Saving posts a partial update to PUT /api/table-location/:id.
    ============================================================ */
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { submitJson } from "@/components/forms/submit";
 import { absoluteHex, formatHexScale } from "@/lib/location";
+import { centerOf, gridSize, hexFromPoint } from "@/lib/hexgrid";
 import {
-  centerOf,
-  gridSize,
-  hexFromPoint,
-  polygonPath,
-  rotatePoint,
-} from "@/lib/hexgrid";
+  drawShapes,
+  hitDrawShapes,
+  normalizeShapeToHexR,
+  paintCanvas,
+  screenToGrid,
+  shiftShape,
+  snapNormalized,
+  toNormalized,
+  traceCell,
+  withRotated,
+  type GridSpec,
+  type Point,
+} from "@/lib/canvasgrid";
 import type { DrawShape, HexTile, HexTileKind, Location } from "@/lib/types";
 import { TERRAIN } from "@/lib/terrain";
 
@@ -38,14 +50,10 @@ const M = 48;
 
 const STROKES = ["#e4e4e7", "#38bdf8", "#fbbf24", "#f87171", "#4ade80", "#a78bfa"];
 const STROKE_WEIGHTS = [1, 1.6, 2.5, 4, 6];
+const WALL_BRIGHT = "#e4e4e7";
 
-type Tool = "paint" | "erase" | "pen" | "line" | "rect" | "ellipse";
-type ShapeType = "path" | "rect" | "ellipse";
-
-interface Point {
-  x: number;
-  y: number;
-}
+type Tool = "select" | "paint" | "erase" | "pen" | "line" | "rect" | "ellipse";
+type ShapeType = "path" | "rect" | "ellipse" | "line";
 
 interface MapStudioProps {
   location: Location;
@@ -64,18 +72,20 @@ export default function MapStudio({ location }: MapStudioProps) {
   const [centerR, setCenterR] = useState<number>(h?.centerR ?? 0);
   const [isIndoor, setIsIndoor] = useState(!!location.isIndoor);
 
-  const [tool, setTool] = useState<Tool>("paint");
+  const [tool, setTool] = useState<Tool>("select");
   const [terrain, setTerrain] = useState<HexTileKind>("wall");
   const [strokeColor, setStrokeColor] = useState(STROKES[0]);
   const [strokeWeight, setStrokeWeight] = useState(STROKE_WEIGHTS[2]);
+  const [snap, setSnap] = useState(true);
 
   const [tiles, setTiles] = useState<Map<string, HexTileKind>>(() => {
     const m = new Map<string, HexTileKind>();
     for (const t of location.tiles ?? []) m.set(`${t.q},${t.r}`, t.t);
     return m;
   });
-  const [shapes, setShapes] = useState<DrawShape[]>(location.drawing ?? []);
+  const [shapes, setShapes] = useState<DrawShape[]>(() => (location.drawing ?? []).map(normalizeShapeToHexR));
   const [draft, setDraft] = useState<DrawShape | null>(null);
+  const [selection, setSelection] = useState<number | null>(null);
 
   const [hover, setHover] = useState<{ q: number; r: number } | null>(null);
   const [crosshair, setCrosshair] = useState<Point | null>(null);
@@ -83,11 +93,12 @@ export default function MapStudio({ location }: MapStudioProps) {
   const [error, setError] = useState<string | null>(null);
   const [savedAt, setSavedAt] = useState<number>(0);
 
-  const svgRef = useRef<SVGSVGElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const drawingRef = useRef(false);
   const originRef = useRef<Point>({ x: 0, y: 0 });
-  const snapRef = useRef<{ tiles: Map<string, HexTileKind>; shapes: DrawShape[] } | null>(null);
+  const dragRef = useRef<{ index: number; anchor: Point; grab: Point } | null>(null);
   const paintCellRef = useRef<string | null>(null);
+  const snapRef = useRef<{ tiles: Map<string, HexTileKind>; shapes: DrawShape[] } | null>(null);
   const [canUndo, setCanUndo] = useState(false);
 
   const sizeNum = sizeM === "" ? null : Number(sizeM);
@@ -105,23 +116,22 @@ export default function MapStudio({ location }: MapStudioProps) {
   const g = gridSize(cols, rows, orientation, R);
   const W = g.w + M * 2;
   const H = g.h + M * 2;
-  const pivot = { x: W / 2, y: H / 2 };
   const centerCol = Math.floor(cols / 2);
   const centerRow = Math.floor(rows / 2);
 
+  const spec: GridSpec = useMemo(() => ({ cols, rows, orientation, R, M, rotationDeg }), [cols, rows, orientation, rotationDeg]);
+
   /* ---------- helpers ---------- */
 
-  const toGrid = useCallback(
+  const toGridPoint = useCallback(
     (e: React.PointerEvent): Point => {
-      const svg = svgRef.current;
-      if (!svg) return { x: 0, y: 0 };
-      const rect = svg.getBoundingClientRect();
-      const x = ((e.clientX - rect.left) / rect.width) * W;
-      const y = ((e.clientY - rect.top) / rect.height) * H;
-      const p = rotatePoint({ x: x - M, y: y - M }, { x: pivot.x - M, y: pivot.y - M }, -rotationDeg);
+      const cv = canvasRef.current;
+      if (!cv) return { x: 0, y: 0 };
+      const rect = cv.getBoundingClientRect();
+      const p = screenToGrid(e.clientX, e.clientY, rect, W, H, spec);
       return { x: p.x, y: p.y };
     },
-    [W, rotationDeg]
+    [W, H, spec]
   );
 
   const cellAt = useCallback(
@@ -130,7 +140,20 @@ export default function MapStudio({ location }: MapStudioProps) {
       if (cell.q < 0 || cell.q >= cols || cell.r < 0 || cell.r >= rows) return null;
       return cell;
     },
-    [orientation, R, cols, rows]
+    [orientation, cols, rows]
+  );
+
+  /** Normalized point (hexR units) with optional lattice snap for shape tools. */
+  const shapePoint = useCallback(
+    (e: React.PointerEvent): Point => {
+      const p = toGridPoint(e);
+      const n = toNormalized(p, R);
+      if (!snap) return n;
+      if (tool === "line") return snapNormalized(n, spec, "vertex");
+      if (tool === "rect" || tool === "ellipse") return snapNormalized(n, spec, "center");
+      return n;
+    },
+    [toGridPoint, snap, tool, spec]
   );
 
   const stamp = useCallback(
@@ -148,7 +171,7 @@ export default function MapStudio({ location }: MapStudioProps) {
     [tool, terrain]
   );
 
-  const snap = useCallback(() => {
+  const takeSnapshot = useCallback(() => {
     snapRef.current = { tiles: new Map(tiles), shapes };
     setCanUndo(true);
   }, [tiles, shapes]);
@@ -156,56 +179,98 @@ export default function MapStudio({ location }: MapStudioProps) {
   /* ---------- pointer handlers ---------- */
 
   function onPointerDown(e: React.PointerEvent) {
-    const p = toGrid(e);
-    svgRef.current?.setPointerCapture(e.pointerId);
+    const p = toGridPoint(e);
+    const n = toNormalized(p, R);
+    canvasRef.current?.setPointerCapture(e.pointerId);
     drawingRef.current = true;
-    originRef.current = p;
+    originRef.current = n;
     paintCellRef.current = null;
 
     if (tool === "paint" || tool === "erase") {
       const cell = cellAt(p);
       if (cell) {
-        snap();
+        takeSnapshot();
         stamp(cell);
       }
       return;
     }
 
+    if (tool === "select") {
+      const idx = hitDrawShapes(shapes, n, 1, 6 / R);
+      if (idx != null) {
+        takeSnapshot();
+        const target = shapes[idx];
+        const anchor =
+          target.type === "path"
+            ? shapeAnchor(shapes, idx, n)
+            : {
+                x: target.type === "ellipse" ? target.cx ?? 0 : target.x ?? 0,
+                y: target.type === "ellipse" ? target.cy ?? 0 : target.y ?? 0,
+              };
+        dragRef.current = { index: idx, anchor, grab: { x: n.x - anchor.x, y: n.y - anchor.y } };
+        setSelection(idx);
+      } else {
+        dragRef.current = null;
+        setSelection(null);
+      }
+      return;
+    }
+
+    takeSnapshot();
     if (tool === "pen") {
-      snap();
-      setDraft({ type: "path", d: `M ${p.x.toFixed(2)} ${p.y.toFixed(2)}`, size: strokeWeight, color: strokeColor });
+      setDraft({ type: "path", d: `M ${n.x.toFixed(3)} ${n.y.toFixed(3)}`, size: strokeWeight, color: strokeColor, unit: "hexR" });
     } else {
-      snap();
-      setDraft({ type: tool === "rect" ? "rect" : (tool === "ellipse" ? "ellipse" : "line") as ShapeType, x: p.x, y: p.y, w: 0, h: 0, size: strokeWeight, color: strokeColor });
+      const s = shapePoint(e);
+      originRef.current = s;
+      setDraft({ type: tool as ShapeType, x: s.x, y: s.y, w: 0, h: 0, size: strokeWeight, color: strokeColor, unit: "hexR" });
     }
   }
 
   function onPointerMove(e: React.PointerEvent) {
-    const p = toGrid(e);
+    const p = toGridPoint(e);
     setCrosshair(p);
 
-    if (drawingRef.current && tool === "paint" || drawingRef.current && tool === "erase") {
+    if (drawingRef.current && (tool === "paint" || tool === "erase")) {
       const cell = cellAt(p);
       if (cell) stamp(cell);
+    }
+
+    if (drawingRef.current && dragRef.current && tool === "select") {
+      const n = toNormalized(p, R);
+      const d = dragRef.current;
+      const anchor = { x: n.x - d.grab.x, y: n.y - d.grab.y };
+      const dx = anchor.x - d.anchor.x;
+      const dy = anchor.y - d.anchor.y;
+      if (Math.abs(dx) > 0.0001 || Math.abs(dy) > 0.0001) {
+        setShapes((prev) => {
+          const next = prev.slice();
+          const idx = d.index;
+          if (idx >= 0 && idx < next.length) next[idx] = shiftShape(next[idx], dx, dy);
+          return next;
+        });
+      }
+      return;
     }
 
     if (drawingRef.current && draft) {
       const o = originRef.current;
       if (draft.type === "path") {
-        setDraft({ ...draft, d: `${draft.d ?? ""} L ${p.x.toFixed(2)} ${p.y.toFixed(2)}` });
+        const n = toNormalized(p, R);
+        setDraft({ ...draft, d: `${draft.d ?? ""} L ${n.x.toFixed(3)} ${n.y.toFixed(3)}` });
       } else {
-        const x = Math.min(o.x, p.x);
-        const y = Math.min(o.y, p.y);
-        const w = Math.abs(p.x - o.x);
-        const h = Math.abs(p.y - o.y);
+        const s = shapePoint(e);
+        const x = Math.min(o.x, s.x);
+        const y = Math.min(o.y, s.y);
+        const w = Math.abs(s.x - o.x);
+        const h = Math.abs(s.y - o.y);
         setDraft({
           ...draft,
           x,
           y,
           w,
           h,
-          cx: (o.x + p.x) / 2,
-          cy: (o.y + p.y) / 2,
+          cx: (o.x + s.x) / 2,
+          cy: (o.y + s.y) / 2,
           rx: w / 2,
           ry: h / 2,
         });
@@ -220,8 +285,10 @@ export default function MapStudio({ location }: MapStudioProps) {
   function onPointerUp() {
     drawingRef.current = false;
     paintCellRef.current = null;
+    dragRef.current = null;
     if (draft) {
       setShapes((prev) => [...prev, draft]);
+      setSelection(shapes.length);
       setDraft(null);
     }
   }
@@ -231,6 +298,24 @@ export default function MapStudio({ location }: MapStudioProps) {
     setCrosshair(null);
   }
 
+  /* ---------- keyboard shortcuts (delete selection) ---------- */
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      const tag = (e.target as HTMLElement | null)?.tagName ?? "";
+      if (tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA") return;
+      if ((e.key === "Delete" || e.key === "Backspace") && selection != null) {
+        e.preventDefault();
+        setShapes((prev) => prev.filter((_, i) => i !== selection));
+        setSelection(null);
+      } else if (e.key === "Escape") {
+        setSelection(null);
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [selection]);
+
   /* ---------- actions ---------- */
 
   function undo() {
@@ -239,18 +324,18 @@ export default function MapStudio({ location }: MapStudioProps) {
     setShapes(snapRef.current.shapes);
     snapRef.current = null;
     setCanUndo(false);
+    setSelection(null);
   }
 
   function clearTiles() {
-    snapRef.current = { tiles: new Map(tiles), shapes };
-    setCanUndo(true);
+    takeSnapshot();
     setTiles(new Map());
   }
 
   function clearStrokes() {
-    snapRef.current = { tiles: new Map(tiles), shapes };
-    setCanUndo(true);
+    takeSnapshot();
     setShapes([]);
+    setSelection(null);
   }
 
   async function save() {
@@ -287,72 +372,87 @@ export default function MapStudio({ location }: MapStudioProps) {
     }
   }
 
-  /* ---------- render ---------- */
+  /* ---------- canvas render ---------- */
 
-  const cellNodes: React.ReactNode[] = [];
-  for (let c = 0; c < cols; c++) {
-    for (let r = 0; r < rows; r++) {
-      const key = `${c},${r}`;
-      const pt = centerOf(c, r, orientation, R);
-      const cx = M + pt.x;
-      const cy = M + pt.y;
-      const t = tiles.get(key) ?? "open";
-      const meta = TERRAIN[t];
-      const isCenter = c === centerCol && r === centerRow;
-      const isHover = hover?.q === c && hover?.r === r;
-      cellNodes.push(
-        <polygon
-          key={key}
-          points={polygonPath(cx, cy, R, orientation)}
-          fill={isHover ? `${STROKES[0]}14` : meta.fill}
-          stroke={isHover ? STROKES[0] : isCenter ? TERRAIN.door.stroke : meta.stroke}
-          strokeWidth={isHover || isCenter ? 1.8 : 1}
-        />
-      );
-      if (meta.glyph) {
-        cellNodes.push(
-          <text
-            key={`g-${key}`}
-            x={cx}
-            y={cy}
-            textAnchor="middle"
-            dominantBaseline="middle"
-            fontFamily="Geist Mono, monospace"
-            fontSize="11"
-            fontWeight="bold"
-            fill={meta.stroke}
-          >
-            {meta.glyph}
-          </text>
-        );
-      }
-      if (isCenter) {
-        cellNodes.push(
-          <text
-            key={`c-${key}`}
-            x={cx}
-            y={cy + (meta.glyph ? 10 : 0)}
-            textAnchor="middle"
-            dominantBaseline="middle"
-            fontFamily="Geist Mono, monospace"
-            fontSize="9"
-            fill={meta.glyph ? "#00000066" : "#8b93a5"}
-          >
-            {meta.glyph ? `q${centerQ} r${centerR}` : `q${centerQ} r${centerR}`}
-          </text>
-        );
-      }
-    }
-  }
+  useEffect(() => {
+    const cv = canvasRef.current;
+    if (!cv) return;
+    paintCanvas(cv, W, H, (ctx) => {
+      const tileMap = tiles;
+
+      withRotated(ctx, W, H, rotationDeg, () => {
+        /* cells */
+        for (let c = 0; c < cols; c++) {
+          for (let r = 0; r < rows; r++) {
+            const key = `${c},${r}`;
+            const pt = centerOf(c, r, orientation, R);
+            const cx = M + pt.x;
+            const cy = M + pt.y;
+            const meta = TERRAIN[tileMap.get(key) ?? "open"];
+            const isCenter = c === centerCol && r === centerRow;
+            const isHover = hover?.q === c && hover?.r === r;
+            traceCell(ctx, cx, cy, R, orientation);
+            ctx.fillStyle = isHover ? `${STROKES[0]}14` : meta.fill;
+            ctx.fill();
+            ctx.strokeStyle = isHover ? STROKES[0] : isCenter ? TERRAIN.door.stroke : meta.stroke;
+            ctx.lineWidth = isHover || isCenter ? 1.8 : 1;
+            ctx.stroke();
+
+            if (meta.glyph) {
+              ctx.fillStyle = meta.stroke;
+              ctx.font = `bold ${Math.max(9, R * 0.46)}px "Geist Mono", monospace`;
+              ctx.textAlign = "center";
+              ctx.textBaseline = "middle";
+              ctx.fillText(meta.glyph, cx, cy);
+            }
+            if (isCenter) {
+              ctx.fillStyle = "#8b93a5";
+              ctx.font = `${Math.max(8, R * 0.375)}px "Geist Mono", monospace`;
+              ctx.textAlign = "center";
+              ctx.textBaseline = "middle";
+              ctx.fillText(`q${centerQ} r${centerR}`, cx, cy + (meta.glyph ? R * 0.42 : 0));
+            }
+          }
+        }
+
+        /* strokes + draft + selection */
+        drawShapes(ctx, shapes, R, selection, "#38bdf8");
+        if (draft) drawShapes(ctx, [draft], R, null);
+
+        /* brush highlight on hovered cell */
+        if ((tool === "paint" || tool === "erase") && hover) {
+          const pt = centerOf(hover.q, hover.r, orientation, R);
+          traceCell(ctx, M + pt.x, M + pt.y, R, orientation);
+          ctx.strokeStyle = tool === "erase" ? "#f87171" : TERRAIN[terrain].stroke;
+          ctx.lineWidth = 2;
+          ctx.setLineDash([4, 3]);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+
+        /* snap crosshair while drawing box/line tools */
+        if (drawingRef.current && (tool === "line" || tool === "rect" || tool === "ellipse") && crosshair) {
+          const n = snapNormalized(toNormalized(crosshair, R), spec, tool === "line" ? "vertex" : "center");
+          const sx = n.x * R;
+          const sy = n.y * R;
+          ctx.strokeStyle = strokeColor;
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.arc(sx, sy, 5, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+      });
+    });
+  }, [shapes, tiles, draft, selection, hover, crosshair, tool, terrain, strokeColor, rotationDeg, W, H, cols, rows, centerCol, centerRow, centerQ, centerR, orientation, spec, snap]);
+
+  /* ---------- derived UI ---------- */
 
   const hoverCell = hover;
   const hoverAbs = hoverCell
     ? { q: Math.round((abs.q + (hoverCell.q - centerCol)) * 100) / 100, r: Math.round((abs.r + (hoverCell.r - centerRow)) * 100) / 100 }
     : null;
 
-  const brush = (tool === "paint" || tool === "erase") && hoverCell
-    ? polygonPath(M + centerOf(hoverCell.q, hoverCell.r, orientation, R).x, M + centerOf(hoverCell.q, hoverCell.r, orientation, R).y, R, orientation)
-    : null;
+  const activeShape = selection != null && shapes[selection] ? shapes[selection] : null;
 
   return (
     <section className="rounded-xl border border-zinc-700/40 bg-zinc-900/40 overflow-hidden">
@@ -389,8 +489,9 @@ export default function MapStudio({ location }: MapStudioProps) {
         <div className="border-b lg:border-b-0 lg:border-r border-zinc-800 p-4 space-y-5">
           <div>
             <p className="font-mono text-[9px] uppercase tracking-widest text-zinc-500 mb-2">Tool</p>
-            <div className="grid grid-cols-3 gap-1.5">
+            <div className="grid grid-cols-4 gap-1.5">
               {([
+                ["select", "✛", "Select"],
                 ["paint", "▦", "Paint"],
                 ["erase", "⌫", "Erase"],
                 ["pen", "✎", "Pen"],
@@ -413,7 +514,49 @@ export default function MapStudio({ location }: MapStudioProps) {
             </div>
           </div>
 
-          {(tool === "paint") ? (
+          {tool === "select" ? (
+            <div>
+              <p className="font-mono text-[9px] uppercase tracking-widest text-zinc-500 mb-2">Selection</p>
+              <div className="space-y-2">
+                <p className="text-[10px] leading-snug text-zinc-500">
+                  {activeShape ? (
+                    <>
+                      <b className="text-zinc-300">{activeShape.type}</b> selected — drag to move,{" "}
+                      <b className="text-red-300">Del</b> remove.
+                    </>
+                  ) : (
+                    "Click a stroke to select it. Drag to move, Del/Backspace to remove."
+                  )}
+                </p>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setShapes((prev) => {
+                      const next = prev.slice();
+                      if (selection != null && next[selection]) {
+                        next[selection] = {
+                          ...next[selection],
+                          color:
+                            next[selection].color === WALL_BRIGHT
+                              ? "#fbbf24"
+                              : next[selection].color === "#fbbf24"
+                              ? "#f87171"
+                              : WALL_BRIGHT,
+                        };
+                      }
+                      return next;
+                    })
+                  }
+                  disabled={!activeShape}
+                  className="font-mono text-[9px] uppercase tracking-widest px-2 py-1 rounded border border-zinc-700/50 text-zinc-400 hover:text-zinc-200 transition-colors disabled:opacity-40"
+                >
+                  Recolor
+                </button>
+              </div>
+            </div>
+          ) : null}
+
+          {tool === "paint" ? (
             <div>
               <p className="font-mono text-[9px] uppercase tracking-widest text-zinc-500 mb-2">Terrain</p>
               <div className="grid grid-cols-2 gap-1.5">
@@ -472,6 +615,18 @@ export default function MapStudio({ location }: MapStudioProps) {
                     </button>
                   ))}
                 </div>
+              </div>
+              <div>
+                <button
+                  type="button"
+                  onClick={() => setSnap((s) => !s)}
+                  className={`w-full rounded-md border px-2 py-1 text-[10px] uppercase tracking-widest font-mono transition-colors ${
+                    snap ? "border-amber-500/70 bg-amber-500/10 text-amber-300" : "border-zinc-700/40 text-zinc-500"
+                  }`}
+                >
+                  Snap to grid {snap ? "on" : "off"}
+                </button>
+                <p className="mt-1.5 text-[10px] leading-snug text-zinc-500">Lines snap to hex vertices; boxes snap to hex centers.</p>
               </div>
             </div>
           ) : null}
@@ -533,34 +688,19 @@ export default function MapStudio({ location }: MapStudioProps) {
         {/* canvas */}
         <div className="p-4">
           <div className="rounded-lg border border-zinc-700/40 bg-zinc-950/50 overflow-hidden relative">
-            <svg
-              ref={svgRef}
-              viewBox={`0 0 ${W} ${H}`}
+            <canvas
+              ref={canvasRef}
+              width={W}
+              height={H}
               className="w-full h-auto block touch-none select-none cursor-crosshair"
               onPointerDown={onPointerDown}
               onPointerMove={onPointerMove}
               onPointerUp={onPointerUp}
               onPointerLeave={onPointerLeave}
+              onPointerCancel={onPointerUp}
               role="img"
               aria-label="Tactical map editor canvas"
-            >
-              <g transform={`rotate(${rotationDeg} ${pivot.x} ${pivot.y})`}>
-                {cellNodes}
-              </g>
-
-              {/* drawing layer (same grid space as cells) */}
-              <g transform={`rotate(${rotationDeg} ${pivot.x} ${pivot.y})`} pointerEvents="none">
-                {shapes.map((s, i) => (
-                  <DrawNode key={i} shape={s} />
-                ))}
-                {draft ? <DrawNode shape={draft} /> : null}
-              </g>
-
-              {/* brush highlight */}
-              {brush ? (
-                <polygon points={brush} fill="none" stroke={tool === "erase" ? "#f87171" : TERRAIN[terrain].stroke} strokeWidth={2} strokeDasharray="4 3" pointerEvents="none" />
-              ) : null}
-            </svg>
+            />
 
             {error ? <p className="absolute inset-x-0 bottom-0 bg-red-950/90 text-red-200 text-xs px-3 py-2">{error}</p> : null}
           </div>
@@ -577,6 +717,9 @@ export default function MapStudio({ location }: MapStudioProps) {
               Scale <b className="text-zinc-300">{formatHexScale(sizeNum)}</b>
             </span>
             <span>
+              Strokes <b className="text-zinc-300">{shapes.length}</b>
+            </span>
+            <span>
               Chain <b className="text-zinc-400 truncate max-w-[16rem] inline-block align-top">
                 {(location.ancestors ?? []).map((a) => a.name).join(" › ") || "—"}
               </b>
@@ -588,20 +731,12 @@ export default function MapStudio({ location }: MapStudioProps) {
   );
 }
 
-function DrawNode({ shape }: { shape: DrawShape }) {
-  const common = {
-    fill: "none",
-    stroke: shape.color,
-    strokeWidth: shape.size,
-    strokeLinecap: "round" as const,
-    strokeLinejoin: "round" as const,
-    pointerEvents: "none" as const,
-  };
-  if (shape.type === "path") {
-    return <path {...common} d={shape.d ?? ""} />;
+/** Initial anchor of a path shape (its first vertex), for Select-drag. */
+function shapeAnchor(shapes: DrawShape[], idx: number, fallback: Point): Point {
+  const s = shapes[idx];
+  if (s.type === "path") {
+    const segs = s.d?.match(/-?\d*\.?\d+(?:[eE][+-]?\d+)?/g);
+    if (segs && segs.length >= 2) return { x: Number(segs[0]), y: Number(segs[1]) };
   }
-  if (shape.type === "rect") {
-    return <rect {...common} x={shape.x ?? 0} y={shape.y ?? 0} width={shape.w ?? 0} height={shape.h ?? 0} />;
-  }
-  return <ellipse {...common} cx={shape.cx ?? 0} cy={shape.cy ?? 0} rx={Math.max(0.1, shape.rx ?? 0)} ry={Math.max(0.1, shape.ry ?? 0)} />;
+  return fallback;
 }
