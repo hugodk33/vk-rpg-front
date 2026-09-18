@@ -9,8 +9,10 @@
      location;
    · each ACTION is a tick on its node — a quiet, countable pulse;
    · the rail&apos;s cursor rests on the latest narration (where the
-     chronicle now stands), and the top bar reads how much of the
-     story has already been told.
+     chronicle now stands), and the top bar reads how much story
+     has been told — a gauge built from recorded chapters, scenes,
+     narrations, actions and modifiers, with no deadline and no
+     end-percentage, so it only ever grows as the tale unfolds.
    ============================================================ */
 
 import Link from "next/link";
@@ -20,13 +22,16 @@ import type { Narration, Scene } from "@/lib/types";
 const ROMAN = ["0","I","II","III","IV","V","VI","VII","VIII","IX","X","XI","XII","XIII","XIV","XV"];
 const roman = (n: number) => ROMAN[Math.max(0, Math.min(ROMAN.length - 1, Math.floor(n)))] ?? String(n);
 
+const METER_SEGMENTS = 16;
+
 interface StoryRailProps {
   tableId: string;
   scenes: Scene[];
   state: SessionState;
+  modifierCount?: number;
 }
 
-export default function StoryRail({ tableId, scenes, state }: StoryRailProps) {
+export default function StoryRail({ tableId, scenes, state, modifierCount = 0 }: StoryRailProps) {
   const sorted = [...scenes].sort(
     (a, b) => (a.chapter ?? 0) - (b.chapter ?? 0) || (a.moment ?? 0) - (b.moment ?? 0)
   );
@@ -38,17 +43,6 @@ export default function StoryRail({ tableId, scenes, state }: StoryRailProps) {
   );
 
   const now = state.latestNarrationId;
-  const nowIndex = (() => {
-    let i = 0;
-    for (const s of sorted) {
-      for (const n of s.narrations ?? []) {
-        if (n.id === now) return i;
-        i += 1;
-      }
-    }
-    return -1;
-  })();
-  const progress = totalNarrations > 0 ? Math.round(((nowIndex + 1) / totalNarrations) * 100) : 0;
 
   const chapters = [] as { chapter: number; scenes: Scene[] }[];
   for (const s of sorted) {
@@ -58,29 +52,46 @@ export default function StoryRail({ tableId, scenes, state }: StoryRailProps) {
     else chapters.push({ chapter: ch, scenes: [s] });
   }
 
+  const taleMass = chapters.length + sorted.length + totalNarrations + totalActions + modifierCount;
+  const meterFilled = Math.min(METER_SEGMENTS, taleMass);
+  const meterOverflow = taleMass - METER_SEGMENTS;
+  const massBreakdown =
+    `${chapters.length} chapter${chapters.length === 1 ? "" : "s"} · ${sorted.length} scene${sorted.length === 1 ? "" : "s"} · ` +
+    `${totalNarrations} narration${totalNarrations === 1 ? "" : "s"} · ${totalActions} action${totalActions === 1 ? "" : "s"} · ` +
+    `${modifierCount} modifier${modifierCount === 1 ? "" : "s"}`;
+
   if (sorted.length === 0) return null;
 
   return (
     <section className="rounded-xl border border-zinc-700/40 bg-zinc-900/40 overflow-hidden">
       {/* header strip */}
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5 px-4 py-3 border-b border-zinc-800">
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-3 border-b border-zinc-800">
         <div className="flex items-center gap-2.5">
           <span aria-hidden className="font-mono text-base leading-none text-teal-400">◍</span>
           <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-zinc-400">
             Chronicle rail
           </span>
           <span className="font-mono text-[9px] uppercase tracking-widest text-zinc-600 hidden sm:inline">
-            {chapters.length} chapter{chapters.length === 1 ? "" : "s"} · {sorted.length} scene{sorted.length === 1 ? "" : "s"}
-            {totalNarrations >= 0 ? ` · ${totalNarrations} narration${totalNarrations === 1 ? "" : "s"}` : ""} · {totalActions} action{totalActions === 1 ? "" : "s"}
+            {massBreakdown}
           </span>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-widest text-zinc-500">
-            <span>Progress</span>
-            <span className="text-teal-300">{progress}%</span>
+        <div className="flex items-center gap-3" title={massBreakdown}>
+          <div className="flex flex-col items-end leading-tight">
+            <span className="font-mono text-[9px] uppercase tracking-widest text-zinc-500">Tale told</span>
+            <span className="font-mono text-xs text-teal-300 tabular-nums">{taleMass}</span>
           </div>
-          <div className="w-32 h-1.5 rounded-full bg-zinc-800 overflow-hidden" aria-hidden>
-            <div className="h-full rounded-full bg-teal-500/80 transition-all" style={{ width: `${Math.max(0, Math.min(100, progress))}%` }} />
+          <div className="flex items-center gap-[3px]" aria-hidden>
+            {Array.from({ length: METER_SEGMENTS }).map((_, i) => (
+              <span
+                key={i}
+                className={`block h-4 w-1.5 rounded-sm transition-colors ${
+                  i < meterFilled ? "bg-teal-400/70" : "bg-zinc-800"
+                }`}
+              />
+            ))}
+            {meterOverflow > 0 ? (
+              <span className="font-mono text-[9px] text-teal-300/80">+{meterOverflow}</span>
+            ) : null}
           </div>
           <Link
             href={`/table/${tableId}/sessions`}

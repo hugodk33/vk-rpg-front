@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Activity, BookOpen, MapPin, Package, Skull, Sparkles, Users, type LucideIcon } from "lucide-react";
 import { api } from "@/lib/api";
 import type {
   CharacterViewer,
@@ -170,27 +171,34 @@ interface ArchiveCell {
   unit: string;
   count: number;
   seal: string;
+  icon: LucideIcon;
   href?: string;
   addHref?: string;
   addLabel?: string;
 }
 
 function ArchiveRow({ cell }: { cell: ArchiveCell }) {
+  const Icon = cell.icon;
   return (
-    <div className="group flex items-center gap-3 px-4 py-3.5 border-b border-zinc-700/30 last:border-b-0 hover:bg-zinc-800/30 transition-colors">
-      <span className="hidden sm:block w-20 shrink-0 font-mono text-[8px] uppercase tracking-[0.22em] text-zinc-600">{cell.group}</span>
-      <span className="w-1.5 h-6 rounded-full shrink-0" style={{ background: cell.seal, boxShadow: `0 0 8px ${cell.seal}40` }} />
-      <span className="min-w-0 flex-1">
-        <span className="block text-sm font-medium text-zinc-200">{cell.name}</span>
-        <span className="block font-mono text-[9px] uppercase tracking-widest text-zinc-500 mt-0.5">
-          {cell.count} {cell.unit}
-        </span>
+    <div
+      className="group flex flex-col items-center text-center rounded-lg border border-l-[3px] border-zinc-700/40 bg-zinc-900/50 px-4 py-4 transition-colors hover:bg-zinc-800/40 hover:border-zinc-600/60"
+      style={{ borderLeftColor: cell.seal }}
+    >
+      <span
+        className="flex h-10 w-10 items-center justify-center rounded-lg border"
+        style={{ background: `${cell.seal}14`, borderColor: `${cell.seal}55`, color: cell.seal }}
+      >
+        <Icon className="w-5 h-5" strokeWidth={1.75} />
       </span>
-      <span className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
+      <span className="block text-sm font-semibold text-zinc-100 mt-2.5 leading-tight">{cell.name}</span>
+      <span className="block font-mono text-[9px] uppercase tracking-widest text-zinc-500 mt-1">
+        {cell.count} {cell.unit}
+      </span>
+      <span className="flex items-center justify-center gap-2 mt-3 pt-3 border-t border-zinc-700/40 w-full flex-wrap">
         {cell.href ? (
           <Link
             href={cell.href}
-            className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest rounded-md border border-zinc-700/50 px-2.5 py-1.5 text-zinc-400 hover:text-zinc-100 group-hover:border-zinc-600/60 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-green-800/60"
+            className="inline-flex items-center gap-1 font-mono text-[9px] uppercase tracking-widest rounded-md border border-zinc-700/50 px-2 py-1 text-zinc-400 hover:text-zinc-100 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-green-800/60"
           >
             Open
             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -201,7 +209,7 @@ function ArchiveRow({ cell }: { cell: ArchiveCell }) {
         {cell.addHref ? (
           <Link
             href={cell.addHref}
-            className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest rounded-md border border-green-700/25 bg-green-700/10 px-2.5 py-1.5 text-green-400 hover:bg-green-700/20 hover:text-green-300 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-green-800/60"
+            className="inline-flex items-center gap-1 font-mono text-[9px] uppercase tracking-widest rounded-md border border-green-700/25 bg-green-700/10 px-2 py-1 text-green-400 hover:bg-green-700/20 hover:text-green-300 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-green-800/60"
           >
             + {cell.addLabel}
           </Link>
@@ -349,13 +357,13 @@ export default async function TableOverviewPage({ params }: { params: Promise<{ 
     (modsRes?.modifiers?.length ?? 0);
 
   const cells: ArchiveCell[] = [
-    { group: "People", name: "Characters", unit: "dossiers", count: characters.length, seal: "#34d399", href: `/table/${id}/characters`, addHref: `/character/new?table_id=${id}`, addLabel: "New character" },
-    { group: "Gear", name: "Items", unit: "records", count: items.length, seal: "#f59e0b", href: `/table/${id}/items`, addHref: `/item/new?table_id=${id}`, addLabel: "New item" },
-    { group: "Traits", name: "Advantages", unit: "records", count: advantages.length, seal: "#818cf8", href: `/table/${id}/advantages`, addHref: `/advantage/new?table_id=${id}`, addLabel: "New advantage" },
-    { group: "Traits", name: "Disadvantages", unit: "records", count: disadvantages.length, seal: "#f87171", href: `/table/${id}/disadvantages`, addHref: `/disadvantage/new?table_id=${id}`, addLabel: "New disadvantage" },
-    { group: "Study", name: "Skills", unit: "folios", count: skills.length, seal: "#a78bfa", href: `/table/${id}/skills` },
-    { group: "Places", name: "Locations", unit: "places", count: places, seal: "#2dd4bf", href: `/table/${id}/locations` },
-    { group: "Conditions", name: "Modifiers", unit: "conditions", count: modsRes?.modifiers?.length ?? 0, seal: "#f472b6", href: `/table/${id}/modifiers` },
+    { group: "People", name: "Characters", unit: "dossiers", count: characters.length, seal: "#34d399", icon: Users, href: `/table/${id}/characters`, addHref: `/character/new?table_id=${id}`, addLabel: "New character" },
+    { group: "Gear", name: "Items", unit: "records", count: items.length, seal: "#f59e0b", icon: Package, href: `/table/${id}/items`, addHref: `/item/new?table_id=${id}`, addLabel: "New item" },
+    { group: "Traits", name: "Advantages", unit: "records", count: advantages.length, seal: "#818cf8", icon: Sparkles, href: `/table/${id}/advantages`, addHref: `/advantage/new?table_id=${id}`, addLabel: "New advantage" },
+    { group: "Traits", name: "Disadvantages", unit: "records", count: disadvantages.length, seal: "#f87171", icon: Skull, href: `/table/${id}/disadvantages`, addHref: `/disadvantage/new?table_id=${id}`, addLabel: "New disadvantage" },
+    { group: "Study", name: "Skills", unit: "folios", count: skills.length, seal: "#a78bfa", icon: BookOpen, href: `/table/${id}/skills` },
+    { group: "Places", name: "Locations", unit: "places", count: places, seal: "#2dd4bf", icon: MapPin, href: `/table/${id}/locations` },
+    { group: "Conditions", name: "Modifiers", unit: "conditions", count: modsRes?.modifiers?.length ?? 0, seal: "#f472b6", icon: Activity, href: `/table/${id}/modifiers` },
   ];
 
   const system = table?.system?.trim();
@@ -439,7 +447,7 @@ export default async function TableOverviewPage({ params }: { params: Promise<{ 
       {/* ---- chronicle rail ---- */}
       {hasChronicle ? (
         <section className="mt-8">
-          <StoryRail tableId={id} scenes={scenes} state={state} />
+          <StoryRail tableId={id} scenes={scenes} state={state} modifierCount={modsRes?.modifiers?.length ?? 0} />
         </section>
       ) : null}
 
@@ -490,7 +498,7 @@ export default async function TableOverviewPage({ params }: { params: Promise<{ 
       {/* ---- archive ---- */}
       <section className="mt-8">
         <LedgerHeader title="The Archive" meta={`${recordTotal} records on file`} />
-        <div className="rounded-xl border border-zinc-700/40 bg-zinc-900/50 overflow-hidden">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
           {cells.map((cell) => (
             <ArchiveRow key={`${cell.group}-${cell.name}`} cell={cell} />
           ))}
