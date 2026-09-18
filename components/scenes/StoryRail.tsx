@@ -217,7 +217,7 @@ function NarrationNode({
           <span className="block text-[11px] italic leading-tight text-zinc-500">Beats</span>
         )}
         <span className="block font-mono text-[8px] uppercase tracking-widest text-zinc-600 mt-0.5">
-          M{index + 1}{loc ? ` · ${loc}` : ""}
+          moment {index + 1}{loc ? ` · ${loc}` : ""}
         </span>
       </div>
 

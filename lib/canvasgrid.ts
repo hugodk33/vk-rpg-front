@@ -62,14 +62,17 @@ export function pivotOf(W: number, H: number): Point {
   return { x: W / 2, y: H / 2 };
 }
 
-/** Fill the canvas backing store for the DPR and run the draw routine. */
-export function paintCanvas(cv: HTMLCanvasElement, W: number, H: number, draw: (ctx: CanvasRenderingContext2D) => void): void {
+/** Fill the canvas backing store for the DPR and run the draw routine.
+    `zoom` inflates the backing pixel grid (crisp at any scale) and scales
+    the whole draw; the CSS node should then be sized to zoom × logical W/H. */
+export function paintCanvas(cv: HTMLCanvasElement, W: number, H: number, draw: (ctx: CanvasRenderingContext2D) => void, zoom = 1): void {
   const dpr = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
-  cv.width = Math.max(1, Math.round(W * dpr));
-  cv.height = Math.max(1, Math.round(H * dpr));
+  const z = Number.isFinite(zoom) ? Math.max(0.1, zoom) : 1;
+  cv.width = Math.max(1, Math.round(W * z * dpr));
+  cv.height = Math.max(1, Math.round(H * z * dpr));
   const ctx = cv.getContext("2d");
   if (!ctx) return;
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.setTransform(dpr * z, 0, 0, dpr * z, 0, 0);
   ctx.clearRect(0, 0, W, H);
   draw(ctx);
 }
@@ -200,6 +203,10 @@ export function tracePath(ctx: CanvasRenderingContext2D, d: string | undefined, 
 
 /** Draw a single shape in grid space (no margin — matches cell space). */
 export function drawShape(ctx: CanvasRenderingContext2D, shape: DrawShape, R: number, selected = false, accent = "#38bdf8"): void {
+  if (shape.type === "asset") {
+    drawAssetShape(ctx, shape, R, selected, accent);
+    return;
+  }
   const k = shapeScale(shape, R);
   const lw = strokeWeightPx(shape, R);
   const x = (shape.x ?? 0) * k;
@@ -256,6 +263,11 @@ export function drawShapes(ctx: CanvasRenderingContext2D, shapes: DrawShape[], R
 /** Bounding box (px, grid space) of a shape, for marquee / hit region. */
 export function shapeTypesBounds(shape: DrawShape, R: number): { x: number; y: number; w: number; h: number } {
   const k = shapeScale(shape, R);
+  if (shape.type === "asset") {
+    const { w, h } = assetHalf(shape);
+    const ak = assetScale(shape, R);
+    return { x: (shape.x ?? 0) * ak - w * ak, y: (shape.y ?? 0) * ak - h * ak, w: w * 2 * ak, h: h * 2 * ak };
+  }
   if (shape.type === "path") {
     let minX = Infinity,
       minY = Infinity,
@@ -296,6 +308,9 @@ function distToSegment(p: Point, a: Point, b: Point): number {
 /** Point hit-test on a single shape (px, grid space). Ignore interior fill. */
 export function hitDrawShape(shape: DrawShape, p: Point, R: number, tol = 4): boolean {
   const b = shapeTypesBounds(shape, R);
+  if (shape.type === "asset") {
+    return p.x >= b.x - tol && p.x <= b.x + b.w + tol && p.y >= b.y - tol && p.y <= b.y + b.h + tol;
+  }
   if (shape.type === "rect" || shape.type === "line") {
     const pts = [
       { x: b.x, y: b.y },
@@ -396,6 +411,437 @@ export function normalizeShapeToHexR(shape: DrawShape): DrawShape {
     }
   }
   return out;
+}
+
+/* ------------------------- asset stamps (drawing) ------------------------ */
+
+export type DrawAssetKind = import("./types").DrawAssetKind;
+
+export interface AssetMeta {
+  label: string;
+  w: number;
+  h: number;
+}
+
+/** Springboard asset catalog — vector props stamped onto the grid. */
+export const ASSETS: DrawAssetKind[] = [
+  "door", "chest", "table", "chair", "bed", "barrel", "crate", "bookcase",
+  "brazier", "torch", "altar", "statue", "tree", "rock", "well", "rug",
+  "stairs", "fountain",
+];
+
+/** Full extents (hexR units) each asset occupies, for bounds + hit tests. */
+export const ASSET_BOX: Record<DrawAssetKind, AssetMeta> = {
+  door: { label: "Door", w: 0.5, h: 0.85 },
+  chest: { label: "Chest", w: 0.6, h: 0.45 },
+  table: { label: "Table", w: 0.72, h: 0.5 },
+  chair: { label: "Chair", w: 0.34, h: 0.34 },
+  bed: { label: "Bed", w: 0.68, h: 0.42 },
+  barrel: { label: "Barrel", w: 0.4, h: 0.4 },
+  crate: { label: "Crate", w: 0.45, h: 0.45 },
+  bookcase: { label: "Bookcase", w: 0.6, h: 0.72 },
+  brazier: { label: "Brazier", w: 0.42, h: 0.5 },
+  torch: { label: "Torch", w: 0.2, h: 0.55 },
+  altar: { label: "Altar", w: 0.6, h: 0.4 },
+  statue: { label: "Statue", w: 0.38, h: 0.58 },
+  tree: { label: "Tree", w: 0.56, h: 0.56 },
+  rock: { label: "Rock", w: 0.5, h: 0.4 },
+  well: { label: "Well", w: 0.55, h: 0.55 },
+  rug: { label: "Rug", w: 0.72, h: 0.46 },
+  stairs: { label: "Stairs", w: 0.55, h: 0.4 },
+  fountain: { label: "Fountain", w: 0.6, h: 0.6 },
+};
+
+/** Render scale for an asset stamp (hexR × user scale). */
+export function assetScale(shape: DrawShape, R: number): number {
+  return shapeScale(shape, R) * (shape.s ?? 1);
+}
+
+/** Half extents (hexR units) of an asset's footprint. */
+export function assetHalf(shape: DrawShape): { w: number; h: number } {
+  const meta = ASSET_BOX[shape.kind ?? "crate"] ?? ASSET_BOX.crate;
+  return { w: meta.w / 2, h: meta.h / 2 };
+}
+
+function soft(hex: string, a: number): string {
+  return `${hex}${Math.round(Math.min(1, a) * 255).toString(16).padStart(2, "0")}`;
+}
+
+function rrect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number): void {
+  const rr = Math.min(r, Math.abs(w) / 2, Math.abs(h) / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + rr, y);
+  ctx.lineTo(x + w - rr, y);
+  ctx.arcTo(x + w, y, x + w, y + rr, rr);
+  ctx.lineTo(x + w, y + h - rr);
+  ctx.arcTo(x + w, y + h, x + w - rr, y + h, rr);
+  ctx.lineTo(x + rr, y + h);
+  ctx.arcTo(x, y + h, x, y + h - rr, rr);
+  ctx.lineTo(x, y + rr);
+  ctx.arcTo(x, y, x + rr, y, rr);
+  ctx.closePath();
+}
+
+/** Draw the asset glyph in unit space, origin = asset center. */
+function drawAssetGlyph(ctx: CanvasRenderingContext2D, kind: DrawAssetKind, col: string): void {
+  const f = (a: number) => soft(col, a);
+  switch (kind) {
+    case "door": {
+      const w = 0.25, h = 0.425;
+      rrect(ctx, -w, -h, w * 2, h * 2, 0.03);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(-w, -h * 0.45);
+      ctx.lineTo(w, -h * 0.45);
+      ctx.moveTo(-w, h * 0.55);
+      ctx.lineTo(w, h * 0.55);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(0, -h * 0.72, 0.075, 0, Math.PI * 2);
+      ctx.fillStyle = f(0.6);
+      ctx.fill();
+      break;
+    }
+    case "chest": {
+      const w = 0.3, h = 0.225;
+      rrect(ctx, -w, -h * 0.72, w * 2, h * 0.28, 0.02);
+      ctx.stroke();
+      rrect(ctx, -w, -h * 0.44, w * 2, h * 1.44, 0.02);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(-w, -h * 0.44);
+      ctx.lineTo(w, -h * 0.44);
+      ctx.stroke();
+      ctx.beginPath();
+      rrect(ctx, -w * 0.22, -h * 0.44, w * 0.44, h * 0.55, 0.03);
+      ctx.fillStyle = f(0.45);
+      ctx.fill();
+      ctx.strokeStyle = "#0b0d12";
+      ctx.stroke();
+      ctx.strokeStyle = col;
+      break;
+    }
+    case "table": {
+      const w = 0.36, h = 0.25;
+      rrect(ctx, -w, -h, w * 2, h * 0.36, 0.04);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(-w * 0.72, -h * 0.64);
+      ctx.lineTo(-w * 0.72, h);
+      ctx.moveTo(w * 0.72, -h * 0.64);
+      ctx.lineTo(w * 0.72, h);
+      ctx.moveTo(-w * 0.72, h * 0.22);
+      ctx.lineTo(w * 0.72, h * 0.22);
+      ctx.stroke();
+      break;
+    }
+    case "chair": {
+      const w = 0.17, h = 0.17;
+      rrect(ctx, -w, -h, w * 2, h * 0.75, 0.03);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(-w, -h);
+      ctx.lineTo(w, -h);
+      ctx.lineTo(w, h * 0.22);
+      ctx.moveTo(-w * 0.75, -h);
+      ctx.lineTo(-w * 0.75, h);
+      ctx.moveTo(w * 0.75, -h);
+      ctx.lineTo(w * 0.75, h);
+      ctx.stroke();
+      break;
+    }
+    case "bed": {
+      const w = 0.34, h = 0.21;
+      rrect(ctx, -w, -h * 0.6, w * 2, h * 1.14, 0.04);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(-w, -h * 0.6);
+      ctx.lineTo(w, -h * 0.6);
+      ctx.moveTo(-w * 0.9, h * 0.14);
+      ctx.lineTo(-w * 0.55, h * 0.14);
+      ctx.moveTo(w * 0.55, h * 0.14);
+      ctx.lineTo(w * 0.9, h * 0.14);
+      ctx.stroke();
+      ctx.moveTo(-w * 0.72, -h * 0.24);
+      ctx.lineTo(w * 0.72, -h * 0.24);
+      ctx.fillStyle = f(0.3);
+      ctx.fillRect(-w, -h * 0.6, w * 2, h * 0.36);
+      break;
+    }
+    case "barrel": {
+      const w = 0.2, h = 0.2;
+      ctx.beginPath();
+      ctx.ellipse(0, -h, w, h * 0.5, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(-w, -h);
+      ctx.lineTo(-w, h);
+      ctx.moveTo(w, -h);
+      ctx.lineTo(w, h);
+      ctx.moveTo(0, -h * 1.15);
+      ctx.lineTo(0, h * 1.15);
+      ctx.moveTo(-w * 0.5, -h * 1.08);
+      ctx.lineTo(-w * 0.5, h * 1.08);
+      ctx.moveTo(w * 0.5, -h * 1.08);
+      ctx.lineTo(w * 0.5, h * 1.08);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.ellipse(0, h, w, h * 0.5, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      break;
+    }
+    case "crate": {
+      const w = 0.225, h = 0.225;
+      ctx.strokeRect(-w, -h, w * 2, h * 2);
+      ctx.beginPath();
+      ctx.moveTo(-w, -h);
+      ctx.lineTo(w, h);
+      ctx.moveTo(w, -h);
+      ctx.lineTo(-w, h);
+      ctx.stroke();
+      break;
+    }
+    case "bookcase": {
+      const w = 0.3, h = 0.36;
+      ctx.strokeRect(-w, -h, w * 2, h * 2);
+      ctx.beginPath();
+      ctx.moveTo(-w, -h * 0.34);
+      ctx.lineTo(w, -h * 0.34);
+      ctx.moveTo(-w, h * 0.36);
+      ctx.lineTo(w, h * 0.36);
+      ctx.stroke();
+      ctx.fillStyle = f(0.45);
+      ctx.fillRect(-w * 0.72, h * 0.54, w * 1.44, h * 0.28);
+      ctx.fillRect(-w * 0.72, -h * 0.16, w * 1.44, h * 0.28);
+      break;
+    }
+    case "brazier": {
+      const w = 0.21, h = 0.25;
+      ctx.beginPath();
+      ctx.moveTo(-w, -h * 0.2);
+      ctx.lineTo(w, -h * 0.2);
+      ctx.lineTo(w * 0.72, h * 0.6);
+      ctx.lineTo(-w * 0.72, h * 0.6);
+      ctx.closePath();
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(-w * 0.55, h * 0.6);
+      ctx.lineTo(-w * 0.35, h);
+      ctx.moveTo(w * 0.55, h * 0.6);
+      ctx.lineTo(w * 0.35, h);
+      ctx.stroke();
+      ctx.fillStyle = f(0.55);
+      ctx.beginPath();
+      ctx.moveTo(0, -h * 0.9);
+      ctx.quadraticCurveTo(w * 0.75, -h * 0.4, w * 0.45, -h * 0.05);
+      ctx.quadraticCurveTo(w * 0.2, -h * 0.28, 0, -h * 0.2);
+      ctx.quadraticCurveTo(-w * 0.2, -h * 0.28, -w * 0.45, -h * 0.05);
+      ctx.quadraticCurveTo(-w * 0.75, -h * 0.4, 0, -h * 0.9);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = col;
+      ctx.stroke();
+      break;
+    }
+    case "torch": {
+      const w = 0.1, h = 0.275;
+      ctx.beginPath();
+      ctx.moveTo(-w, -h * 0.25);
+      ctx.lineTo(w, -h * 0.25);
+      ctx.lineTo(w * 0.5, h);
+      ctx.lineTo(-w * 0.5, h);
+      ctx.closePath();
+      ctx.stroke();
+      ctx.rotate((25 * Math.PI) / 180);
+      ctx.fillStyle = f(0.5);
+      ctx.beginPath();
+      ctx.moveTo(0, -h * 0.45);
+      ctx.quadraticCurveTo(w, -h * 0.55, w * 0.6, -h * 0.42);
+      ctx.quadraticCurveTo(w * 0.5, -h * 0.8, 0, -h * 0.9);
+      ctx.quadraticCurveTo(-w * 0.5, -h * 0.8, -w * 0.6, -h * 0.42);
+      ctx.quadraticCurveTo(-w, -h * 0.55, 0, -h * 0.45);
+      ctx.closePath();
+      ctx.fill();
+      break;
+    }
+    case "altar": {
+      const w = 0.3, h = 0.2;
+      ctx.beginPath();
+      ctx.moveTo(-w, h);
+      ctx.lineTo(-w * 0.7, -h * 0.7);
+      ctx.lineTo(w * 0.7, -h * 0.7);
+      ctx.lineTo(w, h);
+      ctx.closePath();
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(-w * 0.7, -h * 0.7);
+      ctx.lineTo(-w * 0.7, h);
+      ctx.moveTo(w * 0.7, -h * 0.7);
+      ctx.lineTo(w * 0.7, h);
+      ctx.stroke();
+      ctx.fillStyle = f(0.55);
+      ctx.fillRect(-w * 0.55, -h * 0.42, w * 0.24, h * 0.3);
+      ctx.fillRect(w * 0.31, -h * 0.42, w * 0.24, h * 0.3);
+      break;
+    }
+    case "statue": {
+      const w = 0.19, h = 0.29;
+      ctx.beginPath();
+      ctx.moveTo(-w * 1.15, h);
+      ctx.lineTo(w * 1.15, h);
+      ctx.moveTo(-w * 0.8, h * 0.42);
+      ctx.lineTo(w * 0.8, h * 0.42);
+      ctx.moveTo(-w * 0.8, h * 0.42);
+      ctx.lineTo(-w * 0.7, h);
+      ctx.moveTo(w * 0.8, h * 0.42);
+      ctx.lineTo(w * 0.7, h);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(0, -h * 0.55, w, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(0, -h * 0.55, w * 1.55, 0, Math.PI * 2);
+      ctx.stroke();
+      break;
+    }
+    case "tree": {
+      const w = 0.28, h = 0.28;
+      ctx.fillStyle = f(0.35);
+      ctx.beginPath();
+      ctx.arc(-w * 0.42, -h * 0.25, h * 0.62, 0, Math.PI * 2);
+      ctx.arc(w * 0.4, -h * 0.2, h * 0.66, 0, Math.PI * 2);
+      ctx.arc(0, -h * 0.02, h * 0.78, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = col;
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(0, h * 0.55);
+      ctx.lineTo(0, h);
+      ctx.moveTo(-w * 0.5, h);
+      ctx.lineTo(w * 0.5, h);
+      ctx.stroke();
+      break;
+    }
+    case "rock": {
+      const w = 0.25, h = 0.2;
+      ctx.fillStyle = f(0.3);
+      ctx.beginPath();
+      ctx.moveTo(-w, h * 0.35);
+      ctx.lineTo(-w * 0.6, -h);
+      ctx.lineTo(-w * 0.15, -h * 0.25);
+      ctx.lineTo(w * 0.35, -h * 0.8);
+      ctx.lineTo(w, h * 0.4);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = col;
+      ctx.stroke();
+      break;
+    }
+    case "well": {
+      const w = 0.275, h = 0.275;
+      ctx.beginPath();
+      ctx.arc(0, 0, w, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(0, 0, w * 0.55, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(-w, h * 0.45);
+      ctx.lineTo(w, h * 0.45);
+      ctx.moveTo(-w, h * 0.45);
+      ctx.lineTo(-w * 0.35, h);
+      ctx.moveTo(w, h * 0.45);
+      ctx.lineTo(w * 0.35, h);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(0, -h, w * 0.5, Math.PI, 0);
+      ctx.stroke();
+      break;
+    }
+    case "rug": {
+      const w = 0.36, h = 0.23;
+      rrect(ctx, -w, -h, w * 2, h * 2, 0.1);
+      ctx.stroke();
+      ctx.beginPath();
+      rrect(ctx, -w * 0.7, -h * 0.7, w * 1.4, h * 1.4, 0.07);
+      ctx.stroke();
+      ctx.fillStyle = f(0.5);
+      ctx.beginPath();
+      ctx.arc(0, 0, h * 0.35, 0, Math.PI * 2);
+      ctx.fill();
+      break;
+    }
+    case "stairs": {
+      const w = 0.275, h = 0.2;
+      for (let i = 0; i < 4; i++) {
+        const t = i / 3;
+        const y = -h + t * h * 2;
+        const hw = w * (1 - t * 0.72);
+        ctx.beginPath();
+        ctx.moveTo(-hw, y);
+        ctx.lineTo(hw, y);
+        ctx.stroke();
+      }
+      ctx.beginPath();
+      ctx.moveTo(-w, h);
+      ctx.lineTo(-w, -h);
+      ctx.moveTo(w, h);
+      ctx.lineTo(w, -h);
+      ctx.stroke();
+      break;
+    }
+    case "fountain": {
+      const w = 0.3, h = 0.3;
+      ctx.beginPath();
+      ctx.arc(0, 0, w, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(0, 0, w * 0.65, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(0, -h * 0.55, w * 0.32, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(0, -h * 0.3);
+      ctx.quadraticCurveTo(w * 0.5, -h * 0.75, 0, -h * 1.1);
+      ctx.quadraticCurveTo(-w * 0.5, -h * 0.75, 0, -h * 0.3);
+      ctx.stroke();
+      break;
+    }
+    default: {
+      ctx.strokeRect(-0.2, -0.2, 0.4, 0.4);
+      break;
+    }
+  }
+}
+
+/** Draw an asset stamp: positioned at (x,y), scaling by unit × s, rotated by rot. */
+export function drawAssetShape(ctx: CanvasRenderingContext2D, shape: DrawShape, R: number, selected = false, accent = "#38bdf8"): void {
+  const k = assetScale(shape, R);
+  const { w, h } = assetHalf(shape);
+  const lw = Math.max(1, R * 0.12 * (shape.s ?? 1));
+  const col = shape.color || "#e4e4e7";
+
+  ctx.save();
+  ctx.translate((shape.x ?? 0) * k, (shape.y ?? 0) * k);
+  ctx.rotate(((shape.rot ?? 0) * Math.PI) / 180);
+  ctx.scale(k, k);
+  ctx.strokeStyle = col;
+  ctx.fillStyle = col;
+  ctx.lineWidth = lw / k;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+
+  drawAssetGlyph(ctx, shape.kind ?? "crate", col);
+
+  if (selected) {
+    ctx.strokeStyle = accent;
+    ctx.lineWidth = 1.2 / k;
+    ctx.setLineDash([4 / k, 3 / k]);
+    ctx.strokeRect(-w, -h, w * 2, h * 2);
+    ctx.setLineDash([]);
+  }
+  ctx.restore();
 }
 
 /* ----------------------- full board (viewer) render ---------------------- */

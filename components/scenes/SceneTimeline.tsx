@@ -287,7 +287,7 @@ function SceneCard({ scene, showEdit, badgeCls, viewerId, mask, rules }: { scene
         <h3 className="text-lg font-semibold text-zinc-100">
           {scene.title}
           <span className={`ml-3 font-mono text-[11px] tracking-widest uppercase rounded px-2 py-0.5 ${badgeCls}`}>
-            m {sceneNum}
+            moment {sceneNum}
           </span>
         </h3>
         {showEdit ? (

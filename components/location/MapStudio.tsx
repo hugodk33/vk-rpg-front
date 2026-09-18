@@ -5,7 +5,9 @@
    rendered on a 2D <canvas> (lib/canvasgrid). Layers:
 
    1. HEX TILES   — paint terrain onto each cell. Stored as
-                    { q, r, t } in the plate's own grid.
+                    { q, r, t } in the plate's own grid. The
+                    Fill (≋) bucket flood-fills a contiguous
+                    region of the same floor type, Paint-style.
    2. DRAWING     — vector strokes over the grid: pen, line, rect,
                     ellipse, in a chosen color/weight. All shapes
                     are stored NORMALIZED (unit:"hexR"; 1 unit =
@@ -13,12 +15,16 @@
                     viewers at any radius stay aligned. Legacy
                     pixel shapes (authored at R = 24) are converted
                     on load.
-   3. SELECT      — click a stroke to select it, drag to move,
+   3. ASSETS      — a springboard catalog of vector props (door,
+                    altar, statue, tree…) stamped onto hex centers,
+                    then moved / scaled / rotated with Select.
+   4. SELECT      — click a stroke to select it, drag to move,
                     Delete/Backspace removes it.
-   4. GRID        — footprint, orientation, scale, rotation and
+   5. GRID        — footprint, orientation, scale, rotation and
                     the center cell that seams the plate into the
                     territory chain. Snapping (hex centers for boxes,
                     vertices for lines) keeps strokes on the lattice.
+   The canvas has a top-right zoom control (crisp re-render).
 
    Saving posts a partial update to PUT /api/table-location/:id.
    ============================================================ */
@@ -29,6 +35,9 @@ import { submitJson } from "@/components/forms/submit";
 import { absoluteHex, formatHexScale } from "@/lib/location";
 import { centerOf, gridSize, hexFromPoint } from "@/lib/hexgrid";
 import {
+  ASSETS,
+  ASSET_BOX,
+  drawAssetShape,
   drawShapes,
   hitDrawShapes,
   normalizeShapeToHexR,
@@ -42,17 +51,19 @@ import {
   type GridSpec,
   type Point,
 } from "@/lib/canvasgrid";
-import type { DrawShape, HexTile, HexTileKind, Location } from "@/lib/types";
+import ZoomControls from "@/components/map/ZoomControls";
+import type { DrawAssetKind, DrawShape, HexTile, HexTileKind, Location } from "@/lib/types";
 import { TERRAIN } from "@/lib/terrain";
 
 const R = 24;
 const M = 48;
+const HEX_NEIGHBORS = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, -1], [-1, 1]] as const;
 
 const STROKES = ["#e4e4e7", "#38bdf8", "#fbbf24", "#f87171", "#4ade80", "#a78bfa"];
 const STROKE_WEIGHTS = [1, 1.6, 2.5, 4, 6];
 const WALL_BRIGHT = "#e4e4e7";
 
-type Tool = "select" | "paint" | "erase" | "pen" | "line" | "rect" | "ellipse";
+type Tool = "select" | "paint" | "erase" | "fill" | "pen" | "line" | "rect" | "ellipse" | "asset";
 type ShapeType = "path" | "rect" | "ellipse" | "line";
 
 interface MapStudioProps {
@@ -77,6 +88,10 @@ export default function MapStudio({ location }: MapStudioProps) {
   const [strokeColor, setStrokeColor] = useState(STROKES[0]);
   const [strokeWeight, setStrokeWeight] = useState(STROKE_WEIGHTS[2]);
   const [snap, setSnap] = useState(true);
+  const [assetKind, setAssetKind] = useState<DrawAssetKind>("door");
+  const [assetScale, setAssetScale] = useState(1);
+  const [assetRot, setAssetRot] = useState(0);
+  const [zoom, setZoom] = useState(1);
 
   const [tiles, setTiles] = useState<Map<string, HexTileKind>>(() => {
     const m = new Map<string, HexTileKind>();
@@ -176,6 +191,32 @@ export default function MapStudio({ location }: MapStudioProps) {
     setCanUndo(true);
   }, [tiles, shapes]);
 
+  /** Paint-style flood fill: replace a contiguous region of one floor type. */
+  const floodCell = useCallback(
+    (start: { q: number; r: number }) => {
+      const startKey = `${start.q},${start.r}`;
+      const base = tiles.get(startKey) ?? "open";
+      if (base === terrain) return;
+      const queue = [start];
+      const seen = new Set<string>([startKey]);
+      const next = new Map(tiles);
+      while (queue.length) {
+        const cur = queue.pop()!;
+        next.set(`${cur.q},${cur.r}`, terrain);
+        for (const [dq, dr] of HEX_NEIGHBORS) {
+          const q2 = cur.q + dq;
+          const r2 = cur.r + dr;
+          const k2 = `${q2},${r2}`;
+          if (q2 < 0 || q2 >= cols || r2 < 0 || r2 >= rows || seen.has(k2)) continue;
+          seen.add(k2);
+          if ((tiles.get(k2) ?? "open") === base) queue.push({ q: q2, r: r2 });
+        }
+      }
+      setTiles(next);
+    },
+    [tiles, terrain, cols, rows]
+  );
+
   /* ---------- pointer handlers ---------- */
 
   function onPointerDown(e: React.PointerEvent) {
@@ -191,6 +232,37 @@ export default function MapStudio({ location }: MapStudioProps) {
       if (cell) {
         takeSnapshot();
         stamp(cell);
+      }
+      return;
+    }
+
+    if (tool === "fill") {
+      const cell = cellAt(p);
+      if (cell) {
+        takeSnapshot();
+        floodCell(cell);
+      }
+      return;
+    }
+
+    if (tool === "asset") {
+      const cell = cellAt(p);
+      if (cell) {
+        takeSnapshot();
+        const cn = centerOf(cell.q, cell.r, orientation, 1);
+        const shape: DrawShape = {
+          type: "asset",
+          kind: assetKind,
+          x: cn.x,
+          y: cn.y,
+          s: assetScale,
+          rot: assetRot,
+          size: 1,
+          color: strokeColor,
+          unit: "hexR",
+        };
+        setShapes((prev) => [...prev, shape]);
+        setSelection(shapes.length);
       }
       return;
     }
@@ -327,6 +399,14 @@ export default function MapStudio({ location }: MapStudioProps) {
     setSelection(null);
   }
 
+  function updateSelected(patch: Partial<DrawShape>) {
+    setShapes((prev) => {
+      const next = prev.slice();
+      if (selection != null && next[selection]) next[selection] = { ...next[selection], ...patch };
+      return next;
+    });
+  }
+
   function clearTiles() {
     takeSnapshot();
     setTiles(new Map());
@@ -420,7 +500,7 @@ export default function MapStudio({ location }: MapStudioProps) {
         if (draft) drawShapes(ctx, [draft], R, null);
 
         /* brush highlight on hovered cell */
-        if ((tool === "paint" || tool === "erase") && hover) {
+        if ((tool === "paint" || tool === "erase" || tool === "fill") && hover) {
           const pt = centerOf(hover.q, hover.r, orientation, R);
           traceCell(ctx, M + pt.x, M + pt.y, R, orientation);
           ctx.strokeStyle = tool === "erase" ? "#f87171" : TERRAIN[terrain].stroke;
@@ -428,6 +508,20 @@ export default function MapStudio({ location }: MapStudioProps) {
           ctx.setLineDash([4, 3]);
           ctx.stroke();
           ctx.setLineDash([]);
+        }
+
+        /* asset drop target + ghost on hovered cell */
+        if (tool === "asset" && hover) {
+          const pt = centerOf(hover.q, hover.r, orientation, R);
+          const cx = M + pt.x;
+          const cy = M + pt.y;
+          traceCell(ctx, cx, cy, R, orientation);
+          ctx.strokeStyle = "#fbbf24";
+          ctx.lineWidth = 2;
+          ctx.setLineDash([4, 3]);
+          ctx.stroke();
+          ctx.setLineDash([]);
+          drawAssetShape(ctx, { type: "asset", kind: assetKind, x: pt.x, y: pt.y, s: assetScale, rot: assetRot, size: 1, color: strokeColor, unit: "hexR" }, R);
         }
 
         /* snap crosshair while drawing box/line tools */
@@ -442,8 +536,8 @@ export default function MapStudio({ location }: MapStudioProps) {
           ctx.stroke();
         }
       });
-    });
-  }, [shapes, tiles, draft, selection, hover, crosshair, tool, terrain, strokeColor, rotationDeg, W, H, cols, rows, centerCol, centerRow, centerQ, centerR, orientation, spec, snap]);
+    }, zoom);
+  }, [shapes, tiles, draft, selection, hover, crosshair, tool, terrain, strokeColor, rotationDeg, W, H, cols, rows, centerCol, centerRow, centerQ, centerR, orientation, spec, snap, zoom, assetKind, assetScale, assetRot]);
 
   /* ---------- derived UI ---------- */
 
@@ -494,10 +588,12 @@ export default function MapStudio({ location }: MapStudioProps) {
                 ["select", "✛", "Select"],
                 ["paint", "▦", "Paint"],
                 ["erase", "⌫", "Erase"],
+                ["fill", "≋", "Fill"],
                 ["pen", "✎", "Pen"],
                 ["line", "╱", "Line"],
                 ["rect", "▭", "Rect"],
                 ["ellipse", "◯", "Ellipse"],
+                ["asset", "⬒", "Asset"],
               ] as [Tool, string, string][]).map(([t, icon, label]) => (
                 <button
                   key={t}
@@ -521,37 +617,150 @@ export default function MapStudio({ location }: MapStudioProps) {
                 <p className="text-[10px] leading-snug text-zinc-500">
                   {activeShape ? (
                     <>
-                      <b className="text-zinc-300">{activeShape.type}</b> selected — drag to move,{" "}
+                      <b className="text-zinc-300">{activeShape.type === "asset" ? `${ASSETS.includes(activeShape.kind ?? "crate") ? (activeShape.kind ?? "crate") : "asset"} asset` : activeShape.type}</b> selected — drag to move,{" "}
                       <b className="text-red-300">Del</b> remove.
                     </>
                   ) : (
-                    "Click a stroke to select it. Drag to move, Del/Backspace to remove."
+                    "Click a stroke or asset to select it. Drag to move, Del/Backspace to remove."
                   )}
                 </p>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setShapes((prev) => {
-                      const next = prev.slice();
-                      if (selection != null && next[selection]) {
-                        next[selection] = {
-                          ...next[selection],
+
+                {activeShape ? (
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {activeShape.type === "asset" ? (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            updateSelected({ s: Math.max(0.4, Math.round(((activeShape.s ?? 1) - 0.15) * 100) / 100) })
+                          }
+                          className="font-mono text-[9px] uppercase tracking-widest px-2 py-1 rounded border border-zinc-700/50 text-zinc-400 hover:text-zinc-200 transition-colors"
+                        >
+                          − Size
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            updateSelected({ s: Math.min(3, Math.round(((activeShape.s ?? 1) + 0.15) * 100) / 100) })
+                          }
+                          className="font-mono text-[9px] uppercase tracking-widest px-2 py-1 rounded border border-zinc-700/50 text-zinc-400 hover:text-zinc-200 transition-colors"
+                        >
+                          + Size
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => updateSelected({ rot: ((activeShape.rot ?? 0) - 15 + 360) % 360 })}
+                          className="font-mono text-[9px] uppercase tracking-widest px-2 py-1 rounded border border-zinc-700/50 text-zinc-400 hover:text-zinc-200 transition-colors"
+                        >
+                          ↺ Rotate
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => updateSelected({ rot: ((activeShape.rot ?? 0) + 15) % 360 })}
+                          className="font-mono text-[9px] uppercase tracking-widest px-2 py-1 rounded border border-zinc-700/50 text-zinc-400 hover:text-zinc-200 transition-colors"
+                        >
+                          ↻ Rotate
+                        </button>
+                      </>
+                    ) : null}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        updateSelected({
                           color:
-                            next[selection].color === WALL_BRIGHT
+                            activeShape.type === "asset"
+                              ? STROKES[(STROKES.indexOf(activeShape.color) + 1) % STROKES.length] ?? STROKES[0]
+                              : activeShape.color === WALL_BRIGHT
                               ? "#fbbf24"
-                              : next[selection].color === "#fbbf24"
+                              : activeShape.color === "#fbbf24"
                               ? "#f87171"
                               : WALL_BRIGHT,
-                        };
+                        })
                       }
-                      return next;
-                    })
-                  }
-                  disabled={!activeShape}
-                  className="font-mono text-[9px] uppercase tracking-widest px-2 py-1 rounded border border-zinc-700/50 text-zinc-400 hover:text-zinc-200 transition-colors disabled:opacity-40"
-                >
-                  Recolor
-                </button>
+                      className="font-mono text-[9px] uppercase tracking-widest px-2 py-1 rounded border border-zinc-700/50 text-zinc-400 hover:text-zinc-200 transition-colors"
+                    >
+                      Recolor
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
+
+          {tool === "asset" ? (
+            <div className="space-y-4">
+              <div>
+                <p className="font-mono text-[9px] uppercase tracking-widest text-zinc-500 mb-2">Asset catalog</p>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {ASSETS.map((k) => (
+                    <button
+                      key={k}
+                      type="button"
+                      onClick={() => setAssetKind(k)}
+                      title={ASSET_LABELS[k]}
+                      className={`flex flex-col items-center gap-0.5 rounded-md border px-1 py-1 transition-colors ${
+                        assetKind === k ? "border-amber-500/70 bg-amber-500/10" : "border-zinc-700/40 hover:border-zinc-600"
+                      }`}
+                    >
+                      <AssetPreview kind={k} dim={assetKind !== k} />
+                      <span className="font-mono text-[8px] uppercase tracking-widest text-zinc-500 truncate w-full text-center">{ASSET_LABELS[k]}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <p className="font-mono text-[9px] uppercase tracking-widest text-zinc-500 mb-2">Stroke</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {STROKES.map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => setStrokeColor(c)}
+                      className={`h-6 w-6 rounded-full border transition-transform ${strokeColor === c ? "scale-110 border-zinc-200" : "border-zinc-700"}`}
+                      style={{ backgroundColor: c }}
+                      title={c}
+                    />
+                  ))}
+                </div>
+              </div>
+              <div>
+                <p className="font-mono text-[9px] uppercase tracking-widest text-zinc-500 mb-2">Scale · {assetScale.toFixed(2)}×</p>
+                <input
+                  type="range"
+                  min={0.4}
+                  max={2.5}
+                  step={0.1}
+                  value={assetScale}
+                  onChange={(e) => setAssetScale(Number(e.target.value))}
+                  className="w-full accent-amber-500"
+                />
+              </div>
+              <div>
+                <p className="font-mono text-[9px] uppercase tracking-widest text-zinc-500 mb-2">Rotation · {((assetRot % 360) + 360) % 360}°</p>
+                <div className="grid grid-cols-3 gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setAssetRot((assetRot - 15 + 360) % 360)}
+                    className="rounded-md border border-zinc-700/40 px-2 py-1 font-mono text-[9px] uppercase tracking-widest text-zinc-400 hover:text-zinc-200 transition-colors"
+                  >
+                    ↺ 15°
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAssetRot((assetRot + 15) % 360)}
+                    className="rounded-md border border-zinc-700/40 px-2 py-1 font-mono text-[9px] uppercase tracking-widest text-zinc-400 hover:text-zinc-200 transition-colors"
+                  >
+                    15° ↻
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAssetRot(0)}
+                    className="rounded-md border border-zinc-700/40 px-2 py-1 font-mono text-[9px] uppercase tracking-widest text-zinc-400 hover:text-zinc-200 transition-colors"
+                  >
+                    0°
+                  </button>
+                </div>
+                <p className="mt-1.5 text-[10px] leading-snug text-zinc-500">Click a hex to place. Switch to Select to move / scale / rotate / delete placed assets.</p>
               </div>
             </div>
           ) : null}
@@ -687,12 +896,16 @@ export default function MapStudio({ location }: MapStudioProps) {
 
         {/* canvas */}
         <div className="p-4">
-          <div className="rounded-lg border border-zinc-700/40 bg-zinc-950/50 overflow-hidden relative">
+          <div className="relative overflow-auto rounded-lg border border-zinc-700/40 bg-zinc-950/50">
             <canvas
               ref={canvasRef}
               width={W}
               height={H}
-              className="w-full h-auto block touch-none select-none cursor-crosshair"
+              className="block mx-auto touch-none select-none cursor-crosshair"
+              style={{
+                width: `${Math.round(W * zoom)}px`,
+                height: `${Math.round(H * zoom)}px`,
+              }}
               onPointerDown={onPointerDown}
               onPointerMove={onPointerMove}
               onPointerUp={onPointerUp}
@@ -701,6 +914,7 @@ export default function MapStudio({ location }: MapStudioProps) {
               role="img"
               aria-label="Tactical map editor canvas"
             />
+            <ZoomControls zoom={zoom} onZoom={setZoom} min={0.5} max={4} step={0.25} />
 
             {error ? <p className="absolute inset-x-0 bottom-0 bg-red-950/90 text-red-200 text-xs px-3 py-2">{error}</p> : null}
           </div>
@@ -739,4 +953,28 @@ function shapeAnchor(shapes: DrawShape[], idx: number, fallback: Point): Point {
     if (segs && segs.length >= 2) return { x: Number(segs[0]), y: Number(segs[1]) };
   }
   return fallback;
+}
+
+/* ---------- asset preview ---------- */
+
+const ASSET_LABELS: Record<DrawAssetKind, string> = {
+  door: "Door", chest: "Chest", table: "Table", chair: "Chair", bed: "Bed",
+  barrel: "Barrel", crate: "Crate", bookcase: "Bookcase", brazier: "Brazier",
+  torch: "Torch", altar: "Altar", statue: "Statue", tree: "Tree", rock: "Rock",
+  well: "Well", rug: "Rug", stairs: "Stairs", fountain: "Fountain",
+};
+
+/** Tiny live vector preview of an asset stamp. */
+function AssetPreview({ kind, dim = false }: { kind: DrawAssetKind; dim?: boolean }) {
+  const ref = useRef<HTMLCanvasElement | null>(null);
+  useEffect(() => {
+    const cv = ref.current;
+    if (!cv) return;
+    const meta = ASSET_BOX[kind];
+    const k = Math.max(6, 28 / Math.max(meta.w, meta.h));
+    paintCanvas(cv, 40, 40, (ctx) => {
+      drawAssetShape(ctx, { type: "asset", kind, x: 0, y: 0, s: 1, rot: 0, size: 1, color: "#d4d4d8", unit: "hexR" }, k);
+    });
+  }, [kind]);
+  return <canvas ref={ref} width={40} height={40} className={`block w-10 h-10 ${dim ? "opacity-45" : ""}`} aria-hidden />;
 }

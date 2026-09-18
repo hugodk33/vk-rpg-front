@@ -9,7 +9,7 @@
    hex picker (used by the session MAP tab to log a move).
    ============================================================ */
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { MouseEvent as ReactMouseEvent } from "react";
 import { hexFromPoint } from "@/lib/hexgrid";
 import {
@@ -23,6 +23,7 @@ import {
   type CanvasPlate,
   type GridSpec,
 } from "@/lib/canvasgrid";
+import ZoomControls from "@/components/map/ZoomControls";
 import type { BoardToken, BoardTrail } from "@/lib/board";
 import type { Location } from "@/lib/types";
 
@@ -58,6 +59,7 @@ export default function TacticalPlate({
   M = 10,
 }: TacticalPlateProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [zoom, setZoom] = useState(1);
 
   const plate: CanvasPlate = useMemo(
     () => plateCanvas({ width: location?.hex?.width, height: location?.hex?.height, orientation: location?.hex?.orientation }, R, M, 120, 100),
@@ -86,8 +88,8 @@ export default function TacticalPlate({
       drawPlateDrawing(ctx, W, H, spec, location?.drawing ?? []);
       drawPlateTrail(ctx, W, H, spec, accent, trail?.from ?? null, trail?.to ?? null, "tic");
       drawPlateTokens(ctx, W, H, spec, placed);
-    });
-  }, [location, placed, trail, mark, accent, W, H, spec]);
+    }, zoom);
+  }, [location, placed, trail, mark, accent, W, H, spec, zoom]);
 
   function handleClick(e: ReactMouseEvent<HTMLCanvasElement>) {
     if (!onHexClick) return;
@@ -101,16 +103,23 @@ export default function TacticalPlate({
 
   return (
     <div className="rounded-lg border border-zinc-700/40 bg-zinc-950/60 overflow-hidden">
-      <canvas
-        ref={canvasRef}
-        width={W}
-        height={H}
-        className="w-full h-auto block"
-        role="img"
-        aria-label="Floor plan"
-        style={{ cursor: onHexClick ? "pointer" : undefined }}
-        onClick={handleClick}
-      />
+      <div className="relative overflow-auto">
+        <canvas
+          ref={canvasRef}
+          width={W}
+          height={H}
+          className="block mx-auto"
+          role="img"
+          aria-label="Floor plan"
+          style={{
+            width: `${Math.round(W * zoom)}px`,
+            height: `${Math.round(H * zoom)}px`,
+            cursor: onHexClick ? "pointer" : undefined,
+          }}
+          onClick={handleClick}
+        />
+        <ZoomControls zoom={zoom} onZoom={setZoom} />
+      </div>
 
       {unplaced.length > 0 ? (
         <div className="border-t border-zinc-700/40 px-3 py-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">

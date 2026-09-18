@@ -10,7 +10,7 @@
    pointed at its absolute q,r chain.
    ============================================================ */
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { AbsoluteHex } from "@/lib/location";
 import { formatHexScale } from "@/lib/location";
 import {
@@ -21,6 +21,7 @@ import {
   type CanvasPlate,
   type GridSpec,
 } from "@/lib/canvasgrid";
+import ZoomControls from "@/components/map/ZoomControls";
 import type { DrawShape, HexTile } from "@/lib/types";
 
 interface MapHex {
@@ -47,6 +48,7 @@ export default function LocationMap({
   drawing?: DrawShape[];
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [zoom, setZoom] = useState(1);
 
   const plate: CanvasPlate = useMemo(() => plateCanvas(hex ?? {}, 18, 34, 320, 240), [hex]);
   const spec: GridSpec = useMemo(() => ({ ...plate.spec, rotationDeg: hex?.rotationDeg ?? 0 }), [plate, hex]);
@@ -72,8 +74,8 @@ export default function LocationMap({
         centerLabel: centerLabel ? { text: centerLabel, at: { q: centerCol, r: centerRow } } : null,
       });
       drawPlateDrawing(ctx, W, H, spec, drawing);
-    });
-  }, [spec, tiles, drawing, accent, centerLabel, centerCol, centerRow, W, H]);
+    }, zoom);
+  }, [spec, tiles, drawing, accent, centerLabel, centerCol, centerRow, W, H, zoom]);
 
   return (
     <div>
@@ -83,8 +85,20 @@ export default function LocationMap({
         <span className="flex-1 h-px" style={{ background: `linear-gradient(90deg, ${accent}55, transparent)` }} />
       </div>
 
-      <div className="rounded-lg border border-zinc-700/40 bg-zinc-950/50 overflow-hidden">
-        <canvas ref={canvasRef} width={W} height={H} className="w-full h-auto block" role="img" aria-label="Local tactical grid" />
+      <div className="relative overflow-auto rounded-lg border border-zinc-700/40 bg-zinc-950/50">
+        <canvas
+          ref={canvasRef}
+          width={W}
+          height={H}
+          className="block mx-auto"
+          role="img"
+          aria-label="Local tactical grid"
+          style={{
+            width: `${Math.round(W * zoom)}px`,
+            height: `${Math.round(H * zoom)}px`,
+          }}
+        />
+        <ZoomControls zoom={zoom} onZoom={setZoom} />
       </div>
 
       <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-2 font-mono text-[10px] uppercase tracking-widest text-zinc-500">

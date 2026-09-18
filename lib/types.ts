@@ -274,8 +274,10 @@ export interface HexTile {
   t: HexTileKind
 }
 
+export type DrawAssetKind = "door" | "chest" | "table" | "chair" | "bed" | "barrel" | "crate" | "bookcase" | "brazier" | "torch" | "altar" | "statue" | "tree" | "rock" | "well" | "rug" | "stairs" | "fountain"
+
 export interface DrawShape {
-  type: "path" | "rect" | "ellipse" | "line"
+  type: "path" | "rect" | "ellipse" | "line" | "asset"
   /**
    * "hexR" = normalized unit space: 1 unit = 1 hex radius, origin at the
    * center of hex (0,0). Legacy shapes without `unit` are authored in raw
@@ -291,6 +293,12 @@ export interface DrawShape {
   cy?: number
   rx?: number
   ry?: number
+  /** asset kind (for type "asset") */
+  kind?: DrawAssetKind
+  /** asset rotation in degrees (for type "asset") */
+  rot?: number
+  /** asset scale multiplier (for type "asset") */
+  s?: number
   size: number
   color: string
 }
