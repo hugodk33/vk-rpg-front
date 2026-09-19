@@ -6,7 +6,7 @@
    a percentage and doubles as the "reset to 100%" button.
    ============================================================ */
 
-import { Minus, Plus } from "lucide-react";
+import { Hand, Minus, Plus } from "lucide-react";
 
 interface ZoomControlsProps {
   zoom: number;
@@ -14,12 +14,32 @@ interface ZoomControlsProps {
   min?: number;
   max?: number;
   step?: number;
+  /** hand (pan) tool state — render the toggle when provided */
+  hand?: boolean;
+  onToggleHand?: () => void;
 }
 
-export default function ZoomControls({ zoom, onZoom, min = 0.5, max = 3.5, step = 0.3 }: ZoomControlsProps) {
+export default function ZoomControls({ zoom, onZoom, min = 0.5, max = 3.5, step = 0.3, hand = false, onToggleHand }: ZoomControlsProps) {
   const clamp = (v: number) => Math.round(Math.min(max, Math.max(min, v)) * 100) / 100;
   return (
     <div className="absolute top-2 right-2 z-10 flex items-center gap-0.5 rounded-md border border-zinc-700/70 bg-zinc-950/85 backdrop-blur px-1 py-0.5 shadow-lg">
+      {onToggleHand ? (
+        <>
+          <button
+            type="button"
+            onClick={onToggleHand}
+            aria-pressed={hand}
+            aria-label="Pan map (H)"
+            title="Pan map (H)"
+            className={`flex h-6 w-6 items-center justify-center rounded transition-colors ${
+              hand ? "bg-sky-500/20 text-sky-300 ring-1 ring-sky-500/50" : "text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800"
+            }`}
+          >
+            <Hand className="w-3.5 h-3.5" strokeWidth={2.25} />
+          </button>
+          <span className="mx-0.5 h-4 w-px bg-zinc-700/70" aria-hidden="true" />
+        </>
+      ) : null}
       <button
         type="button"
         onClick={() => onZoom(clamp(zoom - step))}

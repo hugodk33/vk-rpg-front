@@ -27,6 +27,17 @@ function useReveal<T extends HTMLElement>() {
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
+    if (typeof IntersectionObserver === "undefined") {
+      el.classList.add("exhibit-reveal-in");
+      return;
+    }
+    const rect = el.getBoundingClientRect();
+    const vh = window.innerHeight || document.documentElement.clientHeight;
+    const inInitialViewport = rect.bottom > 0 && rect.top < vh;
+    if (inInitialViewport) {
+      el.classList.add("exhibit-reveal-in");
+      return;
+    }
     el.classList.add("exhibit-reveal-ready");
     const io = new IntersectionObserver(
       (entries) => entries.forEach((e) => e.isIntersecting && e.target.classList.add("exhibit-reveal-in")),

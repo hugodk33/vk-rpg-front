@@ -18,6 +18,42 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+/* =========================================================
+   Scrollbars — dark editorial rails.
+   Thin zinc thumbs on transparent tracks so the chrome stays
+   quiet against the zinc-900 base; the border acts as a tint
+   instead of a visible track.
+   ========================================================= */
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background: rgb(82 82 91 / 0.9);
+  border-radius: 9999px;
+  border: 2px solid rgb(24 24 27);
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: rgb(161 161 170 / 0.9);
+}
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+@supports (scrollbar-width: thin) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(82 82 91) transparent;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  * {
+    scrollbar-color: rgb(63 63 70) transparent;
+  }
+}
+
 details > summary::-webkit-details-marker {
   display: none;
 }

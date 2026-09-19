@@ -59,7 +59,25 @@ export default function TacticalPlate({
   M = 12,
 }: TacticalPlateProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const scrollerRef = useRef<HTMLDivElement | null>(null);
   const [zoom, setZoom] = useState(1);
+  const [hand, setHand] = useState(false);
+  const [dragging, setDragging] = useState(false);
+  const dragRef = useRef<{ pointerId: number; x: number; y: number; moved: boolean } | null>(null);
+
+  const toggleHand = () => setHand((h) => !h);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (e.key.toLowerCase() !== "h" || e.metaKey || e.ctrlKey || e.altKey) return;
+      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
+      if (scrollerRef.current && t && !scrollerRef.current.contains(t)) return;
+      setHand((h) => !h);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   const plate: CanvasPlate = useMemo(
     () => plateCanvas({ width: location?.hex?.width, height: location?.hex?.height, orientation: location?.hex?.orientation }, R, M, 120, 100),
@@ -106,7 +124,7 @@ export default function TacticalPlate({
   }, [location, placed, trail, mark, accent, W, H, spec, zoom, fitBox]);
 
   function handleClick(e: ReactMouseEvent<HTMLCanvasElement>) {
-    if (!onHexClick) return;
+    if (!onHexClick || hand) return;
     const cv = canvasRef.current;
     if (!cv) return;
     const rect = cv.getBoundingClientRect();
@@ -123,9 +141,46 @@ export default function TacticalPlate({
     if (cell.q >= 0 && cell.q < spec.cols && cell.r >= 0 && cell.r < spec.rows) onHexClick(cell.q, cell.r);
   }
 
+  function onPanDown(e: React.PointerEvent<HTMLDivElement>) {
+    if (!hand) return;
+    dragRef.current = { pointerId: e.pointerId, x: e.clientX, y: e.clientY, moved: false };
+    setDragging(true);
+    e.currentTarget.setPointerCapture(e.pointerId);
+  }
+
+  function onPanMove(e: React.PointerEvent<HTMLDivElement>) {
+    const s = scrollerRef.current;
+    const d = dragRef.current;
+    if (!s || !d || d.pointerId !== e.pointerId) return;
+    const dx = e.clientX - d.x;
+    const dy = e.clientY - d.y;
+    if (Math.abs(dx) + Math.abs(dy) > 2) d.moved = true;
+    s.scrollLeft -= dx;
+    s.scrollTop -= dy;
+    d.x = e.clientX;
+    d.y = e.clientY;
+  }
+
+  function onPanUp(e: React.PointerEvent<HTMLDivElement>) {
+    if (!dragRef.current || dragRef.current.pointerId !== e.pointerId) return;
+    dragRef.current = null;
+    setDragging(false);
+  }
+
   return (
-    <div className="rounded-lg border border-zinc-700/40 bg-zinc-950/60 overflow-hidden">
-      <div className="relative overflow-auto">
+    <div className="relative rounded-lg border border-zinc-700/40 bg-zinc-950/60 overflow-hidden">
+      <div
+        ref={scrollerRef}
+        className="relative overflow-auto select-none"
+        style={{
+          cursor: hand ? (dragging ? "grabbing" : "grab") : onHexClick ? "pointer" : undefined,
+          touchAction: hand ? "none" : undefined,
+        }}
+        onPointerDown={onPanDown}
+        onPointerMove={onPanMove}
+        onPointerUp={onPanUp}
+        onPointerCancel={onPanUp}
+      >
         <canvas
           ref={canvasRef}
           width={W}
@@ -136,12 +191,13 @@ export default function TacticalPlate({
           style={{
             width: `${Math.round(boxW)}px`,
             height: `${Math.round(boxH)}px`,
-            cursor: onHexClick ? "pointer" : undefined,
+            transform: `scale(${zoom})`,
+            transformOrigin: "top left",
           }}
           onClick={handleClick}
         />
-        <ZoomControls zoom={zoom} onZoom={setZoom} />
       </div>
+      <ZoomControls zoom={zoom} onZoom={setZoom} hand={hand} onToggleHand={toggleHand} />
 
       {unplaced.length > 0 ? (
         <div className="border-t border-zinc-700/40 px-3 py-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
