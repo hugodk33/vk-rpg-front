@@ -6,6 +6,7 @@ import type { CharacterSkill, Location, Narration, NarrationAction, QueueEntry, 
 import { skillLabel, skillLevel } from "@/lib/skill";
 import { narrationBoard, tokenAt, type BoardToken } from "@/lib/board";
 import { hexDir, hexDist } from "@/lib/hexgrid";
+import { floorPlanGroup } from "@/lib/location";
 import { maskedLocationName, maskedTargetName } from "@/lib/visibility";
 import TacticalPlate from "@/components/tactical/TacticalPlate";
 import QueueProcession from "@/components/session/QueueProcession";
@@ -254,6 +255,7 @@ export default function TurnPanel({
     locations[0] ??
     null;
   const mapLocation = locations.find((l) => l.id === locSel) ?? defaultLocation;
+  const mapGroup = floorPlanGroup(mapLocation, locations);
   const board = narrationBoard(latestBeat, mapLocation);
   /* tokens = toda a party (roster) + quem a narration posiciona; nomes
      reais para personagens de jogadores, mascarados só para NPCs. */
@@ -409,14 +411,14 @@ export default function TurnPanel({
             style={isMyTurn ? { boxShadow: "0 0 10px rgba(96,165,250,.7)" } : undefined}
           />
           <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">Floor plan</span>
-          {locations.length > 1 ? (
+          {mapGroup.length > 1 ? (
             <select
               value={mapLocation?.id ?? ""}
               onChange={(e) => { setLocSel(e.target.value); setMoveTarget(null); setMoveWarn(null); }}
               aria-label="Where you are"
               className="max-w-xs bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-3 py-2 text-zinc-100 text-sm focus:outline-none focus:border-blue-600/70 transition-colors"
             >
-              {locations.map((l) => (
+              {mapGroup.map((l) => (
                 <option key={l.id} value={l.id} className="bg-zinc-800">
                   {maskedLocationName(visibility, l.id, l.name || "Unnamed")}
                 </option>

@@ -1,3 +1,5 @@
+import type { Location } from "./types";
+
 export const LOCATION_KINDS: Array<{ value: string; label: string; desc: string }> = [
   { value: "world", label: "Mundo", desc: "O globo — escala macro (continentes)" },
   { value: "continent", label: "Continente", desc: "Uma massa de terra" },
@@ -80,4 +82,18 @@ export function absoluteHex(location: HexNodeInput): AbsoluteHex {
     rotationDeg: location.hex?.rotationDeg ?? 0,
     chain: steps,
   };
+}
+
+/**
+ * Floor-plan group of a location — the maps that belong to the SAME
+ * place, like the floors of one house. A map qualifies when it is
+ * itself a container with subdivisions (the building) or a subdivision
+ * sharing a host (a floor). Returns [] — and therefore hides the map
+ * switcher — when the location has no such configuration.
+ */
+export function floorPlanGroup(loc: Location | null | undefined, all: Location[]): Location[] {
+  if (!loc) return [];
+  const host = loc.parentId ?? loc.id;
+  const group = all.filter((l) => l.id === host || l.parentId === host);
+  return group.length > 1 ? group : [];
 }

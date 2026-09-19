@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type {
   Advantage,
   CharacterViewer,
@@ -123,7 +123,22 @@ export default function PlayerConsole({
   initialTab = "sheet",
 }: PlayerConsoleProps) {
   const [tab, setTab] = useState<PlayerTab>(initialTab);
+  const [tableOpen, setTableOpen] = useState(false);
+  const tableRef = useRef<HTMLDivElement>(null);
   const name = character?.sheet?.name || character?.name || "Your character";
+
+  useEffect(() => {
+    if (!tableOpen) return;
+    const onDown = (e: MouseEvent | TouchEvent) => {
+      if (tableRef.current && !tableRef.current.contains(e.target as Node)) setTableOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("touchstart", onDown);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("touchstart", onDown);
+    };
+  }, [tableOpen]);
 
   const latestBeat = useMemo(() => getSessionState(scenes).latestBeat, [scenes]);
 
@@ -154,6 +169,8 @@ export default function PlayerConsole({
     return [...pool, ...npcPool.filter((n) => !seen.has(n.id))];
   }, [presence, roster, npcs]);
 
+  const resourceActive = RESOURCE_TABS.some((r) => r.key === tab);
+
   return (
     <div className="max-w-5xl mx-auto px-6 py-8">
       {/* heading */}
@@ -175,7 +192,65 @@ export default function PlayerConsole({
 
       {/* unified tab bar */}
       <div role="tablist" aria-label="Player console" className="inline-flex bg-zinc-800/50 border border-zinc-700/40 rounded-lg p-0.5 mb-6">
-        {TABS.map((t) => (
+        {TABS.filter((t) => ["turn", "journey", "chronicle"].includes(t.key)).map((t) => (
+          <button
+            key={t.key}
+            role="tab"
+            aria-selected={tab === t.key}
+            onClick={() => setTab(t.key)}
+            className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-md font-mono text-[12px] uppercase tracking-[0.12em] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 ${
+              tab === t.key ? "bg-zinc-700 text-blue-300" : "text-zinc-500 hover:text-zinc-200"
+            }`}
+          >
+            {icon(t.icon, "w-3.5 h-3.5")} {t.label}
+          </button>
+        ))}
+
+        {/* table resources dropdown */}
+        <div className="relative" ref={tableRef}>
+          <button
+            role="tab"
+            aria-selected={resourceActive}
+            aria-haspopup="menu"
+            aria-expanded={tableOpen}
+            onClick={() => setTableOpen((o) => !o)}
+            className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-md font-mono text-[12px] uppercase tracking-[0.12em] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 ${
+              resourceActive ? "bg-zinc-700 text-blue-300" : "text-zinc-500 hover:text-zinc-200"
+            }`}
+          >
+            {icon(RESOURCE_ICONS.characters, "w-3.5 h-3.5")} Table
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={tableOpen ? "M5 15l7-7 7 7" : "M19 9l-7 7-7-7"} />
+            </svg>
+          </button>
+
+          {tableOpen ? (
+            <div
+              role="menu"
+              aria-label="Table resources"
+              className="absolute left-0 top-full mt-1 z-20 min-w-[13rem] rounded-lg border border-zinc-700/50 bg-zinc-900 p-1 shadow-xl shadow-black/40"
+            >
+              {RESOURCE_TABS.map((r) => (
+                <button
+                  key={r.key}
+                  role="menuitemradio"
+                  aria-checked={tab === r.key}
+                  onClick={() => {
+                    setTab(r.key);
+                    setTableOpen(false);
+                  }}
+                  className={`w-full flex items-center gap-2 px-3 py-2 rounded-md font-mono text-[11px] uppercase tracking-[0.12em] transition-colors text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 ${
+                    tab === r.key ? "bg-zinc-800 text-blue-300" : "text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/60"
+                  }`}
+                >
+                  {icon(RESOURCE_ICONS[r.key], "w-3.5 h-3.5")} {r.label}
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </div>
+
+        {TABS.filter((t) => ["gear", "sheet"].includes(t.key)).map((t) => (
           <button
             key={t.key}
             role="tab"

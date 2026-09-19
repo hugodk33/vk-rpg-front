@@ -61,11 +61,31 @@ export default function TacticalPlate({
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const scrollerRef = useRef<HTMLDivElement | null>(null);
   const [zoom, setZoom] = useState(1);
+  const lastZoomRef = useRef(1);
   const [hand, setHand] = useState(false);
   const [dragging, setDragging] = useState(false);
   const dragRef = useRef<{ pointerId: number; x: number; y: number; moved: boolean } | null>(null);
 
   const toggleHand = () => setHand((h) => !h);
+
+  /* Zoom anchored at the viewport centre — what is on screen stays under
+     the centre as the scale changes (the canvas scales about its top-left,
+     so the scroll position is re-derived to compensate). */
+  function applyZoom(next: number) {
+    const from = lastZoomRef.current;
+    const clamped = Math.min(3.5, Math.max(0.5, next));
+    lastZoomRef.current = clamped;
+    setZoom(clamped);
+    const s = scrollerRef.current;
+    if (!s || clamped === from) return;
+    const vw = s.clientWidth;
+    const vh = s.clientHeight;
+    const canvasLeft = vw > boxW ? (vw - boxW) / 2 : 0;
+    const px = (s.scrollLeft + vw / 2 - canvasLeft) / from;
+    const py = (s.scrollTop + vh / 2) / from;
+    s.scrollLeft = px * clamped + canvasLeft - vw / 2;
+    s.scrollTop = py * clamped - vh / 2;
+  }
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -197,7 +217,7 @@ export default function TacticalPlate({
           onClick={handleClick}
         />
       </div>
-      <ZoomControls zoom={zoom} onZoom={setZoom} hand={hand} onToggleHand={toggleHand} />
+      <ZoomControls zoom={zoom} onZoom={applyZoom} hand={hand} onToggleHand={toggleHand} />
 
       {unplaced.length > 0 ? (
         <div className="border-t border-zinc-700/40 px-3 py-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">

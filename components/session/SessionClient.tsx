@@ -9,6 +9,7 @@ import { skillLabel, skillLevel } from "@/lib/skill";
 import { narrationBoard, tokenAt } from "@/lib/board";
 import type { BoardToken } from "@/lib/board";
 import { hexDir, hexDist } from "@/lib/hexgrid";
+import { floorPlanGroup } from "@/lib/location";
 import TacticalPlate from "@/components/tactical/TacticalPlate";
 import QueueProcession from "@/components/session/QueueProcession";
 import DiceMystery from "@/components/session/DiceMystery";
@@ -506,7 +507,22 @@ export default function SessionClient({
   const [mapSaving, setMapSaving] = useState(false);
 
   const mapLocation = locations.find((l) => l.id === locSel) ?? defaultLocation;
+  const mapGroup = floorPlanGroup(mapLocation, locations);
   const board = narrationBoard(latestBeat, mapLocation);
+
+  // The narration's floor-plan picker follows the same rule: only maps of
+  // the same place (plus whatever the scene already pins) so narrations
+  // stay anchored to the plan you are working with.
+  const narrationPool = Array.from(
+    new Map<string, Location>(
+      [
+        ...mapGroup,
+        ...locations.filter(
+          (l) => l.id === narrationLocation || l.id === latestBeat?.location?.id
+        ),
+      ].map((l) => [l.id, l])
+    ).values()
+  );
 
   // posições vêm da narration (replay das actions); o roster completa quem ainda não tem token
   const rosterTokens = characters.map((c) => ({
@@ -713,13 +729,13 @@ export default function SessionClient({
           <div className="flex flex-wrap items-center gap-3 mb-4">
             <span className={`w-2.5 h-2.5 rounded-full ${T.dot}`} style={{ boxShadow: `0 0 8px ${T.shadow}` }} />
             <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">Floor plan</span>
-            {locations.length > 1 ? (
+            {mapGroup.length > 1 ? (
               <select
                 value={mapLocation?.id ?? ""}
                 onChange={(e) => setMapLocation(e.target.value)}
                 className={`${inputCls(T.inputBorder)} max-w-xs`}
               >
-                {locations.map((l) => (
+                {mapGroup.map((l) => (
                   <option key={l.id} value={l.id} className="bg-zinc-800">
                     {l.name || "Unnamed"}
                   </option>
@@ -1315,7 +1331,7 @@ export default function SessionClient({
                     <label className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Floor plan (location)</label>
                     <select value={narrationLocation} onChange={(e) => setNarrationLocation(e.target.value)} className={inputCls(T.inputBorder)}>
                       <option value="" className="bg-zinc-800">No map</option>
-                      {locations.map((l) => (
+                      {narrationPool.map((l) => (
                         <option key={l.id} value={l.id} className="bg-zinc-800">
                           {l.name || "Unnamed"}
                         </option>
