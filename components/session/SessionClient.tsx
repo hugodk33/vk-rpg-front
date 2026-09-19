@@ -568,7 +568,19 @@ export default function SessionClient({
     if (!actor) { alert("Pick who moves."); return; }
     if (!moveTarget) { alert("Click a destination hex on the map first."); return; }
     const from = tokenAt(mapTokens, actor);
-    const facing = from ? hexDir(from, moveTarget) : 0;
+    if (!from) { alert(`${charName(actor)} isn't placed on the map yet.`); return; }
+    const dist = hexDist(from, moveTarget);
+    const mover = characters.find((x) => x.id === actor);
+    const sheet = mover?.sheet;
+    if (sheet && sheet.move != null) {
+      const fatigued = sheet.fatigue_state !== "active";
+      const cap = fatigued ? (sheet.effective_move ?? sheet.move) : sheet.move;
+      if (dist > cap) {
+        alert(`${charName(actor)} has Move ${cap} — ${dist} hexes is too far.`);
+        return;
+      }
+    }
+    const facing = hexDir(from, moveTarget);
     const payload = {
       narrations_id: latestNarrationId || null,
       character_id: actor,

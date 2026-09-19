@@ -21,8 +21,9 @@ import TurnPanel from "@/components/player/PlayerSession";
 import SceneTimeline from "@/components/scenes/SceneTimeline";
 import CharacterSheet from "@/components/character/CharacterSheet";
 import CharacterJourney from "@/components/character/CharacterJourney";
-import TableResources from "@/components/player/TableResources";
+import TableResources, { RESOURCE_TABS, type ResourceTab } from "@/components/player/TableResources";
 import PlayerInventory from "@/components/player/PlayerInventory";
+import { getSessionState } from "@/lib/session";
 
 /* ============================================================
    Player Console — one panel per character.
@@ -30,9 +31,9 @@ import PlayerInventory from "@/components/player/PlayerInventory";
      · SESSION  — the scene console (queue + dice, turn-gated).
      · JOURNEY  — the character's own evolution, moment by moment.
      · CHRONICLE— the table's timeline, read-only.
-· TABLE    — the table's sandbox inline: characters, items,
-                skills, advantages, disadvantages and locations
-                (read-only, through the player's eyes).
+· CHARACTERS / ITEMS / SKILLS / ADVANTAGES / DISADVANTAGES /
+     LOCATIONS — the table's sandbox inline; each resource own
+     its own button in the trail (read-only, through the player's eyes).
      · GEAR     — the player's own inventory: equip, store,
                   discard, sell and trade items.
      · SHEET    — the player's own sheet, visibility-aware.
@@ -40,7 +41,13 @@ import PlayerInventory from "@/components/player/PlayerInventory";
    around waiting for their moment.
    ============================================================ */
 
-export type PlayerTab = "turn" | "journey" | "chronicle" | "table" | "gear" | "sheet";
+export type PlayerTab =
+  | "turn"
+  | "journey"
+  | "chronicle"
+  | ResourceTab
+  | "gear"
+  | "sheet";
 
 interface PlayerConsoleProps {
   character: TableCharacter | null;
@@ -73,11 +80,20 @@ const icon = (path: string, cls = "w-4 h-4") => (
   </svg>
 );
 
+const RESOURCE_ICONS: Record<ResourceTab, string> = {
+  characters: "M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z",
+  items: "M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4",
+  skills: "M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253",
+  advantages: "M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.196-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.783-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z",
+  disadvantages: "M15 12a3 3 0 11-6 0 3 3 0 016 0zM9.05 7.4a3 3 0 000 9.2M14.95 7.4a3 3 0 010 9.2M12 2a10 10 0 100 20 10 10 0 000-20z",
+  locations: "M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0zM15 11a3 3 0 11-6 0 3 3 0 016 0z",
+};
+
 const TABS: Array<{ key: PlayerTab; label: string; icon: string }> = [
   { key: "turn", label: "Session", icon: "M4 5a2 2 0 012-2h12a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm0 8a2 2 0 012-2h12a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm0 8a2 2 0 012-2h6a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2z" },
   { key: "journey", label: "Journey", icon: "M3 3v18h18M7 14l4-5 3 3 5-8" },
   { key: "chronicle", label: "Chronicle", icon: "M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" },
-  { key: "table", label: "Table", icon: "M3 6h18v12H3V6zm0 0V4m0 2v2m18-2V4m0 2v2M3 10h18M3 14h18M3 18h18M7 4v2M12 4v2M17 4v2" },
+  ...RESOURCE_TABS.map((r) => ({ key: r.key as PlayerTab, label: r.label, icon: RESOURCE_ICONS[r.key] })),
   { key: "gear", label: "Gear", icon: "M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" },
   { key: "sheet", label: "Sheet", icon: "M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 16a3.001 3.001 0 00-2.83-2M15 11a2 2 0 11-4 0 2 2 0 014 0z" },
 ];
@@ -108,6 +124,8 @@ export default function PlayerConsole({
 }: PlayerConsoleProps) {
   const [tab, setTab] = useState<PlayerTab>(initialTab);
   const name = character?.sheet?.name || character?.name || "Your character";
+
+  const latestBeat = useMemo(() => getSessionState(scenes).latestBeat, [scenes]);
 
   const presence = useMemo(() => {
     const latest = scenes.flatMap((s) => s.narrations).find((n) => n.id === latestNarrationId);
@@ -185,6 +203,9 @@ export default function PlayerConsole({
           targets={presentTargets}
           myId={character?.id ?? ""}
           mySkills={character?.skills ?? []}
+          locations={locations}
+          latestBeat={latestBeat}
+          visibility={visibility}
         />
       ) : null}
 
@@ -206,11 +227,13 @@ export default function PlayerConsole({
         </div>
       ) : null}
 
-      {tab === "table" && tableId ? (
+      {RESOURCE_TABS.some((r) => r.key === tab) && tableId ? (
         <div className="rounded-2xl border border-zinc-700/50 bg-zinc-900/40 overflow-hidden">
           <div className="px-5 py-6">
             <p className="font-mono text-[10px] tracking-widest uppercase text-blue-300/90">The Table</p>
-            <h2 className="text-lg font-bold text-zinc-100 mt-1">{table?.title || "Table resources"}</h2>
+            <h2 className="text-lg font-bold text-zinc-100 mt-1">
+              {RESOURCE_TABS.find((r) => r.key === tab)?.label ?? "Table resources"}
+            </h2>
             <p className="text-sm text-zinc-400 mt-1.5 max-w-xl mb-5">
               Everything the table shares with your seat: characters, items, skills and the
               party&rsquo;s advantages and disadvantages — read-only, through your own eyes.
@@ -224,6 +247,7 @@ export default function PlayerConsole({
               advantages={advantages}
               disadvantages={disadvantages}
               locations={locations}
+              tab={tab as ResourceTab}
             />
           </div>
         </div>

@@ -170,15 +170,11 @@ function Plate({
   const battle = !!node.isBattlemap;
   return (
     <div className="group relative flex h-full gap-3 rounded-xl border border-zinc-700/40 bg-zinc-800/40 px-4 py-3.5 transition-all hover:bg-zinc-800/70 hover:border-zinc-600/60">
-      {/* kind seal — rings around a glyph, tinted per kin; the divider
-          below keeps each card reading like an emblem on the map */}
-      <div className={`relative shrink-0 ${KIND_TINT[node.kind ?? "site"] ?? "text-zinc-500"}`} aria-hidden>
-        <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-[52px] w-[52px] rounded-full border border-current opacity-20 transition-all duration-300 group-hover:scale-105 group-hover:opacity-70" />
-        <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-8 w-8 rounded-full border border-current opacity-25 transition-all duration-300 group-hover:opacity-55" />
-        <span className="absolute inset-x-0 top-1/2 h-px bg-current opacity-10 transition-opacity duration-300 group-hover:opacity-30" />
+      {/* kind icon — the glyph alone, centered vertically in its column */}
+      <div className={`flex items-center shrink-0 ${KIND_TINT[node.kind ?? "site"] ?? "text-zinc-500"}`} aria-hidden>
         <KindGlyph
           kind={node.kind}
-          className="relative mt-1.5 h-11 w-11 opacity-90 transition-all duration-300 group-hover:opacity-100 group-hover:drop-shadow-[0_0_10px_currentColor]"
+          className="h-11 w-11 opacity-90 transition-all duration-300 group-hover:opacity-100 group-hover:drop-shadow-[0_0_10px_currentColor]"
         />
       </div>
 

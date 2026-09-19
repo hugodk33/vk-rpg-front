@@ -24,7 +24,10 @@
                     the center cell that seams the plate into the
                     territory chain. Snapping (hex centers for boxes,
                     vertices for lines) keeps strokes on the lattice.
-   The canvas has a top-right zoom control (crisp re-render).
+   The canvas has a top-right zoom control (crisp re-render). The plate
+   keeps a fixed layout size — zoom is a pure CSS transform of the canvas
+   over a sized spacer, so the backing pixel grid grows (crisp) but the
+   element box never reflows; the wrapper scrolls with thin styled bars.
 
    Saving posts a partial update to PUT /api/table-location/:id.
    ============================================================ */
@@ -990,24 +993,30 @@ export default function MapStudio({ location }: MapStudioProps) {
 
         {/* canvas */}
         <div className="p-4">
-          <div ref={wrapRef} className="relative overflow-auto rounded-lg border border-zinc-700/40 bg-zinc-950/50">
-            <canvas
-              ref={canvasRef}
-              width={W}
-              height={H}
-              className={`block mx-auto touch-none select-none ${grab ? "cursor-grabbing" : "cursor-crosshair"}`}
-              style={{
-                width: `${Math.round(W * zoom)}px`,
-                height: `${Math.round(H * zoom)}px`,
-              }}
-              onPointerDown={onPointerDown}
-              onPointerMove={onPointerMove}
-              onPointerUp={onPointerUp}
-              onPointerLeave={onPointerLeave}
-              onPointerCancel={onPointerUp}
-              role="img"
-              aria-label="Tactical map editor canvas"
-            />
+          <div ref={wrapRef} className="relative overflow-auto scroll-thin rounded-lg border border-zinc-700/40 bg-zinc-950/50" style={{ height: "min(70vh, 560px)" }}>
+            <div className="flex min-w-full min-h-full">
+              <div className="relative m-auto" style={{ width: `${Math.round(W * zoom)}px`, height: `${Math.round(H * zoom)}px` }}>
+                <canvas
+                  ref={canvasRef}
+                  width={W}
+                  height={H}
+                  className={`block touch-none select-none ${grab ? "cursor-grabbing" : "cursor-crosshair"}`}
+                  style={{
+                    width: `${W}px`,
+                    height: `${H}px`,
+                    transform: `scale(${zoom})`,
+                    transformOrigin: "top left",
+                  }}
+                  onPointerDown={onPointerDown}
+                  onPointerMove={onPointerMove}
+                  onPointerUp={onPointerUp}
+                  onPointerLeave={onPointerLeave}
+                  onPointerCancel={onPointerUp}
+                  role="img"
+                  aria-label="Tactical map editor canvas"
+                />
+              </div>
+            </div>
             <ZoomControls zoom={zoom} onZoom={setZoom} min={0.5} max={4} step={0.25} />
 
             {error ? <p className="absolute inset-x-0 bottom-0 bg-red-950/90 text-red-200 text-xs px-3 py-2">{error}</p> : null}

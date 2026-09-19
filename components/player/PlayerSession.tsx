@@ -2,8 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { CharacterSkill, NarrationAction, QueueEntry, TableCharacter } from "@/lib/types";
+import type { CharacterSkill, Location, Narration, NarrationAction, QueueEntry, TableCharacter, VisibilityRule } from "@/lib/types";
 import { skillLabel, skillLevel } from "@/lib/skill";
+import { narrationBoard, tokenAt, type BoardToken } from "@/lib/board";
+import { hexDir, hexDist } from "@/lib/hexgrid";
+import { maskedLocationName, maskedTargetName } from "@/lib/visibility";
+import TacticalPlate from "@/components/tactical/TacticalPlate";
 import QueueProcession from "@/components/session/QueueProcession";
 
 /* ============================================================
@@ -25,6 +29,9 @@ interface TurnPanelProps {
   targets?: TableCharacter[];
   myId: string;
   mySkills: CharacterSkill[];
+  locations: Location[];
+  latestBeat?: Narration | null;
+  visibility?: VisibilityRule[] | null;
 }
 
 const queuePos = (e: QueueEntry): number => {
@@ -79,6 +86,9 @@ export default function TurnPanel({
   targets,
   myId,
   mySkills,
+  locations,
+  latestBeat = null,
+  visibility = null,
 }: TurnPanelProps) {
   const router = useRouter();
   const pendingQueue = [...queue]
@@ -105,6 +115,16 @@ export default function TurnPanel({
   const [submitting, setSubmitting] = useState(false);
   const [committed, setCommitted] = useState(false);
   const [commitError, setCommitError] = useState<string | null>(null);
+
+  /* ---- floor plan / your move ---- */
+  const [locSel, setLocSel] = useState<string>(() =>
+    latestBeat?.location?.id ?? locations.find((l) => !!l.hex?.width && !!l.hex?.height)?.id ?? locations[0]?.id ?? ""
+  );
+  const [moveTarget, setMoveTarget] = useState<null | { q: number; r: number }>(null);
+  const [facingChoice, setFacingChoice] = useState<number | "auto">("auto");
+  const [moveWarn, setMoveWarn] = useState<string | null>(null);
+  const [moveError, setMoveError] = useState<string | null>(null);
+  const [moving, setMoving] = useState(false);
 
   const myEntry = pendingQueue.find((e) => e.character_id === myId);
   const testDie = myEntry?.test_dice || "6";
@@ -227,6 +247,117 @@ export default function TurnPanel({
 
   const sortedActions = [...actions].sort((a, b) => (a.queue ?? 0) - (b.queue ?? 0));
 
+  /* ---- floor plan / your move (capped by your Move) ---- */
+  const defaultLocation =
+    latestBeat?.location ??
+    locations.find((l) => !!l.hex?.width && !!l.hex?.height) ??
+    locations[0] ??
+    null;
+  const mapLocation = locations.find((l) => l.id === locSel) ?? defaultLocation;
+  const board = narrationBoard(latestBeat, mapLocation);
+  /* tokens = toda a party (roster) + quem a narration posiciona; nomes
+     reais para personagens de jogadores, mascarados só para NPCs. */
+  const rosterTokens: BoardToken[] = roster.map((c) => ({
+    id: c.id,
+    name: c.sheet?.name || c.name || c.user?.username || "Unknown",
+    isPlayer: true,
+    unconscious: false,
+  }));
+  const tokenById = new Map<string, BoardToken>(rosterTokens.map((t) => [t.id, t]));
+  for (const bt of board.tokens) {
+    tokenById.set(bt.id, {
+      ...(tokenById.get(bt.id) ?? { id: bt.id, name: bt.name, isPlayer: true }),
+      ...bt,
+    });
+  }
+  const mapTokens = [...tokenById.values()].map((t) => ({
+    ...t,
+    name: t.id === myId || t.isPlayer ? t.name : maskedTargetName(visibility, t.id, t.name),
+  }));
+  const from = tokenAt(mapTokens, myId);
+  const me = mapTokens.find((t) => t.id === myId);
+  const fatigued = s?.fatigue_state !== "active";
+  const myMove = fatigued ? (s?.effective_move ?? s?.move) : s?.move;
+
+  const FACING_LABELS = ["E", "SE", "SW", "W", "NW", "NE"];
+
+  function handleMapClick(q: number, r: number) {
+    if (!isMyTurn || committed) return;
+    const target = { q, r };
+    if (myMove != null && from) {
+      const d = hexDist(from, target);
+      if (d > myMove) {
+        setMoveWarn(`Move is ${myMove} hex${myMove === 1 ? "" : "es"} — ${d} is too far.`);
+        return;
+      }
+    }
+    setMoveWarn(null);
+    setMoveTarget(target);
+  }
+
+  function pickFacing(v: number | "auto") {
+    if (!isMyTurn || committed || moving) return;
+    setFacingChoice(v);
+    setMoveWarn(null);
+  }
+
+  /** Move (ou giro, quando sem destino) + encerra o turno num único POST. */
+  async function logMove() {
+    if (!isMyTurn || committed || moving || !mapLocation?.id || !myEntry) return;
+    const target = moveTarget;
+    const facing = facingChoice === "auto" ? (target && from ? hexDir(from, target) : me?.facing ?? 0) : facingChoice;
+    let q = from?.q ?? null;
+    let r = from?.r ?? null;
+    if (target) {
+      if (myMove != null && from) {
+        const d = hexDist(from, target);
+        if (d > myMove) {
+          setMoveWarn(`Move is ${myMove} hex${myMove === 1 ? "" : "es"} — ${d} is too far.`);
+          return;
+        }
+      }
+      q = target.q;
+      r = target.r;
+    } else if (q == null || r == null) {
+      setMoveWarn("You're not placed on the map yet — pick a destination hex first.");
+      return;
+    }
+    const description = target
+      ? `Moves to hex ${target.q},${target.r}`
+      : `Turns to face ${FACING_LABELS[facing] ?? facing}`;
+    setMoving(true);
+    setMoveError(null);
+    try {
+      const res = await fetch("/api/game-table-end-turn", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          character_id: myId,
+          narrations_id: latestNarrationId || null,
+          description,
+          queue: Number(myEntry.queue) || 0,
+          result: null,
+          dice_roll: null,
+          location_id: mapLocation.id,
+          q,
+          r,
+          facing,
+        }),
+      });
+      const j = await res.json();
+      if (!j.success) throw new Error(j.error || "Failed to end your turn");
+      setCommitted(true);
+      setMoveTarget(null);
+      setFacingChoice("auto");
+      setMoveWarn(null);
+      router.refresh();
+    } catch (err: unknown) {
+      setMoveError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setMoving(false);
+    }
+  }
+
   const waitingText = notInQueue
     ? "You're not in this scene's queue yet — hold for the narrator to call you in."
     : isMyTurn
@@ -269,6 +400,137 @@ export default function TurnPanel({
           <p className="text-sm text-zinc-400 leading-relaxed italic border-t border-zinc-700/40 px-5 py-3">{latestNarration}</p>
         ) : null}
       </div>
+
+      {/* floor plan — you move up to your Move, one turn at a time */}
+      <section aria-label="Floor plan" className="bg-zinc-900/80 border border-zinc-700/40 rounded-xl p-5">
+        <div className="flex flex-wrap items-center gap-3 mb-4">
+          <span
+            className={`w-2.5 h-2.5 rounded-full ${isMyTurn ? "bg-blue-400 beacon" : "bg-zinc-600"}`}
+            style={isMyTurn ? { boxShadow: "0 0 10px rgba(96,165,250,.7)" } : undefined}
+          />
+          <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">Floor plan</span>
+          {locations.length > 1 ? (
+            <select
+              value={mapLocation?.id ?? ""}
+              onChange={(e) => { setLocSel(e.target.value); setMoveTarget(null); setMoveWarn(null); }}
+              aria-label="Where you are"
+              className="max-w-xs bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-3 py-2 text-zinc-100 text-sm focus:outline-none focus:border-blue-600/70 transition-colors"
+            >
+              {locations.map((l) => (
+                <option key={l.id} value={l.id} className="bg-zinc-800">
+                  {maskedLocationName(visibility, l.id, l.name || "Unnamed")}
+                </option>
+              ))}
+            </select>
+          ) : mapLocation ? (
+            <span className="text-sm font-semibold text-zinc-100">
+              {maskedLocationName(visibility, mapLocation.id, mapLocation.name || "Unnamed")}
+            </span>
+          ) : (
+            <span className="text-sm text-zinc-500 italic">No floor plan on this table yet.</span>
+          )}
+          {mapLocation?.hex?.width != null ? (
+            <span className="ml-auto font-mono text-[10px] text-zinc-500 uppercase tracking-widest">
+              {mapLocation.hex.width}×{mapLocation.hex.height} hex · {mapLocation.hex.sizeM ?? 1}m/hex
+            </span>
+          ) : null}
+        </div>
+
+        {mapLocation ? (
+          <TacticalPlate
+            location={mapLocation}
+            tokens={mapTokens}
+            trail={board.trail}
+            mark={moveTarget}
+            accent="#3b82f6"
+            R={22}
+            M={12}
+            onHexClick={isMyTurn && !committed ? handleMapClick : undefined}
+          />
+        ) : (
+          <p className="text-sm text-zinc-600 font-mono italic">
+            The scene opens a floor plan here when the narrator draws it.
+          </p>
+        )}
+
+        {isMyTurn ? (
+          <div className="mt-4 space-y-3">
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-baseline gap-1.5">
+                <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">Move</span>
+                <span className="font-mono text-lg font-bold text-blue-300 tabular-nums">{myMove ?? "—"}</span>
+                <span className="text-[11px] text-zinc-500">hex{myMove === 1 ? "" : "es"}</span>
+              </div>
+              <span className="text-sm text-zinc-500 flex-1 min-w-0">
+                {from ? (
+                  <span className="font-mono text-[12px] text-zinc-400">
+                    you are at hex {from.q},{from.r}
+                    {me?.facing != null && me?.facing >= 0 ? ` · facing ${FACING_LABELS[me.facing] ?? me.facing}` : ""}
+                  </span>
+                ) : (
+                  <span className="text-zinc-600 italic">you&apos;re not placed yet</span>
+                )}
+                {moveTarget ? (
+                  <span className="font-mono text-[12px] text-emerald-300 ml-2">→ {moveTarget.q},{moveTarget.r}</span>
+                ) : null}
+              </span>
+              <button
+                onClick={() => void logMove()}
+                disabled={(!moveTarget && (facingChoice === "auto" || !from)) || moving}
+                className="bg-blue-600 hover:bg-blue-500 text-blue-950 text-sm font-bold px-4 py-2 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {moving
+                  ? "Logging…"
+                  : moveTarget
+                    ? `Move & end turn → ${moveTarget.q},${moveTarget.r}`
+                    : facingChoice !== "auto"
+                      ? "Turn & end turn"
+                      : "Log move · click a hex"}
+              </button>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">Facing</span>
+              <button
+                type="button"
+                onClick={() => pickFacing("auto")}
+                className={`font-mono text-[10px] font-semibold uppercase tracking-widest px-2.5 py-1 rounded-md border transition-colors ${
+                  facingChoice === "auto"
+                    ? "border-blue-500/60 bg-blue-700/20 text-blue-300"
+                    : "border-zinc-700/50 text-zinc-500 hover:text-zinc-300"
+                }`}
+              >
+                auto
+              </button>
+              {FACING_LABELS.map((lbl, i) => (
+                <button
+                  key={lbl}
+                  type="button"
+                  onClick={() => pickFacing(i)}
+                  className={`w-9 h-8 font-mono text-[11px] font-bold rounded-md border transition-colors ${
+                    facingChoice === i
+                      ? "border-blue-500/60 bg-blue-700/20 text-blue-300"
+                      : "border-zinc-700/50 text-zinc-500 hover:text-zinc-300"
+                  }`}
+                >
+                  {lbl}
+                </button>
+              ))}
+              <span className="text-[10px] text-zinc-600 ml-1">
+                {facingChoice === "auto" ? "faces the way you move" : "you turn to face this direction"}
+              </span>
+            </div>
+          </div>
+        ) : (
+          <p className="mt-3 font-mono text-[10px] text-zinc-600 uppercase tracking-widest">
+            the map opens for movement when it&apos;s your turn ·{" "}
+            {myMove != null ? `you can cover ${myMove} hex${myMove === 1 ? "" : "es"}` : "your sheet has no Move"}
+          </p>
+        )}
+
+        {moveWarn ? <p className="mt-2 font-mono text-[11px] text-amber-300">{moveWarn}</p> : null}
+        {moveError ? <p className="mt-2 font-mono text-[11px] text-red-400">{moveError}</p> : null}
+      </section>
 
       {/* queue procession */}
       <QueueProcession

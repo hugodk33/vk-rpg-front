@@ -22,9 +22,17 @@ export interface BoardToken {
   status?: string;
 }
 
+export interface TrailMove {
+  id: string;
+  from: { q: number; r: number } | null;
+  to: { q: number; r: number };
+}
+
 export interface BoardTrail {
   from: { q: number; r: number } | null;
   to: { q: number; r: number };
+  /** movements of every token, in queue order (polyline source) */
+  moves?: TrailMove[];
 }
 
 export interface BeatBoard {
@@ -65,6 +73,7 @@ export function narrationBoard(n: Narration | null | undefined, fallbackLocation
 
   const sorted = [...(n.actions ?? [])].sort((a, b) => (a.queue ?? 0) - (b.queue ?? 0));
   let trail: BoardTrail | null = null;
+  const moves: TrailMove[] = [];
 
   for (const a of sorted) {
     if (a.q == null || a.r == null) continue;
@@ -72,7 +81,9 @@ export function narrationBoard(n: Narration | null | undefined, fallbackLocation
     if (!token) continue;
     const from = token.q != null && token.r != null ? { q: token.q, r: token.r } : null;
     setPos(token, a.q, a.r, a.facing);
-    trail = { from, to: { q: a.q, r: a.r } };
+    const to = { q: a.q, r: a.r };
+    moves.push({ id: token.id, from, to });
+    trail = { from, to, moves: [...moves] };
   }
 
   return {

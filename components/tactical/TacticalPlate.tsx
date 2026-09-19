@@ -71,6 +71,20 @@ export default function TacticalPlate({
   );
   const { W, H } = plate;
 
+  /* Fixed, wider-than-tall canvas: the grid is letterbox-fitted into a
+     stable box regardless of zoom — zoom only scales the content inside. */
+  const boxW = Math.max(R * 40, 320);
+  const boxH = Math.max(R * 25, 200);
+  const fit = Math.min(boxW / W, boxH / H);
+  const drawW = W * fit;
+  const drawH = H * fit;
+  const offX = (boxW - drawW) / 2;
+  const offY = (boxH - drawH) / 2;
+  const fitBox = useMemo(
+    () => ({ scale: fit, dx: offX, dy: offY, boxW, boxH }),
+    [fit, offX, offY, boxW, boxH]
+  );
+
   const placed = useMemo(
     () => tokens.filter((t) => t.q != null && t.r != null && t.q! >= 0 && t.r! >= 0 && t.q! < spec.cols && t.r! < spec.rows),
     [tokens, spec]
@@ -86,17 +100,25 @@ export default function TacticalPlate({
     paintCanvas(cv, W, H, (ctx) => {
       drawPlateBoard(ctx, W, H, spec, location?.tiles ?? [], { accent, mark });
       drawPlateDrawing(ctx, W, H, spec, location?.drawing ?? []);
-      drawPlateTrail(ctx, W, H, spec, accent, trail?.from ?? null, trail?.to ?? null, "tic");
+      drawPlateTrail(ctx, W, H, spec, accent, trail?.moves ?? [], "tic");
       drawPlateTokens(ctx, W, H, spec, placed);
-    }, zoom);
-  }, [location, placed, trail, mark, accent, W, H, spec, zoom]);
+    }, zoom, fitBox);
+  }, [location, placed, trail, mark, accent, W, H, spec, zoom, fitBox]);
 
   function handleClick(e: ReactMouseEvent<HTMLCanvasElement>) {
     if (!onHexClick) return;
     const cv = canvasRef.current;
     if (!cv) return;
     const rect = cv.getBoundingClientRect();
-    const p = screenToGrid(e.clientX, e.clientY, rect, W, H, spec);
+    const cW = drawW * zoom;
+    const cH = drawH * zoom;
+    const contentRect = {
+      left: rect.left + offX * zoom,
+      top: rect.top + offY * zoom,
+      width: cW,
+      height: cH,
+    };
+    const p = screenToGrid(e.clientX, e.clientY, contentRect, W, H, spec);
     const cell = hexFromPoint(p.x, p.y, spec.orientation, spec.R);
     if (cell.q >= 0 && cell.q < spec.cols && cell.r >= 0 && cell.r < spec.rows) onHexClick(cell.q, cell.r);
   }
@@ -112,8 +134,8 @@ export default function TacticalPlate({
           role="img"
           aria-label="Floor plan"
           style={{
-            width: `${Math.round(W * zoom)}px`,
-            height: `${Math.round(H * zoom)}px`,
+            width: `${Math.round(boxW)}px`,
+            height: `${Math.round(boxH)}px`,
             cursor: onHexClick ? "pointer" : undefined,
           }}
           onClick={handleClick}

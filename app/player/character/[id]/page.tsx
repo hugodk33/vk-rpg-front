@@ -1,10 +1,12 @@
 import { redirect } from "next/navigation";
 import { loadPlayerConsole } from "@/lib/player";
-import PlayerConsole from "@/components/player/PlayerConsole";
+import PlayerConsole, { type PlayerTab } from "@/components/player/PlayerConsole";
 
 export const dynamic = "force-dynamic";
 
-const PLAYER_TABS = new Set(["turn", "journey", "chronicle", "table", "gear", "sheet"]);
+const PLAYER_TABS = new Set<string>([
+  "turn", "journey", "chronicle", "characters", "items", "skills", "advantages", "disadvantages", "locations", "gear", "sheet",
+]);
 
 export default async function PlayerCharacterViewerPage({
   params,
@@ -26,7 +28,7 @@ export default async function PlayerCharacterViewerPage({
     <PlayerConsole
       {...data}
       basePath={basePath}
-      initialTab={tab && PLAYER_TABS.has(tab) ? (tab as "turn" | "journey" | "chronicle" | "table" | "gear" | "sheet") : "sheet"}
+      initialTab={tab && PLAYER_TABS.has(tab) ? (tab as "turn" | "journey" | "chronicle" | PlayerTab | "gear" | "sheet") : "sheet"}
     />
   );
 }

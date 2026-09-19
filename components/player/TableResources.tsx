@@ -20,7 +20,7 @@ import ItemIcon from "@/components/items/ItemIcon";
    so the player browses everything from a single seat.
    ============================================================ */
 
-type ResourceTab = "characters" | "items" | "skills" | "advantages" | "disadvantages" | "locations";
+export type ResourceTab = "characters" | "items" | "skills" | "advantages" | "disadvantages" | "locations";
 
 interface TableResourcesProps {
   roster: TableCharacter[];
@@ -31,9 +31,12 @@ interface TableResourcesProps {
   advantages?: Advantage[];
   disadvantages?: Disadvantage[];
   locations?: Location[];
+  /** Controlled mode — the parent owns the selection and hides the strip. */
+  tab?: ResourceTab;
+  onTabChange?: (tab: ResourceTab) => void;
 }
 
-const TABS: Array<{ key: ResourceTab; label: string }> = [
+export const RESOURCE_TABS: Array<{ key: ResourceTab; label: string }> = [
   { key: "characters", label: "Characters" },
   { key: "items", label: "Items" },
   { key: "skills", label: "Skills" },
@@ -51,14 +54,22 @@ export default function TableResources({
   advantages = [],
   disadvantages = [],
   locations = [],
+  tab: controlledTab,
+  onTabChange,
 }: TableResourcesProps) {
-  const [tab, setTab] = useState<ResourceTab>("characters");
+  const [internalTab, setInternalTab] = useState<ResourceTab>("characters");
+  const tab = controlledTab ?? internalTab;
+  const setTab = (next: ResourceTab) => {
+    onTabChange?.(next);
+    setInternalTab(next);
+  };
   const npcIds = new Set(npcs.map((n) => n.character_id));
 
   return (
     <div className="space-y-5">
+      {controlledTab == null ? (
       <div role="tablist" aria-label="Table resources" className="flex items-center gap-1 border-b border-zinc-700/40 flex-wrap">
-        {TABS.map((t) => (
+        {RESOURCE_TABS.map((t) => (
           <button
             key={t.key}
             role="tab"
@@ -75,6 +86,7 @@ export default function TableResources({
           </button>
         ))}
       </div>
+      ) : null}
 
       {/* ---- characters ---- */}
       {tab === "characters" ? (

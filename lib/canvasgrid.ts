@@ -23,6 +23,7 @@
 import { centerOf, cellWidth, cellHeight, gridFrame, hexFromPoint, polygonPath, rotatePoint } from "./hexgrid";
 import { TERRAIN } from "./terrain";
 import type { DrawShape, HexTile, HexTileKind } from "./types";
+import type { TrailMove } from "./board";
 
 export type Point = { x: number; y: number };
 
@@ -83,18 +84,36 @@ export function canvasToGrid(spec: GridSpec, p: Point): Point {
 }
 
 /** Fill the canvas backing store for the DPR and run the draw routine.
-    `zoom` inflates the backing pixel grid (crisp at any scale) and scales
-    the whole draw; the CSS node should then be sized to zoom × logical W/H. */
-export function paintCanvas(cv: HTMLCanvasElement, W: number, H: number, draw: (ctx: CanvasRenderingContext2D) => void, zoom = 1): void {
+    `zoom` inflates the backing pixel grid (crisp at any scale); `fit`
+    letterboxes the draw into a fixed viewport (dx/dy offset, scale
+    factor): the drawing routine still uses the plate's logical W/H,
+    so a fixed-size canvas can host any grid at any zoom — the CSS node
+    should then be sized to `boxW x boxH` (already zoom-independent). */
+export function paintCanvas(
+  cv: HTMLCanvasElement,
+  W: number,
+  H: number,
+  draw: (ctx: CanvasRenderingContext2D) => void,
+  zoom = 1,
+  fit?: { scale: number; dx: number; dy: number; boxW: number; boxH: number }
+): void {
   const dpr = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
   const z = Number.isFinite(zoom) ? Math.max(0.1, zoom) : 1;
-  cv.width = Math.max(1, Math.round(W * z * dpr));
-  cv.height = Math.max(1, Math.round(H * z * dpr));
+  const boxW = fit ? Math.max(1, fit.boxW) : W;
+  const boxH = fit ? Math.max(1, fit.boxH) : H;
+  cv.width = Math.max(1, Math.round(boxW * z * dpr));
+  cv.height = Math.max(1, Math.round(boxH * z * dpr));
   const ctx = cv.getContext("2d");
   if (!ctx) return;
   ctx.setTransform(dpr * z, 0, 0, dpr * z, 0, 0);
-  ctx.clearRect(0, 0, W, H);
+  ctx.clearRect(0, 0, boxW, boxH);
+  ctx.save();
+  if (fit) {
+    ctx.translate(fit.dx, fit.dy);
+    ctx.scale(fit.scale, fit.scale);
+  }
   draw(ctx);
+  ctx.restore();
 }
 
 /** Run `fn` with the context rotated about the plate pivot (SVG-equivalent). */
@@ -1011,50 +1030,76 @@ export function drawPlateTokens(ctx: CanvasRenderingContext2D, W: number, H: num
   });
 }
 
-/** Movement trail + target ring, rotated with the grid. */
-export function drawPlateTrail(ctx: CanvasRenderingContext2D, W: number, H: number, spec: GridSpec, accent: string, from: { q: number; r: number } | null, to: { q: number; r: number } | null, markerId: string): void {
-  if (!to || to.q < 0 || to.r < 0 || to.q >= spec.cols || to.r >= spec.rows) return;
+/** Movement trails + target ring, rotated with the grid.
+    `moves` holds each token's from→to segments in queue order; segments
+    sharing a token id are joined into a dashed polyline with an arrowhead
+    at the final destination. */
+export function drawPlateTrail(ctx: CanvasRenderingContext2D, W: number, H: number, spec: GridSpec, accent: string, moves: TrailMove[], markerId: string): void {
+  if (!moves.length) return;
   const o = gridOffset(spec);
+  const inBounds = (c: { q: number; r: number }) => c && c.q >= 0 && c.r >= 0 && c.q < spec.cols && c.r < spec.rows;
+  const center = (c: { q: number; r: number }) => {
+    const p = centerOf(c.q, c.r, spec.orientation, spec.R);
+    return { x: o.x + p.x, y: o.y + p.y };
+  };
+
+  const last = moves[moves.length - 1];
+  void markerId;
+
   withRotated(ctx, W, H, spec.rotationDeg, () => {
-    const tp = centerOf(to.q, to.r, spec.orientation, spec.R);
-    const tx = o.x + tp.x;
-    const ty = o.y + tp.y;
+    if (inBounds(last.to)) {
+      const l = center(last.to);
+      ctx.save();
+      ctx.strokeStyle = accent;
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([3, 4]);
+      ctx.globalAlpha = 0.9;
+      ctx.beginPath();
+      ctx.arc(l.x, l.y, spec.R * 0.55, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
+    }
 
-    ctx.save();
-    ctx.strokeStyle = accent;
-    ctx.lineWidth = 1.5;
-    ctx.setLineDash([3, 4]);
-    ctx.globalAlpha = 0.9;
-    ctx.beginPath();
-    ctx.arc(tx, ty, spec.R * 0.55, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.setLineDash([]);
+    const byToken = new Map<string, TrailMove[]>();
+    for (const m of moves) {
+      const list = byToken.get(m.id) ?? [];
+      list.push(m);
+      byToken.set(m.id, list);
+    }
 
-    if (from && from.q >= 0 && from.r >= 0 && from.q < spec.cols && from.r < spec.rows) {
-      const fp = centerOf(from.q, from.r, spec.orientation, spec.R);
-      const fx = o.x + fp.x;
-      const fy = o.y + fp.y;
+    for (const segs of byToken.values()) {
+      const points: { x: number; y: number }[] = [];
+      for (const m of segs) {
+        if (m.from && inBounds(m.from)) points.push(center(m.from));
+        if (m.to && inBounds(m.to)) points.push(center(m.to));
+      }
+      if (points.length < 2) continue;
+      const final = points[points.length - 1];
+
+      ctx.save();
       ctx.globalAlpha = 0.85;
+      ctx.strokeStyle = accent;
       ctx.lineWidth = 2;
       ctx.setLineDash([2, 3]);
       ctx.beginPath();
-      ctx.moveTo(fx, fy);
-      ctx.lineTo(tx, ty);
+      ctx.moveTo(points[0].x, points[0].y);
+      for (let i = 1; i < points.length; i++) ctx.lineTo(points[i].x, points[i].y);
       ctx.stroke();
       ctx.setLineDash([]);
 
-      const ang = Math.atan2(ty - fy, tx - fx);
+      const prev = points[points.length - 2];
+      const ang = Math.atan2(final.y - prev.y, final.x - prev.x);
       const ah = 7;
       ctx.beginPath();
-      ctx.moveTo(tx, ty);
-      ctx.lineTo(tx - ah * Math.cos(ang - 0.35), ty - ah * Math.sin(ang - 0.35));
-      ctx.lineTo(tx - ah * Math.cos(ang + 0.35), ty - ah * Math.sin(ang + 0.35));
+      ctx.moveTo(final.x, final.y);
+      ctx.lineTo(final.x - ah * Math.cos(ang - 0.35), final.y - ah * Math.sin(ang - 0.35));
+      ctx.lineTo(final.x - ah * Math.cos(ang + 0.35), final.y - ah * Math.sin(ang + 0.35));
       ctx.closePath();
       ctx.fillStyle = accent;
       ctx.fill();
-      void markerId;
+      ctx.restore();
     }
-    ctx.restore();
   });
 }
 
