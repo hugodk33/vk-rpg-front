@@ -123,12 +123,17 @@ export function traceCell(ctx: CanvasRenderingContext2D, cx: number, cy: number,
 
 /* ------------------------- stroke layer (drawing) ------------------------ */
 
+/* Stroke weight is a FRACTION of the hex radius: a drawn vector stays a
+   thin architectural line against the cell, instead of scaling 1:1 with
+   the grid (which read as too thick on small/big hexes alike). */
+export const STROKE_RATIO = 0.075;
+
 export function shapeScale(shape: DrawShape, R: number): number {
   return shape.unit === "hexR" ? R : R / LEGACY_R;
 }
 
 export function strokeWeightPx(shape: DrawShape, R: number): number {
-  return Math.max(0.5, shape.size * shapeScale(shape, R));
+  return Math.max(0.5, shape.size * shapeScale(shape, R) * STROKE_RATIO);
 }
 
 interface PathSeg {

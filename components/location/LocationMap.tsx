@@ -50,7 +50,7 @@ export default function LocationMap({
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [zoom, setZoom] = useState(1);
 
-  const plate: CanvasPlate = useMemo(() => plateCanvas(hex ?? {}, 18, 34, 320, 240), [hex]);
+  const plate: CanvasPlate = useMemo(() => plateCanvas(hex ?? {}, 26, 34, 320, 240), [hex]);
   const spec: GridSpec = useMemo(() => ({ ...plate.spec, rotationDeg: hex?.rotationDeg ?? 0 }), [plate, hex]);
   const { W, H } = plate;
 

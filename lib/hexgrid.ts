@@ -107,6 +107,14 @@ export function hexDir(from: { q: number; r: number }, to: { q: number; r: numbe
   return i >= 0 ? i : 0;
 }
 
+/** Distância axial em hexes entre duas células (independe da orientação). */
+export function hexDist(a: { q: number; r: number }, b: { q: number; r: number }): number {
+  const dq = a.q - b.q;
+  const dr = a.r - b.r;
+  const ds = -dq - dr;
+  return Math.max(Math.abs(dq), Math.abs(dr), Math.abs(ds));
+}
+
 /** Point exchange at `pivot`, by `deg` degrees (SVG clockwise). */
 export function rotatePoint(p: { x: number; y: number }, pivot: { x: number; y: number }, deg: number): { x: number; y: number } {
   if (!deg) return p;

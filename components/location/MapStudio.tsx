@@ -55,7 +55,7 @@ import ZoomControls from "@/components/map/ZoomControls";
 import type { DrawAssetKind, DrawShape, HexTile, HexTileKind, Location } from "@/lib/types";
 import { TERRAIN } from "@/lib/terrain";
 
-const R = 24;
+const R = 30;
 const M = 48;
 const HEX_NEIGHBORS = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, -1], [-1, 1]] as const;
 
@@ -553,7 +553,7 @@ export default function MapStudio({ location }: MapStudioProps) {
       {/* header */}
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-3 border-b border-zinc-800">
         <div className="flex items-center gap-2.5">
-          <span aria-hidden className="font-mono text-base leading-none text-amber-300">◉</span>
+          <span aria-hidden className="font-mono text-base leading-none text-green-300">◉</span>
           <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-zinc-400">Map studio</span>
           <span className="font-mono text-[9px] uppercase tracking-widest text-zinc-600 hidden sm:inline">
             {cols}×{rows} · {orientation} · {formatHexScale(sizeNum)}
@@ -572,7 +572,7 @@ export default function MapStudio({ location }: MapStudioProps) {
           <button type="button" onClick={clearStrokes} className="font-mono text-[9px] uppercase tracking-widest px-2 py-1.5 rounded border border-zinc-700/50 text-zinc-400 hover:text-red-300 transition-colors">
             Clear strokes
           </button>
-          <button type="button" onClick={save} disabled={saving} className="bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-amber-50 text-sm font-semibold px-4 py-1.5 rounded-lg transition-colors">
+          <button type="button" onClick={save} disabled={saving} className="bg-green-600 hover:bg-green-500 disabled:opacity-50 text-green-50 text-sm font-semibold px-4 py-1.5 rounded-lg transition-colors">
             {saving ? "Saving…" : "Save map"}
           </button>
         </div>
@@ -600,7 +600,7 @@ export default function MapStudio({ location }: MapStudioProps) {
                   type="button"
                   onClick={() => setTool(t)}
                   className={`flex flex-col items-center gap-0.5 rounded-lg border px-1 py-1.5 transition-colors ${
-                    tool === t ? "border-amber-500/70 bg-amber-500/10 text-amber-300" : "border-zinc-700/50 bg-zinc-800/40 text-zinc-500 hover:text-zinc-300"
+                    tool === t ? "border-green-500/70 bg-green-500/10 text-green-300" : "border-zinc-700/50 bg-zinc-800/40 text-zinc-500 hover:text-zinc-300"
                   }`}
                 >
                   <span className="text-sm leading-none">{icon}</span>
@@ -699,7 +699,7 @@ export default function MapStudio({ location }: MapStudioProps) {
                       onClick={() => setAssetKind(k)}
                       title={ASSET_LABELS[k]}
                       className={`flex flex-col items-center gap-0.5 rounded-md border px-1 py-1 transition-colors ${
-                        assetKind === k ? "border-amber-500/70 bg-amber-500/10" : "border-zinc-700/40 hover:border-zinc-600"
+                        assetKind === k ? "border-green-500/70 bg-green-500/10" : "border-zinc-700/40 hover:border-zinc-600"
                       }`}
                     >
                       <AssetPreview kind={k} dim={assetKind !== k} />
@@ -732,7 +732,7 @@ export default function MapStudio({ location }: MapStudioProps) {
                   step={0.1}
                   value={assetScale}
                   onChange={(e) => setAssetScale(Number(e.target.value))}
-                  className="w-full accent-amber-500"
+                  className="w-full accent-green-500"
                 />
               </div>
               <div>
@@ -776,7 +776,7 @@ export default function MapStudio({ location }: MapStudioProps) {
                     onClick={() => setTerrain(k as HexTileKind)}
                     title={meta.label}
                     className={`flex items-center gap-1.5 rounded-md border px-1.5 py-1 transition-colors ${
-                      terrain === k ? "border-amber-500/70 bg-amber-500/10" : "border-zinc-700/40 hover:border-zinc-600"
+                      terrain === k ? "border-green-500/70 bg-green-500/10" : "border-zinc-700/40 hover:border-zinc-600"
                     }`}
                   >
                     <span
@@ -816,7 +816,7 @@ export default function MapStudio({ location }: MapStudioProps) {
                       type="button"
                       onClick={() => setStrokeWeight(w)}
                       className={`h-7 w-7 rounded-md border flex items-center justify-center transition-colors ${
-                        strokeWeight === w ? "border-amber-500/70 bg-amber-500/10" : "border-zinc-700/40 hover:border-zinc-600"
+                        strokeWeight === w ? "border-green-500/70 bg-green-500/10" : "border-zinc-700/40 hover:border-zinc-600"
                       }`}
                       title={`${w}px`}
                     >
@@ -830,7 +830,7 @@ export default function MapStudio({ location }: MapStudioProps) {
                   type="button"
                   onClick={() => setSnap((s) => !s)}
                   className={`w-full rounded-md border px-2 py-1 text-[10px] uppercase tracking-widest font-mono transition-colors ${
-                    snap ? "border-amber-500/70 bg-amber-500/10 text-amber-300" : "border-zinc-700/40 text-zinc-500"
+                    snap ? "border-green-500/70 bg-green-500/10 text-green-300" : "border-zinc-700/40 text-zinc-500"
                   }`}
                 >
                   Snap to grid {snap ? "on" : "off"}
@@ -846,14 +846,14 @@ export default function MapStudio({ location }: MapStudioProps) {
               <button
                 type="button"
                 onClick={() => setIsIndoor(false)}
-                className={`rounded-md border px-1.5 py-1 text-[10px] uppercase tracking-widest font-mono transition-colors ${!isIndoor ? "border-amber-500/70 bg-amber-500/10 text-amber-300" : "border-zinc-700/40 text-zinc-500"}`}
+                className={`rounded-md border px-1.5 py-1 text-[10px] uppercase tracking-widest font-mono transition-colors ${!isIndoor ? "border-green-500/70 bg-green-500/10 text-green-300" : "border-zinc-700/40 text-zinc-500"}`}
               >
                 Exterior
               </button>
               <button
                 type="button"
                 onClick={() => setIsIndoor(true)}
-                className={`rounded-md border px-1.5 py-1 text-[10px] uppercase tracking-widest font-mono transition-colors ${isIndoor ? "border-amber-500/70 bg-amber-500/10 text-amber-300" : "border-zinc-700/40 text-zinc-500"}`}
+                className={`rounded-md border px-1.5 py-1 text-[10px] uppercase tracking-widest font-mono transition-colors ${isIndoor ? "border-green-500/70 bg-green-500/10 text-green-300" : "border-zinc-700/40 text-zinc-500"}`}
               >
                 Interior
               </button>

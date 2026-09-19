@@ -1,13 +1,20 @@
 import { notFound } from "next/navigation";
 import { api } from "@/lib/api";
-import LocationForm from "@/components/forms/LocationForm";
-import MapStudio from "@/components/location/MapStudio";
+import LocationEditor from "@/components/location/LocationEditor";
 import type { GameTableLocations, Location } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
-export default async function EditLocationPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function EditLocationPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
   const { id } = await params;
+  const sp = await searchParams;
+  const defaultTab = sp.tab === "map" ? "map" : "form";
 
   let location: Location | undefined;
   try {
@@ -27,16 +34,11 @@ export default async function EditLocationPage({ params }: { params: Promise<{ i
   }
 
   return (
-    <div className="max-w-6xl mx-auto p-6 space-y-10">
-      <LocationForm initial={location} tableId={location.tableId} allLocations={all?.locations ?? []} />
-      <div>
-        <div className="mb-3">
-          <span className="font-mono text-[11px] uppercase tracking-widest text-zinc-500">
-            Plate layer — terrain tiles · SVG strokes · grid seam
-          </span>
-        </div>
-        <MapStudio location={location} />
-      </div>
-    </div>
+    <LocationEditor
+      location={location}
+      tableId={location.tableId}
+      allLocations={all?.locations ?? []}
+      defaultTab={defaultTab}
+    />
   );
 }

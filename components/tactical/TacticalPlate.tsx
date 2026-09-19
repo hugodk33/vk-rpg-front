@@ -55,8 +55,8 @@ export default function TacticalPlate({
   mark = null,
   onHexClick,
   accent = "#38bdf8",
-  R = 18,
-  M = 10,
+  R = 24,
+  M = 12,
 }: TacticalPlateProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [zoom, setZoom] = useState(1);

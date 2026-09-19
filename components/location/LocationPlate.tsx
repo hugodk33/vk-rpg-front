@@ -518,8 +518,8 @@ export default function LocationPlate({ location, tableId, mode = "narrator" }: 
               </div>
               {!isPlayer && location.id ? (
                 <Link
-                  href={`/location/${location.id}/edit`}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-amber-600/60 bg-amber-600/10 px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest text-amber-300 transition-colors hover:bg-amber-600/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-600/60"
+                  href={`/location/${location.id}/edit?tab=map`}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-green-600/60 bg-green-600/10 px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest text-green-300 transition-colors hover:bg-green-600/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-green-600/60"
                 >
                   Edit map
                 </Link>

@@ -8,7 +8,7 @@ import { api } from "@/lib/api";
 import { skillLabel, skillLevel } from "@/lib/skill";
 import { narrationBoard, tokenAt } from "@/lib/board";
 import type { BoardToken } from "@/lib/board";
-import { hexDir } from "@/lib/hexgrid";
+import { hexDir, hexDist } from "@/lib/hexgrid";
 import TacticalPlate from "@/components/tactical/TacticalPlate";
 import QueueProcession from "@/components/session/QueueProcession";
 import DiceMystery from "@/components/session/DiceMystery";
@@ -57,7 +57,7 @@ interface SessionClientProps {
   role?: "narrator" | "player";
 }
 
-type SessionTab = "turn" | "dice" | "map" | "journal";
+type SessionTab = "turn" | "dice" | "journal";
 
 const queuePos = (entry: QueueEntry): number => {
   const n = Number(entry.queue);
@@ -76,7 +76,6 @@ const icon = (path: string, cls = "w-4 h-4") => (
 const TABS: Array<{ key: SessionTab; label: string; icon: string }> = [
   { key: "turn", label: "Turn", icon: "M4 5a2 2 0 012-2h12a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm0 8a2 2 0 012-2h12a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm0 8a2 2 0 012-2h6a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2z" },
   { key: "dice", label: "Dice", icon: "M12 3l1.5 6.5L20 11l-6.5 1.5L12 19l-1.5-6.5L4 11l6.5-1.5L12 3zM5 20l1-1M19 20l1-1" },
-  { key: "map", label: "Map", icon: "M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.553-.894L9 7m0 13l6-3m-6 3V7m6 10l4.447 2.724A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L16 4m-1 13V4" },
   { key: "journal", label: "Journal", icon: "M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" },
 ];
 
@@ -450,6 +449,10 @@ export default function SessionClient({
       queue: 1,
       target: actTarget || null,
       multitarget: false,
+      location_id: actionLocation?.id ?? null,
+      q: actHex?.q ?? null,
+      r: actHex?.r ?? null,
+      facing: actFacing,
     };
     try {
       const res = await fetch("/api/game-table-action", {
@@ -460,7 +463,7 @@ export default function SessionClient({
       const j = await res.json();
       if (j.success) {
         try { await advanceQueue(actorCharId); } catch { /* ignore */ }
-        setActDesc(""); setActRoll(""); setActTarget(""); router.refresh();
+        setActDesc(""); setActRoll(""); setActTarget(""); setActionHex(null); router.refresh();
       } else alert("Error: " + (j.error || "Unknown"));
     } catch (err: unknown) {
       alert("Network error: " + (err instanceof Error ? err.message : "Unknown"));
@@ -488,6 +491,20 @@ export default function SessionClient({
   const [moveTarget, setMoveTarget] = useState<null | { q: number; r: number }>(null);
   const [moveActor, setMoveActor] = useState<string>(() => pendingQueue[0]?.character_id || "");
 
+  /* ---- log-action map (hex da ação) ---- */
+  const [actionLocId, setActionLocId] = useState<string>(() => defaultLocation?.id ?? "");
+  const [actionHex, setActionHex] = useState<null | { q: number; r: number }>(null);
+
+  /* ---- test-on-map (alvo por distância) — integrado à action ---- */
+  const [actionMode, setActionMode] = useState<"move" | "melee" | "ranged">("move");
+  const combatRange = actionMode === "ranged" ? "ranged" : "melee";
+  const [combatActor, setCombatActor] = useState<string>(() => pendingQueue[0]?.character_id || "");
+  const [combatTarget, setCombatTarget] = useState<string>("");
+  const [meleeReach, setMeleeReach] = useState(3);
+  const [mapCastAttr, setMapCastAttr] = useState<"st" | "dx" | "iq" | "ht">("dx");
+  const [mapRoll, setMapRoll] = useState<null | { r: number[]; tot: number; j: Judgment }>(null);
+  const [mapSaving, setMapSaving] = useState(false);
+
   const mapLocation = locations.find((l) => l.id === locSel) ?? defaultLocation;
   const board = narrationBoard(latestBeat, mapLocation);
 
@@ -506,6 +523,38 @@ export default function SessionClient({
   const mapTokens: BoardToken[] = [...tokenById.values()];
 
   const actorPos = (moveActor || actorCharId) ? tokenAt(mapTokens, moveActor || actorCharId) : null;
+
+  /* ---- log-action hex (sempre visível, acima das tabs) ---- */
+  const actionLocation = locations.find((l) => l.id === actionLocId) ?? defaultLocation;
+  const actActorHex = actorCharId ? tokenAt(mapTokens, actorCharId) : null;
+  const actHex = actionHex ?? actActorHex;
+  const actFacing = actActorHex && actHex ? hexDir(actActorHex, actHex) : 0;
+
+  /* ---- test-on-map: distância + alvo ajustado ---- */
+  const atkPos = combatActor ? tokenAt(mapTokens, combatActor) : null;
+  const tgtPos = combatTarget ? tokenAt(mapTokens, combatTarget) : null;
+  const distance = atkPos && tgtPos ? hexDist(atkPos, tgtPos) : null;
+  const mapAttacker = characters.find((c) => c.id === combatActor);
+  const mapBaseTarget =
+    mapAttacker ? mapAttacker[mapCastAttr] ?? mapAttacker.sheet?.[mapCastAttr] ?? 10 : 10;
+  const combat =
+    atkPos && tgtPos && distance != null
+      ? combatRange === "ranged"
+        ? {
+            penalty: -(distance - 1),
+            label: `Ranged · ${distance} hex${distance === 1 ? "" : "es"}`,
+            reachable: true,
+            dist: distance,
+          }
+        : distance <= 1
+        ? { penalty: 0, label: "Melee · adjacent", reachable: true, dist: distance }
+        : distance <= meleeReach
+        ? { penalty: -2 * (distance - 1), label: `Melee · reach (${distance} hex)`, reachable: true, dist: distance }
+        : { penalty: -2 * (distance - 1), label: `Out of reach (reach ${meleeReach})`, reachable: false, dist: distance }
+      : null;
+  const adjustedTarget = combat ? mapBaseTarget + combat.penalty : mapBaseTarget;
+  const combatMark = actionMode !== "move" && combatTarget && tgtPos ? { q: tgtPos.q, r: tgtPos.r } : null;
+  const plateMark = combatMark ?? moveTarget;
 
   function setMapLocation(id: string) {
     setLocSel(id);
@@ -548,6 +597,55 @@ export default function SessionClient({
       }
     } catch (err: unknown) {
       alert("Network error: " + (err instanceof Error ? err.message : "Unknown"));
+    }
+  }
+
+  function rollMapTest() {
+    if (!combat?.reachable) return;
+    const { r, tot } = performRoll(3, "6", combat.penalty);
+    const j = judgeRoll(tot, adjustedTarget);
+    setMapRoll({ r, tot, j });
+  }
+
+  async function logMapTest() {
+    if (!combat?.reachable || !combatActor || !combatTarget || !atkPos) return;
+    if (!mapRoll) { rollMapTest(); return; }
+    const tgtName = charName(combatTarget);
+    const posture = combatRange === "melee" ? "Melee" : "Ranged";
+    const payload = {
+      narrations_id: latestNarrationId || null,
+      character_id: combatActor,
+      description: `${posture} attack on ${tgtName} — ${combat.dist} hex · target ${adjustedTarget}`,
+      dice_roll: `${mapRoll.r.join("+")}=${mapRoll.tot}`,
+      queue: nextQueuePos,
+      target: combatTarget,
+      q: atkPos.q,
+      r: atkPos.r,
+      facing: tgtPos ? hexDir(atkPos, tgtPos) : 0,
+      location_id: mapLocation?.id ?? null,
+    };
+    setMapSaving(true);
+    try {
+      const res = await fetch("/api/game-table-action", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const j = await res.json();
+      if (j.success) {
+        if (pendingQueue.some((q) => q.character_id === combatActor)) {
+          try { await advanceQueue(combatActor); } catch { /* ignore */ }
+        }
+        setMapRoll(null);
+        setCombatTarget("");
+        router.refresh();
+      } else {
+        alert("Error: " + (j.error || "Unknown"));
+      }
+    } catch (err: unknown) {
+      alert("Network error: " + (err instanceof Error ? err.message : "Unknown"));
+    } finally {
+      setMapSaving(false);
     }
   }
 
@@ -594,6 +692,276 @@ export default function SessionClient({
         </div>
         {latestNarration ? (
           <p className="text-sm text-zinc-400 leading-relaxed italic border-t border-zinc-700/40 px-5 py-3">{latestNarration}</p>
+        ) : null}
+      </div>
+
+      {/* ================= MAP & ACTION (always visible, between narration and tabs) ================= */}
+      <div className="space-y-4 mb-6">
+        <div className="bg-zinc-900/80 border border-zinc-700/40 rounded-xl p-5">
+          <div className="flex flex-wrap items-center gap-3 mb-4">
+            <span className={`w-2.5 h-2.5 rounded-full ${T.dot}`} style={{ boxShadow: `0 0 8px ${T.shadow}` }} />
+            <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">Floor plan</span>
+            {locations.length > 1 ? (
+              <select
+                value={mapLocation?.id ?? ""}
+                onChange={(e) => setMapLocation(e.target.value)}
+                className={`${inputCls(T.inputBorder)} max-w-xs`}
+              >
+                {locations.map((l) => (
+                  <option key={l.id} value={l.id} className="bg-zinc-800">
+                    {l.name || "Unnamed"}
+                  </option>
+                ))}
+              </select>
+            ) : mapLocation ? (
+              <span className="text-sm font-semibold text-zinc-100">{mapLocation.name}</span>
+            ) : (
+              <span className="text-sm text-zinc-500 italic">No floor plan registered yet</span>
+            )}
+            {mapLocation?.hex?.width != null ? (
+              <span className="ml-auto font-mono text-[10px] text-zinc-500 uppercase tracking-widest">
+                {mapLocation.hex.width}×{mapLocation.hex.height} hex · {mapLocation.hex.sizeM ?? 1}m/hex
+              </span>
+            ) : null}
+          </div>
+
+          {mapLocation ? (
+            <TacticalPlate
+              location={mapLocation}
+              tokens={mapTokens}
+              trail={board.trail}
+              mark={plateMark}
+              accent={T.hex}
+              R={28}
+              M={16}
+              onHexClick={
+                !isPlayer
+                  ? (q, r) => {
+                      if (actionMode !== "move") {
+                        const t = mapTokens.find((m) => m.q === q && m.r === r);
+                        setCombatTarget(t?.id ?? "");
+                        if (t?.q != null && t.r != null) {
+                          setActionLocId(mapLocation?.id ?? "");
+                          setActionHex({ q: t.q, r: t.r });
+                        }
+                      } else {
+                        setMoveTarget({ q, r });
+                        setActionLocId(mapLocation?.id ?? "");
+                        setActionHex({ q, r });
+                      }
+                    }
+                  : undefined
+              }
+            />
+          ) : (
+            <p className="text-sm text-zinc-600 font-mono italic">
+              Register a location with a hex grid to open the tactical map.
+            </p>
+          )}
+        </div>
+
+        {/* ---- integrated action: move / melee / ranged + dice ---- */}
+        {!isPlayer ? (
+          <div className="bg-zinc-900/80 border border-zinc-700/40 rounded-xl p-5">
+            <div className="flex flex-wrap items-center gap-3 mb-4">
+              <span className={`w-2.5 h-2.5 rounded-full ${T.dot}`} style={{ boxShadow: `0 0 8px ${T.shadow}` }} />
+              <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">Action on map</span>
+              <div className="flex items-center gap-1">
+                {(["move", "melee", "ranged"] as const).map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => { setActionMode(m); setMapRoll(null); }}
+                    className={`font-mono text-[10px] font-semibold uppercase tracking-widest px-3 py-1 rounded-lg border transition-colors ${
+                      actionMode === m ? T.borderCta + " text-zinc-100" : "border-zinc-700/50 text-zinc-500 hover:text-zinc-300"
+                    }`}
+                  >
+                    {m}
+                  </button>
+                ))}
+              </div>
+              {actionMode === "melee" ? (
+                <div className="flex items-center gap-1.5">
+                  <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">Reach</span>
+                  <button
+                    type="button"
+                    onClick={() => setMeleeReach((v) => Math.max(1, v - 1))}
+                    className="w-7 h-7 bg-zinc-800/60 border border-zinc-700/50 rounded-lg text-zinc-300 hover:bg-zinc-700 transition-colors leading-none"
+                  >
+                    −
+                  </button>
+                  <span className={`w-7 text-center font-mono text-sm font-bold ${T.text}`}>{meleeReach}</span>
+                  <button
+                    type="button"
+                    onClick={() => setMeleeReach((v) => Math.min(6, v + 1))}
+                    className="w-7 h-7 bg-zinc-800/60 border border-zinc-700/50 rounded-lg text-zinc-300 hover:bg-zinc-700 transition-colors leading-none"
+                  >
+                    +
+                  </button>
+                </div>
+              ) : null}
+            </div>
+
+            {actionMode === "move" ? (
+              <>
+                <div className="flex flex-wrap items-center gap-3">
+                  <select
+                    value={moveActor}
+                    onChange={(e) => { setMoveActor(e.target.value); setMoveTarget(null); }}
+                    className={`${inputCls(T.inputBorder)} max-w-xs`}
+                  >
+                    <option value="" className="bg-zinc-800">
+                      {actorCharId ? `Current: ${charName(actorCharId)}` : "Pick who moves…"}
+                    </option>
+                    {characters
+                      .filter((c) => moveActor !== "" || c.id !== actorCharId)
+                      .map((c) => (
+                        <option key={c.id} value={c.id} className="bg-zinc-800">
+                          {c.name || c.username || "Unknown"}{npcIds.includes(c.id) ? " — NPC" : ""}
+                        </option>
+                      ))}
+                  </select>
+                  <span className="text-sm text-zinc-500 flex-1 min-w-0">
+                    {shownActor ? <b className="text-zinc-200">{charName(shownActor)}</b> : null} {actorPos ? (
+                      <span className="font-mono text-[12px] text-zinc-400">at hex {actorPos.q},{actorPos.r}</span>
+                    ) : (
+                      <span className="text-zinc-600 italic">not placed yet</span>
+                    )}
+                    {moveTarget ? (
+                      <span className="font-mono text-[12px] text-emerald-300 ml-2">→ {moveTarget.q},{moveTarget.r}</span>
+                    ) : null}
+                  </span>
+                  <button
+                    onClick={logMove}
+                    disabled={!moveTarget}
+                    className={`${T.btnFill} text-sm font-bold px-4 py-2 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed`}
+                  >
+                    Log move {moveTarget ? `→ ${moveTarget.q},${moveTarget.r}` : "· click a hex"}
+                  </button>
+                </div>
+                <p className="mt-2 font-mono text-[10px] text-zinc-600 uppercase tracking-widest">
+                  each logged move becomes an action with the destination hex: who? {shownActor ? charName(shownActor) : "—"} · where? {mapLocation?.name ?? "—"} · from {actorPos ? `${actorPos.q},${actorPos.r}` : "—"} → {moveTarget ? `${moveTarget.q},${moveTarget.r}` : "click a hex"}
+                </p>
+              </>
+            ) : (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Attacker</label>
+                    <select
+                      value={combatActor}
+                      onChange={(e) => { setCombatActor(e.target.value); setMapRoll(null); setCombatTarget(""); }}
+                      className={inputCls(T.inputBorder)}
+                    >
+                      {characters.map((c) => (
+                        <option key={c.id} value={c.id} className="bg-zinc-800">
+                          {c.name || c.username || "Unknown"}{npcIds.includes(c.id) ? " — NPC" : ""}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="mt-2 flex items-center gap-3">
+                      <span className="font-mono text-[9px] uppercase tracking-widest text-zinc-600">Basis</span>
+                      <select
+                        value={mapCastAttr}
+                        onChange={(e) => { setMapCastAttr(e.target.value as "st" | "dx" | "iq" | "ht"); setMapRoll(null); }}
+                        className="bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-2 py-1 text-zinc-100 text-sm focus:outline-none"
+                      >
+                        {["st", "dx", "iq", "ht"].map((s) => (
+                          <option key={s} value={s} className="bg-zinc-800">{s.toUpperCase()}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Target</label>
+                    <select
+                      value={combatTarget}
+                      onChange={(e) => { setCombatTarget(e.target.value); setMapRoll(null); }}
+                      className={inputCls(T.inputBorder)}
+                    >
+                      <option value="" className="bg-zinc-800">
+                        …click a token on the map
+                      </option>
+                      {mapTokens
+                        .filter((t) => t.q != null && t.r != null && t.id !== combatActor)
+                        .map((t) => (
+                          <option key={t.id} value={t.id} className="bg-zinc-800">
+                            {t.name} — {t.q},{t.r}
+                          </option>
+                        ))}
+                    </select>
+                    <p className="mt-2 font-mono text-[10px] text-zinc-600 uppercase tracking-widest">
+                      {combatTarget ? `hex ${tgtPos ? `${tgtPos.q},${tgtPos.r}` : "—"}` : "click a token on the map"}
+                    </p>
+                  </div>
+
+                  <div>
+                    <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Resolution</span>
+                    <div className="flex flex-col gap-1.5 rounded-lg border border-zinc-700/40 bg-zinc-800/30 px-3 py-2">
+                      {combat ? (
+                        <>
+                          <span className="flex items-center justify-between font-mono text-[11px]">
+                            <span className="text-zinc-500 uppercase tracking-widest text-[10px]">Distance</span>
+                            <b className={`tabular-nums ${T.text}`}>{combat.dist} hex</b>
+                          </span>
+                          <span className="flex items-center justify-between font-mono text-[11px]">
+                            <span className="text-zinc-500 uppercase tracking-widest text-[10px]">Posture</span>
+                            <span className={combat.reachable ? "text-zinc-200" : "text-red-400"}>{combat.label}</span>
+                          </span>
+                          <span className="flex items-center justify-between font-mono text-[11px]">
+                            <span className="text-zinc-500 uppercase tracking-widest text-[10px]">Penalty</span>
+                            <b className={`tabular-nums ${combat.penalty >= 0 ? "text-emerald-300" : "text-amber-300"}`}>
+                              {combat.penalty >= 0 ? "+0" : combat.penalty}
+                            </b>
+                          </span>
+                          <span className="flex items-center justify-between font-mono text-[13px] border-t border-zinc-700/40 pt-1.5">
+                            <span className="text-zinc-500 uppercase tracking-widest text-[10px]">Target</span>
+                            <b className={`tabular-nums font-bold ${combat.reachable ? (adjustedTarget <= 4 ? "text-emerald-300" : T.text) : "text-red-400"}`}>
+                              {mapBaseTarget}{combat.penalty ? ` ${combat.penalty > 0 ? "+" : ""}${combat.penalty} = ${adjustedTarget}` : ""}
+                            </b>
+                          </span>
+                        </>
+                      ) : (
+                        <span className="text-[11px] text-zinc-500 italic">
+                          click a token on the map to resolve
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-4 flex flex-wrap items-center gap-3">
+                  {mapRoll ? (
+                    <span className={`rounded-lg border px-3 py-1.5 font-mono text-sm tabular-nums ${mapRoll.j.ok ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-300" : "border-red-500/50 bg-red-500/10 text-red-300"}`}>
+                      {mapRoll.r.join(" + ")} = {mapRoll.tot} · {mapRoll.j.text}
+                    </span>
+                  ) : (
+                    <span className="text-sm text-zinc-600 italic">3d6 · {combat ? `under ${adjustedTarget}` : "awaiting combatants"}</span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={rollMapTest}
+                    disabled={!combat?.reachable}
+                    className="bg-zinc-700 hover:bg-zinc-600 text-zinc-200 text-sm font-bold px-4 py-2 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    Roll 3d6
+                  </button>
+                  <button
+                    type="button"
+                    onClick={logMapTest}
+                    disabled={mapSaving || !mapRoll || !combat?.reachable}
+                    className={`${T.btnFill} text-sm font-bold px-4 py-2 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed`}
+                  >
+                    {mapSaving ? "Saving…" : "+ Log test"}
+                  </button>
+                </div>
+                <p className="mt-2 font-mono text-[10px] text-zinc-600 uppercase tracking-widest">
+                  melee: full at adjacent · −2/hex beyond (reach {meleeReach}) — ranged: −1/hex of distance · logged as an action with the attacker&apos;s hex {combatActor ? charName(combatActor) : "—"}
+                </p>
+              </>
+            )}
+          </div>
         ) : null}
       </div>
 
@@ -841,6 +1209,16 @@ export default function SessionClient({
               {!isPlayer ? (
                 <div className="border-l border-zinc-700/40 pl-6 space-y-3">
                   <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block">Log action</span>
+                  <div className="rounded-lg border border-zinc-700/40 bg-zinc-800/30 px-3 py-2">
+                    <span className="font-mono text-[9px] uppercase tracking-widest text-zinc-600">Action hex (from the map above)</span>
+                    <p className="mt-0.5 font-mono text-[12px] text-zinc-300">
+                      {actHex ? (
+                        <>hex {actHex.q},{actHex.r} · {actionLocation?.name ?? "—"}{actActorHex ? ` · facing from ${actActorHex.q},${actActorHex.r}` : ""}</>
+                      ) : (
+                        "click a hex on the floor plan"
+                      )}
+                    </p>
+                  </div>
                   <div>
                     <label className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Dice (prefilled)</label>
                     <input type="text" value={actRoll} onChange={(e) => setActRoll(e.target.value)} placeholder="3d6+2=14" className={inputCls(T.inputBorder)} />
@@ -863,101 +1241,6 @@ export default function SessionClient({
               ) : null}
             </div>
           </div>
-        </div>
-      ) : null}
-
-      {/* ================= MAP ================= */}
-      {tab === "map" ? (
-        <div className="space-y-4">
-          <div className="bg-zinc-900/80 border border-zinc-700/40 rounded-xl p-5">
-            <div className="flex flex-wrap items-center gap-3 mb-4">
-              <span className={`w-2.5 h-2.5 rounded-full ${T.dot}`} style={{ boxShadow: `0 0 8px ${T.shadow}` }} />
-              <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">Floor plan</span>
-              {locations.length > 1 ? (
-                <select
-                  value={mapLocation?.id ?? ""}
-                  onChange={(e) => setMapLocation(e.target.value)}
-                  className={`${inputCls(T.inputBorder)} max-w-xs`}
-                >
-                  {locations.map((l) => (
-                    <option key={l.id} value={l.id} className="bg-zinc-800">
-                      {l.name || "Unnamed"}
-                    </option>
-                  ))}
-                </select>
-              ) : mapLocation ? (
-                <span className="text-sm font-semibold text-zinc-100">{mapLocation.name}</span>
-              ) : (
-                <span className="text-sm text-zinc-500 italic">No floor plan registered yet</span>
-              )}
-              {mapLocation?.hex?.width != null ? (
-                <span className="ml-auto font-mono text-[10px] text-zinc-500 uppercase tracking-widest">
-                  {mapLocation.hex.width}×{mapLocation.hex.height} hex · {mapLocation.hex.sizeM ?? 1}m/hex
-                </span>
-              ) : null}
-            </div>
-
-            {mapLocation ? (
-              <TacticalPlate
-                location={mapLocation}
-                tokens={mapTokens}
-                trail={board.trail}
-                mark={moveTarget}
-                accent={T.hex}
-                R={22}
-                M={14}
-                onHexClick={!isPlayer ? (q, r) => setMoveTarget({ q, r }) : undefined}
-              />
-            ) : (
-              <p className="text-sm text-zinc-600 font-mono italic">
-                Register a location with a hex grid to open the tactical map.
-              </p>
-            )}
-          </div>
-
-          {!isPlayer ? (
-            <div className="bg-zinc-900/80 border border-zinc-700/40 rounded-xl p-5">
-              <div className="flex flex-wrap items-center gap-3">
-                <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">Move</span>
-                <select
-                  value={moveActor}
-                  onChange={(e) => { setMoveActor(e.target.value); setMoveTarget(null); }}
-                  className={`${inputCls(T.inputBorder)} max-w-xs`}
-                >
-                  <option value="" className="bg-zinc-800">
-                    {actorCharId ? `Current: ${charName(actorCharId)}` : "Pick who moves…"}
-                  </option>
-                  {characters
-                    .filter((c) => moveActor !== "" || c.id !== actorCharId)
-                    .map((c) => (
-                      <option key={c.id} value={c.id} className="bg-zinc-800">
-                        {c.name || c.username || "Unknown"}{npcIds.includes(c.id) ? " — NPC" : ""}
-                      </option>
-                    ))}
-                </select>
-                <span className="text-sm text-zinc-500 flex-1 min-w-0">
-                  {shownActor ? <b className="text-zinc-200">{charName(shownActor)}</b> : null} {actorPos ? (
-                    <span className="font-mono text-[12px] text-zinc-400">at hex {actorPos.q},{actorPos.r}</span>
-                  ) : (
-                    <span className="text-zinc-600 italic">not placed yet</span>
-                  )}
-                  {moveTarget ? (
-                    <span className="font-mono text-[12px] text-emerald-300 ml-2">→ {moveTarget.q},{moveTarget.r}</span>
-                  ) : null}
-                </span>
-                <button
-                  onClick={logMove}
-                  disabled={!moveTarget}
-                  className={`${T.btnFill} text-sm font-bold px-4 py-2 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed`}
-                >
-                  Log move {moveTarget ? `→ ${moveTarget.q},${moveTarget.r}` : "· click a hex"}
-                </button>
-              </div>
-              <p className="mt-2 font-mono text-[10px] text-zinc-600 uppercase tracking-widest">
-                each logged move becomes an action: who? {shownActor ? charName(shownActor) : "—"} · where? {mapLocation?.name ?? "—"} · from {actorPos ? `${actorPos.q},${actorPos.r}` : "—"} → {moveTarget ? `${moveTarget.q},${moveTarget.r}` : "click a hex"}
-              </p>
-            </div>
-          ) : null}
         </div>
       ) : null}
 
