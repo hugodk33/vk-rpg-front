@@ -1100,12 +1100,14 @@ export function drawPlateTokens(ctx: CanvasRenderingContext2D, W: number, H: num
   });
 }
 
-/** Movement trails + target ring, rotated with the grid.
-    `moves` holds each token's from→to segments in queue order; segments
-    sharing a token id are joined into a dashed polyline with an arrowhead
-    at the final destination. */
-export function drawPlateTrail(ctx: CanvasRenderingContext2D, W: number, H: number, spec: GridSpec, accent: string, moves: TrailMove[], markerId: string): void {
+/** Movement replay — dashed fixel per selected move, rotated with the grid.
+    Every `moves` entry is one movement action (from→to): we draw an
+    independent arrow with a start marker and stamp a translucent "ghost"
+    token at the destination so the character appears with its action.
+    A dashed ring anchors the final destination. */
+export function drawPlateTrail(ctx: CanvasRenderingContext2D, W: number, H: number, spec: GridSpec, accent: string, moves: TrailMove[], markerId: string, opts: { tokens?: CanvasToken[] } = {}): void {
   if (!moves.length) return;
+  const font = `"Geist Mono", monospace`;
   const o = gridOffset(spec);
   const inBounds = (c: { q: number; r: number }) => c && c.q >= 0 && c.r >= 0 && c.q < spec.cols && c.r < spec.rows;
   const center = (c: { q: number; r: number }) => {
@@ -1113,10 +1115,97 @@ export function drawPlateTrail(ctx: CanvasRenderingContext2D, W: number, H: numb
     return { x: o.x + p.x, y: o.y + p.y };
   };
 
+  const tokenById = new Map<string, CanvasToken>();
+  for (const t of opts.tokens ?? []) tokenById.set(t.id, t);
+
   const last = moves[moves.length - 1];
   void markerId;
 
   withRotated(ctx, W, H, spec.rotationDeg, () => {
+    for (const m of moves) {
+      const tok = tokenById.get(m.id);
+      const ring = tok
+        ? tok.unconscious
+          ? "#71717a"
+          : !tok.isPlayer && tok.status && /mort|death|fallen|dead|ko|down/i.test(tok.status)
+          ? "#f87171"
+          : !tok.isPlayer
+          ? "#fbbf24"
+          : "#60a5fa"
+        : accent;
+      const inner = Math.max(5, spec.R * 0.36);
+      const outer = Math.max(8, spec.R * 0.6);
+
+      const tC = center(m.to);
+      const sC = m.from && inBounds(m.from) ? center(m.from) : null;
+
+      /* start marker + dashed direction line + arrowhead */
+      if (sC) {
+        ctx.save();
+        ctx.strokeStyle = accent;
+        ctx.fillStyle = accent;
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([2, 3]);
+        ctx.globalAlpha = 0.85;
+        ctx.beginPath();
+        ctx.moveTo(sC.x, sC.y);
+        ctx.lineTo(tC.x, tC.y);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.globalAlpha = 0.6;
+        ctx.beginPath();
+        ctx.arc(sC.x, sC.y, Math.max(2.5, spec.R * 0.09), 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 0.9;
+        const ang = Math.atan2(tC.y - sC.y, tC.x - sC.x);
+        const ah = Math.max(6, spec.R * 0.22);
+        ctx.beginPath();
+        ctx.moveTo(tC.x, tC.y);
+        ctx.lineTo(tC.x - ah * Math.cos(ang - 0.35), tC.y - ah * Math.sin(ang - 0.35));
+        ctx.lineTo(tC.x - ah * Math.cos(ang + 0.35), tC.y - ah * Math.sin(ang + 0.35));
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      } else {
+        /* spawned on a fresh hex — mark the arrival point */
+        ctx.save();
+        ctx.strokeStyle = accent;
+        ctx.fillStyle = accent;
+        ctx.globalAlpha = 0.85;
+        ctx.beginPath();
+        ctx.arc(tC.x, tC.y, Math.max(2.5, spec.R * 0.09), 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      /* ghost token at the destination — the token "appears" with the action */
+      ctx.save();
+      ctx.globalAlpha = 0.45;
+      ctx.beginPath();
+      ctx.arc(tC.x, tC.y, (inner + outer) / 2, 0, Math.PI * 2);
+      ctx.strokeStyle = ring;
+      ctx.lineWidth = Math.max(3, outer - inner);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(tC.x, tC.y, inner, 0, Math.PI * 2);
+      ctx.fillStyle = "#14161c";
+      ctx.fill();
+      ctx.globalAlpha = 0.95;
+      ctx.lineWidth = 1.4;
+      ctx.stroke();
+      ctx.fillStyle = "#c8cbd4";
+      ctx.font = `bold ${Math.max(6, inner * 0.72)}px ${font}`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(
+        (tok?.isPlayer ? "" : "·") + String((tok?.name ?? "?").charAt(0)).toUpperCase(),
+        tC.x,
+        tC.y + inner * 0.42
+      );
+      ctx.restore();
+    }
+
+    /* anchor ring on the final destination */
     if (inBounds(last.to)) {
       const l = center(last.to);
       ctx.save();
@@ -1128,46 +1217,6 @@ export function drawPlateTrail(ctx: CanvasRenderingContext2D, W: number, H: numb
       ctx.arc(l.x, l.y, spec.R * 0.55, 0, Math.PI * 2);
       ctx.stroke();
       ctx.setLineDash([]);
-      ctx.restore();
-    }
-
-    const byToken = new Map<string, TrailMove[]>();
-    for (const m of moves) {
-      const list = byToken.get(m.id) ?? [];
-      list.push(m);
-      byToken.set(m.id, list);
-    }
-
-    for (const segs of byToken.values()) {
-      const points: { x: number; y: number }[] = [];
-      for (const m of segs) {
-        if (m.from && inBounds(m.from)) points.push(center(m.from));
-        if (m.to && inBounds(m.to)) points.push(center(m.to));
-      }
-      if (points.length < 2) continue;
-      const final = points[points.length - 1];
-
-      ctx.save();
-      ctx.globalAlpha = 0.85;
-      ctx.strokeStyle = accent;
-      ctx.lineWidth = 2;
-      ctx.setLineDash([2, 3]);
-      ctx.beginPath();
-      ctx.moveTo(points[0].x, points[0].y);
-      for (let i = 1; i < points.length; i++) ctx.lineTo(points[i].x, points[i].y);
-      ctx.stroke();
-      ctx.setLineDash([]);
-
-      const prev = points[points.length - 2];
-      const ang = Math.atan2(final.y - prev.y, final.x - prev.x);
-      const ah = 7;
-      ctx.beginPath();
-      ctx.moveTo(final.x, final.y);
-      ctx.lineTo(final.x - ah * Math.cos(ang - 0.35), final.y - ah * Math.sin(ang - 0.35));
-      ctx.lineTo(final.x - ah * Math.cos(ang + 0.35), final.y - ah * Math.sin(ang + 0.35));
-      ctx.closePath();
-      ctx.fillStyle = accent;
-      ctx.fill();
       ctx.restore();
     }
   });

@@ -193,7 +193,7 @@ export default function TacticalPlate({
     paintCanvas(cv, W, H, (ctx) => {
       drawPlateBoard(ctx, W, H, spec, location?.tiles ?? [], { accent, mark });
       drawPlateDrawing(ctx, W, H, spec, location?.drawing ?? []);
-      drawPlateTrail(ctx, W, H, spec, accent, trail?.moves ?? [], "tic");
+      drawPlateTrail(ctx, W, H, spec, accent, trail?.moves ?? [], "tic", { tokens: placed });
       drawPlateTokens(ctx, W, H, spec, placed, { images: tokenImages });
     }, zoom, fitBox);
   }, [location, placed, trail, mark, accent, W, H, spec, zoom, fitBox, tokenImages]);
