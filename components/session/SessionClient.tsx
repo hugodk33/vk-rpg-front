@@ -7,7 +7,7 @@ import type { CharacterSkill, CharacterViewer, Location, Narration, NarrationAct
 import { api } from "@/lib/api";
 import { skillLabel, skillLevel } from "@/lib/skill";
 import { narrationBoard, tokenAt } from "@/lib/board";
-import type { BoardToken } from "@/lib/board";
+import type { BoardToken, BoardTrail } from "@/lib/board";
 import { hexDir, hexDist } from "@/lib/hexgrid";
 import { floorPlanGroup } from "@/lib/location";
 import TacticalPlate from "@/components/tactical/TacticalPlate";
@@ -63,6 +63,12 @@ type SessionTab = "turn" | "dice" | "journal";
 const queuePos = (entry: QueueEntry): number => {
   const n = Number(entry.queue);
   return Number.isFinite(n) ? n : Number.MAX_SAFE_INTEGER;
+};
+
+const hexLbl = (hex: { q: number; r: number } | null): string => {
+  if (!hex) return "off";
+  const col = hex.q >= 0 ? String.fromCharCode(65 + (hex.q % 26)) : "?";
+  return `${col}${hex.r + 1}`;
 };
 
 const inputCls = (focus: string) =>
@@ -510,6 +516,25 @@ export default function SessionClient({
   const mapGroup = floorPlanGroup(mapLocation, locations);
   const board = narrationBoard(latestBeat, mapLocation);
 
+  /* ---- movement replay: each action with a hex gets its own toggle ----
+     default: no vector, the board keeps its plain (initial) snapshot. */
+  const boardMoves = board.trail?.moves ?? [];
+  const [shownMoves, setShownMoves] = useState<string[]>([]);
+  const activeMoves = boardMoves.filter((m) => m.actionId && shownMoves.includes(m.actionId));
+  const activeTrail: BoardTrail | null = activeMoves.length
+    ? {
+        from: activeMoves[activeMoves.length - 1]?.from ?? null,
+        to: activeMoves[activeMoves.length - 1]?.to,
+        moves: activeMoves,
+      }
+    : null;
+
+  function toggleMove(actionId: string) {
+    setShownMoves((prev) =>
+      prev.includes(actionId) ? prev.filter((id) => id !== actionId) : [...prev, actionId]
+    );
+  }
+
   // The narration's floor-plan picker follows the same rule: only maps of
   // the same place (plus whatever the scene already pins) so narrations
   // stay anchored to the plan you are working with.
@@ -757,7 +782,7 @@ export default function SessionClient({
             <TacticalPlate
               location={mapLocation}
               tokens={mapTokens}
-              trail={board.trail}
+              trail={activeTrail}
               mark={plateMark}
               accent={T.hex}
               R={28}
@@ -786,6 +811,53 @@ export default function SessionClient({
               Register a location with a hex grid to open the tactical map.
             </p>
           )}
+
+          {/* ---- replay movement per action ---- */}
+          {boardMoves.length > 0 ? (
+            <div className="mt-3 border-t border-zinc-700/40 pt-3">
+              <div className="flex flex-wrap items-center gap-2 mb-2">
+                <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">
+                  Replay movement
+                </span>
+                <span className="font-mono text-[10px] text-zinc-600">
+                  ({boardMoves.length} move{boardMoves.length !== 1 ? "s" : ""})
+                </span>
+                <div className="ml-auto flex gap-1">
+                  <button
+                    onClick={() => setShownMoves(boardMoves.map((m) => m.actionId).filter((x): x is string => !!x))}
+                    className="px-2 py-0.5 rounded-md text-[10px] font-mono uppercase tracking-wider text-zinc-400 hover:text-zinc-100 bg-zinc-800/60 border border-zinc-700/40"
+                  >
+                    All
+                  </button>
+                  <button
+                    onClick={() => setShownMoves([])}
+                    className="px-2 py-0.5 rounded-md text-[10px] font-mono uppercase tracking-wider text-zinc-400 hover:text-zinc-100 bg-zinc-800/60 border border-zinc-700/40"
+                  >
+                    None
+                  </button>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {boardMoves.map((m) => {
+                  const active = !!m.actionId && shownMoves.includes(m.actionId);
+                  return (
+                    <button
+                      key={`${m.id}-${m.actionId ?? "act"}`}
+                      onClick={() => m.actionId && toggleMove(m.actionId)}
+                      className={`px-2 py-1 rounded-md text-[11px] font-mono border transition-colors ${
+                        active
+                          ? "bg-sky-500/15 border-sky-500/50 text-sky-200"
+                          : "bg-zinc-800/40 border-zinc-700/40 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200"
+                      }`}
+                    >
+                      {charName(m.id)}
+                      <span className="opacity-60"> {hexLbl(m.from)} → {hexLbl(m.to)}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
         </div>
 
         {/* ---- integrated action: move / melee / ranged + dice ---- */}

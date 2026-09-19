@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { CharacterSkill, Location, Narration, NarrationAction, QueueEntry, TableCharacter, VisibilityRule } from "@/lib/types";
 import { skillLabel, skillLevel } from "@/lib/skill";
-import { narrationBoard, tokenAt, type BoardToken } from "@/lib/board";
+import { narrationBoard, tokenAt, type BoardToken, type BoardTrail } from "@/lib/board";
 import { hexDir, hexDist } from "@/lib/hexgrid";
 import { floorPlanGroup } from "@/lib/location";
 import { maskedLocationName, maskedTargetName } from "@/lib/visibility";
@@ -38,6 +38,12 @@ interface TurnPanelProps {
 const queuePos = (e: QueueEntry): number => {
   const n = Number(e.queue);
   return Number.isFinite(n) ? n : Number.MAX_SAFE_INTEGER;
+};
+
+const hexLbl = (hex: { q: number; r: number } | null): string => {
+  if (!hex) return "off";
+  const col = hex.q >= 0 ? String.fromCharCode(65 + (hex.q % 26)) : "?";
+  return `${col}${hex.r + 1}`;
 };
 
 const icon = (path: string, cls = "w-4 h-4") => (
@@ -257,6 +263,24 @@ export default function TurnPanel({
   const mapLocation = locations.find((l) => l.id === locSel) ?? defaultLocation;
   const mapGroup = floorPlanGroup(mapLocation, locations);
   const board = narrationBoard(latestBeat, mapLocation);
+
+  /* ---- movement replay: each action with a hex gets its own toggle ---- */
+  const boardMoves = board.trail?.moves ?? [];
+  const [shownMoves, setShownMoves] = useState<string[]>([]);
+  const activeMoves = boardMoves.filter((m) => m.actionId && shownMoves.includes(m.actionId));
+  const activeTrail: BoardTrail | null = activeMoves.length
+    ? {
+        from: activeMoves[activeMoves.length - 1]?.from ?? null,
+        to: activeMoves[activeMoves.length - 1]?.to,
+        moves: activeMoves,
+      }
+    : null;
+
+  function toggleMove(actionId: string) {
+    setShownMoves((prev) =>
+      prev.includes(actionId) ? prev.filter((id) => id !== actionId) : [...prev, actionId]
+    );
+  }
   /* tokens = toda a party (roster) + quem a narration posiciona; nomes
      reais para personagens de jogadores, mascarados só para NPCs. */
   const rosterTokens: BoardToken[] = roster.map((c) => ({
@@ -442,7 +466,7 @@ export default function TurnPanel({
           <TacticalPlate
             location={mapLocation}
             tokens={mapTokens}
-            trail={board.trail}
+            trail={activeTrail}
             mark={moveTarget}
             accent="#3b82f6"
             R={22}
@@ -454,6 +478,55 @@ export default function TurnPanel({
             The scene opens a floor plan here when the narrator draws it.
           </p>
         )}
+
+        {/* ---- replay movement per action ---- */}
+        {boardMoves.length > 0 ? (
+          <div className="mt-3 border-t border-zinc-700/40 pt-3">
+            <div className="flex flex-wrap items-center gap-2 mb-2">
+              <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">
+                Replay movement
+              </span>
+              <span className="font-mono text-[10px] text-zinc-600">
+                ({boardMoves.length} move{boardMoves.length !== 1 ? "s" : ""})
+              </span>
+              <div className="ml-auto flex gap-1">
+                <button
+                  onClick={() => setShownMoves(boardMoves.map((m) => m.actionId).filter((x): x is string => !!x))}
+                  className="px-2 py-0.5 rounded-md text-[10px] font-mono uppercase tracking-wider text-zinc-400 hover:text-zinc-100 bg-zinc-800/60 border border-zinc-700/40"
+                >
+                  All
+                </button>
+                <button
+                  onClick={() => setShownMoves([])}
+                  className="px-2 py-0.5 rounded-md text-[10px] font-mono uppercase tracking-wider text-zinc-400 hover:text-zinc-100 bg-zinc-800/60 border border-zinc-700/40"
+                >
+                  None
+                </button>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {boardMoves.map((m) => {
+                const active = !!m.actionId && shownMoves.includes(m.actionId);
+                const nm =
+                  mapTokens.find((t) => t.id === m.id)?.name ?? charName(m.id);
+                return (
+                  <button
+                    key={`${m.id}-${m.actionId ?? "act"}`}
+                    onClick={() => m.actionId && toggleMove(m.actionId)}
+                    className={`px-2 py-1 rounded-md text-[11px] font-mono border transition-colors ${
+                      active
+                        ? "bg-blue-500/15 border-blue-500/50 text-blue-200"
+                        : "bg-zinc-800/40 border-zinc-700/40 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200"
+                    }`}
+                  >
+                    {nm}
+                    <span className="opacity-60"> {hexLbl(m.from)} → {hexLbl(m.to)}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ) : null}
 
         {isMyTurn ? (
           <div className="mt-4 space-y-3">

@@ -972,59 +972,129 @@ export interface CanvasToken {
   isPlayer: boolean;
   unconscious?: boolean;
   status?: string;
+  /** avatar photo url shown inside the inner circle (see drawPlateTokens) */
+  imageUrl?: string | null;
+}
+
+export interface TokenDrawOpts {
+  /** url → loaded HTMLImageElement (null while loading/failed → placeholder) */
+  images?: Map<string, HTMLImageElement | null>;
 }
 
 const playerFill = "#60a5fa";
 const npcFill = "#fbbf24";
 const deadFill = "#f87171";
 
-/** Tokens placed on the grid, rotated with it. */
-export function drawPlateTokens(ctx: CanvasRenderingContext2D, W: number, H: number, spec: GridSpec, tokens: CanvasToken[]): void {
+/** Empty-avatar silhouette painted inside the token's inner circle. */
+function drawEmptyAvatar(ctx: CanvasRenderingContext2D, cx: number, cy: number, r: number): void {
+  ctx.save();
+  ctx.globalAlpha = 0.85;
+  ctx.fillStyle = "#3f434c";
+  ctx.beginPath();
+  ctx.arc(cx, cy - r * 0.16, r * 0.26, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(cx, cy + r * 0.62, r * 0.72, Math.PI, 0);
+  ctx.fill();
+  ctx.restore();
+}
+
+/** Tokens placed on the grid, rotated with it.
+    Each token is a double circle: an outer ring carries the facing arrowhead
+    (fused into the band) while the inner circle — always upright — holds the
+    character's avatar photo or, without one, an empty-avatar silhouette + the
+    sheet's initial. */
+export function drawPlateTokens(ctx: CanvasRenderingContext2D, W: number, H: number, spec: GridSpec, tokens: CanvasToken[], opts: TokenDrawOpts = {}): void {
   const font = `"Geist Mono", monospace`;
   const o = gridOffset(spec);
+  const images = opts.images;
   withRotated(ctx, W, H, spec.rotationDeg, () => {
     for (const t of tokens) {
       if (t.q == null || t.r == null || t.q < 0 || t.r < 0 || t.q >= spec.cols || t.r >= spec.rows) continue;
       const pt = centerOf(t.q, t.r, spec.orientation, spec.R);
       const cx = o.x + pt.x;
       const cy = o.y + pt.y;
-      const rr = Math.max(6, spec.R * 0.52);
       const isNpc = !t.isPlayer;
-      const fill = t.unconscious ? "#71717a" : isNpc && t.status && /mort|death|fallen|dead|ko|down/i.test(t.status) ? deadFill : isNpc ? npcFill : playerFill;
+      const ring = t.unconscious
+        ? "#71717a"
+        : isNpc && t.status && /mort|death|fallen|dead|ko|down/i.test(t.status)
+        ? deadFill
+        : isNpc
+        ? npcFill
+        : playerFill;
+
+      const inner = Math.max(5, spec.R * 0.36);
+      const outer = Math.max(8, spec.R * 0.6);
 
       ctx.globalAlpha = t.unconscious ? 0.55 : 1;
+
+      /* outer ring — the second circle */
       ctx.beginPath();
-      ctx.arc(cx, cy, rr, 0, Math.PI * 2);
-      ctx.fillStyle = fill;
-      ctx.fill();
-      ctx.lineWidth = 2;
-      ctx.strokeStyle = "#0b0d12";
+      ctx.arc(cx, cy, (inner + outer) / 2, 0, Math.PI * 2);
+      ctx.strokeStyle = ring;
+      ctx.lineWidth = Math.max(3, outer - inner);
       ctx.stroke();
 
+      /* facing arrowhead fused into the ring (rotates; inner circle doesn't) */
       if (t.facing != null) {
         ctx.save();
         ctx.translate(cx, cy);
         ctx.rotate((t.facing * 60 * Math.PI) / 180);
+        const tip = outer + 1.2;
+        const base = inner - 1;
+        const half = Math.max(2.6, (outer - inner) * 0.62);
         ctx.beginPath();
-        ctx.moveTo(spec.R * 0.62, 0);
-        ctx.lineTo(-spec.R * 0.18, -spec.R * 0.36);
-        ctx.lineTo(-spec.R * 0.18, spec.R * 0.36);
+        ctx.moveTo(tip, 0);
+        ctx.lineTo(base, -half);
+        ctx.lineTo(base + 1.4, 0);
+        ctx.lineTo(base, half);
         ctx.closePath();
         ctx.fillStyle = "#0b0d12";
         ctx.fill();
+        ctx.strokeStyle = "#0b0d12";
+        ctx.lineWidth = 0.8;
+        ctx.stroke();
         ctx.restore();
       }
 
-      ctx.fillStyle = "#0b0d12";
-      ctx.font = `bold ${8}px ${font}`;
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillText((t.isPlayer ? "" : "·") + t.name.charAt(0).toUpperCase(), cx, cy);
+      /* inner circle — avatar photo / empty avatar + sheet initial */
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(cx, cy, inner, 0, Math.PI * 2);
+      ctx.clip();
+      ctx.fillStyle = "#14161c";
+      ctx.fillRect(cx - inner, cy - inner, inner * 2, inner * 2);
 
+      const url = t.imageUrl;
+      const img = url && images ? images.get(url) || null : null;
+      if (img && img.width > 0 && img.height > 0) {
+        const scale = Math.max((inner * 2) / img.width, (inner * 2) / img.height);
+        const w = img.width * scale;
+        const h = img.height * scale;
+        ctx.drawImage(img, cx - w / 2, cy - h / 2, w, h);
+      } else {
+        drawEmptyAvatar(ctx, cx, cy, inner);
+        ctx.fillStyle = "#c8cbd4";
+        ctx.font = `bold ${Math.max(6, inner * 0.72)}px ${font}`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText((t.isPlayer ? "" : "·") + t.name.charAt(0).toUpperCase(), cx, cy + inner * 0.42);
+      }
+      ctx.restore();
+
+      /* inner outline */
+      ctx.beginPath();
+      ctx.arc(cx, cy, inner, 0, Math.PI * 2);
+      ctx.strokeStyle = "#0b0d12";
+      ctx.lineWidth = Math.max(1.3, spec.R * 0.05);
+      ctx.stroke();
+
+      /* label */
       ctx.fillStyle = "#a1a1aa";
       ctx.font = `8px ${font}`;
+      ctx.textAlign = "center";
       ctx.textBaseline = "alphabetic";
-      ctx.fillText(t.name, cx, cy + rr + 8);
+      ctx.fillText(t.name, cx, cy + outer + 8);
       ctx.globalAlpha = 1;
     }
   });

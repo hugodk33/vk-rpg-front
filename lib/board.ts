@@ -24,6 +24,10 @@ export interface BoardToken {
 
 export interface TrailMove {
   id: string;
+  /** action that produced this move (for per-action replay toggles) */
+  actionId?: string;
+  /** queue position of the action in the narration */
+  queue?: number | null;
   from: { q: number; r: number } | null;
   to: { q: number; r: number };
 }
@@ -82,7 +86,7 @@ export function narrationBoard(n: Narration | null | undefined, fallbackLocation
     const from = token.q != null && token.r != null ? { q: token.q, r: token.r } : null;
     setPos(token, a.q, a.r, a.facing);
     const to = { q: a.q, r: a.r };
-    moves.push({ id: token.id, from, to });
+    moves.push({ id: token.id, actionId: a.id, queue: a.queue, from, to });
     trail = { from, to, moves: [...moves] };
   }
 

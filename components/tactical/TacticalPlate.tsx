@@ -21,11 +21,64 @@ import {
   plateCanvas,
   screenToGrid,
   type CanvasPlate,
+  type CanvasToken,
   type GridSpec,
 } from "@/lib/canvasgrid";
 import ZoomControls from "@/components/map/ZoomControls";
 import type { BoardToken, BoardTrail } from "@/lib/board";
 import type { Location } from "@/lib/types";
+
+/* ---- avatar photo cache (module-level, survives re-renders) ---- */
+const IMG_MISSING = Symbol("missing");
+const imageCache = new Map<string, HTMLImageElement | symbol>();
+
+function useTokenImages(tokens: CanvasToken[]): Map<string, HTMLImageElement | null> {
+  const [version, setVersion] = useState(0);
+  const urlKey = tokens
+    .map((t) => t.imageUrl ?? "")
+    .filter(Boolean)
+    .join("\u0000");
+  useEffect(() => {
+    const list = urlKey ? urlKey.split("\u0000") : [];
+    if (!list.length || typeof Image === "undefined") return;
+    let cancelled = false;
+    let pending = 0;
+    for (const url of list) {
+      if (imageCache.has(url)) continue;
+      pending++;
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      const settle = (ok: boolean) => {
+        imageCache.set(url, ok ? img : IMG_MISSING);
+        if (!cancelled && --pending === 0) setVersion((v) => v + 1);
+      };
+      img.onload = () => settle(true);
+      img.onerror = () => settle(false);
+      img.src = url;
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [urlKey]);
+  return useMemo(() => {
+    const list = urlKey ? urlKey.split("\u0000") : [];
+    const out = new Map<string, HTMLImageElement | null>();
+    if (typeof HTMLImageElement === "undefined") {
+      for (const url of list) out.set(url, null);
+      return out;
+    }
+    for (const url of list) {
+      const hit = imageCache.get(url);
+      out.set(
+        url,
+        hit && hit !== IMG_MISSING && hit instanceof HTMLImageElement ? hit : null
+      );
+    }
+    return out;
+    // `version` is read below so the map is rebuilt when a photo finishes loading
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urlKey, version]);
+}
 
 export interface PlatePoint {
   q: number;
@@ -132,6 +185,8 @@ export default function TacticalPlate({
     [tokens, spec]
   );
 
+  const tokenImages = useTokenImages(placed);
+
   useEffect(() => {
     const cv = canvasRef.current;
     if (!cv) return;
@@ -139,9 +194,9 @@ export default function TacticalPlate({
       drawPlateBoard(ctx, W, H, spec, location?.tiles ?? [], { accent, mark });
       drawPlateDrawing(ctx, W, H, spec, location?.drawing ?? []);
       drawPlateTrail(ctx, W, H, spec, accent, trail?.moves ?? [], "tic");
-      drawPlateTokens(ctx, W, H, spec, placed);
+      drawPlateTokens(ctx, W, H, spec, placed, { images: tokenImages });
     }, zoom, fitBox);
-  }, [location, placed, trail, mark, accent, W, H, spec, zoom, fitBox]);
+  }, [location, placed, trail, mark, accent, W, H, spec, zoom, fitBox, tokenImages]);
 
   function handleClick(e: ReactMouseEvent<HTMLCanvasElement>) {
     if (!onHexClick || hand) return;
