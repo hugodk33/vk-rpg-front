@@ -33,7 +33,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { submitJson } from "@/components/forms/submit";
 import { absoluteHex, formatHexScale } from "@/lib/location";
-import { centerOf, gridSize, hexFromPoint } from "@/lib/hexgrid";
+import { centerOf, gridFrame, hexFromPoint } from "@/lib/hexgrid";
 import {
   ASSETS,
   ASSET_BOX,
@@ -109,12 +109,21 @@ export default function MapStudio({ location }: MapStudioProps) {
   const [savedAt, setSavedAt] = useState<number>(0);
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const wrapRef = useRef<HTMLDivElement | null>(null);
   const drawingRef = useRef(false);
   const originRef = useRef<Point>({ x: 0, y: 0 });
   const dragRef = useRef<{ index: number; anchor: Point; grab: Point } | null>(null);
   const paintCellRef = useRef<string | null>(null);
   const snapRef = useRef<{ tiles: Map<string, HexTileKind>; shapes: DrawShape[] } | null>(null);
+  const zoomRef = useRef(zoom);
+  const spaceRef = useRef(false);
+  const panRef = useRef<{ x: number; y: number; sl: number; st: number } | null>(null);
   const [canUndo, setCanUndo] = useState(false);
+  const [grab, setGrab] = useState(false);
+
+  useEffect(() => {
+    zoomRef.current = zoom;
+  }, [zoom]);
 
   const sizeNum = sizeM === "" ? null : Number(sizeM);
   const abs = useMemo(
@@ -128,13 +137,18 @@ export default function MapStudio({ location }: MapStudioProps) {
     [location.id, location.name, location.ancestors, sizeNum, centerQ, centerR, orientation]
   );
 
-  const g = gridSize(cols, rows, orientation, R);
+  const g = gridFrame(cols, rows, orientation, R);
   const W = g.w + M * 2;
   const H = g.h + M * 2;
+  const offX = M - g.x0;
+  const offY = M - g.y0;
   const centerCol = Math.floor(cols / 2);
   const centerRow = Math.floor(rows / 2);
 
-  const spec: GridSpec = useMemo(() => ({ cols, rows, orientation, R, M, rotationDeg }), [cols, rows, orientation, rotationDeg]);
+  const spec: GridSpec = useMemo(
+    () => ({ cols, rows, orientation, R, M, rotationDeg, ox: g.x0, oy: g.y0 }),
+    [cols, rows, orientation, rotationDeg, g]
+  );
 
   /* ---------- helpers ---------- */
 
@@ -220,6 +234,17 @@ export default function MapStudio({ location }: MapStudioProps) {
   /* ---------- pointer handlers ---------- */
 
   function onPointerDown(e: React.PointerEvent) {
+    if (e.button === 1 || (e.button === 0 && spaceRef.current)) {
+      e.preventDefault();
+      const wrap = wrapRef.current;
+      if (wrap) {
+        panRef.current = { x: e.clientX, y: e.clientY, sl: wrap.scrollLeft, st: wrap.scrollTop };
+        canvasRef.current?.setPointerCapture(e.pointerId);
+        setGrab(true);
+      }
+      return;
+    }
+
     const p = toGridPoint(e);
     const n = toNormalized(p, R);
     canvasRef.current?.setPointerCapture(e.pointerId);
@@ -299,6 +324,16 @@ export default function MapStudio({ location }: MapStudioProps) {
   }
 
   function onPointerMove(e: React.PointerEvent) {
+    if (panRef.current) {
+      const wrap = wrapRef.current;
+      if (wrap) {
+        const d = panRef.current;
+        wrap.scrollLeft = Math.max(0, d.sl - (e.clientX - d.x));
+        wrap.scrollTop = Math.max(0, d.st - (e.clientY - d.y));
+      }
+      return;
+    }
+
     const p = toGridPoint(e);
     setCrosshair(p);
 
@@ -355,6 +390,11 @@ export default function MapStudio({ location }: MapStudioProps) {
   }
 
   function onPointerUp() {
+    if (panRef.current) {
+      panRef.current = null;
+      setGrab(spaceRef.current);
+      return;
+    }
     drawingRef.current = false;
     paintCellRef.current = null;
     dragRef.current = null;
@@ -366,6 +406,7 @@ export default function MapStudio({ location }: MapStudioProps) {
   }
 
   function onPointerLeave() {
+    if (panRef.current) return;
     setHover(null);
     setCrosshair(null);
   }
@@ -376,6 +417,12 @@ export default function MapStudio({ location }: MapStudioProps) {
     function onKey(e: KeyboardEvent) {
       const tag = (e.target as HTMLElement | null)?.tagName ?? "";
       if (tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA") return;
+      if (e.code === "Space") {
+        e.preventDefault();
+        spaceRef.current = true;
+        setGrab(true);
+        return;
+      }
       if ((e.key === "Delete" || e.key === "Backspace") && selection != null) {
         e.preventDefault();
         setShapes((prev) => prev.filter((_, i) => i !== selection));
@@ -384,9 +431,55 @@ export default function MapStudio({ location }: MapStudioProps) {
         setSelection(null);
       }
     }
+    function onKeyUp(e: KeyboardEvent) {
+      if (e.code === "Space") {
+        spaceRef.current = false;
+        setGrab(false);
+      }
+    }
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    window.addEventListener("keyup", onKeyUp);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("keyup", onKeyUp);
+    };
   }, [selection]);
+
+  /* ---------- zoom + pan ---------- */
+
+  useEffect(() => {
+    const wrap = wrapRef.current;
+    if (!wrap) return;
+    function onWheel(e: WheelEvent) {
+      e.preventDefault();
+      const cv = canvasRef.current;
+      const wrap = wrapRef.current;
+      if (!cv || !wrap) return;
+      const zold = zoomRef.current;
+      const delta = e.deltaY;
+      const step = e.deltaMode === 1 ? 0.2 : e.deltaMode === 2 ? 2 : 0.1;
+      const znew = Math.min(4, Math.max(0.5, zold + (delta < 0 ? step : -step)));
+      const ratio = znew / zold;
+      if (ratio === 1) return;
+
+      const rect = cv.getBoundingClientRect();
+      const oldSl = wrap.scrollLeft;
+      const oldSt = wrap.scrollTop;
+
+      zoomRef.current = znew;
+      setZoom(znew);
+
+      /* keep the grid point under the cursor: classic scrollLeft += mx*(ratio-1) */
+      requestAnimationFrame(() => {
+        const wrap2 = wrapRef.current;
+        if (!wrap2) return;
+        wrap2.scrollLeft = oldSl + (e.clientX - rect.left) * (ratio - 1);
+        wrap2.scrollTop = oldSt + (e.clientY - rect.top) * (ratio - 1);
+      });
+    }
+    wrap.addEventListener("wheel", onWheel, { passive: false });
+    return () => wrap.removeEventListener("wheel", onWheel);
+  }, []);
 
   /* ---------- actions ---------- */
 
@@ -461,13 +554,15 @@ export default function MapStudio({ location }: MapStudioProps) {
       const tileMap = tiles;
 
       withRotated(ctx, W, H, rotationDeg, () => {
+        ctx.save();
+        ctx.translate(offX, offY);
         /* cells */
         for (let c = 0; c < cols; c++) {
           for (let r = 0; r < rows; r++) {
             const key = `${c},${r}`;
             const pt = centerOf(c, r, orientation, R);
-            const cx = M + pt.x;
-            const cy = M + pt.y;
+            const cx = pt.x;
+            const cy = pt.y;
             const meta = TERRAIN[tileMap.get(key) ?? "open"];
             const isCenter = c === centerCol && r === centerRow;
             const isHover = hover?.q === c && hover?.r === r;
@@ -502,7 +597,7 @@ export default function MapStudio({ location }: MapStudioProps) {
         /* brush highlight on hovered cell */
         if ((tool === "paint" || tool === "erase" || tool === "fill") && hover) {
           const pt = centerOf(hover.q, hover.r, orientation, R);
-          traceCell(ctx, M + pt.x, M + pt.y, R, orientation);
+          traceCell(ctx, pt.x, pt.y, R, orientation);
           ctx.strokeStyle = tool === "erase" ? "#f87171" : TERRAIN[terrain].stroke;
           ctx.lineWidth = 2;
           ctx.setLineDash([4, 3]);
@@ -513,9 +608,7 @@ export default function MapStudio({ location }: MapStudioProps) {
         /* asset drop target + ghost on hovered cell */
         if (tool === "asset" && hover) {
           const pt = centerOf(hover.q, hover.r, orientation, R);
-          const cx = M + pt.x;
-          const cy = M + pt.y;
-          traceCell(ctx, cx, cy, R, orientation);
+          traceCell(ctx, pt.x, pt.y, R, orientation);
           ctx.strokeStyle = "#fbbf24";
           ctx.lineWidth = 2;
           ctx.setLineDash([4, 3]);
@@ -535,9 +628,10 @@ export default function MapStudio({ location }: MapStudioProps) {
           ctx.arc(sx, sy, 5, 0, Math.PI * 2);
           ctx.stroke();
         }
+        ctx.restore();
       });
     }, zoom);
-  }, [shapes, tiles, draft, selection, hover, crosshair, tool, terrain, strokeColor, rotationDeg, W, H, cols, rows, centerCol, centerRow, centerQ, centerR, orientation, spec, snap, zoom, assetKind, assetScale, assetRot]);
+  }, [shapes, tiles, draft, selection, hover, crosshair, tool, terrain, strokeColor, rotationDeg, W, H, cols, rows, centerCol, centerRow, centerQ, centerR, orientation, spec, snap, zoom, assetKind, assetScale, assetRot, offX, offY]);
 
   /* ---------- derived UI ---------- */
 
@@ -896,12 +990,12 @@ export default function MapStudio({ location }: MapStudioProps) {
 
         {/* canvas */}
         <div className="p-4">
-          <div className="relative overflow-auto rounded-lg border border-zinc-700/40 bg-zinc-950/50">
+          <div ref={wrapRef} className="relative overflow-auto rounded-lg border border-zinc-700/40 bg-zinc-950/50">
             <canvas
               ref={canvasRef}
               width={W}
               height={H}
-              className="block mx-auto touch-none select-none cursor-crosshair"
+              className={`block mx-auto touch-none select-none ${grab ? "cursor-grabbing" : "cursor-crosshair"}`}
               style={{
                 width: `${Math.round(W * zoom)}px`,
                 height: `${Math.round(H * zoom)}px`,

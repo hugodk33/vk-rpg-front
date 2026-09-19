@@ -40,33 +40,109 @@ export function polygonPath(cx: number, cy: number, r: number, orientation: stri
 
 export function centerOf(q: number, r: number, orientation: string, R: number): { x: number; y: number } {
   if (orientation === "square") return { x: q * (R * 1.5), y: r * (R * 1.5) };
-  if (orientation === "pointy") return { x: Math.sqrt(3) * R * (q + r / 2), y: 1.5 * R * r };
-  return { x: 1.5 * R * q, y: Math.sqrt(3) * R * (r + q / 2) };
+  if (orientation === "pointy") {
+    const rx = (Math.sqrt(3) * R) / 2;
+    return { x: Math.sqrt(3) * R * q + (mod2(r) ? rx : 0), y: 1.5 * R * r };
+  }
+  const ry = (Math.sqrt(3) * R) / 2;
+  return { x: 1.5 * R * q, y: Math.sqrt(3) * R * r + (mod2(q) ? ry : 0) };
+}
+
+/** 1 when the integer is odd — drives the brick (alternating) offset. */
+function mod2(n: number): number {
+  return ((Math.trunc(n) % 2) + 2) % 2;
+}
+
+/** Half-axis extents (padding) of a single cell around its center. */
+function cellHalfExtent(orientation: string, R: number): { ex: number; ey: number } {
+  if (orientation === "square") return { ex: (R * 1.5) / 2, ey: (R * 1.5) / 2 };
+  if (orientation === "pointy") return { ex: (Math.sqrt(3) * R) / 2, ey: R };
+  return { ex: R, ey: (Math.sqrt(3) * R) / 2 };
+}
+
+/** True bounding box of a cols×rows axial mesh (incl. the q/2 shearing
+    term and each cell's radius), so the canvas never clips the grid. */
+export function gridFrame(cols: number, rows: number, orientation: string, R: number): {
+  w: number;
+  h: number;
+  x0: number;
+  y0: number;
+  x1: number;
+  y1: number;
+} {
+  const { ex, ey } = cellHalfExtent(orientation, R);
+  let x0 = 0,
+    y0 = 0,
+    x1 = 0,
+    y1 = 0;
+  for (let q = 0; q < cols; q++) {
+    for (let r = 0; r < rows; r++) {
+      const p = centerOf(q, r, orientation, R);
+      const px0 = p.x - ex;
+      const px1 = p.x + ex;
+      const py0 = p.y - ey;
+      const py1 = p.y + ey;
+      if (q === 0 && r === 0) {
+        x0 = px0;
+        x1 = px1;
+        y0 = py0;
+        y1 = py1;
+      } else {
+        x0 = Math.min(x0, px0);
+        x1 = Math.max(x1, px1);
+        y0 = Math.min(y0, py0);
+        y1 = Math.max(y1, py1);
+      }
+    }
+  }
+  return { w: x1 - x0, h: y1 - y0, x0, y0, x1, y1 };
 }
 
 export function gridSize(cols: number, rows: number, orientation: string, R: number): { w: number; h: number } {
-  return {
-    w: cellWidth(orientation, R) * cols,
-    h: cellHeight(orientation, R) * rows,
-  };
+  const f = gridFrame(cols, rows, orientation, R);
+  return { w: f.w, h: f.h };
 }
 
 /* ------ pixel → axial (fractional), then round to nearest hex ------ */
 
 export function hexFromPoint(x: number, y: number, orientation: string, R: number): { q: number; r: number } {
-  let qf: number;
-  let rf: number;
   if (orientation === "square") {
-    qf = x / (R * 1.5);
-    rf = y / (R * 1.5);
-  } else if (orientation === "pointy") {
-    rf = y / (1.5 * R);
-    qf = x / (Math.sqrt(3) * R) - rf / 2;
-  } else {
-    qf = x / (1.5 * R);
-    rf = y / (Math.sqrt(3) * R) - qf / 2;
+    const qf = x / (R * 1.5);
+    const rf = y / (R * 1.5);
+    return { q: Math.round(qf), r: Math.round(rf) };
   }
-  return cubeRound(qf, rf);
+  if (orientation === "pointy") {
+    const rx = (Math.sqrt(3) * R) / 2;
+    const rProbe = Math.round(y / (1.5 * R));
+    let best: { q: number; r: number } = { q: 0, r: 0 };
+    let bestD = Number.MAX_VALUE;
+    for (const r of [rProbe - 1, rProbe, rProbe + 1]) {
+      const qf = (x - (mod2(r) ? rx : 0)) / (Math.sqrt(3) * R);
+      const q = Math.round(qf);
+      const p = centerOf(q, r, orientation, R);
+      const d = (p.x - x) * (p.x - x) + (p.y - y) * (p.y - y);
+      if (d < bestD) {
+        bestD = d;
+        best = { q, r };
+      }
+    }
+    return best;
+  }
+  const ry = (Math.sqrt(3) * R) / 2;
+  const qProbe = Math.round(x / (1.5 * R));
+  let best: { q: number; r: number } = { q: 0, r: 0 };
+  let bestD = Number.MAX_VALUE;
+  for (const q of [qProbe - 1, qProbe, qProbe + 1]) {
+    const rf = (y - (mod2(q) ? ry : 0)) / (Math.sqrt(3) * R);
+    const r = Math.round(rf);
+    const p = centerOf(q, r, orientation, R);
+    const d = (p.x - x) * (p.x - x) + (p.y - y) * (p.y - y);
+    if (d < bestD) {
+      bestD = d;
+      best = { q, r };
+    }
+  }
+  return best;
 }
 
 export function cubeRound(qf: number, rf: number): { q: number; r: number } {

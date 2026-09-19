@@ -20,7 +20,7 @@
    cells at any viewer radius.
    ============================================================ */
 
-import { centerOf, cellWidth, cellHeight, gridSize, hexFromPoint, polygonPath, rotatePoint } from "./hexgrid";
+import { centerOf, cellWidth, cellHeight, gridFrame, hexFromPoint, polygonPath, rotatePoint } from "./hexgrid";
 import { TERRAIN } from "./terrain";
 import type { DrawShape, HexTile, HexTileKind } from "./types";
 
@@ -36,6 +36,9 @@ export interface GridSpec {
   R: number;
   M: number;
   rotationDeg: number;
+  /** frame origin (top-left of the mesh in grid-space, usually ≤ 0) */
+  ox?: number;
+  oy?: number;
 }
 
 export interface CanvasPlate {
@@ -50,16 +53,33 @@ export function plateCanvas(hex: { width?: number | null; height?: number | null
   const orientation = hex?.orientation ?? "flat";
   const cols = Math.max(1, Math.floor(hex?.width ?? 0) || 1);
   const rows = Math.max(1, Math.floor(hex?.height ?? 0) || 1);
-  const g = gridSize(cols, rows, orientation, R);
+  const f = gridFrame(cols, rows, orientation, R);
   return {
-    W: Math.max(g.w + M * 2, minW),
-    H: Math.max(g.h + M * 2, minH),
-    spec: { cols, rows, orientation, R, M, rotationDeg: 0 },
+    W: Math.max(f.w + M * 2, minW),
+    H: Math.max(f.h + M * 2, minH),
+    spec: { cols, rows, orientation, R, M, rotationDeg: 0, ox: f.x0, oy: f.y0 },
   };
 }
 
 export function pivotOf(W: number, H: number): Point {
   return { x: W / 2, y: H / 2 };
+}
+
+/** Canvas origin (top-left of the true mesh frame) for a grid spec. */
+export function gridOffset(spec: GridSpec): Point {
+  return { x: spec.M - (spec.ox ?? 0), y: spec.M - (spec.oy ?? 0) };
+}
+
+/** Grid-space point → canvas pixel (frame-aware). */
+export function gridToCanvas(spec: GridSpec, p: Point): Point {
+  const o = gridOffset(spec);
+  return { x: o.x + p.x, y: o.y + p.y };
+}
+
+/** Canvas pixel → grid-space point (frame-aware, no rotation). */
+export function canvasToGrid(spec: GridSpec, p: Point): Point {
+  const o = gridOffset(spec);
+  return { x: p.x - o.x, y: p.y - o.y };
 }
 
 /** Fill the canvas backing store for the DPR and run the draw routine.
@@ -866,6 +886,7 @@ export function drawPlateBoard(ctx: CanvasRenderingContext2D, W: number, H: numb
   for (const t of tiles) tileMap.set(`${t.q},${t.r}`, t.t);
   const centerCol = Math.floor(spec.cols / 2);
   const centerRow = Math.floor(spec.rows / 2);
+  const o = gridOffset(spec);
 
   withRotated(ctx, W, H, spec.rotationDeg, () => {
     for (let c = 0; c < spec.cols; c++) {
@@ -874,8 +895,8 @@ export function drawPlateBoard(ctx: CanvasRenderingContext2D, W: number, H: numb
         const tile = tileMap.get(key);
         const meta = tile ? TERRAIN[tile] : null;
         const pt = centerOf(c, r, spec.orientation, spec.R);
-        const cx = spec.M + pt.x;
-        const cy = spec.M + pt.y;
+        const cx = o.x + pt.x;
+        const cy = o.y + pt.y;
         const isMark = !!mark && mark.q === c && mark.r === r;
         const isCenter = !!centerLabel && c === centerCol && r === centerRow;
 
@@ -904,7 +925,7 @@ export function drawPlateBoard(ctx: CanvasRenderingContext2D, W: number, H: numb
     }
     if (mark) {
       const pt = centerOf(mark.q, mark.r, spec.orientation, spec.R);
-      traceCell(ctx, spec.M + pt.x, spec.M + pt.y, spec.R, spec.orientation);
+      traceCell(ctx, o.x + pt.x, o.y + pt.y, spec.R, spec.orientation);
       ctx.strokeStyle = accent;
       ctx.lineWidth = 2.5;
       ctx.stroke();
@@ -915,7 +936,11 @@ export function drawPlateBoard(ctx: CanvasRenderingContext2D, W: number, H: numb
 /** The stroke layer (drawing shapes), rotated with the grid. */
 export function drawPlateDrawing(ctx: CanvasRenderingContext2D, W: number, H: number, spec: GridSpec, shapes: DrawShape[], selectedIndex: number | null = null, accent = "#38bdf8"): void {
   withRotated(ctx, W, H, spec.rotationDeg, () => {
+    const o = gridOffset(spec);
+    ctx.save();
+    ctx.translate(o.x, o.y);
     drawShapes(ctx, shapes, spec.R, selectedIndex, accent);
+    ctx.restore();
   });
 }
 
@@ -937,12 +962,13 @@ const deadFill = "#f87171";
 /** Tokens placed on the grid, rotated with it. */
 export function drawPlateTokens(ctx: CanvasRenderingContext2D, W: number, H: number, spec: GridSpec, tokens: CanvasToken[]): void {
   const font = `"Geist Mono", monospace`;
+  const o = gridOffset(spec);
   withRotated(ctx, W, H, spec.rotationDeg, () => {
     for (const t of tokens) {
       if (t.q == null || t.r == null || t.q < 0 || t.r < 0 || t.q >= spec.cols || t.r >= spec.rows) continue;
       const pt = centerOf(t.q, t.r, spec.orientation, spec.R);
-      const cx = spec.M + pt.x;
-      const cy = spec.M + pt.y;
+      const cx = o.x + pt.x;
+      const cy = o.y + pt.y;
       const rr = Math.max(6, spec.R * 0.52);
       const isNpc = !t.isPlayer;
       const fill = t.unconscious ? "#71717a" : isNpc && t.status && /mort|death|fallen|dead|ko|down/i.test(t.status) ? deadFill : isNpc ? npcFill : playerFill;
@@ -988,10 +1014,11 @@ export function drawPlateTokens(ctx: CanvasRenderingContext2D, W: number, H: num
 /** Movement trail + target ring, rotated with the grid. */
 export function drawPlateTrail(ctx: CanvasRenderingContext2D, W: number, H: number, spec: GridSpec, accent: string, from: { q: number; r: number } | null, to: { q: number; r: number } | null, markerId: string): void {
   if (!to || to.q < 0 || to.r < 0 || to.q >= spec.cols || to.r >= spec.rows) return;
+  const o = gridOffset(spec);
   withRotated(ctx, W, H, spec.rotationDeg, () => {
     const tp = centerOf(to.q, to.r, spec.orientation, spec.R);
-    const tx = spec.M + tp.x;
-    const ty = spec.M + tp.y;
+    const tx = o.x + tp.x;
+    const ty = o.y + tp.y;
 
     ctx.save();
     ctx.strokeStyle = accent;
@@ -1005,8 +1032,8 @@ export function drawPlateTrail(ctx: CanvasRenderingContext2D, W: number, H: numb
 
     if (from && from.q >= 0 && from.r >= 0 && from.q < spec.cols && from.r < spec.rows) {
       const fp = centerOf(from.q, from.r, spec.orientation, spec.R);
-      const fx = spec.M + fp.x;
-      const fy = spec.M + fp.y;
+      const fx = o.x + fp.x;
+      const fy = o.y + fp.y;
       ctx.globalAlpha = 0.85;
       ctx.lineWidth = 2;
       ctx.setLineDash([2, 3]);
@@ -1037,8 +1064,10 @@ export function drawPlateTrail(ctx: CanvasRenderingContext2D, W: number, H: numb
 export function screenToGrid(clientX: number, clientY: number, rect: { left: number; top: number; width: number; height: number }, W: number, H: number, spec: GridSpec): Point {
   const x = ((clientX - rect.left) / rect.width) * W;
   const y = ((clientY - rect.top) / rect.height) * H;
+  const o = gridOffset(spec);
   const pivot = pivotOf(W, H);
-  return rotatePoint({ x: x - spec.M, y: y - spec.M }, { x: pivot.x - spec.M, y: pivot.y - spec.M }, -spec.rotationDeg);
+  const gridPivot = { x: pivot.x - o.x, y: pivot.y - o.y };
+  return rotatePoint({ x: x - o.x, y: y - o.y }, gridPivot, -spec.rotationDeg);
 }
 
 /** Nearest in-bounds cell for a grid-space point, else null. */
