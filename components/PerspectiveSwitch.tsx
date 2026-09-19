@@ -81,15 +81,26 @@ export default function PerspectiveSwitch() {
   const pathname = usePathname() ?? "/";
   const router = useRouter();
   const [fallbackName, setFallbackName] = useState<string | null>(null);
+  const [seat, setSeat] = useState<Seat>({});
   const [busy, setBusy] = useState(false);
+
+  /* localStorage only exists on the client — read the seat after mount
+     (and again on navigation / cross-tab changes) so SSR and the first
+     client render always agree and no hydration mismatch occurs. */
+  useEffect(() => {
+    const refresh = () => setSeat(readSeat());
+    refresh();
+    window.addEventListener("storage", refresh);
+    return () => window.removeEventListener("storage", refresh);
+  }, [pathname]);
 
   /* player seat name for the badge — prefers the seat USER (username);
      falls back to the seat character's sheet name. */
   useEffect(() => {
     if (currentRole(pathname) !== "player") return;
-    const seat = readSeat();
-    if (seat.username) return;
-    const pid = seat.characterId;
+    const s = readSeat();
+    if (s.username) return;
+    const pid = s.characterId;
     if (!pid) return;
     let alive = true;
     api<CharacterViewer>(`/game-table-character/${pid}`)
@@ -146,7 +157,6 @@ export default function PerspectiveSwitch() {
   };
 
   const isPlayer = currentRole(pathname) === "player";
-  const seat = readSeat();
   const displayName = seat.username ?? fallbackName;
   const seatLabel = isPlayer
     ? displayName
