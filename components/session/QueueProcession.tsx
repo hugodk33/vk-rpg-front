@@ -8,9 +8,10 @@ import type { QueueEntry, Sheet } from "@/lib/types";
    so the table reads identically from either side. Only the
    controls differ:
      · player — a "you" tag and a "Roll now" beacon when up;
-     · narrator — a link to the character sheet and a remove
-       button on each waiting seat (plus the add-to-queue bar,
-       which lives with the caller).
+· narrator — a link to the character sheet and a remove
+        button on each waiting seat (plus the add-to-queue bar,
+        which lives with the caller). The narrator may also pass
+        onEndTurn to resolve the NOW seat.
    Tone: blue for the player trail, green for the narrator trail.
    ============================================================ */
 
@@ -34,6 +35,7 @@ interface QueueProcessionProps {
   emptyText?: string;
   linkHref?: (charId: string) => string;
   onRemove?: (entry: QueueEntry) => void;
+  onEndTurn?: (entry: QueueEntry) => void;
 }
 
 const TONES = {
@@ -50,6 +52,7 @@ const TONES = {
     you: "text-blue-400",
     rollNow: "text-blue-300",
     acting: "text-blue-400/70",
+    endTurn: "border-blue-500/50 text-blue-300 hover:border-blue-400 hover:text-blue-100",
     shadow: "0 0 10px rgba(59,130,246,.6)",
   },
   green: {
@@ -65,6 +68,7 @@ const TONES = {
     you: "text-emerald-400",
     rollNow: "text-emerald-300",
     acting: "text-emerald-400/70",
+    endTurn: "border-emerald-500/50 text-emerald-300 hover:border-emerald-400 hover:text-emerald-100",
     shadow: "0 0 10px rgba(16,185,129,.6)",
   },
 } as const;
@@ -111,6 +115,7 @@ export default function QueueProcession({
   emptyText = "The queue is empty — the scene hasn't opened yet.",
   linkHref,
   onRemove,
+  onEndTurn,
 }: QueueProcessionProps) {
   const pending = [...entries]
     .filter((e) => (e.status ?? "pending") !== "done")
@@ -173,7 +178,15 @@ export default function QueueProcession({
                     {c ? <AttrSummary c={c} /> : null}
                   </div>
                 </div>
-                {up && mine ? (
+                {up && onEndTurn ? (
+                  <button
+                    onClick={() => onEndTurn(entry)}
+                    aria-label={`End ${name}'s turn`}
+                    className={`shrink-0 font-mono text-[10px] font-semibold uppercase tracking-widest px-3 py-1.5 rounded-lg border transition-colors ${T.endTurn}`}
+                  >
+                    End turn
+                  </button>
+                ) : up && mine ? (
                   <span className={`shrink-0 font-mono text-[10px] uppercase tracking-widest ${T.rollNow}`}>Roll now</span>
                 ) : up ? (
                   <span className={`shrink-0 font-mono text-[10px] uppercase tracking-widest ${T.acting}`}>acting</span>

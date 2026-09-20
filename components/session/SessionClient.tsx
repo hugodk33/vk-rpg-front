@@ -65,6 +65,20 @@ const queuePos = (entry: QueueEntry): number => {
   return Number.isFinite(n) ? n : Number.MAX_SAFE_INTEGER;
 };
 
+/* bússola de 8 direções (índice = ângulo · 45° no sentido horário a partir do Leste)
+   + AUTO como 9ª opção, no centro do compasso. */
+const FACING_DIRS: { label: string; arrow: string }[] = [
+  { label: "E", arrow: "→" },
+  { label: "SE", arrow: "↘" },
+  { label: "S", arrow: "↓" },
+  { label: "SW", arrow: "↙" },
+  { label: "W", arrow: "←" },
+  { label: "NW", arrow: "↖" },
+  { label: "N", arrow: "↑" },
+  { label: "NE", arrow: "↗" },
+];
+const COMPASS_ORDER = [5, 6, 7, 4, 0, 3, 2, 1]; /* NW N NE / W · AUTO · E / SW S SE */
+
 const hexLbl = (hex: { q: number; r: number } | null): string => {
   if (!hex) return "off";
   const col = hex.q >= 0 ? String.fromCharCode(65 + (hex.q % 26)) : "?";
@@ -506,6 +520,8 @@ export default function SessionClient({
   const [narrationLocation, setNarrationLocation] = useState<string>(() => defaultLocation?.id ?? "");
   const [locSel, setLocSel] = useState<string | undefined>(() => defaultLocation?.id ?? undefined);
   const [moveTarget, setMoveTarget] = useState<null | { q: number; r: number }>(null);
+  /* ---- facing (8 setas + auto) do personagem da vez ---- */
+  const [facingChoice, setFacingChoice] = useState<number | "auto">("auto");
   /* ---- movement uses whoever is up in the turn (no picker) ---- */
 
   /* ---- log-action map (hex da ação) ---- */
@@ -640,29 +656,44 @@ export default function SessionClient({
     if (!loc?.id) { alert("No floor plan selected for this session."); return; }
     const actor = actorCharId;
     if (!actor) { alert("No one is up in the queue to move."); return; }
-    if (!moveTarget) { alert("Click a destination hex on the map first."); return; }
-    const from = tokenAt(mapTokens, actor);
-    if (!from) { alert(`${charName(actor)} isn't placed on the map yet.`); return; }
-    const dist = hexDist(from, moveTarget);
-    const mover = characters.find((x) => x.id === actor);
-    const sheet = mover?.sheet;
-    if (sheet && sheet.move != null) {
-      const fatigued = sheet.fatigue_state !== "active";
-      const cap = fatigued ? (sheet.effective_move ?? sheet.move) : sheet.move;
-      if (dist > cap) {
-        alert(`${charName(actor)} has Move ${cap} — ${dist} hexes is too far.`);
-        return;
+    const fromTok = mapTokens.find((t) => t.id === actor) ?? null;
+    const from = { q: fromTok?.q ?? null, r: fromTok?.r ?? null, facing: fromTok?.facing ?? null };
+    if (from.q == null || from.r == null) { alert(`${charName(actor)} isn't placed on the map yet.`); return; }
+    const start: { q: number; r: number } = { q: from.q, r: from.r };
+    const target = moveTarget;
+    const turnOnly = !target && facingChoice !== "auto";
+    if (!turnOnly && !target) { alert("Click a destination hex on the map first."); return; }
+    const facing =
+      facingChoice === "auto"
+        ? target
+          ? hexDir(start, target)
+          : (from.facing ?? 0)
+        : facingChoice;
+    if (target) {
+      const dist = hexDist(start, target);
+      const mover = characters.find((x) => x.id === actor);
+      const sheet = mover?.sheet;
+      if (sheet && sheet.move != null) {
+        const fatigued = sheet.fatigue_state !== "active";
+        const cap = fatigued ? (sheet.effective_move ?? sheet.move) : sheet.move;
+        if (dist > cap) {
+          alert(`${charName(actor)} has Move ${cap} — ${dist} hexes is too far.`);
+          return;
+        }
       }
     }
-    const facing = hexDir(from, moveTarget);
     const payload = {
       narrations_id: latestNarrationId || null,
       character_id: actor,
-      description: `Moves to hex ${moveTarget.q},${moveTarget.r}`,
+      description: turnOnly
+        ? `Turns to face ${FACING_DIRS[facing]?.label ?? facing}`
+        : target
+          ? `Moves to hex ${target.q},${target.r}`
+          : `Stays at hex ${from.q},${from.r}`,
       queue: nextActionQueue,
       location_id: loc.id,
-      q: moveTarget.q,
-      r: moveTarget.r,
+      q: turnOnly ? from.q : (target ? target.q : from.q),
+      r: turnOnly ? from.r : (target ? target.r : from.r),
       facing,
     };
     const alreadyQueued = pendingQueue.some((q) => q.character_id === actor);
@@ -689,6 +720,7 @@ export default function SessionClient({
           try { await advanceQueue(actor); } catch { /* ignore */ }
         }
         setMoveTarget(null);
+        setFacingChoice("auto");
         window.location.reload();
       } else {
         alert("Error: " + (j.error || "Unknown"));
@@ -981,14 +1013,60 @@ export default function SessionClient({
                   </span>
                   <button
                     onClick={logMove}
-                    disabled={!moveTarget || !actorCharId}
+                    disabled={!actorCharId || !actorPos || (!moveTarget && facingChoice === "auto")}
                     className={`${T.btnFill} text-sm font-bold px-4 py-2 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed`}
                   >
-                    Log move {moveTarget ? `→ ${moveTarget.q},${moveTarget.r}` : "· click a hex"}
+                    {!moveTarget && facingChoice !== "auto"
+                      ? `Log turn · face ${FACING_DIRS[facingChoice]?.label ?? facingChoice}`
+                      : moveTarget
+                        ? `Log move → ${moveTarget.q},${moveTarget.r}`
+                        : "Log move · click a hex"}
                   </button>
                 </div>
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">Facing</span>
+                  <div className="inline-grid grid-cols-3 gap-1">
+                    {COMPASS_ORDER.map((i) => {
+                      const dir = FACING_DIRS[i];
+                      return (
+                        <button
+                          key={dir.label}
+                          type="button"
+                          title={dir.label}
+                          onClick={() => setFacingChoice(i)}
+                          disabled={!actorCharId || !actorPos}
+                          className={`w-9 h-9 flex flex-col items-center justify-center leading-none rounded-md border transition-colors disabled:opacity-30 disabled:cursor-not-allowed ${
+                            facingChoice === i
+                              ? "border-blue-500/60 bg-blue-700/20 text-blue-300"
+                              : "border-zinc-700/50 text-zinc-500 hover:text-zinc-300"
+                          }`}
+                        >
+                          <span className="text-sm">{dir.arrow}</span>
+                          <span className="text-[8px] font-mono mt-0.5">{dir.label}</span>
+                        </button>
+                      );
+                    })}
+                    <button
+                      type="button"
+                      onClick={() => setFacingChoice("auto")}
+                      disabled={!actorCharId || !actorPos}
+                      className={`row-start-2 col-start-2 w-9 h-9 font-mono text-[10px] font-bold rounded-md border transition-colors disabled:opacity-30 disabled:cursor-not-allowed ${
+                        facingChoice === "auto"
+                          ? "border-blue-500/60 bg-blue-700/20 text-blue-300"
+                          : "border-zinc-700/50 text-zinc-500 hover:text-zinc-300"
+                      }`}
+                    >
+                      auto
+                    </button>
+                  </div>
+                  <span className="text-[10px] text-zinc-600 ml-1">
+                    {facingChoice === "auto"
+                      ? "faces the way it moves (or keeps its heading)"
+                      : "log your turn to face this direction"}
+                  </span>
+                </div>
                 <p className="mt-2 font-mono text-[10px] text-zinc-600 uppercase tracking-widest">
-                  each logged move becomes an action with the destination hex: who? {shownActor ? charName(shownActor) : "—"} · where? {mapLocation?.name ?? "—"} · from {actorPos ? `${actorPos.q},${actorPos.r}` : "—"} → {moveTarget ? `${moveTarget.q},${moveTarget.r}` : "click a hex"}
+                  each logged move becomes an action with the destination hex: who? {shownActor ? charName(shownActor) : "—"} · where? {mapLocation?.name ?? "—"} · from {actorPos ? `${actorPos.q},${actorPos.r}` : "—"} {moveTarget ? `→ ${moveTarget.q},${moveTarget.r}` : facingChoice !== "auto" ? `→ turns to face ${FACING_DIRS[facingChoice]?.label}` : "→ click a hex"}
                 </p>
               </>
             ) : (
@@ -1142,6 +1220,7 @@ export default function SessionClient({
             npcIds={npcIds}
             linkHref={(charId) => `/character/${charId}`}
             onRemove={!isPlayer ? removeFromQueue : undefined}
+            onEndTurn={!isPlayer ? (entry) => removeFromQueue(entry) : undefined}
             emptyText={
               isPlayer
                 ? "The queue is empty — the scene hasn't opened yet."
