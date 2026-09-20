@@ -16,9 +16,10 @@
    each action stays replayable by story moment.
    ============================================================ */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
+import type { TableSettings } from "@/lib/types";
 
 export interface QuickTarget {
   id: string;
@@ -32,6 +33,7 @@ export interface QuickTarget {
 export interface QuickItem {
   id: string;
   name: string;
+  cost?: number;
 }
 
 const EQUIP_STATUS: { value: string; label: string }[] = [
@@ -66,6 +68,22 @@ export default function TableQuickActions({
   items: QuickItem[];
 }) {
   const router = useRouter();
+
+  const [tableSettings, setTableSettings] = useState<TableSettings | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`/api/game-table-settings/${tableId}`)
+      .then((r) => r.json())
+      .then((j) => {
+        if (!cancelled) setTableSettings(j as TableSettings);
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [tableId]);
+
+  /* item custa pontos da ficha quando a mesa usa 'points' e o mestre não
+     o adiciona de graça (gm_adds_item) */
+  const pointsMode = tableSettings?.item_mode === "points" && !tableSettings.gm_adds_item;
 
   const [targetId, setTargetId] = useState("");
   const [mode, setMode] = useState<"status" | "item" | "xp">("status");
@@ -135,7 +153,20 @@ export default function TableQuickActions({
       setError("Pick an item to grant.");
       throw new Error(VALIDATION);
     }
-    const summary = `+${q}× ${itemName} · ${EQUIP_STATUS.find((s) => s.value === eqStatus)?.label ?? eqStatus}`;
+    const unitCost = items.find((i) => i.id === itemId)?.cost;
+    const totalCost = pointsMode ? (unitCost ?? 0) * q : 0;
+    if (pointsMode) {
+      if (unitCost == null) {
+        setError("This table charges points for items — set a point cost on the item first.");
+        throw new Error(VALIDATION);
+      }
+      const have = target?.points ?? 0;
+      if (have < totalCost) {
+        setError(`${target?.name ?? "Character"} has ${have} pts — ${q}× ${itemName} costs ${totalCost} pts.`);
+        throw new Error(VALIDATION);
+      }
+    }
+    const summary = `+${q}× ${itemName}${pointsMode ? ` · −${totalCost} pts` : ""} · ${EQUIP_STATUS.find((s) => s.value === eqStatus)?.label ?? eqStatus}`;
     await api("/game-table-item/grant", {
       method: "POST",
       body: JSON.stringify({
@@ -143,10 +174,22 @@ export default function TableQuickActions({
         item_id: itemId,
         quantity: q,
         status: eqStatus,
-        name: note.trim() || `Granted ${itemName}`,
-        description: note.trim() || `+${q}× ${itemName}`,
+        name: note.trim() || (pointsMode ? `${itemName} (purchase)` : `Granted ${itemName}`),
+        description: note.trim() || (pointsMode ? `${q}× ${itemName} · −${totalCost} pts` : `+${q}× ${itemName}`),
       }),
     });
+    if (pointsMode) {
+      /* cobra o custo da ficha como gasto de pontos, sempre depois do grant */
+      await api("/game-table-character/points", {
+        method: "POST",
+        body: JSON.stringify({
+          character_id: targetId,
+          points: -totalCost,
+          name: `Purchased ${itemName}`,
+          description: `−${totalCost} points · ${q}× ${itemName}`,
+        }),
+      });
+    }
     return summary;
   };
 
@@ -260,7 +303,10 @@ export default function TableQuickActions({
                   <select value={itemId} onChange={(e) => setItemId(e.target.value)} className={fieldCls} disabled={items.length === 0}>
                     <option value="">{items.length === 0 ? "No items on file" : "Pick an item…"}</option>
                     {items.map((i) => (
-                      <option key={i.id} value={i.id}>{i.name}</option>
+                      <option key={i.id} value={i.id}>
+                        {i.name}
+                        {pointsMode ? (i.cost != null ? ` · ${i.cost} pts each` : " · no cost set") : ""}
+                      </option>
                     ))}
                   </select>
                 </label>
@@ -282,6 +328,11 @@ export default function TableQuickActions({
                   Note (why)
                   <input type="text" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Loot from the ambush…" className={fieldCls} />
                 </label>
+                {pointsMode ? (
+                  <p className="text-[11px] text-amber-300/90">
+                    This table charges sheet points for items — the cost is deducted from the character&apos;s {target?.name ?? "target"}. (~{target?.points ?? 0} pts available)
+                  </p>
+                ) : null}
               </div>
             ) : null}
 

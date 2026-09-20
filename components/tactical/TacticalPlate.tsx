@@ -100,9 +100,6 @@ interface TacticalPlateProps {
   fill?: boolean;
 }
 
-const playerFill = "#60a5fa";
-const npcFill = "#fbbf24";
-
 export default function TacticalPlate({
   location,
   tokens = [],
@@ -184,11 +181,6 @@ export default function TacticalPlate({
     () => tokens.filter((t) => t.q != null && t.r != null && t.q! >= 0 && t.r! >= 0 && t.q! < spec.cols && t.r! < spec.rows),
     [tokens, spec]
   );
-  const unplaced = useMemo(
-    () => tokens.filter((t) => t.q == null || t.r == null || t.q! < 0 || t.r! < 0 || t.q! >= spec.cols || t.r! >= spec.rows),
-    [tokens, spec]
-  );
-
   const tokenImages = useTokenImages(placed);
 
   useEffect(() => {
@@ -291,31 +283,6 @@ export default function TacticalPlate({
         />
       </div>
       <ZoomControls zoom={zoom} onZoom={applyZoom} hand={hand} onToggleHand={toggleHand} />
-
-      {unplaced.length > 0 ? (
-        <div className="border-t border-zinc-700/40 px-3 py-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
-          <span className="font-mono text-[9px] uppercase tracking-widest text-zinc-600">off board</span>
-          {unplaced.map((t) => (
-            <span key={t.id} className="inline-flex items-center gap-1 text-[10px] text-zinc-400">
-              <span className="w-1.5 h-1.5 rounded-full" style={{ background: t.isPlayer ? playerFill : npcFill, opacity: t.unconscious ? 0.5 : 1 }} />
-              {t.name}
-            </span>
-          ))}
-        </div>
-      ) : (
-        byId(tokens).size > 0 &&
-        placed.length === 0 && (
-          <div className="border-t border-zinc-700/40 px-3 py-1.5 font-mono text-[10px] text-zinc-600">
-            No tokens placed yet — log a move or reset positions.
-          </div>
-        )
-      )}
     </div>
   );
-}
-
-function byId(tokens: BoardToken[]): Map<string, BoardToken> {
-  const m = new Map<string, BoardToken>();
-  for (const t of tokens) m.set(t.id, t);
-  return m;
 }

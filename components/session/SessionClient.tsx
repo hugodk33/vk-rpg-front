@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import type { CharacterSkill, CharacterViewer, Location, Narration, NarrationAction, QueueEntry, Sheet } from "@/lib/types";
+import type { CharacterSkill, CharacterViewer, Location, Narration, NarrationAction, QueueEntry, Sheet, TableSettings } from "@/lib/types";
 import { api } from "@/lib/api";
 import { skillLabel, skillLevel } from "@/lib/skill";
 import { narrationBoard, narrationBoardAt, tokenAt } from "@/lib/board";
@@ -202,6 +202,19 @@ export default function SessionClient({
       };
   const router = useRouter();
   const [tab, setTab] = useState<SessionTab>("turn");
+
+  /* config de mesa: decide se o movimento encerra o turno (after_move) */
+  const [tableSettings, setTableSettings] = useState<TableSettings | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`/api/game-table-settings/${tableId}`)
+      .then((r) => r.json())
+      .then((j) => {
+        if (!cancelled) setTableSettings(j as TableSettings);
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [tableId]);
 
   const pendingQueue = [...queue]
     .filter((q) => (q.status ?? "pending") !== "done")
@@ -697,6 +710,9 @@ export default function SessionClient({
       facing,
     };
     const alreadyQueued = pendingQueue.some((q) => q.character_id === actor);
+    /* no modo 'after_move', um deslocamento real (com destino) encerra o turno
+       de quem já estava na vez; quem acabou de entrar pela jogada permanece */
+    const endTurnByMove = tableSettings?.turn_end_mode === "after_move" && !!target;
     try {
       /* movimento = tomada de decisão: se o ator não está na fila, abre a vez
          dele no TOPO da fila antes de registrar a ação. */
@@ -716,7 +732,12 @@ export default function SessionClient({
       });
       const j = await res.json();
       if (j.success) {
-        if (alreadyQueued) {
+        if (endTurnByMove && alreadyQueued) {
+          const front = pendingQueue.find((e) => e.character_id === actor) ?? pendingQueue[0];
+          if (front) {
+            try { await removeFromQueue(front); } catch { /* ignore */ }
+          }
+        } else if (alreadyQueued) {
           try { await advanceQueue(actor); } catch { /* ignore */ }
         }
         setMoveTarget(null);

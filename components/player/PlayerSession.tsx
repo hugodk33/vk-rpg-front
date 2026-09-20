@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { CharacterSkill, Location, Narration, NarrationAction, QueueEntry, TableCharacter, VisibilityRule } from "@/lib/types";
+import type { CharacterSkill, Location, Narration, NarrationAction, QueueEntry, TableCharacter, TableSettings, VisibilityRule } from "@/lib/types";
 import { skillLabel, skillLevel } from "@/lib/skill";
 import { narrationBoard, narrationBoardAt, tokenAt, type BoardToken, type BoardTrail, type TrailMove } from "@/lib/board";
 import { hexDir, hexDist } from "@/lib/hexgrid";
@@ -18,6 +18,7 @@ import QueueProcession from "@/components/session/QueueProcession";
    ============================================================ */
 
 interface TurnPanelProps {
+  tableId: string;
   chapter: number;
   part: string;
   latestTitle: string;
@@ -81,6 +82,7 @@ function rollDice(count: number, die: number, mod: number): { r: number[]; tot: 
 }
 
 export default function TurnPanel({
+  tableId,
   chapter,
   part,
   latestTitle,
@@ -114,6 +116,18 @@ export default function TurnPanel({
   const [rolls, setRolls] = useState<number[]>([]);
   const [total, setTotal] = useState<number | null>(null);
   const [judgment, setJudgment] = useState<Judgment | null>(null);
+  const [tableSettings, setTableSettings] = useState<TableSettings | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`/api/game-table-settings/${tableId}`)
+      .then((r) => r.json())
+      .then((j) => {
+        if (!cancelled) setTableSettings(j as TableSettings);
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [tableId]);
   const [effectNote, setEffectNote] = useState<string | null>(null);
   const [actDesc, setActDesc] = useState("");
   const [actTarget, setActTarget] = useState("");
@@ -206,8 +220,11 @@ export default function TurnPanel({
       (latestBeat?.actions ?? []).reduce((m, a) => Math.max(m, Number(a.queue) || 0), 0) + 1;
     const defaultDesc = `${skillMode ? (skillData ? skillLabel(skillData, myChar?.sheet ?? null) : "Skill") : actAttr.toUpperCase()} test — ${judgment.ok ? "success" : "failure"}.`;
     const description = actDesc.trim() || defaultDesc;
+    /* um teste encerra o turno só no modo 'after_test' (no 'after_move' o turno
+       encerra ao mover; o teste fica como ação registrada e a vez continua) */
+    const endTurnByTest = (tableSettings?.turn_end_mode ?? "after_test") !== "after_move";
     try {
-      const res = await fetch("/api/game-table-end-turn", {
+      const res = await fetch(endTurnByTest ? "/api/game-table-end-turn" : "/api/game-table-action", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -222,7 +239,7 @@ export default function TurnPanel({
         }),
       });
       const j = await res.json();
-      if (!j.success) throw new Error(j.error || "Failed to end your turn");
+      if (!j.success) throw new Error(j.error || "Failed to log your action");
       setCommitted(true);
       setActDesc("");
       setActTarget("");
@@ -416,8 +433,10 @@ export default function TurnPanel({
     setMoveError(null);
     const nextActionQueue =
       (latestBeat?.actions ?? []).reduce((m, a) => Math.max(m, Number(a.queue) || 0), 0) + 1;
+    /* só um deslocamento real (com destino) encerra o turno no modo 'after_move' */
+    const endTurnByMove = tableSettings?.turn_end_mode === "after_move" && !!target;
     try {
-      const res = await fetch("/api/game-table-end-turn", {
+      const res = await fetch(endTurnByMove ? "/api/game-table-end-turn" : "/api/game-table-action", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -427,6 +446,8 @@ export default function TurnPanel({
           queue: nextActionQueue,
           result: null,
           dice_roll: null,
+          target: null,
+          multitarget: false,
           location_id: mapLocation.id,
           q,
           r,

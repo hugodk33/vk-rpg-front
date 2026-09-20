@@ -32,7 +32,7 @@ const BLUE_TONE: TrailTone = {
 interface TableTabsProps {
   tableId: string;
   role?: "narrator" | "player";
-  active?: "overview" | "sessions" | "timeline" | "map" | "visibility" | "modifiers" | "character";
+  active?: "overview" | "sessions" | "timeline" | "map" | "visibility" | "modifiers" | "settings" | "character";
   characterUrl?: string;
   characterHref?: string;
   hideBreadcrumb?: boolean;
@@ -57,6 +57,7 @@ const ICONS = {
   map: "M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7",
   visibility: "M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7zM12 9a3 3 0 100 6 3 3 0 000-6z",
   modifiers: "M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z",
+  settings: "M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z",
   character: "M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 16a3.001 3.001 0 00-2.83-2M15 11a2 2 0 11-4 0 2 2 0 014 0z",
 };
 
@@ -200,6 +201,12 @@ export default function TableTabs({ tableId, role = "narrator", active, characte
         {role !== "player" ? (
         <Link href={`${prefix}/table/${tableId}/modifiers`} className={`${tabActive(active === "modifiers", tone)} ${active === "modifiers" ? underlineCls : ""}`}>
           {icon(ICONS.modifiers, "w-4 h-4")} Modifiers
+        </Link>
+        ) : null}
+
+        {role !== "player" ? (
+        <Link href={`${prefix}/table/${tableId}/settings`} className={`${tabActive(active === "settings", tone)} ${active === "settings" ? underlineCls : ""}`}>
+          {icon(ICONS.settings, "w-4 h-4")} Settings
         </Link>
         ) : null}
 

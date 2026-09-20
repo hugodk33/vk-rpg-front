@@ -333,7 +333,7 @@ export default async function TableOverviewPage({ params }: { params: Promise<{ 
       })),
   ];
   const quickItems: QuickItem[] = itemsRes?.items
-    ? itemsRes.items.map((i) => ({ id: i.id, name: i.name }))
+    ? itemsRes.items.map((i: { id: string; name: string; cost?: number }) => ({ id: i.id, name: i.name, cost: i.cost }))
     : [];
 
   /* records on file */

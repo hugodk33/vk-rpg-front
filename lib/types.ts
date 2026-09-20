@@ -529,6 +529,23 @@ export interface GameTableNpcs {
   npcs: TableNpc[]
 }
 
+/** Configurações de regra por mesa (game_table_settings). */
+export interface TableSettings {
+  table_id: string
+  /** O turno encerra depois de um teste, ou depois de mover + virar-se. */
+  turn_end_mode: "after_test" | "after_move"
+  /** Itens: gastar pontos da ficha, ou o mestre concede. */
+  item_mode: "points" | "gm"
+  /** Teste de reação: com pontos, ou o mestre resolve. */
+  reaction_mode: "points" | "gm"
+  /** O mestre pode adicionar o item diretamente (independente de pontos). */
+  gm_adds_item: number
+  /** Item que representa dinheiro (moeda) para a loja inicial. */
+  money_item_id?: string | null
+  /** Loja inicial habilitada. */
+  starting_shop: number
+}
+
 export interface QueueEntry {
   id: string
   character_id?: string | null

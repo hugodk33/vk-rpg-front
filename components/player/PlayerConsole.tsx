@@ -345,6 +345,7 @@ export default function PlayerConsole({
 
       {tab === "turn" ? (
         <TurnPanel
+          tableId={tableId}
           chapter={chapter}
           part={part}
           latestTitle={latestTitle}
