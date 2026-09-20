@@ -1,10 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import type { CharacterSkill, Location, Narration, NarrationAction, QueueEntry, TableCharacter, VisibilityRule } from "@/lib/types";
 import { skillLabel, skillLevel } from "@/lib/skill";
-import { narrationBoard, tokenAt, type BoardToken, type BoardTrail, type TrailMove } from "@/lib/board";
+import { narrationBoard, narrationBoardAt, tokenAt, type BoardToken, type BoardTrail, type TrailMove } from "@/lib/board";
 import { hexDir, hexDist } from "@/lib/hexgrid";
 import { floorPlanGroup } from "@/lib/location";
 import { maskedLocationName, maskedTargetName } from "@/lib/visibility";
@@ -97,7 +96,6 @@ export default function TurnPanel({
   latestBeat = null,
   visibility = null,
 }: TurnPanelProps) {
-  const router = useRouter();
   const pendingQueue = [...queue]
     .filter((e) => (e.status ?? "pending") !== "done")
     .sort((a, b) => queuePos(a) - queuePos(b));
@@ -192,7 +190,6 @@ export default function TurnPanel({
     setActDesc("");
     if (j.ok && skillMode && selSkill) {
       void applySkillConsequence(selSkill);
-      router.refresh();
     }
     return { r, tot };
   }
@@ -204,6 +201,9 @@ export default function TurnPanel({
     if (!isMyTurn || !myEntry || rolls.length === 0 || total === null || !judgment) return;
     setSubmitting(true);
     setCommitError(null);
+    /* posição da próxima action = append na sequência da narração atual */
+    const nextActionQueue =
+      (latestBeat?.actions ?? []).reduce((m, a) => Math.max(m, Number(a.queue) || 0), 0) + 1;
     const defaultDesc = `${skillMode ? (skillData ? skillLabel(skillData, myChar?.sheet ?? null) : "Skill") : actAttr.toUpperCase()} test — ${judgment.ok ? "success" : "failure"}.`;
     const description = actDesc.trim() || defaultDesc;
     try {
@@ -216,7 +216,7 @@ export default function TurnPanel({
           description,
           dice_roll: rollLog(),
           result: String(total),
-          queue: Number(myEntry.queue) || 0,
+          queue: nextActionQueue,
           target: actTarget || null,
           multitarget: false,
         }),
@@ -226,7 +226,7 @@ export default function TurnPanel({
       setCommitted(true);
       setActDesc("");
       setActTarget("");
-      router.refresh();
+      window.location.reload();
     } catch (err: unknown) {
       setCommitError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -262,12 +262,12 @@ export default function TurnPanel({
     null;
   const mapLocation = locations.find((l) => l.id === locSel) ?? defaultLocation;
   const mapGroup = floorPlanGroup(mapLocation, locations);
-  const board = narrationBoard(latestBeat, mapLocation);
 
-  /* ---- movement replay: each action with a hex gets its own toggle ----
-     on camera: ONLY the freshly made move — each vector is a single
-     movement, toggled below; "All" stacks every vector of the scene. */
-  const boardMoves = board.trail?.moves ?? [];
+  /* ---- movement replay: default = ONLY the latest move; each action
+     with a hex also gets its own toggle below ("All" stacks every
+     vector of the scene). ---- */
+  const boardFull = narrationBoard(latestBeat, mapLocation);
+  const boardMoves = boardFull.trail?.moves ?? [];
   const boardActionIds = boardMoves.map((m) => m.actionId).filter((x): x is string => !!x);
   const boardActionKey = boardActionIds.join("\u0000");
   const [shownMoves, setShownMoves] = useState<string[]>([]);
@@ -278,12 +278,17 @@ export default function TurnPanel({
     if (fresh.length > 0) setShownMoves([boardActionIds[boardActionIds.length - 1]]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [boardActionKey]);
-  const activeMoves = boardMoves.filter((m) => m.actionId && shownMoves.includes(m.actionId));
-  const activeTrail: BoardTrail | null = activeMoves.length
+  const shownSet = new Set(shownMoves);
+  const shownTrailMoves = boardMoves.filter(
+    (m): m is TrailMove & { actionId: string } => !!m.actionId && shownSet.has(m.actionId)
+  );
+  const lastShownId =
+    shownTrailMoves.length > 0 ? shownTrailMoves[shownTrailMoves.length - 1].actionId : null;
+  const activeTrail: BoardTrail | null = shownTrailMoves.length
     ? {
-        from: activeMoves[activeMoves.length - 1]?.from ?? null,
-        to: activeMoves[activeMoves.length - 1]?.to,
-        moves: activeMoves,
+        from: shownTrailMoves[shownTrailMoves.length - 1]?.from ?? null,
+        to: shownTrailMoves[shownTrailMoves.length - 1].to,
+        moves: shownTrailMoves,
       }
     : null;
 
@@ -292,6 +297,7 @@ export default function TurnPanel({
       prev.includes(actionId) ? prev.filter((id) => id !== actionId) : [...prev, actionId]
     );
   }
+
   /* tokens = toda a party (roster) + quem a narration posiciona; o nome
      real é preservado só para o próprio jogador — todo o resto passa pelo
      filtro de visibility (aliados no roster também, pois NPCs controlados
@@ -302,17 +308,35 @@ export default function TurnPanel({
     isPlayer: true,
     unconscious: false,
   }));
-  const tokenById = new Map<string, BoardToken>(rosterTokens.map((t) => [t.id, t]));
-  for (const bt of board.tokens) {
-    tokenById.set(bt.id, {
-      ...(tokenById.get(bt.id) ?? { id: bt.id, name: bt.name, isPlayer: true }),
-      ...bt,
-    });
-  }
-  const mapTokens = [...tokenById.values()].map((t) => ({
-    ...t,
-    name: t.id === myId ? t.name : maskedTargetName(visibility, t.id, t.name),
-  }));
+  const mergeTokens = (src: BoardToken[]): BoardToken[] => {
+    const byId = new Map<string, BoardToken>(rosterTokens.map((t) => [t.id, t]));
+    for (const bt of src) {
+      byId.set(bt.id, {
+        ...(byId.get(bt.id) ?? { id: bt.id, name: bt.name, isPlayer: true }),
+        ...bt,
+      });
+    }
+    return [...byId.values()].map((t) => ({
+      ...t,
+      name: t.id === myId ? t.name : maskedTargetName(visibility, t.id, t.name),
+    }));
+  };
+
+  /* ---- the board is frozen at the LAST SHOWN movement ---- the token
+     lands exactly on the destination of the latest shown move, with the
+     arrow showing where it came from; a newer move simply replaces the
+     older vector. */
+  const fullTokens = mergeTokens(boardFull.tokens);
+  const fromCurrent = tokenAt(fullTokens, myId);
+  const previewMove: TrailMove | null =
+    isMyTurn && !committed && moveTarget && fromCurrent
+      ? { id: myId, from: fromCurrent, to: moveTarget }
+      : null;
+  const frozen = lastShownId !== null && !previewMove;
+  const board = frozen
+    ? narrationBoardAt(latestBeat, { untilActionId: lastShownId, fallbackLocation: mapLocation })
+    : boardFull;
+  const mapTokens = frozen ? mergeTokens(board.tokens) : fullTokens;
   const from = tokenAt(mapTokens, myId);
   const me = mapTokens.find((t) => t.id === myId);
   const fatigued = s?.fatigue_state !== "active";
@@ -320,9 +344,7 @@ export default function TurnPanel({
 
   /* ---- the play map ----: while it's my turn the picked hex is drawn as a
      preview (arrow + destination ghost); the token itself only strides when
-     the move is committed and the refreshed board comes back. */
-  const previewMove: TrailMove | null =
-    isMyTurn && !committed && moveTarget && from ? { id: myId, from, to: moveTarget } : null;
+     the move is committed and the fresh board comes back. */
   const playTrail: BoardTrail | null =
     previewMove && moveTarget
       ? {
@@ -332,7 +354,19 @@ export default function TurnPanel({
         }
       : activeTrail;
 
-  const FACING_LABELS = ["E", "SE", "SW", "W", "NW", "NE"];
+  /* bússola de 8 direções (índice = ângulo · 45° no sentido horário a partir do Leste)
+     + AUTO como 9ª opção, no centro do compasso */
+  const FACING_DIRS: { label: string; arrow: string }[] = [
+    { label: "E", arrow: "→" },
+    { label: "SE", arrow: "↘" },
+    { label: "S", arrow: "↓" },
+    { label: "SW", arrow: "↙" },
+    { label: "W", arrow: "←" },
+    { label: "NW", arrow: "↖" },
+    { label: "N", arrow: "↑" },
+    { label: "NE", arrow: "↗" },
+  ];
+  const COMPASS_ORDER = [5, 6, 7, 4, 0, 3, 2, 1]; /* NW N NE / W · AUTO · E / SW S SE */
 
   function handleMapClick(q: number, r: number) {
     if (!isMyTurn || committed) return;
@@ -377,9 +411,11 @@ export default function TurnPanel({
     }
     const description = target
       ? `Moves to hex ${target.q},${target.r}`
-      : `Turns to face ${FACING_LABELS[facing] ?? facing}`;
+      : `Turns to face ${FACING_DIRS[facing]?.label ?? facing}`;
     setMoving(true);
     setMoveError(null);
+    const nextActionQueue =
+      (latestBeat?.actions ?? []).reduce((m, a) => Math.max(m, Number(a.queue) || 0), 0) + 1;
     try {
       const res = await fetch("/api/game-table-end-turn", {
         method: "POST",
@@ -388,7 +424,7 @@ export default function TurnPanel({
           character_id: myId,
           narrations_id: latestNarrationId || null,
           description,
-          queue: Number(myEntry.queue) || 0,
+          queue: nextActionQueue,
           result: null,
           dice_roll: null,
           location_id: mapLocation.id,
@@ -403,7 +439,7 @@ export default function TurnPanel({
       setMoveTarget(null);
       setFacingChoice("auto");
       setMoveWarn(null);
-      router.refresh();
+      window.location.reload();
     } catch (err: unknown) {
       setMoveError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -579,7 +615,7 @@ export default function TurnPanel({
                 {from ? (
                   <span className="font-mono text-[12px] text-zinc-400">
                     you are at hex {from.q},{from.r}
-                    {me?.facing != null && me?.facing >= 0 ? ` · facing ${FACING_LABELS[me.facing] ?? me.facing}` : ""}
+                    {me?.facing != null && me?.facing >= 0 ? ` · facing ${FACING_DIRS[me.facing]?.label ?? me.facing}` : ""}
                   </span>
                 ) : (
                   <span className="text-zinc-600 italic">you&apos;re not placed yet</span>
@@ -611,31 +647,38 @@ export default function TurnPanel({
 
             <div className="flex flex-wrap items-center gap-2">
               <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">Facing</span>
-              <button
-                type="button"
-                onClick={() => pickFacing("auto")}
-                className={`font-mono text-[10px] font-semibold uppercase tracking-widest px-2.5 py-1 rounded-md border transition-colors ${
-                  facingChoice === "auto"
-                    ? "border-blue-500/60 bg-blue-700/20 text-blue-300"
-                    : "border-zinc-700/50 text-zinc-500 hover:text-zinc-300"
-                }`}
-              >
-                auto
-              </button>
-              {FACING_LABELS.map((lbl, i) => (
+              <div className="inline-grid grid-cols-3 gap-1">
+                {COMPASS_ORDER.map((i) => {
+                  const dir = FACING_DIRS[i];
+                  return (
+                    <button
+                      key={dir.label}
+                      type="button"
+                      title={dir.label}
+                      onClick={() => pickFacing(i)}
+                      className={`w-9 h-9 flex flex-col items-center justify-center leading-none rounded-md border transition-colors ${
+                        facingChoice === i
+                          ? "border-blue-500/60 bg-blue-700/20 text-blue-300"
+                          : "border-zinc-700/50 text-zinc-500 hover:text-zinc-300"
+                      }`}
+                    >
+                      <span className="text-sm">{dir.arrow}</span>
+                      <span className="text-[8px] font-mono mt-0.5">{dir.label}</span>
+                    </button>
+                  );
+                })}
                 <button
-                  key={lbl}
                   type="button"
-                  onClick={() => pickFacing(i)}
-                  className={`w-9 h-8 font-mono text-[11px] font-bold rounded-md border transition-colors ${
-                    facingChoice === i
+                  onClick={() => pickFacing("auto")}
+                  className={`row-start-2 col-start-2 w-9 h-9 font-mono text-[10px] font-bold rounded-md border transition-colors ${
+                    facingChoice === "auto"
                       ? "border-blue-500/60 bg-blue-700/20 text-blue-300"
                       : "border-zinc-700/50 text-zinc-500 hover:text-zinc-300"
                   }`}
                 >
-                  {lbl}
+                  auto
                 </button>
-              ))}
+              </div>
               <span className="text-[10px] text-zinc-600 ml-1">
                 {facingChoice === "auto" ? "faces the way you move" : "you turn to face this direction"}
               </span>

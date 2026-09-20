@@ -6,8 +6,8 @@ import Link from "next/link";
 import type { CharacterSkill, CharacterViewer, Location, Narration, NarrationAction, QueueEntry, Sheet } from "@/lib/types";
 import { api } from "@/lib/api";
 import { skillLabel, skillLevel } from "@/lib/skill";
-import { narrationBoard, tokenAt } from "@/lib/board";
-import type { BoardToken, BoardTrail } from "@/lib/board";
+import { narrationBoard, narrationBoardAt, tokenAt } from "@/lib/board";
+import type { BoardToken, BoardTrail, TrailMove } from "@/lib/board";
 import { hexDir, hexDist } from "@/lib/hexgrid";
 import { floorPlanGroup } from "@/lib/location";
 import TacticalPlate from "@/components/tactical/TacticalPlate";
@@ -194,6 +194,10 @@ export default function SessionClient({
     .sort((a, b) => queuePos(a) - queuePos(b));
   const nextQueuePos =
     pendingQueue.length > 0 ? Math.max(...pendingQueue.map(queuePos)) + 1 : 1;
+  /* posição da PRÓXIMA action na narração atual = append da sequência dela
+     (a fila de turnos é outra coisa — a sequência do texto da narração). */
+  const nextActionQueue =
+    (latestBeat?.actions ?? []).reduce((m, a) => Math.max(m, Number(a.queue) || 0), 0) + 1;
 
   const [modal, setModal] = useState<null | "chapter" | "moment" | "narration">(null);
   const [modalTitle, setModalTitle] = useState("");
@@ -203,6 +207,12 @@ export default function SessionClient({
 
   const [queueChar, setQueueChar] = useState("");
 
+  /* apenas quem está NA CENA (narração atual) pode entrar na fila —
+     alvos = characters listados na narration + NPCs presentes nela. */
+  const sceneCharIds = new Set<string>();
+  for (const c of latestBeat?.characters ?? []) sceneCharIds.add(c.id);
+  for (const n of latestBeat?.npcs ?? []) if (n.characterId) sceneCharIds.add(n.characterId);
+
   const charName = (charId?: string | null): string => {
     if (!charId) return "Unknown";
     const c = characters.find((x) => x.id === charId);
@@ -210,7 +220,7 @@ export default function SessionClient({
   };
 
   async function addToQueue() {
-    if (!queueChar) return;
+    if (!queueChar || !sceneCharIds.has(queueChar)) return;
     try {
       await fetch("/api/game-table-queue", {
         method: "POST",
@@ -449,11 +459,11 @@ export default function SessionClient({
     if (!actorCharId) { alert("No one is up in the queue"); return; }
     if (!actDesc) { alert("Enter an action description"); return; }
     const payload = {
-      narrations_id: null,
+      narrations_id: latestNarrationId || null,
       character_id: actorCharId,
       description: actDesc,
       dice_roll: actRoll || null,
-      queue: 1,
+      queue: nextActionQueue,
       target: actTarget || null,
       multitarget: false,
       location_id: actionLocation?.id ?? null,
@@ -496,7 +506,7 @@ export default function SessionClient({
   const [narrationLocation, setNarrationLocation] = useState<string>(() => defaultLocation?.id ?? "");
   const [locSel, setLocSel] = useState<string | undefined>(() => defaultLocation?.id ?? undefined);
   const [moveTarget, setMoveTarget] = useState<null | { q: number; r: number }>(null);
-  const [moveActor, setMoveActor] = useState<string>(() => pendingQueue[0]?.character_id || "");
+  /* ---- movement uses whoever is up in the turn (no picker) ---- */
 
   /* ---- log-action map (hex da ação) ---- */
   const [actionLocId, setActionLocId] = useState<string>(() => defaultLocation?.id ?? "");
@@ -514,12 +524,12 @@ export default function SessionClient({
 
   const mapLocation = locations.find((l) => l.id === locSel) ?? defaultLocation;
   const mapGroup = floorPlanGroup(mapLocation, locations);
-  const board = narrationBoard(latestBeat, mapLocation);
 
   /* ---- movement replay: each action with a hex gets its own toggle ----
      on camera: ONLY the freshly made move — each vector is a single
      movement, toggled below; "All" stacks every vector of the scene. */
-  const boardMoves = board.trail?.moves ?? [];
+  const boardFull = narrationBoard(latestBeat, mapLocation);
+  const boardMoves = boardFull.trail?.moves ?? [];
   const boardActionIds = boardMoves.map((m) => m.actionId).filter((x): x is string => !!x);
   const boardActionKey = boardActionIds.join("\u0000");
   const [shownMoves, setShownMoves] = useState<string[]>([]);
@@ -530,12 +540,25 @@ export default function SessionClient({
     if (fresh.length > 0) setShownMoves([boardActionIds[boardActionIds.length - 1]]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [boardActionKey]);
-  const activeMoves = boardMoves.filter((m) => m.actionId && shownMoves.includes(m.actionId));
-  const activeTrail: BoardTrail | null = activeMoves.length
+
+  /* ---- the board is frozen at the LAST SHOWN movement ---- the token
+     lands exactly on that action's destination (the arrow shows where it
+     came from), so an earlier vector is never painted over a later
+     position. No selection → the final snapshot with no arrows. */
+  const shownSet = new Set(shownMoves);
+  const shownTrailMoves = boardMoves.filter(
+    (m): m is TrailMove & { actionId: string } => !!m.actionId && shownSet.has(m.actionId)
+  );
+  const lastShownId =
+    shownTrailMoves.length > 0 ? shownTrailMoves[shownTrailMoves.length - 1].actionId : null;
+  const board = lastShownId
+    ? narrationBoardAt(latestBeat, { untilActionId: lastShownId, fallbackLocation: mapLocation })
+    : narrationBoardAt(latestBeat, { untilActionId: "", fallbackLocation: mapLocation });
+  const activeTrail: BoardTrail | null = shownTrailMoves.length
     ? {
-        from: activeMoves[activeMoves.length - 1]?.from ?? null,
-        to: activeMoves[activeMoves.length - 1]?.to,
-        moves: activeMoves,
+        from: shownTrailMoves[shownTrailMoves.length - 1]?.from ?? null,
+        to: shownTrailMoves[shownTrailMoves.length - 1].to,
+        moves: shownTrailMoves,
       }
     : null;
 
@@ -573,7 +596,7 @@ export default function SessionClient({
   }
   const mapTokens: BoardToken[] = [...tokenById.values()];
 
-  const actorPos = (moveActor || actorCharId) ? tokenAt(mapTokens, moveActor || actorCharId) : null;
+  const actorPos = actorCharId ? tokenAt(mapTokens, actorCharId) : null;
 
   /* ---- log-action hex (sempre visível, acima das tabs) ---- */
   const actionLocation = locations.find((l) => l.id === actionLocId) ?? defaultLocation;
@@ -615,8 +638,8 @@ export default function SessionClient({
   async function logMove() {
     const loc = mapLocation;
     if (!loc?.id) { alert("No floor plan selected for this session."); return; }
-    const actor = moveActor || actorCharId;
-    if (!actor) { alert("Pick who moves."); return; }
+    const actor = actorCharId;
+    if (!actor) { alert("No one is up in the queue to move."); return; }
     if (!moveTarget) { alert("Click a destination hex on the map first."); return; }
     const from = tokenAt(mapTokens, actor);
     if (!from) { alert(`${charName(actor)} isn't placed on the map yet.`); return; }
@@ -636,13 +659,25 @@ export default function SessionClient({
       narrations_id: latestNarrationId || null,
       character_id: actor,
       description: `Moves to hex ${moveTarget.q},${moveTarget.r}`,
-      queue: nextQueuePos,
+      queue: nextActionQueue,
       location_id: loc.id,
       q: moveTarget.q,
       r: moveTarget.r,
       facing,
     };
+    const alreadyQueued = pendingQueue.some((q) => q.character_id === actor);
     try {
+      /* movimento = tomada de decisão: se o ator não está na fila, abre a vez
+         dele no TOPO da fila antes de registrar a ação. */
+      if (!alreadyQueued) {
+        const enq = await fetch("/api/game-table-queue", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ character_id: actor, queue: "0", status: "pending" }),
+        });
+        const enqJ = await enq.json();
+        if (!enqJ.success) throw new Error(enqJ.error || "Failed to enqueue move");
+      }
       const res = await fetch("/api/game-table-action", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -650,11 +685,11 @@ export default function SessionClient({
       });
       const j = await res.json();
       if (j.success) {
-        if (pendingQueue.some((q) => q.character_id === actor)) {
+        if (alreadyQueued) {
           try { await advanceQueue(actor); } catch { /* ignore */ }
         }
         setMoveTarget(null);
-        router.refresh();
+        window.location.reload();
       } else {
         alert("Error: " + (j.error || "Unknown"));
       }
@@ -680,7 +715,7 @@ export default function SessionClient({
       character_id: combatActor,
       description: `${posture} attack on ${tgtName} — ${combat.dist} hex · target ${adjustedTarget}`,
       dice_roll: `${mapRoll.r.join("+")}=${mapRoll.tot}`,
-      queue: nextQueuePos,
+      queue: nextActionQueue,
       target: combatTarget,
       q: atkPos.q,
       r: atkPos.r,
@@ -712,7 +747,7 @@ export default function SessionClient({
     }
   }
 
-  const shownActor = moveActor || actorCharId;
+  const shownActor = actorCharId;
 
   return (
     <>
@@ -927,35 +962,26 @@ export default function SessionClient({
             {actionMode === "move" ? (
               <>
                 <div className="flex flex-wrap items-center gap-3">
-                  <select
-                    value={moveActor}
-                    onChange={(e) => { setMoveActor(e.target.value); setMoveTarget(null); }}
-                    className={`${inputCls(T.inputBorder)} max-w-xs`}
-                  >
-                    <option value="" className="bg-zinc-800">
-                      {actorCharId ? `Current: ${charName(actorCharId)}` : "Pick who moves…"}
-                    </option>
-                    {characters
-                      .filter((c) => moveActor !== "" || c.id !== actorCharId)
-                      .map((c) => (
-                        <option key={c.id} value={c.id} className="bg-zinc-800">
-                          {c.name || c.username || "Unknown"}{npcIds.includes(c.id) ? " — NPC" : ""}
-                        </option>
-                      ))}
-                  </select>
+                  {actorCharId ? (
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">Moving</span>
+                      <b className={`font-mono text-sm font-bold ${T.text}`}>{charName(actorCharId)}</b>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">Moving</span>
+                      <span className="text-sm text-zinc-600 italic">no one is up yet — authorize in the queue</span>
+                    </div>
+                  )}
                   <span className="text-sm text-zinc-500 flex-1 min-w-0">
-                    {shownActor ? <b className="text-zinc-200">{charName(shownActor)}</b> : null} {actorPos ? (
-                      <span className="font-mono text-[12px] text-zinc-400">at hex {actorPos.q},{actorPos.r}</span>
-                    ) : (
-                      <span className="text-zinc-600 italic">not placed yet</span>
-                    )}
+                    {shownActor ? <span className="font-mono text-[12px] text-zinc-400">at hex {actorPos ? `${actorPos.q},${actorPos.r}` : "—"}</span> : null}
                     {moveTarget ? (
                       <span className="font-mono text-[12px] text-emerald-300 ml-2">→ {moveTarget.q},{moveTarget.r}</span>
                     ) : null}
                   </span>
                   <button
                     onClick={logMove}
-                    disabled={!moveTarget}
+                    disabled={!moveTarget || !actorCharId}
                     className={`${T.btnFill} text-sm font-bold px-4 py-2 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed`}
                   >
                     Log move {moveTarget ? `→ ${moveTarget.q},${moveTarget.r}` : "· click a hex"}
@@ -1132,11 +1158,13 @@ export default function SessionClient({
                 className={`${inputCls(T.inputBorder)} flex-1`}
               >
                 <option value="">Who acts next?…</option>
-                {characters.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name || c.username || "Unknown"}{npcIds.includes(c.id) ? " — NPC" : ""}
-                  </option>
-                ))}
+                {characters
+                  .filter((c) => sceneCharIds.has(c.id))
+                  .map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name || c.username || "Unknown"}{npcIds.includes(c.id) ? " — NPC" : ""}
+                    </option>
+                  ))}
               </select>
               <button
                 onClick={addToQueue}

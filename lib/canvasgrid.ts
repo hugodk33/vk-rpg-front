@@ -1042,7 +1042,7 @@ export function drawPlateTokens(ctx: CanvasRenderingContext2D, W: number, H: num
       if (t.facing != null) {
         ctx.save();
         ctx.translate(cx, cy);
-        ctx.rotate((t.facing * 60 * Math.PI) / 180);
+        ctx.rotate((t.facing * 45 * Math.PI) / 180);
         const tip = outer + 1.2;
         const base = inner - 1;
         const half = Math.max(2.6, (outer - inner) * 0.62);

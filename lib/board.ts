@@ -95,7 +95,9 @@ export function narrationBoardAt(n: Narration | null | undefined, opts?: Narrati
     })),
   ];
 
-  const sorted = [...(n.actions ?? [])].sort((a, b) => (a.queue ?? 0) - (b.queue ?? 0));
+  const sorted = [...(n.actions ?? [])].sort(
+    (a, b) => (a.moment ?? 0) - (b.moment ?? 0) || (a.queue ?? 0) - (b.queue ?? 0),
+  );
   const until = opts?.untilActionId ?? null;
   const freezeBefore = until === "";
   const targetIdx = until ? sorted.findIndex((a) => a.id === until) : -1;
@@ -103,6 +105,7 @@ export function narrationBoardAt(n: Narration | null | undefined, opts?: Narrati
 
   for (let i = 0; i < sorted.length; i++) {
     const a = sorted[i];
+    if (targetIdx >= 0 && i > targetIdx) break;
     if (a.q == null || a.r == null) continue;
     const token = tokens.find((t) => t.id === a.character?.id);
     if (!token) continue;

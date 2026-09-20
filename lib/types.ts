@@ -423,6 +423,7 @@ export interface ActionCharacter {
 export interface NarrationAction {
   id: string
   queue?: number
+  moment?: number | null
   result?: string
   description?: string
   dice_roll?: string
