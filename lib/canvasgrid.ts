@@ -979,6 +979,9 @@ export interface CanvasToken {
 export interface TokenDrawOpts {
   /** url → loaded HTMLImageElement (null while loading/failed → placeholder) */
   images?: Map<string, HTMLImageElement | null>;
+  /** id of the token whose name label is painted (hover highlight);
+      when absent, no token names are drawn at all. */
+  labelId?: string | null;
 }
 
 const playerFill = "#60a5fa";
@@ -1089,12 +1092,14 @@ export function drawPlateTokens(ctx: CanvasRenderingContext2D, W: number, H: num
       ctx.lineWidth = Math.max(1.3, spec.R * 0.05);
       ctx.stroke();
 
-      /* label */
-      ctx.fillStyle = "#a1a1aa";
-      ctx.font = `8px ${font}`;
-      ctx.textAlign = "center";
-      ctx.textBaseline = "alphabetic";
-      ctx.fillText(t.name, cx, cy + outer + 8);
+      /* label — only the hovered token's name is painted */
+      if (opts.labelId === t.id) {
+        ctx.fillStyle = "#a1a1aa";
+        ctx.font = `8px ${font}`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "alphabetic";
+        ctx.fillText(t.name, cx, cy + outer + 8);
+      }
       ctx.globalAlpha = 1;
     }
   });

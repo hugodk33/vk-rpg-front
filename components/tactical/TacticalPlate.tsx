@@ -96,6 +96,8 @@ interface TacticalPlateProps {
   accent?: string;
   R?: number;
   M?: number;
+  /** fill the parent's height instead of a fixed content box */
+  fill?: boolean;
 }
 
 const playerFill = "#60a5fa";
@@ -110,6 +112,7 @@ export default function TacticalPlate({
   accent = "#38bdf8",
   R = 24,
   M = 12,
+  fill = false,
 }: TacticalPlateProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const scrollerRef = useRef<HTMLDivElement | null>(null);
@@ -117,6 +120,7 @@ export default function TacticalPlate({
   const lastZoomRef = useRef(1);
   const [hand, setHand] = useState(false);
   const [dragging, setDragging] = useState(false);
+  const [hoverId, setHoverId] = useState<string | null>(null);
   const dragRef = useRef<{ pointerId: number; x: number; y: number; moved: boolean } | null>(null);
 
   const toggleHand = () => setHand((h) => !h);
@@ -194,14 +198,13 @@ export default function TacticalPlate({
       drawPlateBoard(ctx, W, H, spec, location?.tiles ?? [], { accent, mark });
       drawPlateDrawing(ctx, W, H, spec, location?.drawing ?? []);
       drawPlateTrail(ctx, W, H, spec, accent, trail?.moves ?? [], "tic", { tokens: placed });
-      drawPlateTokens(ctx, W, H, spec, placed, { images: tokenImages });
+      drawPlateTokens(ctx, W, H, spec, placed, { images: tokenImages, labelId: hoverId });
     }, zoom, fitBox);
-  }, [location, placed, trail, mark, accent, W, H, spec, zoom, fitBox, tokenImages]);
+  }, [location, placed, trail, mark, accent, W, H, spec, zoom, fitBox, tokenImages, hoverId]);
 
-  function handleClick(e: ReactMouseEvent<HTMLCanvasElement>) {
-    if (!onHexClick || hand) return;
+  function locateFromClient(clientX: number, clientY: number): PlatePoint | null {
     const cv = canvasRef.current;
-    if (!cv) return;
+    if (!cv) return null;
     const rect = cv.getBoundingClientRect();
     const cW = drawW * zoom;
     const cH = drawH * zoom;
@@ -211,9 +214,22 @@ export default function TacticalPlate({
       width: cW,
       height: cH,
     };
-    const p = screenToGrid(e.clientX, e.clientY, contentRect, W, H, spec);
+    const p = screenToGrid(clientX, clientY, contentRect, W, H, spec);
     const cell = hexFromPoint(p.x, p.y, spec.orientation, spec.R);
-    if (cell.q >= 0 && cell.q < spec.cols && cell.r >= 0 && cell.r < spec.rows) onHexClick(cell.q, cell.r);
+    if (cell.q >= 0 && cell.q < spec.cols && cell.r >= 0 && cell.r < spec.rows) return cell;
+    return null;
+  }
+
+  function handleClick(e: ReactMouseEvent<HTMLCanvasElement>) {
+    if (!onHexClick || hand) return;
+    const cell = locateFromClient(e.clientX, e.clientY);
+    if (cell) onHexClick(cell.q, cell.r);
+  }
+
+  function handleHover(e: React.PointerEvent<HTMLCanvasElement>) {
+    const cell = locateFromClient(e.clientX, e.clientY);
+    const token = cell ? placed.find((t) => t.q === cell.q && t.r === cell.r) ?? null : null;
+    setHoverId(token ? token.id : null);
   }
 
   function onPanDown(e: React.PointerEvent<HTMLDivElement>) {
@@ -243,10 +259,10 @@ export default function TacticalPlate({
   }
 
   return (
-    <div className="relative rounded-lg border border-zinc-700/40 bg-zinc-950/60 overflow-hidden">
+    <div className={`relative rounded-lg border border-zinc-700/40 bg-zinc-950/60 overflow-hidden ${fill ? "h-full" : ""}`}>
       <div
         ref={scrollerRef}
-        className="relative overflow-auto select-none"
+        className={`relative overflow-auto select-none ${fill ? "h-full" : ""}`}
         style={{
           cursor: hand ? (dragging ? "grabbing" : "grab") : onHexClick ? "pointer" : undefined,
           touchAction: hand ? "none" : undefined,
@@ -255,6 +271,7 @@ export default function TacticalPlate({
         onPointerMove={onPanMove}
         onPointerUp={onPanUp}
         onPointerCancel={onPanUp}
+        onPointerLeave={() => setHoverId(null)}
       >
         <canvas
           ref={canvasRef}
@@ -270,6 +287,7 @@ export default function TacticalPlate({
             transformOrigin: "top left",
           }}
           onClick={handleClick}
+          onPointerMove={handleHover}
         />
       </div>
       <ZoomControls zoom={zoom} onZoom={applyZoom} hand={hand} onToggleHand={toggleHand} />

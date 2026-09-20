@@ -3,7 +3,8 @@ import Link from "next/link";
 /* ============================================================
    Table navigation — primary tab bar.
    "Table" opens the resource group (items, advantages, skills...);
-   Sessions / Timeline are linear tabs. Two trails share the bar:
+   Sessions is a linear tab; Chronicle groups the read-only timeline
+   and the battle-log map in a dropdown. Two trails share the bar:
    the narrator trail glows green, the player trail glows blue.
    ============================================================ */
 
@@ -31,7 +32,7 @@ const BLUE_TONE: TrailTone = {
 interface TableTabsProps {
   tableId: string;
   role?: "narrator" | "player";
-  active?: "overview" | "sessions" | "timeline" | "visibility" | "modifiers" | "character";
+  active?: "overview" | "sessions" | "timeline" | "map" | "visibility" | "modifiers" | "character";
   characterUrl?: string;
   characterHref?: string;
   hideBreadcrumb?: boolean;
@@ -53,6 +54,7 @@ const ICONS = {
   loc: "M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0zM15 11a3 3 0 11-6 0 3 3 0 016 0z",
   sessions: "M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z",
   timeline: "M12 6V4m0 16v-2m0-4V8M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M4 12H2m20 0h-2m-1.07-7.07l-1.41 1.41M6.34 17.66l-1.41 1.41M12 16a4 4 0 100-8 4 4 0 000 8z",
+  map: "M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7",
   visibility: "M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7zM12 9a3 3 0 100 6 3 3 0 000-6z",
   modifiers: "M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z",
   character: "M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 16a3.001 3.001 0 00-2.83-2M15 11a2 2 0 11-4 0 2 2 0 014 0z",
@@ -80,6 +82,8 @@ export default function TableTabs({ tableId, role = "narrator", active, characte
   const dashboardHref = role === "player" ? "/player" : "/narrator";
   const tone = role === "player" ? BLUE_TONE : GREEN_TONE;
   const underlineCls = `after:absolute after:inset-x-2 after:bottom-0 after:h-0.5 after:rounded-full ${tone.underline} after:content-['']`;
+
+  const chronicleActive = active === "timeline" || active === "map";
 
   return (
     <>
@@ -147,9 +151,45 @@ export default function TableTabs({ tableId, role = "narrator", active, characte
           {icon(ICONS.sessions, "w-4 h-4")} Sessions
         </Link>
 
-        <Link href={`${prefix}/table/${tableId}/scenes`} className={`${tabActive(active === "timeline", tone)} ${active === "timeline" ? underlineCls : ""}`}>
-          {icon(ICONS.timeline, "w-4 h-4")} Timeline
-        </Link>
+        {/* Chronicle — the read-only story record: timeline + battle-log map */}
+        <details className="group relative">
+          <summary
+            className={`list-none cursor-pointer select-none inline-flex items-center gap-1.5 px-3 py-2.5 font-mono text-[12px] uppercase tracking-[0.12em] rounded-md transition-colors focus:outline-none focus-visible:ring-2 ${tone.ring} ${
+              chronicleActive ? tone.activeText : "text-zinc-400 hover:text-zinc-100"
+            }`}
+            aria-label="Chronicle views"
+          >
+            {icon(ICONS.timeline, "w-4 h-4")}
+            <span>Chronicle</span>
+            <svg className="w-3.5 h-3.5 text-zinc-500 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+            </svg>
+            {chronicleActive ? <span aria-hidden className={`absolute inset-x-2 bottom-0 h-0.5 rounded-full ${tone.underline}`} /> : null}
+          </summary>
+
+          <div className="absolute left-0 top-full mt-1 w-44 rounded-lg border border-zinc-700/60 bg-zinc-900/95 backdrop-blur shadow-2xl py-1.5 z-50">
+            <Link
+              href={`${prefix}/table/${tableId}/scenes`}
+              className={`flex items-center gap-2.5 px-3 py-2 text-sm rounded transition-colors text-zinc-200 hover:bg-zinc-700/50 ${tone.hoverText} ${
+                active === "timeline" ? `bg-zinc-700/50 ${tone.activeText}` : ""
+              }`}
+            >
+              {icon(ICONS.timeline, "w-4 h-4 text-zinc-500")}
+              Timeline
+            </Link>
+            {role !== "player" ? (
+              <Link
+                href={`${prefix}/table/${tableId}/map`}
+                className={`flex items-center gap-2.5 px-3 py-2 text-sm rounded transition-colors text-zinc-200 hover:bg-zinc-700/50 ${tone.hoverText} ${
+                  active === "map" ? `bg-zinc-700/50 ${tone.activeText}` : ""
+                }`}
+              >
+                {icon(ICONS.map, "w-4 h-4 text-zinc-500")}
+                Map
+              </Link>
+            ) : null}
+          </div>
+        </details>
 
         {role !== "player" ? (
         <Link href={`${prefix}/table/${tableId}/visibility`} className={`${tabActive(active === "visibility", tone)} ${active === "visibility" ? underlineCls : ""}`}>

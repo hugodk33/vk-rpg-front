@@ -19,6 +19,7 @@ import type {
 } from "@/lib/types";
 import TurnPanel from "@/components/player/PlayerSession";
 import SceneTimeline from "@/components/scenes/SceneTimeline";
+import MapLog from "@/components/map/MapLog";
 import CharacterSheet from "@/components/character/CharacterSheet";
 import CharacterJourney from "@/components/character/CharacterJourney";
 import TableResources, { RESOURCE_TABS, type ResourceTab } from "@/components/player/TableResources";
@@ -30,7 +31,9 @@ import { getSessionState } from "@/lib/session";
    A single tab bar unifies the player's flow:
      · SESSION  — the scene console (queue + dice, turn-gated).
      · JOURNEY  — the character's own evolution, moment by moment.
-     · CHRONICLE— the table's timeline, read-only.
+     · CHRONICLE— a dropdown: the Timeline (the table's read-only record)
+                  and the Map (the battle-log floor plan — chapter, scene,
+                  beat and move scrubbed one at a time, through the player's eyes).
 · CHARACTERS / ITEMS / SKILLS / ADVANTAGES / DISADVANTAGES /
      LOCATIONS — the table's sandbox inline; each resource own
      its own button in the trail (read-only, through the player's eyes).
@@ -45,6 +48,7 @@ export type PlayerTab =
   | "turn"
   | "journey"
   | "chronicle"
+  | "map"
   | ResourceTab
   | "gear"
   | "sheet";
@@ -89,10 +93,14 @@ const RESOURCE_ICONS: Record<ResourceTab, string> = {
   locations: "M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0zM15 11a3 3 0 11-6 0 3 3 0 016 0z",
 };
 
+const MAP_ICON = "M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7";
+const CHRONICLE_ICON = "M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253";
+
 const TABS: Array<{ key: PlayerTab; label: string; icon: string }> = [
   { key: "turn", label: "Session", icon: "M4 5a2 2 0 012-2h12a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm0 8a2 2 0 012-2h12a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm0 8a2 2 0 012-2h6a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2z" },
   { key: "journey", label: "Journey", icon: "M3 3v18h18M7 14l4-5 3 3 5-8" },
   { key: "chronicle", label: "Chronicle", icon: "M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" },
+  { key: "map", label: "Map", icon: "M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" },
   ...RESOURCE_TABS.map((r) => ({ key: r.key as PlayerTab, label: r.label, icon: RESOURCE_ICONS[r.key] })),
   { key: "gear", label: "Gear", icon: "M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" },
   { key: "sheet", label: "Sheet", icon: "M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 16a3.001 3.001 0 00-2.83-2M15 11a2 2 0 11-4 0 2 2 0 014 0z" },
@@ -125,6 +133,8 @@ export default function PlayerConsole({
   const [tab, setTab] = useState<PlayerTab>(initialTab);
   const [tableOpen, setTableOpen] = useState(false);
   const tableRef = useRef<HTMLDivElement>(null);
+  const [chronOpen, setChronOpen] = useState(false);
+  const chronRef = useRef<HTMLDivElement>(null);
   const name = character?.sheet?.name || character?.name || "Your character";
 
   useEffect(() => {
@@ -139,6 +149,19 @@ export default function PlayerConsole({
       document.removeEventListener("touchstart", onDown);
     };
   }, [tableOpen]);
+
+  useEffect(() => {
+    if (!chronOpen) return;
+    const onDown = (e: MouseEvent | TouchEvent) => {
+      if (chronRef.current && !chronRef.current.contains(e.target as Node)) setChronOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("touchstart", onDown);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("touchstart", onDown);
+    };
+  }, [chronOpen]);
 
   const latestBeat = useMemo(() => getSessionState(scenes).latestBeat, [scenes]);
 
@@ -170,6 +193,7 @@ export default function PlayerConsole({
   }, [presence, roster, npcs]);
 
   const resourceActive = RESOURCE_TABS.some((r) => r.key === tab);
+  const chronActive = tab === "chronicle" || tab === "map";
 
   return (
     <div className="max-w-5xl mx-auto px-6 py-8">
@@ -192,7 +216,7 @@ export default function PlayerConsole({
 
       {/* unified tab bar */}
       <div role="tablist" aria-label="Player console" className="inline-flex bg-zinc-800/50 border border-zinc-700/40 rounded-lg p-0.5 mb-6">
-        {TABS.filter((t) => ["turn", "journey", "chronicle"].includes(t.key)).map((t) => (
+        {TABS.filter((t) => ["turn", "journey"].includes(t.key)).map((t) => (
           <button
             key={t.key}
             role="tab"
@@ -205,6 +229,60 @@ export default function PlayerConsole({
             {icon(t.icon, "w-3.5 h-3.5")} {t.label}
           </button>
         ))}
+
+        {/* chronicle dropdown: timeline + map */}
+        <div className="relative" ref={chronRef}>
+          <button
+            role="tab"
+            aria-selected={chronActive}
+            aria-haspopup="menu"
+            aria-expanded={chronOpen}
+            onClick={() => setChronOpen((o) => !o)}
+            className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-md font-mono text-[12px] uppercase tracking-[0.12em] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 ${
+              chronActive ? "bg-zinc-700 text-blue-300" : "text-zinc-500 hover:text-zinc-200"
+            }`}
+          >
+            {icon(CHRONICLE_ICON, "w-3.5 h-3.5")} Chronicle
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={chronOpen ? "M5 15l7-7 7 7" : "M19 9l-7 7-7-7"} />
+            </svg>
+          </button>
+
+          {chronOpen ? (
+            <div
+              role="menu"
+              aria-label="Chronicle views"
+              className="absolute left-0 top-full mt-1 z-20 min-w-[12rem] rounded-lg border border-zinc-700/50 bg-zinc-900 p-1 shadow-xl shadow-black/40"
+            >
+              <button
+                role="menuitemradio"
+                aria-checked={tab === "map"}
+                onClick={() => {
+                  setTab("map");
+                  setChronOpen(false);
+                }}
+                className={`w-full flex items-center gap-2 px-3 py-2 rounded-md font-mono text-[11px] uppercase tracking-[0.12em] transition-colors text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 ${
+                  tab === "map" ? "bg-zinc-800 text-blue-300" : "text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/60"
+                }`}
+              >
+                {icon(MAP_ICON, "w-3.5 h-3.5")} Map
+              </button>
+              <button
+                role="menuitemradio"
+                aria-checked={tab === "chronicle"}
+                onClick={() => {
+                  setTab("chronicle");
+                  setChronOpen(false);
+                }}
+                className={`w-full flex items-center gap-2 px-3 py-2 rounded-md font-mono text-[11px] uppercase tracking-[0.12em] transition-colors text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 ${
+                  tab === "chronicle" ? "bg-zinc-800 text-blue-300" : "text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/60"
+                }`}
+              >
+                {icon(CHRONICLE_ICON, "w-3.5 h-3.5")} Timeline
+              </button>
+            </div>
+          ) : null}
+        </div>
 
         {/* table resources dropdown */}
         <div className="relative" ref={tableRef}>
@@ -286,6 +364,18 @@ export default function PlayerConsole({
 
       {tab === "chronicle" ? (
         <SceneTimeline table={table} scenes={scenes} showEditButtons={false} role="player" viewerId={character?.id ?? undefined} visibility={visibility ?? undefined} />
+      ) : null}
+
+      {tab === "map" ? (
+        <MapLog
+          scenes={scenes}
+          locations={locations}
+          characters={roster}
+          npcIds={npcs?.map((n) => n.character_id).filter(Boolean) as string[]}
+          role="player"
+          viewerId={character?.id ?? undefined}
+          visibility={visibility}
+        />
       ) : null}
 
       {tab === "journey" ? (

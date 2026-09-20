@@ -238,6 +238,9 @@ function Beat({ n, viewerId, mask, rules }: { n: { narration: string; title?: st
     ? maskedLocationName(rules, n.location.id, n.location.name)
     : null;
   const board = narrationBoard(n as unknown as Narration);
+  const mapTokens = viewerId
+    ? board.tokens.map((t) => (t.id === viewerId ? t : { ...t, name: mask(t.id, t.name) }))
+    : board.tokens;
   const hasGrid = !!board.location?.hex?.width && !!board.location?.hex?.height;
   return (
     <Panel>
@@ -269,7 +272,7 @@ function Beat({ n, viewerId, mask, rules }: { n: { narration: string; title?: st
 
         {hasGrid ? (
           <div className="mt-3">
-            <TacticalPlate location={board.location} tokens={board.tokens} trail={board.trail} accent="#38bdf8" R={14} M={8} />
+            <TacticalPlate location={board.location} tokens={mapTokens} trail={board.trail} accent="#38bdf8" R={14} M={8} />
           </div>
         ) : null}
         <CastChips chars={n.characters} npcs={n.npcs} moment={n.moment} mask={mask} viewerId={viewerId} />

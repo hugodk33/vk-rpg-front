@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { CharacterSkill, Location, Narration, NarrationAction, QueueEntry, TableCharacter, VisibilityRule } from "@/lib/types";
 import { skillLabel, skillLevel } from "@/lib/skill";
-import { narrationBoard, tokenAt, type BoardToken, type BoardTrail } from "@/lib/board";
+import { narrationBoard, tokenAt, type BoardToken, type BoardTrail, type TrailMove } from "@/lib/board";
 import { hexDir, hexDist } from "@/lib/hexgrid";
 import { floorPlanGroup } from "@/lib/location";
 import { maskedLocationName, maskedTargetName } from "@/lib/visibility";
@@ -264,9 +264,20 @@ export default function TurnPanel({
   const mapGroup = floorPlanGroup(mapLocation, locations);
   const board = narrationBoard(latestBeat, mapLocation);
 
-  /* ---- movement replay: each action with a hex gets its own toggle ---- */
+  /* ---- movement replay: each action with a hex gets its own toggle ----
+     on camera: ONLY the freshly made move — each vector is a single
+     movement, toggled below; "All" stacks every vector of the scene. */
   const boardMoves = board.trail?.moves ?? [];
+  const boardActionIds = boardMoves.map((m) => m.actionId).filter((x): x is string => !!x);
+  const boardActionKey = boardActionIds.join("\u0000");
   const [shownMoves, setShownMoves] = useState<string[]>([]);
+  const lastSeenMoves = useRef<string[]>([]);
+  useEffect(() => {
+    const fresh = boardActionIds.filter((id) => !lastSeenMoves.current.includes(id));
+    lastSeenMoves.current = boardActionIds;
+    if (fresh.length > 0) setShownMoves([boardActionIds[boardActionIds.length - 1]]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [boardActionKey]);
   const activeMoves = boardMoves.filter((m) => m.actionId && shownMoves.includes(m.actionId));
   const activeTrail: BoardTrail | null = activeMoves.length
     ? {
@@ -281,8 +292,10 @@ export default function TurnPanel({
       prev.includes(actionId) ? prev.filter((id) => id !== actionId) : [...prev, actionId]
     );
   }
-  /* tokens = toda a party (roster) + quem a narration posiciona; nomes
-     reais para personagens de jogadores, mascarados só para NPCs. */
+  /* tokens = toda a party (roster) + quem a narration posiciona; o nome
+     real é preservado só para o próprio jogador — todo o resto passa pelo
+     filtro de visibility (aliados no roster também, pois NPCs controlados
+     pelo narrador podem estar entre eles). */
   const rosterTokens: BoardToken[] = roster.map((c) => ({
     id: c.id,
     name: c.sheet?.name || c.name || c.user?.username || "Unknown",
@@ -298,12 +311,26 @@ export default function TurnPanel({
   }
   const mapTokens = [...tokenById.values()].map((t) => ({
     ...t,
-    name: t.id === myId || t.isPlayer ? t.name : maskedTargetName(visibility, t.id, t.name),
+    name: t.id === myId ? t.name : maskedTargetName(visibility, t.id, t.name),
   }));
   const from = tokenAt(mapTokens, myId);
   const me = mapTokens.find((t) => t.id === myId);
   const fatigued = s?.fatigue_state !== "active";
   const myMove = fatigued ? (s?.effective_move ?? s?.move) : s?.move;
+
+  /* ---- the play map ----: while it's my turn the picked hex is drawn as a
+     preview (arrow + destination ghost); the token itself only strides when
+     the move is committed and the refreshed board comes back. */
+  const previewMove: TrailMove | null =
+    isMyTurn && !committed && moveTarget && from ? { id: myId, from, to: moveTarget } : null;
+  const playTrail: BoardTrail | null =
+    previewMove && moveTarget
+      ? {
+          from: activeTrail?.moves?.length ? activeTrail.from : from,
+          to: moveTarget,
+          moves: [...(activeTrail?.moves ?? []), previewMove],
+        }
+      : activeTrail;
 
   const FACING_LABELS = ["E", "SE", "SW", "W", "NW", "NE"];
 
@@ -466,7 +493,7 @@ export default function TurnPanel({
           <TacticalPlate
             location={mapLocation}
             tokens={mapTokens}
-            trail={activeTrail}
+            trail={playTrail}
             mark={moveTarget}
             accent="#3b82f6"
             R={22}
@@ -490,6 +517,18 @@ export default function TurnPanel({
                 ({boardMoves.length} move{boardMoves.length !== 1 ? "s" : ""})
               </span>
               <div className="ml-auto flex gap-1">
+                <button
+                  onClick={() =>
+                    setShownMoves(
+                      boardMoves.length && boardMoves[boardMoves.length - 1].actionId
+                        ? [boardMoves[boardMoves.length - 1].actionId as string]
+                        : []
+                    )
+                  }
+                  className="px-2 py-0.5 rounded-md text-[10px] font-mono uppercase tracking-wider text-blue-300 hover:text-blue-100 bg-blue-500/10 border border-blue-500/40"
+                >
+                  Latest
+                </button>
                 <button
                   onClick={() => setShownMoves(boardMoves.map((m) => m.actionId).filter((x): x is string => !!x))}
                   className="px-2 py-0.5 rounded-md text-[10px] font-mono uppercase tracking-wider text-zinc-400 hover:text-zinc-100 bg-zinc-800/60 border border-zinc-700/40"
@@ -563,6 +602,12 @@ export default function TurnPanel({
                       : "Log move · click a hex"}
               </button>
             </div>
+
+            {moveTarget ? (
+              <p className="font-mono text-[10px] uppercase tracking-widest text-emerald-300/80">
+                play preview — the token moves only when you confirm the move
+              </p>
+            ) : null}
 
             <div className="flex flex-wrap items-center gap-2">
               <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">Facing</span>

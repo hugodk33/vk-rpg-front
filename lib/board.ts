@@ -4,8 +4,9 @@
    npcs) at their starting hexes; actions then move those tokens
    hex by hex (q/r is the destination of the movement). This module
    replays the actions in queue order and returns the final token
-   positions plus the last movement trail, so the same snapshot
-   drives the mini-map in the timeline and the session MAP tab.
+   positions plus the movement trail, so the same snapshot drives
+   the mini-map in the timeline, the session MAP tab and the
+   battle-log map (one action at a time).
    ============================================================ */
 
 import type { Location, Narration } from "./types";
@@ -52,6 +53,25 @@ function setPos(t: { q?: number | null; r?: number | null; facing?: number | nul
 }
 
 export function narrationBoard(n: Narration | null | undefined, fallbackLocation?: Location | null): BeatBoard {
+  return narrationBoardAt(n, { fallbackLocation });
+}
+
+export interface NarrationBoardOpts {
+  /** replay only ONE movement: positions land after that action, the trail
+      carries just that move. Pass "" to pause before replaying any move —
+      positions resolve to the final snapshot but no arrow is drawn. When
+      set to an action without a hex, the trail is similarly null. */
+  untilActionId?: string | null;
+  fallbackLocation?: Location | null;
+}
+
+/** The floor-plan snapshot of a narration, optionally paused at one action.
+    With `untilActionId` the tokens are replayed up to (and including) that
+    action — so "where everyone stood when it happened" — while the trail
+    exposes only that single movement, the perspective the battle-log map
+    uses to show one move at a time instead of every vector at once.
+    `untilActionId: ""` yields the same board with no trail at all. */
+export function narrationBoardAt(n: Narration | null | undefined, opts?: NarrationBoardOpts): BeatBoard {
   if (!n) return { location: null, tokens: [], trail: null };
 
   const tokens: BoardToken[] = [
@@ -76,22 +96,29 @@ export function narrationBoard(n: Narration | null | undefined, fallbackLocation
   ];
 
   const sorted = [...(n.actions ?? [])].sort((a, b) => (a.queue ?? 0) - (b.queue ?? 0));
-  let trail: BoardTrail | null = null;
+  const until = opts?.untilActionId ?? null;
+  const freezeBefore = until === "";
+  const targetIdx = until ? sorted.findIndex((a) => a.id === until) : -1;
   const moves: TrailMove[] = [];
 
-  for (const a of sorted) {
+  for (let i = 0; i < sorted.length; i++) {
+    const a = sorted[i];
     if (a.q == null || a.r == null) continue;
     const token = tokens.find((t) => t.id === a.character?.id);
     if (!token) continue;
     const from = token.q != null && token.r != null ? { q: token.q, r: token.r } : null;
     setPos(token, a.q, a.r, a.facing);
     const to = { q: a.q, r: a.r };
-    moves.push({ id: token.id, actionId: a.id, queue: a.queue, from, to });
-    trail = { from, to, moves: [...moves] };
+    const record = freezeBefore ? false : targetIdx >= 0 ? i === targetIdx : true;
+    if (record) moves.push({ id: token.id, actionId: a.id, queue: a.queue, from, to });
   }
 
+  const trail: BoardTrail | null = moves.length
+    ? { from: moves[moves.length - 1]?.from ?? null, to: moves[moves.length - 1].to, moves }
+    : null;
+
   return {
-    location: n.location ?? fallbackLocation ?? null,
+    location: n.location ?? opts?.fallbackLocation ?? null,
     tokens,
     trail,
   };

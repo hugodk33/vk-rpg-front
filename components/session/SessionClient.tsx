@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { CharacterSkill, CharacterViewer, Location, Narration, NarrationAction, QueueEntry, Sheet } from "@/lib/types";
 import { api } from "@/lib/api";
@@ -517,9 +517,19 @@ export default function SessionClient({
   const board = narrationBoard(latestBeat, mapLocation);
 
   /* ---- movement replay: each action with a hex gets its own toggle ----
-     default: no vector, the board keeps its plain (initial) snapshot. */
+     on camera: ONLY the freshly made move — each vector is a single
+     movement, toggled below; "All" stacks every vector of the scene. */
   const boardMoves = board.trail?.moves ?? [];
+  const boardActionIds = boardMoves.map((m) => m.actionId).filter((x): x is string => !!x);
+  const boardActionKey = boardActionIds.join("\u0000");
   const [shownMoves, setShownMoves] = useState<string[]>([]);
+  const lastSeenMoves = useRef<string[]>([]);
+  useEffect(() => {
+    const fresh = boardActionIds.filter((id) => !lastSeenMoves.current.includes(id));
+    lastSeenMoves.current = boardActionIds;
+    if (fresh.length > 0) setShownMoves([boardActionIds[boardActionIds.length - 1]]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [boardActionKey]);
   const activeMoves = boardMoves.filter((m) => m.actionId && shownMoves.includes(m.actionId));
   const activeTrail: BoardTrail | null = activeMoves.length
     ? {
@@ -823,6 +833,18 @@ export default function SessionClient({
                   ({boardMoves.length} move{boardMoves.length !== 1 ? "s" : ""})
                 </span>
                 <div className="ml-auto flex gap-1">
+                  <button
+                    onClick={() =>
+                      setShownMoves(
+                        boardMoves.length && boardMoves[boardMoves.length - 1].actionId
+                          ? [boardMoves[boardMoves.length - 1].actionId as string]
+                          : []
+                      )
+                    }
+                    className="px-2 py-0.5 rounded-md text-[10px] font-mono uppercase tracking-wider text-sky-300 hover:text-sky-100 bg-sky-500/10 border border-sky-500/40"
+                  >
+                    Latest
+                  </button>
                   <button
                     onClick={() => setShownMoves(boardMoves.map((m) => m.actionId).filter((x): x is string => !!x))}
                     className="px-2 py-0.5 rounded-md text-[10px] font-mono uppercase tracking-wider text-zinc-400 hover:text-zinc-100 bg-zinc-800/60 border border-zinc-700/40"

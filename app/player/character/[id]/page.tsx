@@ -5,7 +5,7 @@ import PlayerConsole, { type PlayerTab } from "@/components/player/PlayerConsole
 export const dynamic = "force-dynamic";
 
 const PLAYER_TABS = new Set<string>([
-  "turn", "journey", "chronicle", "characters", "items", "skills", "advantages", "disadvantages", "locations", "gear", "sheet",
+  "turn", "journey", "chronicle", "map", "characters", "items", "skills", "advantages", "disadvantages", "locations", "gear", "sheet",
 ]);
 
 export default async function PlayerCharacterViewerPage({
@@ -28,7 +28,7 @@ export default async function PlayerCharacterViewerPage({
     <PlayerConsole
       {...data}
       basePath={basePath}
-      initialTab={tab && PLAYER_TABS.has(tab) ? (tab as "turn" | "journey" | "chronicle" | PlayerTab | "gear" | "sheet") : "sheet"}
+      initialTab={tab && PLAYER_TABS.has(tab) ? (tab as PlayerTab) : "sheet"}
     />
   );
 }
