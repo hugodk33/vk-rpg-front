@@ -1115,7 +1115,7 @@ export default function SessionClient({
 
             {actionMode === "move" ? (
               <>
-                <div className="flex flex-wrap items-start gap-x-8 gap-y-4">
+                <div className="flex flex-wrap items-start justify-center gap-x-8 gap-y-4">
                   {/* who is moving + destination */}
                   <div className="flex flex-col items-center gap-1.5">
                     <div className="flex items-center gap-2">
@@ -1140,8 +1140,7 @@ export default function SessionClient({
 
                   {/* facing: horizontal strip · tap the arrow or AUTO */}
                   <div className="flex flex-col items-center gap-1.5">
-                    <div className="flex items-center gap-2">
-                      <div className="inline-flex items-stretch rounded-lg border border-zinc-700/50 bg-zinc-950/40 overflow-hidden">
+                    <div className="inline-flex items-stretch rounded-lg border border-zinc-700/50 bg-zinc-950/40 overflow-hidden">
                         {COMPASS_ORDER.map((i) => {
                           const dir = FACING_DIRS[i];
                           const isSel = facingChoice === i;
@@ -1179,14 +1178,6 @@ export default function SessionClient({
                           auto
                         </button>
                       </div>
-                      <span className="text-[10px] text-zinc-600">
-                        {facingChoice === "auto"
-                          ? currentFacing != null
-                            ? `keeps ${FACING_DIRS[currentFacing]?.label ?? currentFacing} — or aims at the destination`
-                            : "aims at the destination (or keeps its heading)"
-                          : `will log a turn facing ${FACING_DIRS[facingChoice]?.label}`}
-                      </span>
-                    </div>
                     <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">
                       Facing
                     </p>

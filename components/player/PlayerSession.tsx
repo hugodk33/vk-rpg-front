@@ -469,12 +469,6 @@ export default function TurnPanel({
     }
   }
 
-  const waitingText = notInQueue
-    ? "You're not in this scene's queue yet — hold for the narrator to call you in."
-    : isMyTurn
-      ? ""
-      : `You're up after ${myIndex} ${myIndex === 1 ? "seat" : "seats"}.`;
-
   return (
     <div className="space-y-6">
       {/* context bar */}
@@ -521,8 +515,9 @@ export default function TurnPanel({
         emptyText="The queue is empty — the scene hasn't opened yet."
       />
 
-      {/* floor plan — you move up to your Move, one turn at a time */}
-      <section aria-label="Floor plan" className="bg-zinc-900/80 border border-zinc-700/40 rounded-xl p-5">
+      {/* floor plan + action — the map, your move and the dice stay in one card */}
+      <section aria-label="Floor plan" className="bg-zinc-900/80 border border-zinc-700/40 rounded-xl overflow-hidden">
+        <div className="p-5">
         <div className="flex flex-wrap items-center gap-3 mb-4">
           <span
             className={`w-2.5 h-2.5 rounded-full ${isMyTurn ? "bg-blue-400 beacon" : "bg-zinc-600"}`}
@@ -650,9 +645,29 @@ export default function TurnPanel({
             ) : null}
           </div>
         ) : null}
+        </div>
 
-        {isMyTurn ? (
-          <div className="mt-4 space-y-3">
+        {/* action zone: movement + dice together */}
+        <div className="relative border-t border-zinc-700/40">
+          <div className="p-5 space-y-4">
+            <div className="flex flex-wrap items-center gap-3 pb-4 border-b border-zinc-700/40">
+              <span className={`w-2.5 h-2.5 rounded-full ${isMyTurn ? "bg-blue-400 beacon" : "bg-zinc-600"}`}
+                style={isMyTurn ? { boxShadow: "0 0 10px rgba(251,191,36,.7)" } : undefined} />
+              <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">Acting now</span>
+              <span className="text-sm font-semibold text-zinc-100">
+                {pendingQueue[0] ? charName(pendingQueue[0].character_id) : "empty queue"}
+              </span>
+              <span className="ml-auto font-mono text-[10px] text-zinc-500 uppercase tracking-widest">
+                target: <span style={{ color: attrHex }}>{target}</span> ({skillMode ? (skillData ? skillLabel(skillData, myChar?.sheet ?? null) : "—") : attrMeta[actAttr]?.label})
+              </span>
+            </div>
+
+            {/* movement | dice test — two columns side by side */}
+            <div className="grid gap-5 lg:grid-cols-2">
+              <div className="rounded-xl border border-zinc-700/40 p-4">
+                <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-3">Movement</span>
+                {isMyTurn ? (
+          <div className="space-y-3">
             {/* move column: value + where you stand, label at the bottom */}
             <div className="flex flex-col items-center gap-1.5">
               <div className="flex flex-wrap items-baseline gap-1.5">
@@ -682,10 +697,9 @@ export default function TurnPanel({
             ) : null}
 
             {/* facing + log move — two columns side by side, labels at the bottom */}
-            <div className="flex flex-wrap items-start gap-x-8 gap-y-4">
+            <div className="flex flex-wrap items-start justify-center gap-x-8 gap-y-4">
               <div className="flex flex-col items-center gap-1.5">
-                <div className="flex flex-wrap items-center gap-2">
-                  <div className="inline-flex items-stretch rounded-lg border border-zinc-700/50 bg-zinc-950/40 overflow-hidden">
+                <div className="inline-flex items-stretch rounded-lg border border-zinc-700/50 bg-zinc-950/40 overflow-hidden">
                     {COMPASS_ORDER.map((i) => {
                       const dir = FACING_DIRS[i];
                       const isSel = facingChoice === i;
@@ -719,14 +733,6 @@ export default function TurnPanel({
                       auto
                     </button>
                   </div>
-                  <span className="text-[10px] text-zinc-600">
-                    {facingChoice === "auto"
-                      ? me?.facing != null
-                        ? `keeps ${FACING_DIRS[me.facing]?.label ?? me.facing} — or aims at the destination`
-                        : "faces the way you move"
-                      : `you will turn to face ${FACING_DIRS[facingChoice]?.label}`}
-                  </span>
-                </div>
                 <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">Facing</p>
               </div>
 
@@ -759,52 +765,16 @@ export default function TurnPanel({
           </p>
         )}
 
-        {moveWarn ? <p className="mt-2 font-mono text-[11px] text-amber-300">{moveWarn}</p> : null}
-        {moveError ? <p className="mt-2 font-mono text-[11px] text-red-400">{moveError}</p> : null}
-      </section>
+              {moveWarn ? <p className="mt-2 font-mono text-[11px] text-amber-300">{moveWarn}</p> : null}
+              {moveError ? <p className="mt-2 font-mono text-[11px] text-red-400">{moveError}</p> : null}
+              </div>
 
-      {/* status banner */}
-      {waitingText ? (
-        <div
-          className={`rounded-xl border px-4 py-3 flex items-center gap-3 ${
-            isMyTurn
-              ? "border-blue-500/40 bg-blue-700/10 text-blue-200"
-              : "border-zinc-700/40 bg-zinc-900/40 text-zinc-400"
-          }`}
-        >
-          {icon(isMyTurn ? "M13 10V3L4 14h7v7l9-11h-7z" : "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z", "w-5 h-5")}
-          <span className="text-sm">
-            {isMyTurn ? "It's your moment — the dice are live." : waitingText}
-          </span>
-        </div>
-      ) : null}
-
-      {/* dice tray */}
-      <section aria-label="Dice tray">
-        <div
-          className="rounded-2xl border overflow-hidden relative transition-colors"
-          style={{
-            borderColor: isMyTurn ? "#3b82f655" : "#27272a",
-            boxShadow: isMyTurn ? "0 0 40px -12px rgba(59,130,246,.45)" : undefined,
-          }}
-        >
-          <div className="bg-zinc-900/90 p-5">
-            <div className="flex items-center gap-3 mb-5 pb-4 border-b border-zinc-700/40">
-              <span className={`w-2.5 h-2.5 rounded-full ${isMyTurn ? "bg-blue-400 beacon" : "bg-zinc-600"}`}
-                style={isMyTurn ? { boxShadow: "0 0 10px rgba(251,191,36,.7)" } : undefined} />
-              <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">Acting now</span>
-              <span className="text-sm font-semibold text-zinc-100">
-                {pendingQueue[0] ? charName(pendingQueue[0].character_id) : "empty queue"}
-              </span>
-<span className="ml-auto font-mono text-[10px] text-zinc-500 uppercase tracking-widest">
-                  target: <span style={{ color: attrHex }}>{target}</span> ({skillMode ? (skillData ? skillLabel(skillData, myChar?.sheet ?? null) : "—") : attrMeta[actAttr]?.label})
-                </span>
-            </div>
-
-            <div className="grid grid-cols-1 gap-5">
-              <div className="flex flex-wrap items-end gap-3">
-                <div>
-                  <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Test basis</span>
+              <div className="rounded-xl border border-zinc-700/40 p-4">
+                <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-3">Dice test</span>
+                <div className="grid grid-cols-1 gap-5">
+              <div className="flex flex-col items-center gap-5">
+                {/* line 1 — choose the test basis */}
+                <div className="flex flex-col items-center gap-1.5">
                   <div className="flex items-center gap-1">
                     {(["attr", "skill"] as const).map((b) => (
                       <button
@@ -822,10 +792,12 @@ export default function TurnPanel({
                       </button>
                     ))}
                   </div>
+                  <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">Test basis</p>
                 </div>
-                {basis === "skill" ? (
-                  <div>
-                    <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Skill</span>
+
+                {/* line 2 — the selector */}
+                <div className="flex flex-col items-center gap-1.5">
+                  {basis === "skill" ? (
                     <select
                       value={selSkill}
                       onChange={(e) => setSelSkill(e.target.value)}
@@ -839,10 +811,7 @@ export default function TurnPanel({
                         </option>
                       ))}
                     </select>
-                  </div>
-                ) : (
-                  <div>
-                    <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Attribute</span>
+                  ) : (
                     <select
                       value={actAttr}
                       onChange={(e) => setActAttr(e.target.value as "st" | "dx" | "iq" | "ht")}
@@ -853,27 +822,34 @@ export default function TurnPanel({
                         <option key={a} value={a} className="bg-zinc-800">{a.toUpperCase()}</option>
                       ))}
                     </select>
+                  )}
+                  <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">
+                    {basis === "skill" ? "Skill" : "Attribute"}
+                  </p>
+                </div>
+
+                {/* line 3 — read-only modifiers: the test is already set, no inputs here */}
+                <div className="flex flex-wrap items-start justify-center gap-x-8 gap-y-4">
+                  <div className="flex flex-col items-center gap-1.5">
+                    <span className="inline-flex items-center justify-center min-w-[3.5rem] h-10 bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-3 text-zinc-100 text-sm font-mono">d{testDie}</span>
+                    <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">Die</p>
                   </div>
-                )}
-                <div>
-                  <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Die</span>
-                  <span className="inline-flex items-center justify-center min-w-[3.5rem] h-10 bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-3 text-zinc-100 text-sm font-mono">d{testDie}</span>
+                  <div className="flex flex-col items-center gap-1.5">
+                    <span className="inline-flex items-center justify-center min-w-[3.5rem] h-10 bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-3 text-zinc-100 text-sm font-mono">{testCount}</span>
+                    <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">Count</p>
+                  </div>
+                  <div className="flex flex-col items-center gap-1.5">
+                    <span className="inline-flex items-center justify-center min-w-[3.5rem] h-10 bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-3 text-zinc-100 text-sm font-mono">{testMod >= 0 ? `+${testMod}` : testMod}</span>
+                    <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">Mod</p>
+                  </div>
                 </div>
-                <div>
-                  <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Count</span>
-                  <span className="inline-flex items-center justify-center min-w-[3.5rem] h-10 bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-3 text-zinc-100 text-sm font-mono">{testCount}</span>
-                </div>
-                <div>
-                  <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Mod</span>
-                  <span className="inline-flex items-center justify-center min-w-[3.5rem] h-10 bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-3 text-zinc-100 text-sm font-mono">{testMod >= 0 ? `+${testMod}` : testMod}</span>
-                </div>
-                <div className="w-full">
-                  <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-600">
-                    {testSet
-                      ? `Seat test locked (${testCount}d${testDie}${testMod >= 0 ? `+${testMod}` : testMod}) — the dice come from the narrator; pick an attribute or skill to roll against.`
-                      : "No seat test set yet — dice default until the narrator tunes it. You pick the attribute or skill."}
-                  </span>
-                </div>
+
+                {/* status */}
+                <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-600 text-center">
+                  {testSet
+                    ? `Seat test locked (${testCount}d${testDie}${testMod >= 0 ? `+${testMod}` : testMod}) — the dice come from the narrator; pick an attribute or skill to roll against.`
+                    : "No seat test set yet — dice default until the narrator tunes it. You pick the attribute or skill."}
+                </p>
               </div>
 
               <div className="flex flex-wrap items-center gap-2 min-h-[3.5rem]">
@@ -1000,6 +976,8 @@ export default function TurnPanel({
                 </div>
               ) : null}
             </div>
+            </div>
+          </div>
           </div>
 
           {!isMyTurn ? (
