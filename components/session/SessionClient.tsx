@@ -477,13 +477,25 @@ export default function SessionClient({
       r: moved.get(c.id)?.r ?? null,
       facing: moved.get(c.id)?.facing ?? 0,
     }));
+    let sceneId = latestSceneId;
+    if (!sceneId) {
+      const sceneRes = await fetch("/api/game-table-scene", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ table_id: tableId, title: modalTitle, chapter: chapter || 1, moment: 0 }),
+      });
+      const sceneJson = await sceneRes.json();
+      if (!sceneJson.success) { alert("Error: " + (sceneJson.error || "Unknown")); return; }
+      sceneId = sceneJson.scene?.id ?? "";
+      if (!sceneId) { alert("Error: could not create the scene"); return; }
+    }
     const loc = narrationLocation || defaultLocation?.id || latestBeat?.location?.id || null;
     const res = await fetch("/api/game-table-narration", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         table_id: tableId,
-        scene_id: latestSceneId,
+        scene_id: sceneId,
         title: modalTitle,
         narration: prefix + narrationText,
         moment: latestMoment,
@@ -816,8 +828,6 @@ export default function SessionClient({
   }
 
   const shownActor = actorCharId;
-  /* cenas/chapters: sem uma cena existente, part(e) e narration ficam travados */
-  const hasScene = !!latestSceneId;
   const currentFacing = actorCharId ? (mapTokens.find((t) => t.id === actorCharId)?.facing ?? null) : null;
 
   return (
@@ -843,17 +853,16 @@ export default function SessionClient({
           {!isPlayer ? (
             <div className="flex gap-2 flex-wrap items-center">
               {[
-                { m: "chapter" as const, label: "+ Chapter", hex: T.hex, needsScene: false },
-                { m: "moment" as const, label: "+ Part", hex: "#a1a1aa", needsScene: true },
-                { m: "narration" as const, label: "+ Narration", hex: "#a1a1aa", needsScene: true },
+                { m: "chapter" as const, label: "+ Chapter", hex: T.hex },
+                { m: "moment" as const, label: "+ Part", hex: "#a1a1aa" },
+                { m: "narration" as const, label: "+ Narration", hex: "#a1a1aa" },
               ].map((b) => (
                 <button
                   key={b.m}
                   onClick={() => setModal(b.m)}
-                  disabled={b.needsScene && !hasScene}
-                  title={b.needsScene && !hasScene ? "Create a chapter first" : b.label}
-                  className="font-mono text-[11px] font-semibold uppercase tracking-widest px-3 py-1.5 rounded-lg border transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                  style={{ borderColor: `${b.hex}55`, color: b.needsScene && !hasScene ? "#52525b" : b.hex }}
+                  title={b.label}
+                  className="font-mono text-[11px] font-semibold uppercase tracking-widest px-3 py-1.5 rounded-lg border transition-colors"
+                  style={{ borderColor: `${b.hex}55`, color: b.hex }}
                 >
                   {b.label}
                 </button>
@@ -885,6 +894,7 @@ export default function SessionClient({
       </div>
 
       {/* ================= TURN QUEUE (above the map) ================= */}
+      {tab === "turn" ? (
       <div className="space-y-4 mb-6">
         <QueueProcession
           entries={pendingQueue}
@@ -929,8 +939,10 @@ export default function SessionClient({
           </div>
         ) : null}
       </div>
+      ) : null}
 
       {/* ================= MAP & ACTION (battle board, under the queue/tabs) ================= */}
+      {tab === "turn" ? (
       <div className="space-y-4 mb-6">
         <div className="bg-zinc-900/80 border border-zinc-700/40 rounded-xl p-5">
           <div className="flex flex-wrap items-center gap-3 mb-4">
@@ -1326,6 +1338,7 @@ export default function SessionClient({
           </div>
         ) : null}
       </div>
+      ) : null}
 
       {/* ================= DICE ================= */}
       {tab === "dice" ? (
@@ -1509,7 +1522,7 @@ export default function SessionClient({
                 <div className="border-l border-zinc-700/40 pl-6 space-y-3">
                   <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block">Log action</span>
                   <div className="rounded-lg border border-zinc-700/40 bg-zinc-800/30 px-3 py-2">
-                    <span className="font-mono text-[9px] uppercase tracking-widest text-zinc-600">Action hex (from the map above)</span>
+                    <span className="font-mono text-[9px] uppercase tracking-widest text-zinc-600">Action hex (from the board)</span>
                     <p className="mt-0.5 font-mono text-[12px] text-zinc-300">
                       {actHex ? (
                         <>hex {actHex.q},{actHex.r} · {actionLocation?.name ?? "—"}{actActorHex ? ` · facing from ${actActorHex.q},${actActorHex.r}` : ""}</>
