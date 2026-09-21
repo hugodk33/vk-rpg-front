@@ -90,6 +90,7 @@ export default function TableSettingsPanel({
     gm_adds_item: 1,
     money_item_id: null,
     starting_shop: 0,
+    starting_points: 150,
   };
 
   const [turnEndMode, setTurnEndMode] = useState<"after_test" | "after_move">(s.turn_end_mode);
@@ -98,6 +99,7 @@ export default function TableSettingsPanel({
   const [gmAddsItem, setGmAddsItem] = useState(Boolean(s.gm_adds_item));
   const [moneyItemId, setMoneyItemId] = useState(s.money_item_id ?? "");
   const [startingShop, setStartingShop] = useState(Boolean(s.starting_shop));
+  const [startingPoints, setStartingPoints] = useState(s.starting_points ?? 150);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -115,6 +117,7 @@ export default function TableSettingsPanel({
           gm_adds_item: gmAddsItem ? 1 : 0,
           money_item_id: moneyItemId || null,
           starting_shop: startingShop ? 1 : 0,
+          starting_points: startingPoints,
         }),
       });
       window.location.reload();
@@ -249,6 +252,50 @@ export default function TableSettingsPanel({
               </span>
             </label>
           </div>
+        </div>
+      </Section>
+
+      <Section
+        index="05"
+        title="Pontos para a primeira ficha"
+        hint="O orçamento que cada jogador recebe para criar a primeira ficha."
+      >
+        <div className="space-y-4">
+          <div className="flex flex-wrap gap-2">
+            {[100, 150, 200, 250].map((n) => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => setStartingPoints(n)}
+                className={`font-mono text-sm font-bold tabular-nums px-4 py-2 rounded-lg border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600/60 ${
+                  startingPoints === n
+                    ? "border-emerald-500/60 bg-emerald-700/10 text-emerald-300"
+                    : "border-zinc-700/50 text-zinc-400 hover:border-zinc-600"
+                }`}
+              >
+                {n}
+              </button>
+            ))}
+          </div>
+          <label className="block">
+            <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-500 block mb-1.5">
+              Outro valor (pontos)
+            </span>
+            <input
+              type="number"
+              min={0}
+              max={100000}
+              value={startingPoints}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (Number.isFinite(v) && v >= 0) setStartingPoints(Math.floor(v));
+              }}
+              className="w-full max-w-xs bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-3 py-2 text-zinc-100 text-sm focus:outline-none focus:border-emerald-600/60"
+            />
+            <span className="block text-xs text-zinc-500 mt-1.5">
+              O jogador usa essa quantidade para montar a ficha na rota de primeiro acesso.
+            </span>
+          </label>
         </div>
       </Section>
 

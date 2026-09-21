@@ -544,6 +544,45 @@ export interface TableSettings {
   money_item_id?: string | null
   /** Loja inicial habilitada. */
   starting_shop: number
+  /** Orçamento de pontos para a primeira ficha do jogador. */
+  starting_points: number
+}
+
+/* ============================================================
+   Catálogo de conteúdo (módulos/pacotes prontos de campanha)
+   ============================================================ */
+
+export interface ContentModuleRow {
+  id: string
+  slug: string
+  name: string
+  tech_level: string | null
+  description: string | null
+  accent: string | null
+  sort: number
+}
+
+export interface ContentCategoryRow {
+  id: string
+  domain: string
+  parent_id: string | null
+  name: string
+  display_name: string
+  sort: number
+}
+
+export interface ContentCatalogCount {
+  moduleId: string
+  domain: string
+  category: string
+  subcategory: string | null
+  count: number
+}
+
+export interface ContentCatalog {
+  modules: ContentModuleRow[]
+  categories: ContentCategoryRow[]
+  counts: ContentCatalogCount[]
 }
 
 export interface QueueEntry {

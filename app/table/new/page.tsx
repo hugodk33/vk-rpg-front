@@ -1,15 +1,22 @@
 import { api } from "@/lib/api";
-import type { GameTable } from "@/lib/types";
-import TableForm from "@/components/forms/TableForm";
+import type { ContentCatalog, GameTable } from "@/lib/types";
+import TableWizard from "@/components/table/TableWizard";
 
 export const dynamic = "force-dynamic";
 
 export default async function NewTablePage() {
   let tables: GameTable[] = [];
+  let catalog: ContentCatalog | null = null;
   try {
-    tables = await api<GameTable[]>("/game-tables");
+    const [tablesRes, catalogRes] = await Promise.all([
+      api<GameTable[]>("/game-tables").catch(() => [] as GameTable[]),
+      api<ContentCatalog>("/content-modules").catch(() => null),
+    ]);
+    tables = tablesRes;
+    catalog = catalogRes;
   } catch {
     tables = [];
+    catalog = null;
   }
 
   const narratorOptions = Array.from(
@@ -21,10 +28,5 @@ export default async function NewTablePage() {
   );
   const defaultNarratorId = narratorOptions[0]?.id;
 
-  return (
-    <TableForm
-      narratorOptions={narratorOptions}
-      defaultNarratorId={defaultNarratorId}
-    />
-  );
+  return <TableWizard narratorOptions={narratorOptions} defaultNarratorId={defaultNarratorId} catalog={catalog} />;
 }

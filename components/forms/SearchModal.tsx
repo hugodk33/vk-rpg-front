@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { inputCls } from "./formStyles";
 import InfoTooltip from "./InfoTooltip";
+import { useTranslation } from "@/lib/i18n";
 
 export interface SearchModalItem {
   id: string;
@@ -27,6 +28,7 @@ interface SearchModalProps {
 }
 
 export default function SearchModal({ title, onSearch, isSelected, onToggle, onClose, filters = [] }: SearchModalProps) {
+  const { t } = useTranslation();
   const [query, setQuery] = useState("");
   const [filtersState, setFiltersState] = useState<Record<string, string>>({});
   const [results, setResults] = useState<SearchModalItem[]>([]);
@@ -88,7 +90,7 @@ export default function SearchModal({ title, onSearch, isSelected, onToggle, onC
             type="button"
             onClick={onClose}
             className="text-zinc-500 hover:text-zinc-300 text-sm transition-colors"
-            aria-label="Close"
+            aria-label={t("search.close")}
           >
             ✕
           </button>
@@ -99,17 +101,17 @@ export default function SearchModal({ title, onSearch, isSelected, onToggle, onC
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search..."
+              placeholder={t("search.placeholder")}
               className={inputCls}
             />
             <button
               type="submit"
-              className="flex items-center gap-1.5 shrink-0 text-xs font-semibold bg-green-800 hover:bg-green-700 text-white px-4 py-2.5 rounded-lg transition-colors"
+              className={`flex items-center gap-1.5 shrink-0 text-xs font-semibold bg-amber-600 hover:bg-amber-500 text-white px-4 py-2.5 rounded-lg transition-colors`}
             >
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-4.35-4.35M17 10.5a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z" />
               </svg>
-              Search
+              {t("search.button")}
             </button>
           </form>
           {filters.length > 0 ? (
@@ -134,9 +136,9 @@ export default function SearchModal({ title, onSearch, isSelected, onToggle, onC
         </div>
         <div className="px-2 pb-6 overflow-y-auto scroll-thin space-y-1">
           {loading ? (
-            <p className="text-zinc-600 text-sm px-4 py-2">Loading...</p>
+            <p className="text-zinc-600 text-sm px-4 py-2">{t("search.loading")}</p>
           ) : results.length === 0 ? (
-            <p className="text-zinc-600 text-sm px-4 py-2">No results.</p>
+            <p className="text-zinc-600 text-sm px-4 py-2">{t("search.empty")}</p>
           ) : (
             results.map((i) => {
               const selected = isSelected(i.id);

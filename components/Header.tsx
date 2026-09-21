@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import LanguageSwitch from "./LanguageSwitch";
 
 export default function Header() {
   const pathname = usePathname();
@@ -25,6 +26,9 @@ export default function Header() {
       <div className="max-w-5xl mx-auto px-4 relative">
         <div className="flex items-center justify-center h-14">
           <div className="w-14"></div>
+          <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
+            <LanguageSwitch />
+          </div>
           <Link
             href="/"
             className="flex items-center gap-2 text-amber-400 font-bold text-xl tracking-tight"

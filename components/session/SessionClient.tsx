@@ -433,7 +433,14 @@ export default function SessionClient({
       body: JSON.stringify({ table_id: tableId, title: modalTitle, chapter: chapter + 1, moment: 0 }),
     });
     const j = await res.json();
-    if (j.success) { setModal(null); setModalTitle(""); router.refresh(); }
+    if (j.success) {
+      setModalTitle("");
+      setNarrationChars([]);
+      setNarrationConsc({});
+      router.refresh();
+      /* a narration vem logo em seguida da cena (capítulo/parte) */
+      setModal("narration");
+    }
     else alert("Error: " + (j.error || "Unknown"));
   }
 
@@ -445,7 +452,14 @@ export default function SessionClient({
       body: JSON.stringify({ table_id: tableId, title: modalTitle, chapter, moment: latestMoment + 1 }),
     });
     const j = await res.json();
-    if (j.success) { setModal(null); setModalTitle(""); router.refresh(); }
+    if (j.success) {
+      setModalTitle("");
+      setNarrationChars([]);
+      setNarrationConsc({});
+      router.refresh();
+      /* a narration vem logo em seguida da parte */
+      setModal("narration");
+    }
     else alert("Error: " + (j.error || "Unknown"));
   }
 
@@ -562,6 +576,7 @@ export default function SessionClient({
   const boardActionIds = boardMoves.map((m) => m.actionId).filter((x): x is string => !!x);
   const boardActionKey = boardActionIds.join("\u0000");
   const [shownMoves, setShownMoves] = useState<string[]>([]);
+  const [replayOpen, setReplayOpen] = useState(false);
   const lastSeenMoves = useRef<string[]>([]);
   useEffect(() => {
     const fresh = boardActionIds.filter((id) => !lastSeenMoves.current.includes(id));
@@ -801,6 +816,9 @@ export default function SessionClient({
   }
 
   const shownActor = actorCharId;
+  /* cenas/chapters: sem uma cena existente, part(e) e narration ficam travados */
+  const hasScene = !!latestSceneId;
+  const currentFacing = actorCharId ? (mapTokens.find((t) => t.id === actorCharId)?.facing ?? null) : null;
 
   return (
     <>
@@ -823,17 +841,19 @@ export default function SessionClient({
             ) : null}
           </div>
           {!isPlayer ? (
-            <div className="flex gap-2 flex-wrap">
+            <div className="flex gap-2 flex-wrap items-center">
               {[
-                { m: "chapter" as const, label: "+ Chapter", hex: T.hex },
-                { m: "moment" as const, label: "+ Part", hex: "#a1a1aa" },
-                { m: "narration" as const, label: "+ Narration", hex: "#a1a1aa" },
+                { m: "chapter" as const, label: "+ Chapter", hex: T.hex, needsScene: false },
+                { m: "moment" as const, label: "+ Part", hex: "#a1a1aa", needsScene: true },
+                { m: "narration" as const, label: "+ Narration", hex: "#a1a1aa", needsScene: true },
               ].map((b) => (
                 <button
                   key={b.m}
                   onClick={() => setModal(b.m)}
-                  className="font-mono text-[11px] font-semibold uppercase tracking-widest px-3 py-1.5 rounded-lg border transition-colors"
-                  style={{ borderColor: `${b.hex}55`, color: b.hex }}
+                  disabled={b.needsScene && !hasScene}
+                  title={b.needsScene && !hasScene ? "Create a chapter first" : b.label}
+                  className="font-mono text-[11px] font-semibold uppercase tracking-widest px-3 py-1.5 rounded-lg border transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  style={{ borderColor: `${b.hex}55`, color: b.needsScene && !hasScene ? "#52525b" : b.hex }}
                 >
                   {b.label}
                 </button>
@@ -846,7 +866,71 @@ export default function SessionClient({
         ) : null}
       </div>
 
-      {/* ================= MAP & ACTION (always visible, between narration and tabs) ================= */}
+      {/* ---- TAB SWITCHER ---- */}
+      <div role="tablist" aria-label="Session console" className="inline-flex bg-zinc-800/50 border border-zinc-700/40 rounded-lg p-0.5 mb-5">
+        {TABS.map((t) => (
+          <button
+            key={t.key}
+            role="tab"
+            aria-selected={tab === t.key}
+            onClick={() => setTab(t.key)}
+            className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-md font-mono text-[12px] uppercase tracking-[0.12em] transition-colors focus:outline-none focus-visible:ring-2 ${T.ring} ${
+              tab === t.key ? T.activeTab : "text-zinc-500 hover:text-zinc-200"
+            }`}
+          >
+            {icon(t.icon, "w-3.5 h-3.5")}
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* ================= TURN QUEUE (above the map) ================= */}
+      <div className="space-y-4 mb-6">
+        <QueueProcession
+          entries={pendingQueue}
+          roster={characters}
+          tone={isPlayer ? "blue" : "green"}
+          myId={isPlayer ? myCharacterId : undefined}
+          npcIds={npcIds}
+          linkHref={(charId) => `/character/${charId}`}
+          onRemove={!isPlayer ? removeFromQueue : undefined}
+          onEndTurn={!isPlayer ? (entry) => removeFromQueue(entry) : undefined}
+          emptyText={
+            isPlayer
+              ? "The queue is empty — the scene hasn't opened yet."
+              : "The queue is empty — pick who acts next."
+          }
+        />
+
+        {!isPlayer ? (
+          <div className="flex items-center gap-2 rounded-xl border border-zinc-700/40 bg-zinc-800/40 p-3">
+            <select
+              value={queueChar}
+              onChange={(e) => setQueueChar(e.target.value)}
+              aria-label="Who enters the queue"
+              className={`${inputCls(T.inputBorder)} flex-1`}
+            >
+              <option value="">Who acts next?…</option>
+              {characters
+                .filter((c) => sceneCharIds.has(c.id))
+                .map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name || c.username || "Unknown"}{npcIds.includes(c.id) ? " — NPC" : ""}
+                  </option>
+                ))}
+            </select>
+            <button
+              onClick={addToQueue}
+              disabled={!queueChar}
+              className={`font-mono text-[12px] font-semibold uppercase tracking-widest px-4 py-2 rounded-lg border ${T.borderCta} transition-colors disabled:opacity-40 w-full sm:w-auto`}
+            >
+              + Add to queue
+            </button>
+          </div>
+        ) : null}
+      </div>
+
+      {/* ================= MAP & ACTION (battle board, under the queue/tabs) ================= */}
       <div className="space-y-4 mb-6">
         <div className="bg-zinc-900/80 border border-zinc-700/40 rounded-xl p-5">
           <div className="flex flex-wrap items-center gap-3 mb-4">
@@ -910,68 +994,85 @@ export default function SessionClient({
             </p>
           )}
 
-          {/* ---- replay movement per action ---- */}
+          {/* ---- replay movement per action (collapsed dropdown) ---- */}
           {boardMoves.length > 0 ? (
             <div className="mt-3 border-t border-zinc-700/40 pt-3">
               <div className="flex flex-wrap items-center gap-2 mb-2">
-                <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">
+                <button
+                  type="button"
+                  onClick={() => setReplayOpen((o) => !o)}
+                  aria-expanded={replayOpen}
+                  aria-label="Toggle replay movement"
+                  className="inline-flex items-center gap-1.5 font-mono text-[10px] tracking-widest uppercase text-zinc-500 hover:text-zinc-300 transition-colors"
+                >
+                  <span
+                    className={`inline-flex items-center justify-center w-3.5 h-3.5 transition-transform ${
+                      replayOpen ? "rotate-90" : ""
+                    }`}
+                  >
+                    {icon("M9 18l6-6-6-6", "w-3.5 h-3.5")}
+                  </span>
                   Replay movement
-                </span>
+                </button>
                 <span className="font-mono text-[10px] text-zinc-600">
                   ({boardMoves.length} move{boardMoves.length !== 1 ? "s" : ""})
                 </span>
-                <div className="ml-auto flex gap-1">
-                  <button
-                    onClick={() =>
-                      setShownMoves(
-                        boardMoves.length && boardMoves[boardMoves.length - 1].actionId
-                          ? [boardMoves[boardMoves.length - 1].actionId as string]
-                          : []
-                      )
-                    }
-                    className="px-2 py-0.5 rounded-md text-[10px] font-mono uppercase tracking-wider text-sky-300 hover:text-sky-100 bg-sky-500/10 border border-sky-500/40"
-                  >
-                    Latest
-                  </button>
-                  <button
-                    onClick={() => setShownMoves(boardMoves.map((m) => m.actionId).filter((x): x is string => !!x))}
-                    className="px-2 py-0.5 rounded-md text-[10px] font-mono uppercase tracking-wider text-zinc-400 hover:text-zinc-100 bg-zinc-800/60 border border-zinc-700/40"
-                  >
-                    All
-                  </button>
-                  <button
-                    onClick={() => setShownMoves([])}
-                    className="px-2 py-0.5 rounded-md text-[10px] font-mono uppercase tracking-wider text-zinc-400 hover:text-zinc-100 bg-zinc-800/60 border border-zinc-700/40"
-                  >
-                    None
-                  </button>
-                </div>
-              </div>
-              <div className="flex flex-wrap gap-1.5">
-                {boardMoves.map((m) => {
-                  const active = !!m.actionId && shownMoves.includes(m.actionId);
-                  return (
+                {replayOpen ? (
+                  <div className="ml-auto flex gap-1">
                     <button
-                      key={`${m.id}-${m.actionId ?? "act"}`}
-                      onClick={() => m.actionId && toggleMove(m.actionId)}
-                      className={`px-2 py-1 rounded-md text-[11px] font-mono border transition-colors ${
-                        active
-                          ? "bg-sky-500/15 border-sky-500/50 text-sky-200"
-                          : "bg-zinc-800/40 border-zinc-700/40 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200"
-                      }`}
+                      onClick={() =>
+                        setShownMoves(
+                          boardMoves.length && boardMoves[boardMoves.length - 1].actionId
+                            ? [boardMoves[boardMoves.length - 1].actionId as string]
+                            : []
+                        )
+                      }
+                      className="px-2 py-0.5 rounded-md text-[10px] font-mono uppercase tracking-wider text-sky-300 hover:text-sky-100 bg-sky-500/10 border border-sky-500/40"
                     >
-                      {charName(m.id)}
-                      <span className="opacity-60"> {hexLbl(m.from)} → {hexLbl(m.to)}</span>
+                      Latest
                     </button>
-                  );
-                })}
+                    <button
+                      onClick={() => setShownMoves(boardMoves.map((m) => m.actionId).filter((x): x is string => !!x))}
+                      className="px-2 py-0.5 rounded-md text-[10px] font-mono uppercase tracking-wider text-zinc-400 hover:text-zinc-100 bg-zinc-800/60 border border-zinc-700/40"
+                    >
+                      All
+                    </button>
+                    <button
+                      onClick={() => setShownMoves([])}
+                      className="px-2 py-0.5 rounded-md text-[10px] font-mono uppercase tracking-wider text-zinc-400 hover:text-zinc-100 bg-zinc-800/60 border border-zinc-700/40"
+                    >
+                      None
+                    </button>
+                  </div>
+                ) : null}
               </div>
+              {replayOpen ? (
+                <div className="flex flex-wrap gap-1.5">
+                  {boardMoves.map((m) => {
+                    const active = !!m.actionId && shownMoves.includes(m.actionId);
+                    return (
+                      <button
+                        key={`${m.id}-${m.actionId ?? "act"}`}
+                        onClick={() => m.actionId && toggleMove(m.actionId)}
+                        className={`px-2 py-1 rounded-md text-[11px] font-mono border transition-colors ${
+                          active
+                            ? "bg-sky-500/15 border-sky-500/50 text-sky-200"
+                            : "bg-zinc-800/40 border-zinc-700/40 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200"
+                        }`}
+                      >
+                        {charName(m.id)}
+                        <span className="opacity-60"> {hexLbl(m.from)} → {hexLbl(m.to)}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : null}
             </div>
           ) : null}
         </div>
 
         {/* ---- integrated action: move / melee / ranged + dice ---- */}
-        {!isPlayer ? (
+        {!isPlayer && mapLocation?.hex?.width != null ? (
           <div className="bg-zinc-900/80 border border-zinc-700/40 rounded-xl p-5">
             <div className="flex flex-wrap items-center gap-3 mb-4">
               <span className={`w-2.5 h-2.5 rounded-full ${T.dot}`} style={{ boxShadow: `0 0 8px ${T.shadow}` }} />
@@ -1014,86 +1115,109 @@ export default function SessionClient({
 
             {actionMode === "move" ? (
               <>
-                <div className="flex flex-wrap items-center gap-3">
-                  {actorCharId ? (
+                <div className="flex flex-wrap items-start gap-x-8 gap-y-4">
+                  {/* who is moving + destination */}
+                  <div className="flex flex-col items-center gap-1.5">
                     <div className="flex items-center gap-2">
-                      <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">Moving</span>
-                      <b className={`font-mono text-sm font-bold ${T.text}`}>{charName(actorCharId)}</b>
+                      {actorCharId ? (
+                        <>
+                          <b className={`font-mono text-sm font-bold ${T.text}`}>{charName(actorCharId)}</b>
+                          {actorPos ? (
+                            <span className="font-mono text-[11px] text-zinc-400">at {actorPos.q},{actorPos.r}</span>
+                          ) : null}
+                        </>
+                      ) : (
+                        <span className="text-sm text-zinc-600 italic">no one is up yet — authorize in the queue</span>
+                      )}
+                      {moveTarget ? (
+                        <span className="font-mono text-[12px] font-bold text-emerald-300">→ {moveTarget.q},{moveTarget.r}</span>
+                      ) : null}
                     </div>
-                  ) : (
+                    <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">
+                      Moving
+                    </p>
+                  </div>
+
+                  {/* facing: horizontal strip · tap the arrow or AUTO */}
+                  <div className="flex flex-col items-center gap-1.5">
                     <div className="flex items-center gap-2">
-                      <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">Moving</span>
-                      <span className="text-sm text-zinc-600 italic">no one is up yet — authorize in the queue</span>
-                    </div>
-                  )}
-                  <span className="text-sm text-zinc-500 flex-1 min-w-0">
-                    {shownActor ? <span className="font-mono text-[12px] text-zinc-400">at hex {actorPos ? `${actorPos.q},${actorPos.r}` : "—"}</span> : null}
-                    {moveTarget ? (
-                      <span className="font-mono text-[12px] text-emerald-300 ml-2">→ {moveTarget.q},{moveTarget.r}</span>
-                    ) : null}
-                  </span>
-                  <button
-                    onClick={logMove}
-                    disabled={!actorCharId || !actorPos || (!moveTarget && facingChoice === "auto")}
-                    className={`${T.btnFill} text-sm font-bold px-4 py-2 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed`}
-                  >
-                    {!moveTarget && facingChoice !== "auto"
-                      ? `Log turn · face ${FACING_DIRS[facingChoice]?.label ?? facingChoice}`
-                      : moveTarget
-                        ? `Log move → ${moveTarget.q},${moveTarget.r}`
-                        : "Log move · click a hex"}
-                  </button>
-                </div>
-                <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">Facing</span>
-                  <div className="inline-grid grid-cols-3 gap-1">
-                    {COMPASS_ORDER.map((i) => {
-                      const dir = FACING_DIRS[i];
-                      return (
+                      <div className="inline-flex items-stretch rounded-lg border border-zinc-700/50 bg-zinc-950/40 overflow-hidden">
+                        {COMPASS_ORDER.map((i) => {
+                          const dir = FACING_DIRS[i];
+                          const isSel = facingChoice === i;
+                          const isCur = !isSel && facingChoice === "auto" && currentFacing === i;
+                          return (
+                            <button
+                              key={dir.label}
+                              type="button"
+                              title={dir.label}
+                              onClick={() => setFacingChoice(i)}
+                              disabled={!actorCharId || !actorPos}
+                              className={`w-9 h-10 flex flex-col items-center justify-center leading-none transition-colors border-r border-zinc-700/40 disabled:opacity-30 disabled:cursor-not-allowed ${
+                                isSel
+                                  ? "border-blue-500/60 bg-blue-700/20 text-blue-300"
+                                  : isCur
+                                    ? "text-zinc-200 bg-zinc-700/40"
+                                    : "text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/60"
+                              }`}
+                            >
+                              <span className="text-sm">{dir.arrow}</span>
+                              <span className="text-[8px] font-mono">{dir.label}</span>
+                            </button>
+                          );
+                        })}
                         <button
-                          key={dir.label}
                           type="button"
-                          title={dir.label}
-                          onClick={() => setFacingChoice(i)}
+                          onClick={() => setFacingChoice("auto")}
                           disabled={!actorCharId || !actorPos}
-                          className={`w-9 h-9 flex flex-col items-center justify-center leading-none rounded-md border transition-colors disabled:opacity-30 disabled:cursor-not-allowed ${
-                            facingChoice === i
-                              ? "border-blue-500/60 bg-blue-700/20 text-blue-300"
-                              : "border-zinc-700/50 text-zinc-500 hover:text-zinc-300"
+                          className={`px-2.5 h-10 font-mono text-[10px] font-bold transition-colors disabled:opacity-30 disabled:cursor-not-allowed ${
+                            facingChoice === "auto"
+                              ? "bg-blue-700/20 text-blue-300"
+                              : "text-zinc-500 hover:text-zinc-300"
                           }`}
                         >
-                          <span className="text-sm">{dir.arrow}</span>
-                          <span className="text-[8px] font-mono mt-0.5">{dir.label}</span>
+                          auto
                         </button>
-                      );
-                    })}
-                    <button
-                      type="button"
-                      onClick={() => setFacingChoice("auto")}
-                      disabled={!actorCharId || !actorPos}
-                      className={`row-start-2 col-start-2 w-9 h-9 font-mono text-[10px] font-bold rounded-md border transition-colors disabled:opacity-30 disabled:cursor-not-allowed ${
-                        facingChoice === "auto"
-                          ? "border-blue-500/60 bg-blue-700/20 text-blue-300"
-                          : "border-zinc-700/50 text-zinc-500 hover:text-zinc-300"
-                      }`}
-                    >
-                      auto
-                    </button>
+                      </div>
+                      <span className="text-[10px] text-zinc-600">
+                        {facingChoice === "auto"
+                          ? currentFacing != null
+                            ? `keeps ${FACING_DIRS[currentFacing]?.label ?? currentFacing} — or aims at the destination`
+                            : "aims at the destination (or keeps its heading)"
+                          : `will log a turn facing ${FACING_DIRS[facingChoice]?.label}`}
+                      </span>
+                    </div>
+                    <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">
+                      Facing
+                    </p>
                   </div>
-                  <span className="text-[10px] text-zinc-600 ml-1">
-                    {facingChoice === "auto"
-                      ? "faces the way it moves (or keeps its heading)"
-                      : "log your turn to face this direction"}
-                  </span>
+
+                  {/* log move */}
+                  <div className="flex flex-col items-center gap-1.5">
+                    <button
+                      onClick={logMove}
+                      disabled={!actorCharId || !actorPos || (!moveTarget && facingChoice === "auto")}
+                      className={`${T.btnFill} text-sm font-bold px-5 py-2 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed`}
+                    >
+                      {!moveTarget && facingChoice !== "auto"
+                        ? `Log turn · face ${FACING_DIRS[facingChoice]?.label ?? facingChoice}`
+                        : moveTarget
+                          ? `Log move → ${moveTarget.q},${moveTarget.r}`
+                          : "Log move · pick a hex"}
+                    </button>
+                    <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">
+                      Log move
+                    </p>
+                  </div>
                 </div>
                 <p className="mt-2 font-mono text-[10px] text-zinc-600 uppercase tracking-widest">
-                  each logged move becomes an action with the destination hex: who? {shownActor ? charName(shownActor) : "—"} · where? {mapLocation?.name ?? "—"} · from {actorPos ? `${actorPos.q},${actorPos.r}` : "—"} {moveTarget ? `→ ${moveTarget.q},${moveTarget.r}` : facingChoice !== "auto" ? `→ turns to face ${FACING_DIRS[facingChoice]?.label}` : "→ click a hex"}
+                  each move becomes an action with the destination hex: {shownActor ? charName(shownActor) : "—"} from {actorPos ? `${actorPos.q},${actorPos.r}` : "—"} {moveTarget ? `→ ${moveTarget.q},${moveTarget.r}` : facingChoice !== "auto" ? `→ turns to face ${FACING_DIRS[facingChoice]?.label}` : "→ click a hex"}
                 </p>
               </>
             ) : (
               <>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
+                <div className="flex flex-wrap items-end gap-4">
+                  <div className="flex-1 min-w-[13rem]">
                     <label className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Attacker</label>
                     <select
                       value={combatActor}
@@ -1120,7 +1244,7 @@ export default function SessionClient({
                     </div>
                   </div>
 
-                  <div>
+                  <div className="flex-1 min-w-[13rem]">
                     <label className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Target</label>
                     <select
                       value={combatTarget}
@@ -1143,7 +1267,7 @@ export default function SessionClient({
                     </p>
                   </div>
 
-                  <div>
+                  <div className="flex-1 min-w-[13rem]">
                     <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Resolution</span>
                     <div className="flex flex-col gap-1.5 rounded-lg border border-zinc-700/40 bg-zinc-800/30 px-3 py-2">
                       {combat ? (
@@ -1212,72 +1336,6 @@ export default function SessionClient({
         ) : null}
       </div>
 
-      {/* ---- TAB SWITCHER ---- */}
-      <div role="tablist" aria-label="Session console" className="inline-flex bg-zinc-800/50 border border-zinc-700/40 rounded-lg p-0.5 mb-5">
-        {TABS.map((t) => (
-          <button
-            key={t.key}
-            role="tab"
-            aria-selected={tab === t.key}
-            onClick={() => setTab(t.key)}
-            className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-md font-mono text-[12px] uppercase tracking-[0.12em] transition-colors focus:outline-none focus-visible:ring-2 ${T.ring} ${
-              tab === t.key ? T.activeTab : "text-zinc-500 hover:text-zinc-200"
-            }`}
-          >
-            {icon(t.icon, "w-3.5 h-3.5")}
-            {t.label}
-          </button>
-        ))}
-      </div>
-
-      {/* ================= TURN ================= */}
-      {tab === "turn" ? (
-        <div className="space-y-4">
-          <QueueProcession
-            entries={pendingQueue}
-            roster={characters}
-            tone={isPlayer ? "blue" : "green"}
-            myId={isPlayer ? myCharacterId : undefined}
-            npcIds={npcIds}
-            linkHref={(charId) => `/character/${charId}`}
-            onRemove={!isPlayer ? removeFromQueue : undefined}
-            onEndTurn={!isPlayer ? (entry) => removeFromQueue(entry) : undefined}
-            emptyText={
-              isPlayer
-                ? "The queue is empty — the scene hasn't opened yet."
-                : "The queue is empty — pick who acts next."
-            }
-          />
-
-          {!isPlayer ? (
-            <div className="flex items-center gap-2 rounded-xl border border-zinc-700/40 bg-zinc-800/40 p-3">
-              <select
-                value={queueChar}
-                onChange={(e) => setQueueChar(e.target.value)}
-                aria-label="Who enters the queue"
-                className={`${inputCls(T.inputBorder)} flex-1`}
-              >
-                <option value="">Who acts next?…</option>
-                {characters
-                  .filter((c) => sceneCharIds.has(c.id))
-                  .map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name || c.username || "Unknown"}{npcIds.includes(c.id) ? " — NPC" : ""}
-                    </option>
-                  ))}
-              </select>
-              <button
-                onClick={addToQueue}
-                disabled={!queueChar}
-                className={`font-mono text-[12px] font-semibold uppercase tracking-widest px-4 py-2 rounded-lg border ${T.borderCta} transition-colors disabled:opacity-40 w-full sm:w-auto`}
-              >
-                + Add to queue
-              </button>
-            </div>
-          ) : null}
-        </div>
-      ) : null}
-
       {/* ================= DICE ================= */}
       {tab === "dice" ? (
         <div className="grid grid-cols-1 gap-5">
@@ -1319,28 +1377,8 @@ export default function SessionClient({
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                {/* roll builder */}
+                {/* roll builder — a base (skill × attribute) vai primeiro */}
                 <div className="flex flex-wrap items-end gap-3 mb-5">
-                  <div>
-                    <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Die</span>
-                    <select value={diceType} onChange={(e) => setDiceType(e.target.value)} className={`bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-3 py-2 text-zinc-100 text-sm focus:outline-none ${T.inputBorder}`}>
-                      {["4", "6", "8", "10", "12", "20"].map((d) => (
-                        <option key={d} value={d} className="bg-zinc-800">d{d}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Count</span>
-                    <div className="flex items-center gap-1">
-                      <button onClick={() => setDiceCount((c) => Math.max(1, c - 1))} className="w-8 h-9 bg-zinc-800/60 border border-zinc-700/50 rounded-lg text-zinc-300 hover:bg-zinc-700 transition-colors leading-none">−</button>
-                      <span className={`w-10 text-center text-lg font-bold font-mono ${T.text}`}>{diceCount}</span>
-                      <button onClick={() => setDiceCount((c) => Math.min(20, c + 1))} className="w-8 h-9 bg-zinc-800/60 border border-zinc-700/50 rounded-lg text-zinc-300 hover:bg-zinc-700 transition-colors leading-none">+</button>
-                    </div>
-                  </div>
-                  <div>
-                    <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Mod</span>
-                    <input type="number" value={diceMod} min={-20} max={20} readOnly={isPlayer} onChange={(e) => setDiceMod(Number(e.target.value))} className={`w-16 bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-2 py-2 text-zinc-100 text-sm text-center focus:outline-none ${T.inputBorder}`} />
-                  </div>
                   <div>
                     <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Test basis</span>
                     {allowSkill ? (
@@ -1385,6 +1423,26 @@ export default function SessionClient({
                       </select>
                     </div>
                   )}
+                  <div>
+                    <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Die</span>
+                    <select value={diceType} onChange={(e) => setDiceType(e.target.value)} className={`bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-3 py-2 text-zinc-100 text-sm focus:outline-none ${T.inputBorder}`}>
+                      {["4", "6", "8", "10", "12", "20"].map((d) => (
+                        <option key={d} value={d} className="bg-zinc-800">d{d}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Count</span>
+                    <div className="flex items-center gap-1">
+                      <button onClick={() => setDiceCount((c) => Math.max(1, c - 1))} className="w-8 h-9 bg-zinc-800/60 border border-zinc-700/50 rounded-lg text-zinc-300 hover:bg-zinc-700 transition-colors leading-none">−</button>
+                      <span className={`w-10 text-center text-lg font-bold font-mono ${T.text}`}>{diceCount}</span>
+                      <button onClick={() => setDiceCount((c) => Math.min(20, c + 1))} className="w-8 h-9 bg-zinc-800/60 border border-zinc-700/50 rounded-lg text-zinc-300 hover:bg-zinc-700 transition-colors leading-none">+</button>
+                    </div>
+                  </div>
+                  <div>
+                    <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Mod</span>
+                    <input type="number" value={diceMod} min={-20} max={20} readOnly={isPlayer} onChange={(e) => setDiceMod(Number(e.target.value))} className={`w-16 bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-2 py-2 text-zinc-100 text-sm text-center focus:outline-none ${T.inputBorder}`} />
+                  </div>
                 </div>
 
                 {/* faces */}
