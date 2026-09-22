@@ -244,7 +244,7 @@ export default function NpcForm({ tableId, tables, initial, defaultLocationId }:
               {saving ? "Salvando..." : isEdit ? "Salvar Alterações" : "Criar NPC"}
             </button>
             <a href={currentTableId ? `/table/${currentTableId}/scenes` : "/narrator"} className={cancelCls}>
-              Cancel
+              Cancelar
             </a>
           </div>
         </form>

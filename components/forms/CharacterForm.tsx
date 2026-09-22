@@ -42,7 +42,7 @@ const ATTR_NAMES: Array<{ key: "st" | "dx" | "iq" | "ht"; label: string; color: 
   },
   { key: "ht", label: "HT", color: "text-purple-400", svg: "M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" },
 ];
-  const ENCUMBRANCE_LABELS = ["None", "Light", "Medium", "Heavy", "Extra-Heavy"];
+  const ENCUMBRANCE_LABELS = ["Nenhuma", "Leve", "Média", "Pesada", "Muito pesada"];
   const BODY_LOCATIONS = ["Head", "Torso", "Arms", "Legs", "Full Body"];
 
 const isArmorish = (item?: Item | null): boolean =>
@@ -384,11 +384,11 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
 
   async function doSave() {
     if (!currentTableId) {
-      setError("Select the table.");
+      setError("Selecione a mesa.");
       return;
     }
     if (charType === "pc" && !userId) {
-      setError("Select a player.");
+      setError("Selecione um jogador.");
       return;
     }
     setSaving(true);
@@ -450,7 +450,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
       }
       router.refresh();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to save the character.");
+      setError(err instanceof Error ? err.message : "Falha ao salvar o personagem.");
       setSaving(false);
     }
   }
@@ -482,7 +482,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
       <div className="flex items-center justify-between mb-6 mt-6">
         <div className="flex items-center gap-3">
           {currentTableId ? (
-            <a href={`/table/${currentTableId}`} className="text-zinc-500 hover:text-zinc-300 transition-colors" title="Back to table">
+            <a href={`/table/${currentTableId}`} className="text-zinc-500 hover:text-zinc-300 transition-colors" title="Voltar à mesa">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
               </svg>
@@ -490,9 +490,9 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
           ) : null}
           <div>
             <h1 className="text-2xl font-bold text-green-100">
-              {isEdit ? "Edit Character" : "New Character"}
+              {isEdit ? "Editar Personagem" : "Novo Personagem"}
             </h1>
-            <p className="text-zinc-400 text-sm">{isEdit ? "Save changes" : "Create a character for this table"}</p>
+            <p className="text-zinc-400 text-sm">{isEdit ? "Salvar alterações" : "Criar um personagem para esta mesa"}</p>
           </div>
         </div>
         {isEdit ? (
@@ -501,13 +501,13 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
             disabled={saving}
             className={`${submitCls} disabled:opacity-50`}
           >
-            {saving ? "Saving..." : "Save Changes"}
+            {saving ? "Salvando..." : "Salvar Alterações"}
           </button>
         ) : null}
       </div>
 
       <div className="flex items-center gap-1 border-b border-zinc-700/50 mb-6">
-        {([["bio", "Bio"], ["sheet", "Sheet"], ["items", "Items"]] as const).map(([key, label]) => (
+        {([["bio", "Bio"], ["sheet", "Ficha"], ["items", "Itens"]] as const).map(([key, label]) => (
           <button
             key={key}
             type="button"
@@ -527,10 +527,10 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
         {activeTab === "bio" && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-5">
-              <h2 className="text-lg font-semibold text-green-100 mb-3">Identity</h2>
+              <h2 className="text-lg font-semibold text-green-100 mb-3">Identidade</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
               <div>
-                <label className={labelCls}>Name</label>
+                <label className={labelCls}>Nome</label>
                 <input value={name} onChange={(e) => setName(e.target.value)} required className={inputCls} />
               </div>
               <div>
@@ -539,17 +539,17 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
               </div>
             </div>
             <div>
-              <label className={labelCls}>Backstory</label>
+              <label className={labelCls}>História</label>
               <textarea value={backstory} onChange={(e) => setBackstory(e.target.value)} rows={2} className={inputCls} />
             </div>
           </div>
 
           <div className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-5">
-            <h2 className="text-lg font-semibold text-green-100 mb-3">Character</h2>
+            <h2 className="text-lg font-semibold text-green-100 mb-3">Personagem</h2>
 
             {!isEdit && !tableId ? (
               <div className="mb-3">
-                <label className={labelCls}>Table</label>
+                <label className={labelCls}>Mesa</label>
                 <select
                   value={currentTableId}
                   onChange={(e) => setCurrentTableId(e.target.value)}
@@ -557,7 +557,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                   className={inputCls}
                 >
                   <option value="" disabled>
-                    Select a table
+                    Selecione uma mesa
                   </option>
                   {(tables ?? []).map((t) => (
                     <option key={t.id} value={t.id}>
@@ -571,7 +571,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
             {!isEdit ? (
               <>
                 <div>
-                  <label className={`${labelCls} mb-2`}>Type</label>
+                  <label className={`${labelCls} mb-2`}>Tipo</label>
                   <div className="flex gap-4 mb-3">
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input
@@ -582,7 +582,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                         onChange={() => setCharType("pc")}
                         className="w-4 h-4 border-zinc-600 text-white0 focus:ring-green-800 bg-zinc-900"
                       />
-                      <span className="text-zinc-200 text-sm">Player Character</span>
+                      <span className="text-zinc-200 text-sm">Personagem do Jogador</span>
                     </label>
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input
@@ -599,9 +599,9 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                 </div>
                 {charType === "pc" ? (
                   <div>
-                    <label className={labelCls}>Assign to Player</label>
+                    <label className={labelCls}>Atribuir ao Jogador</label>
                     <select value={userId} onChange={(e) => setUserId(e.target.value)} required className={inputCls}>
-                      <option value="">Select a player</option>
+                      <option value="">Selecione um jogador</option>
                       {users
                         .filter((u) => u.type !== 2)
                         .map((u) => (
@@ -621,7 +621,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
         {activeTab === "sheet" && (
         <>
           <div className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-5">
-            <h2 className="text-lg font-semibold text-green-100 mb-6">Attributes</h2>
+            <h2 className="text-lg font-semibold text-green-100 mb-6">Atributos</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-8">
               {ATTR_NAMES.map(({ key, label, color, svg }) => (
                 <div key={key} className="flex flex-col items-center gap-2">
@@ -659,13 +659,13 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                 </div>
               </div>
               <div>
-                <label className={labelCls}>Basic Speed</label>
+                <label className={labelCls}>Deslocamento Básico</label>
                 <div className="bg-zinc-700/40 rounded-lg px-4 py-2.5 text-green-500 font-bold font-mono text-center">
                   {basicSpeed.toFixed(2)}
                 </div>
               </div>
               <div>
-                <label className={labelCls}>Move</label>
+                <label className={labelCls}>Deslocamento</label>
                 <div className="bg-zinc-700/40 rounded-lg px-4 py-2.5 text-green-500 font-bold font-mono text-center">
                   {move.toFixed(2)}
                 </div>
@@ -674,15 +674,15 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
           </div>
 
           <div className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-5">
-            <h3 className="text-sm font-semibold uppercase tracking-wider text-zinc-500 mb-3">Defense &amp; Speed</h3>
+            <h3 className="text-sm font-semibold uppercase tracking-wider text-zinc-500 mb-3">Defesa &amp; Velocidade</h3>
             <div className="flex justify-center flex-wrap gap-6">
               {([
-                { label: "Dodge", value: String(Math.floor(basicSpeed + 3)), color: "text-cyan-400", d: "M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" },
+                { label: "Esquiva", value: String(Math.floor(basicSpeed + 3)), color: "text-cyan-400", d: "M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" },
                 { label: "HP", value: String(attrs.ht), color: "text-red-400", d: "M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" },
                 { label: "FP", value: String(initial?.character?.sheet?.fatigue ?? 10), color: "text-green-500", d: "M13 10V3L4 14h7v7l9-11h-7z" },
-                { label: "Basic Speed", value: basicSpeed.toFixed(2), suffix: "km/h", color: "text-emerald-400", d: "M13 5l7 7-7 7M5 5l7 7-7 7" },
-                { label: "Move", value: String(move), color: "text-blue-400", d: "M5 12h14M12 5l7 7-7 7" },
-                { label: "Encumbrance", value: ENCUMBRANCE_LABELS[encumbranceValue], sub: `${itemsWeight.toFixed(1)} kg`, color: "text-purple-400", d: "M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" },
+                { label: "Deslocamento Básico", value: basicSpeed.toFixed(2), suffix: "km/h", color: "text-emerald-400", d: "M13 5l7 7-7 7M5 5l7 7-7 7" },
+                { label: "Deslocamento", value: String(move), color: "text-blue-400", d: "M5 12h14M12 5l7 7-7 7" },
+                { label: "Carga", value: ENCUMBRANCE_LABELS[encumbranceValue], sub: `${itemsWeight.toFixed(1)} lb`, color: "text-purple-400", d: "M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" },
               ] as Array<{ label: string; value: string; suffix?: string; color: string; d: string }>).map(({ label, value, suffix, color, d }) => (
                 <div key={label} className="flex flex-col items-center gap-1 p-2 bg-zinc-800/40 rounded-lg min-w-[80px]">
                   <svg className={`w-5 h-5 ${color}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -702,8 +702,8 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                 <svg className="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                 </svg>
-                <h2 className="text-lg font-semibold text-green-100">Advantages</h2>
-                <span className="text-sm text-zinc-500">{selAdv.length} selected</span>
+                <h2 className="text-lg font-semibold text-green-100">Vantagens</h2>
+                <span className="text-sm text-zinc-500">{selAdv.length} selecionadas</span>
               </div>
               <div className="flex items-center gap-2">
                 <SplitToggle active={splitAdv} onToggle={() => setSplitAdv((v) => !v)} />
@@ -715,7 +715,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-4.35-4.35M17 10.5a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z" />
                   </svg>
-                  Search
+                  Buscar
                 </button>
               </div>
             </div>
@@ -730,10 +730,10 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                       <InfoTooltip
                         key={a.id}
                         rows={[
-                          { label: "Cost", value: a.cost_points != null ? (a.cost_points >= 0 ? "+" : "") + a.cost_points : undefined },
-                          { label: "Category", value: a.category },
-                          { label: "Subcategory", value: a.subcategory },
-                          { label: "Description", value: a.description },
+                          { label: "Custo", value: a.cost_points != null ? (a.cost_points >= 0 ? "+" : "") + a.cost_points : undefined },
+                          { label: "Categoria", value: a.category },
+                          { label: "Subcategoria", value: a.subcategory },
+                          { label: "Descrição", value: a.description },
                         ]}
                       >
                         <label
@@ -748,7 +748,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                             className="w-4 h-4 rounded border-zinc-600 text-white0 focus:ring-green-800 bg-zinc-900"
                           />
                           <div className="flex-1 min-w-0">
-                            <div className="text-sm font-medium text-zinc-200 truncate">{a.name || "Unnamed"}</div>
+                            <div className="text-sm font-medium text-zinc-200 truncate">{a.name || "Sem nome"}</div>
                             {a.description ? <div className="text-xs text-zinc-500 truncate">{a.description}</div> : null}
                           </div>
                           <span className="text-xs font-mono text-green-500 font-bold shrink-0">
@@ -758,19 +758,19 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                       </InfoTooltip>
                     );
                   };
-                  if (available.advantages.length === 0) return <p className="text-zinc-600 text-sm">No advantages registered for this table.</p>;
+                  if (available.advantages.length === 0) return <p className="text-zinc-600 text-sm">Nenhuma vantagem registrada para esta mesa.</p>;
                   if (splitAdv) {
                     return (
                       <>
                         {selRows.length > 0 ? (
                           <>
-                            <div className="text-xs font-semibold text-zinc-500 uppercase tracking-wider pt-1">{selRows.length} selected</div>
+                            <div className="text-xs font-semibold text-zinc-500 uppercase tracking-wider pt-1">{selRows.length} selecionadas</div>
                             {selRows.map(renderAdv)}
                           </>
                         ) : null}
                         {unselRows.length > 0 ? (
                           <>
-                            <div className="text-xs font-semibold text-zinc-500 uppercase tracking-wider pt-3">{unselRows.length} not selected</div>
+                            <div className="text-xs font-semibold text-zinc-500 uppercase tracking-wider pt-3">{unselRows.length} não selecionadas</div>
                             {unselRows.map(renderAdv)}
                           </>
                         ) : null}
@@ -788,8 +788,8 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                   <svg className="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
                   </svg>
-                  <h2 className="text-lg font-semibold text-green-100">Disadvantages</h2>
-                  <span className="text-sm text-zinc-500">{selDis.length} selected</span>
+                  <h2 className="text-lg font-semibold text-green-100">Desvantagens</h2>
+                  <span className="text-sm text-zinc-500">{selDis.length} selecionadas</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <SplitToggle active={splitDis} onToggle={() => setSplitDis((v) => !v)} />
@@ -801,7 +801,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-4.35-4.35M17 10.5a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z" />
                     </svg>
-                    Search
+                    Buscar
                   </button>
                 </div>
               </div>
@@ -816,11 +816,11 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                       <InfoTooltip
                         key={d.id}
                         rows={[
-                          { label: "Cost", value: d.cost_points != null ? `-${d.cost_points}` : undefined },
-                          { label: "Category", value: d.category },
-                          { label: "Subcategory", value: d.subcategory },
-                          { label: "Effect", value: d.effect },
-                          { label: "Description", value: d.description },
+                          { label: "Custo", value: d.cost_points != null ? `-${d.cost_points}` : undefined },
+                          { label: "Categoria", value: d.category },
+                          { label: "Subcategoria", value: d.subcategory },
+                          { label: "Efeito", value: d.effect },
+                          { label: "Descrição", value: d.description },
                         ]}
                       >
                         <label
@@ -835,7 +835,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                             className="w-4 h-4 rounded border-zinc-600 text-white0 focus:ring-green-800 bg-zinc-900"
                           />
                           <div className="flex-1 min-w-0">
-                            <div className="text-sm font-medium text-zinc-200 truncate">{d.name || "Unnamed"}</div>
+                            <div className="text-sm font-medium text-zinc-200 truncate">{d.name || "Sem nome"}</div>
                             {d.description ? <div className="text-xs text-zinc-500 truncate">{d.description}</div> : null}
                           </div>
                           <span className="text-xs font-mono text-green-500 font-bold shrink-0">
@@ -845,19 +845,19 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                       </InfoTooltip>
                     );
                   };
-                  if (available.disadvantages.length === 0) return <p className="text-zinc-600 text-sm">No disadvantages registered for this table.</p>;
+                  if (available.disadvantages.length === 0) return <p className="text-zinc-600 text-sm">Nenhuma desvantagem registrada para esta mesa.</p>;
                   if (splitDis) {
                     return (
                       <>
                         {selRows.length > 0 ? (
                           <>
-                            <div className="text-xs font-semibold text-zinc-500 uppercase tracking-wider pt-1">{selRows.length} selected</div>
+                            <div className="text-xs font-semibold text-zinc-500 uppercase tracking-wider pt-1">{selRows.length} selecionadas</div>
                             {selRows.map(renderDis)}
                           </>
                         ) : null}
                         {unselRows.length > 0 ? (
                           <>
-                            <div className="text-xs font-semibold text-zinc-500 uppercase tracking-wider pt-3">{unselRows.length} not selected</div>
+                            <div className="text-xs font-semibold text-zinc-500 uppercase tracking-wider pt-3">{unselRows.length} não selecionadas</div>
                             {unselRows.map(renderDis)}
                           </>
                         ) : null}
@@ -876,7 +876,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                   <svg className="w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
                   </svg>
-                  <h2 className="text-lg font-semibold text-green-100">Quirks</h2>
+                  <h2 className="text-lg font-semibold text-green-100">Manias</h2>
                   <span className="text-sm text-zinc-500">
                     {quirks.length} / {MAX_QUIRKS}
                   </span>
@@ -892,17 +892,17 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                         onClick={() => removeQuirk(index)}
                         className="ml-auto text-zinc-500 hover:text-red-400 text-xs transition-colors"
                       >
-                        Remove
+                        Remover
                       </button>
                     </div>
                     <div>
-                      <label className={labelCls}>Name</label>
+                      <label className={labelCls}>Nome</label>
                       <div className="flex items-center gap-2">
                         <input
                           value={q.name}
                           onChange={(e) => updateQuirk(index, e.target.value)}
                           className={inputCls}
-                          placeholder="ex: Night Owl"
+                          placeholder="ex: Coruja Noturna"
                         />
                         <span className="text-xs font-mono text-green-500 font-bold shrink-0">-1</span>
                       </div>
@@ -910,7 +910,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                   </div>
                 ))}
                 {quirks.length === 0 ? (
-                  <p className="text-zinc-600 text-sm">No quirks added yet.</p>
+                  <p className="text-zinc-600 text-sm">Nenhuma mania adicionada ainda.</p>
                 ) : null}
               </div>
               <button
@@ -919,14 +919,14 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                 disabled={quirks.length >= MAX_QUIRKS}
                 className="mt-4 w-full bg-zinc-700 hover:bg-zinc-600 disabled:opacity-40 disabled:cursor-not-allowed text-zinc-200 text-sm font-semibold px-4 py-2 rounded-lg transition-colors"
               >
-                + Add Quirk
+                + Adicionar Mania
               </button>
             </section>
 
         <div className="border-t border-zinc-700/40 pt-6">
-          <span className="text-sm text-zinc-500 mb-2 block">{selSkills.length} selected</span>
+          <span className="text-sm text-zinc-500 mb-2 block">{selSkills.length} selecionadas</span>
           <div className="flex items-center gap-2 mb-1">
-            <h2 className="text-lg font-semibold text-green-100">Skills</h2>
+            <h2 className="text-lg font-semibold text-green-100">Perícias</h2>
             <SplitToggle active={splitSkills} onToggle={() => setSplitSkills((v) => !v)} />
             <button
               type="button"
@@ -936,22 +936,20 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-4.35-4.35M17 10.5a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z" />
               </svg>
-              Search
+              Buscar
             </button>
           </div>
           <p className="text-xs text-zinc-500 mb-4">
-            Points follow the GURPS skill cost table by difficulty. Selecting a skill keeps its default level: the predefinition (attribute minus the
-            predef value, shown under the name) costs 0 points. Each + fills one level toward the attribute and beyond; − lowers it back. Points are
-            derived automatically.
+            Os pontos seguem a tabela de custo de perícia do GURPS por dificuldade. Ao selecionar uma perícia, mantém-se o nível padrão: a predefinição (atributo menos o valor predef, mostrado sob o nome) custa 0 pontos. Cada + sobe um nível rumo ao atributo e além; o − volta um nível. Os pontos são derivados automaticamente.
           </p>
           <section className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-5">
             <div className="flex flex-wrap items-center gap-x-2 p-2 pb-2 pr-2 text-xs font-medium text-zinc-500 border-b border-zinc-700/40 mb-1">
               <div className="w-4 shrink-0" />
-              <div className="flex-1 min-w-0" style={{maxWidth: "Calc(100% - 240px)"}}>Skill</div>
+              <div className="flex-1 min-w-0" style={{maxWidth: "Calc(100% - 240px)"}}>Perícia</div>
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-1">
                   <div className="w-6 shrink-0" />
-                  <span className="w-20 text-center">Skill Level</span>
+                  <span className="w-20 text-center">Nível da Perícia</span>
                   <div className="w-6 shrink-0" />
                 </div>
                 <span className="w-10 text-center">Pts</span>
@@ -973,14 +971,14 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                     <InfoTooltip
                       key={sk.id}
                       rows={[
-                        { label: "Type", value: [sk.predefinition_type, sk.predefinition_difficulty].filter(Boolean).join(" · ") },
-                        { label: "Default", value: skillPredefLabel(sk) },
-                        { label: "Category", value: sk.category },
-                        { label: "Subcategory", value: sk.subcategory },
-                        { label: "Effect", value: sk.effect },
-                        { label: "Description", value: sk.description },
+                        { label: "Tipo", value: [sk.predefinition_type, sk.predefinition_difficulty].filter(Boolean).join(" · ") },
+                        { label: "Padrão", value: skillPredefLabel(sk) },
+                        { label: "Categoria", value: sk.category },
+                        { label: "Subcategoria", value: sk.subcategory },
+                        { label: "Efeito", value: sk.effect },
+                        { label: "Descrição", value: sk.description },
                         {
-                          label: "Predefinition",
+                          label: "Predefinição",
                           value:
                             sk.predefinition
                               ?.map((p) => [p.skill, p.depends_on_skill_for_others_attributes ?? p.value].filter(Boolean).join(" "))
@@ -988,7 +986,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                               .join(", ") || undefined,
                         },
                         {
-                          label: "Dependencies",
+                          label: "Dependências",
                           value:
                             sk.dependencies
                               ?.map((d) => [d.skill, d.value].filter(Boolean).join(" "))
@@ -1009,7 +1007,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                           className="w-4 h-4 rounded border-zinc-600 text-white0 focus:ring-green-800 bg-zinc-900"
                         />
                         <div className="flex-1 min-w-0">
-                          <div className="text-sm font-medium text-zinc-200 truncate">{sk.name || "Unnamed"}</div>
+                          <div className="text-sm font-medium text-zinc-200 truncate">{sk.name || "Sem nome"}</div>
                           <div className="flex items-center gap-1.5 text-xs text-zinc-500">
                             {SKILL_TYPE_META[type] ? (
                               <svg className={`w-3.5 h-3.5 ${SKILL_TYPE_META[type].color}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1017,12 +1015,24 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                               </svg>
                             ) : null}
                             <span>
-                              {sk.predefinition_type || "Skill"}
-                              {sk.predefinition_difficulty ? ` · ${sk.predefinition_difficulty}` : ""}
+                              {sk.predefinition_type === "Physical" ? "Física" : sk.predefinition_type === "Mental" ? "Mental" : sk.predefinition_type || "Perícia"}
+                              {sk.predefinition_difficulty
+                                ? ` · ${
+                                    sk.predefinition_difficulty === "Easy"
+                                      ? "Fácil"
+                                      : sk.predefinition_difficulty === "Medium"
+                                        ? "Média"
+                                        : sk.predefinition_difficulty === "Hard"
+                                          ? "Difícil"
+                                          : sk.predefinition_difficulty === "Very Hard"
+                                            ? "Muito difícil"
+                                            : sk.predefinition_difficulty
+                                  }`
+                                : ""}
                             </span>
                           </div>
                           <div className="text-xs text-zinc-500 truncate">
-                            {skillPredefLabel(sk) ? `Default: ${skillPredefLabel(sk)}` : "Default: none"}
+                            {skillPredefLabel(sk) ? `Padrão: ${skillPredefLabel(sk)}` : "Padrão: nenhum"}
                           </div>
                           {sk.description ? <div className="text-xs text-zinc-500 truncate">{sk.description}</div> : null}
                         </div>
@@ -1054,19 +1064,19 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                     </InfoTooltip>
                   );
                 };
-                if (available.skills.length === 0) return <p className="text-zinc-600 text-sm">No skills registered for this table.</p>;
+                if (available.skills.length === 0) return <p className="text-zinc-600 text-sm">Nenhuma perícia registrada para esta mesa.</p>;
                 if (splitSkills) {
                   return (
                     <>
                       {selRows.length > 0 ? (
                         <>
-                          <div className="text-xs font-semibold text-zinc-500 uppercase tracking-wider pt-1">{selRows.length} selected</div>
+                          <div className="text-xs font-semibold text-zinc-500 uppercase tracking-wider pt-1">{selRows.length} selecionadas</div>
                           {selRows.map(renderSkill)}
                         </>
                       ) : null}
                       {unselRows.length > 0 ? (
                         <>
-                          <div className="text-xs font-semibold text-zinc-500 uppercase tracking-wider pt-3">{unselRows.length} not selected</div>
+                          <div className="text-xs font-semibold text-zinc-500 uppercase tracking-wider pt-3">{unselRows.length} não selecionadas</div>
                           {unselRows.map(renderSkill)}
                         </>
                       ) : null}
@@ -1085,15 +1095,15 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
         <>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-5">
-              <h3 className="text-sm font-semibold uppercase tracking-wider text-zinc-500 mb-3">Defense &amp; Speed</h3>
+              <h3 className="text-sm font-semibold uppercase tracking-wider text-zinc-500 mb-3">Defesa &amp; Velocidade</h3>
               <div className="grid grid-cols-3 gap-2">
                 {([
-                  { label: "Dodge", value: String(Math.floor(basicSpeed + 3)), color: "text-cyan-400", d: "M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" },
+                  { label: "Esquiva", value: String(Math.floor(basicSpeed + 3)), color: "text-cyan-400", d: "M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" },
                   { label: "HP", value: String(attrs.ht), color: "text-red-400", d: "M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" },
                   { label: "FP", value: String(initial?.character?.sheet?.fatigue ?? 10), color: "text-green-500", d: "M13 10V3L4 14h7v7l9-11h-7z" },
-                  { label: "Basic Speed", value: basicSpeed.toFixed(2), suffix: "km/h", color: "text-emerald-400", d: "M13 5l7 7-7 7M5 5l7 7-7 7" },
-                  { label: "Move", value: String(move), color: "text-blue-400", d: "M5 12h14M12 5l7 7-7 7" },
-                  { label: "Encumbrance", value: ENCUMBRANCE_LABELS[encumbranceValue], sub: `${itemsWeight.toFixed(1)} kg`, color: "text-purple-400", d: "M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" },
+                  { label: "Deslocamento Básico", value: basicSpeed.toFixed(2), suffix: "km/h", color: "text-emerald-400", d: "M13 5l7 7-7 7M5 5l7 7-7 7" },
+                  { label: "Deslocamento", value: String(move), color: "text-blue-400", d: "M5 12h14M12 5l7 7-7 7" },
+                  { label: "Carga", value: ENCUMBRANCE_LABELS[encumbranceValue], sub: `${itemsWeight.toFixed(1)} lb`, color: "text-purple-400", d: "M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" },
                 ] as Array<{ label: string; value: string; suffix?: string; color: string; d: string }>).map(({ label, value, suffix, color, d }) => (
                   <div key={label} className="flex flex-col items-center gap-1 p-2 bg-zinc-800/40 rounded-lg min-w-[80px]">
                     <svg className={`w-5 h-5 ${color}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1115,7 +1125,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
               });
               return (
                 <div className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-5">
-                  <h3 className="text-sm font-semibold uppercase tracking-wider text-zinc-500 mb-3">Body</h3>
+                  <h3 className="text-sm font-semibold uppercase tracking-wider text-zinc-500 mb-3">Corpo</h3>
                   {(() => {
                     const drFor = (fits: string[]) => {
                       let total = 0;
@@ -1153,12 +1163,12 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                               );
                               return (
                                 <>
-                                  {badge("head", head, { top: -54, left: "50%", transform: "translateX(-50%)" })}
-                                  {badge("a.rig", armR, { top: -32, right: -50 })}
-                                  {badge("a.lef", armL, { top: -32, left: -50 })}
+                                  {badge("cabeça", head, { top: -54, left: "50%", transform: "translateX(-50%)" })}
+                                  {badge("b.dir", armR, { top: -32, right: -50 })}
+                                  {badge("b.esq", armL, { top: -32, left: -50 })}
                                   {badge("torso", torso, { top: 23, width: 50, left: -45, height: 50 })}
-                                  {badge("l.rig", legR, { top: 85, right: -50 })}
-                                  {badge("l.lef", legL, { top: 85, left: -50 })}
+                                  {badge("p.dir", legR, { top: 85, right: -50 })}
+                                  {badge("p.esq", legL, { top: 85, left: -50 })}
                                 </>
                               );
                             })()}
@@ -1184,7 +1194,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
 
           {selItems.some((s) => isArmorish(available.items.find((i) => i.id === s.id))) ? (
             <div className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-5 mt-4">
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-3">Equip</h3>
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-3">Equipar</h3>
               <div className="space-y-3">
                 {selItems.filter((s) => isArmorish(available.items.find((i) => i.id === s.id))).map((s) => {
                   const item = available.items.find((i) => i.id === s.id);
@@ -1201,26 +1211,26 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                       </div>
                       <div className="grid grid-cols-2 gap-2 items-center">
                         <div>
-                          <label className="text-[10px] text-zinc-500 uppercase block mb-0.5">Status</label>
+                          <label className="text-[10px] text-zinc-500 uppercase block mb-0.5">Estado</label>
                           <select
                             value={eq?.status ?? ""}
                             onChange={(e) => setEquipped((prev) => ({ ...prev, [s.id]: { ...prev[s.id], status: e.target.value || undefined } }))}
                             className="w-full bg-zinc-800 border border-zinc-600 rounded px-2 py-1 text-xs text-zinc-200"
                           >
                             <option value="">—</option>
-                            <option value="equipped">Equipped</option>
-                            <option value="wielded">Wielded</option>
-                            <option value="in_inventory">In inventory</option>
+                            <option value="equipped">Equipado</option>
+                            <option value="wielded">Empunhado</option>
+                            <option value="in_inventory">Na mochila</option>
                           </select>
                         </div>
                         <div>
-                          <label className="text-[10px] text-zinc-500 uppercase block mb-0.5">Location</label>
+                          <label className="text-[10px] text-zinc-500 uppercase block mb-0.5">Local</label>
                           <select
                             value={eq?.location ?? ""}
                             onChange={(e) => setEquipped((prev) => ({ ...prev, [s.id]: { ...prev[s.id], location: e.target.value || undefined } }))}
                             className="w-full bg-zinc-800 border border-zinc-600 rounded px-2 py-1 text-xs text-zinc-200"
                           >
-                            <option value="">None</option>
+                            <option value="">Nenhum</option>
                             {BODY_LOCATIONS.map((loc) => (
                               <option key={loc} value={loc}>{loc}</option>
                             ))}
@@ -1232,7 +1242,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                           <svg className="w-3 h-3 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                           </svg>
-                          <span className="text-[10px] text-emerald-400">{eq.status === "wielded" ? "Wielded" : "Equipped"}{eq.location ? ` — ${eq.location}` : ""}</span>
+                          <span className="text-[10px] text-emerald-400">{eq.status === "wielded" ? "Empunhado" : "Equipado"}{eq.location ? ` — ${eq.location}` : ""}</span>
                         </div>
                       ) : null}
                     </div>
@@ -1245,7 +1255,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
           <div className="border-t border-zinc-700/40 pt-6">
             <div className="flex items-center justify-between mb-1">
               <div className="flex items-center gap-2">
-                <h2 className="text-lg font-semibold text-green-100">Items</h2>
+                <h2 className="text-lg font-semibold text-green-100">Itens</h2>
                 <SplitToggle active={splitItems} onToggle={() => setSplitItems((v) => !v)} />
                 <button
                   type="button"
@@ -1255,10 +1265,10 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-4.35-4.35M17 10.5a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z" />
                   </svg>
-                  Search
+                  Buscar
                 </button>
               </div>
-              <span className="text-sm text-zinc-500">{selItems.length} selected</span>
+              <span className="text-sm text-zinc-500">{selItems.length} selecionados</span>
             </div>
             <section className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-5">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-80 overflow-y-auto scroll-thin pr-2">
@@ -1269,12 +1279,12 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                       <InfoTooltip
                         key={item.id}
                         rows={[
-                          { label: "Category", value: item.category },
-                          { label: "Kind", value: item.kind },
-                          { label: "Weight", value: item.weight_lb != null ? `${item.weight_lb} lb` : undefined },
-                          { label: "Quality", value: item.quality },
-                          { label: "Condition", value: item.condition },
-                          { label: "Description", value: item.description },
+                          { label: "Categoria", value: item.category },
+                          { label: "Tipo", value: item.kind },
+                          { label: "Peso", value: item.weight_lb != null ? `${item.weight_lb} lb` : undefined },
+                          { label: "Qualidade", value: item.quality },
+                          { label: "Condição", value: item.condition },
+                          { label: "Descrição", value: item.description },
                         ]}
                       >
                         <label
@@ -1289,7 +1299,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                             className="w-4 h-4 rounded border-zinc-600 text-white0 focus:ring-green-800 bg-zinc-900"
                           />
                           <div className="flex-1 min-w-0">
-                            <div className="text-sm font-medium text-zinc-200 truncate">{item.name || "Unnamed"}</div>
+                            <div className="text-sm font-medium text-zinc-200 truncate">{item.name || "Sem nome"}</div>
                             <div className="text-xs text-zinc-500 truncate">
                               {[item.category, item.quality, item.condition].filter(Boolean).join(" · ") || ""}
                               {item.weight_lb != null ? ` · ${item.weight_lb} lb` : ""}
@@ -1308,13 +1318,13 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                       <>
                         {selRows.length > 0 ? (
                           <>
-                            <div className="col-span-full text-xs font-semibold text-zinc-500 uppercase tracking-wider pt-1">{selRows.length} selected</div>
+                            <div className="col-span-full text-xs font-semibold text-zinc-500 uppercase tracking-wider pt-1">{selRows.length} selecionados</div>
                             {selRows.map(renderItem)}
                           </>
                         ) : null}
                         {unselRows.length > 0 ? (
                           <>
-                            <div className="col-span-full text-xs font-semibold text-zinc-500 uppercase tracking-wider pt-3">{unselRows.length} not selected</div>
+                            <div className="col-span-full text-xs font-semibold text-zinc-500 uppercase tracking-wider pt-3">{unselRows.length} não selecionados</div>
                             {unselRows.map(renderItem)}
                           </>
                         ) : null}
@@ -1324,7 +1334,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                   return available.items.map(renderItem);
                 })()}
                 {available.items.length === 0 ? (
-                  <p className="col-span-full text-zinc-600 text-sm">No items registered for this table.</p>
+                  <p className="col-span-full text-zinc-600 text-sm">Nenhum item registrado para esta mesa.</p>
                 ) : null}
               </div>
             </section>
@@ -1336,7 +1346,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
               </svg>
               <label className={labelCls}>
-                Encumbrance — {ENCUMBRANCE_LABELS[encumbranceValue]} ({itemsWeight.toFixed(1)} lb carried)
+                Carga — {ENCUMBRANCE_LABELS[encumbranceValue]} ({itemsWeight.toFixed(1)} lb carregadas)
               </label>
             </div>
             <div className="mt-2 grid grid-cols-5 gap-1">
@@ -1365,10 +1375,10 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
         {!isEdit ? (
           <div className="flex items-center gap-3 pt-2 pb-8">
             <button type="submit" disabled={saving} className={`${submitCls} disabled:opacity-50`}>
-              {saving ? "Saving..." : "Create Character"}
+              {saving ? "Salvando..." : "Criar Personagem"}
             </button>
             <a href={currentTableId ? `/table/${currentTableId}/characters` : "/narrator"} className="text-zinc-400 hover:text-zinc-300 text-sm transition-colors">
-              Cancel
+              Cancelar
             </a>
           </div>
         ) : null}
@@ -1378,12 +1388,12 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
         <SearchModal
           title={
             searchFor === "advantages"
-              ? "Search Advantages"
+              ? "Buscar Vantagens"
               : searchFor === "disadvantages"
-                ? "Search Disadvantages"
+                ? "Buscar Desvantagens"
                 : searchFor === "skills"
-                  ? "Search Skills"
-                  : "Search Items"
+                  ? "Buscar Perícias"
+                  : "Buscar Itens"
           }
           onSearch={doSearch}
           filters={
@@ -1391,23 +1401,23 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
               ? [
                   {
                     key: "type",
-                    label: "Type",
+                    label: "Tipo",
                     options: [
-                      { value: "Physical", label: "Physical" },
+                      { value: "Physical", label: "Física" },
                       { value: "Mental", label: "Mental" },
                     ],
                   },
                   {
                     key: "difficulty",
-                    label: "Difficulty",
-                    options: ["Easy", "Medium", "Hard", "Very Hard"].map((d) => ({ value: d, label: d })),
+                    label: "Dificuldade",
+                    options: [["Easy", "Fácil"], ["Medium", "Média"], ["Hard", "Difícil"], ["Very Hard", "Muito difícil"]].map(([value, label]) => ({ value, label })),
                   },
                 ]
               : searchFor === "items"
                 ? [
                     {
                       key: "category",
-                      label: "Category",
+                      label: "Categoria",
                       options: [
                         ...new Set(
                           available.items
@@ -1418,7 +1428,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                     },
                     {
                       key: "kind",
-                      label: "Kind",
+                      label: "Tipo",
                       options: [
                         ...new Map(
                           available.items
@@ -1432,7 +1442,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                 : [
                     {
                       key: "category",
-                      label: "Category",
+                      label: "Categoria",
                       options: [
                         ...new Set(
                           (searchFor === "advantages" ? available.advantages : available.disadvantages)

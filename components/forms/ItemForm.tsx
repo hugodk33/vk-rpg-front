@@ -23,6 +23,7 @@ const KINDS: Array<{ value: string; label: string; desc: string }> = [
 ];
 
 const QUALITIES = ["", "ruim", "boa", "excelente", "master"];
+const QUALITY_LABEL: Record<string, string> = { master: "Mestre" };
 const CONDITIONS = ["", "danificado", "quebrado", "gasto"];
 const HANDEDNESS = [
   { value: 1, label: "1 mão" },
@@ -342,7 +343,7 @@ export default function ItemForm({ initial, tableId, tables, defaultLocationId }
                 <option value="">Comum</option>
                 {QUALITIES.slice(1).map((q) => (
                   <option key={q} value={q}>
-                    {q.charAt(0).toUpperCase() + q.slice(1)}
+                    {QUALITY_LABEL[q] ?? q.charAt(0).toUpperCase() + q.slice(1)}
                   </option>
                 ))}
               </select>
@@ -530,7 +531,7 @@ export default function ItemForm({ initial, tableId, tables, defaultLocationId }
               {saving ? "Salvando..." : isEdit ? "Salvar Alterações" : "Criar Item"}
             </button>
             <a href={currentTableId ? `/table/${currentTableId}/items` : "/narrator"} className={cancelCls}>
-              Cancel
+              Cancelar
             </a>
           </div>
         </form>

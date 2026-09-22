@@ -16,9 +16,9 @@ export interface LocationFormProps {
 }
 
 const IS_BATTLE: Array<{ value: string; label: string }> = [
-  { value: "flat", label: "Flat-top" },
-  { value: "pointy", label: "Pointy-top" },
-  { value: "square", label: "Square grid" },
+  { value: "flat", label: "Borda plana" },
+  { value: "pointy", label: "Vértice em cima" },
+  { value: "square", label: "Grade quadrada" },
 ];
 
 function rankOf(kind?: string): number {
@@ -103,11 +103,11 @@ export default function LocationForm({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!currentTableId) {
-      setError("Table not selected.");
+      setError("Selecione a mesa.");
       return;
     }
     if (!name.trim()) {
-      setError("Give this territory division a name.");
+      setError("Dê um nome a esta divisão de território.");
       return;
     }
     setSaving(true);
@@ -173,7 +173,7 @@ export default function LocationForm({
             <div>
               <label className={labelCls}>Contém em (pai)</label>
               <select value={parentId} onChange={(e) => handleParentChange(e.target.value)} className={inputCls}>
-                <option value="">— Top-level / mundo —</option>
+                <option value="">— Sem pai (mundo) —</option>
                 {parentOptions.map((l) => (
                   <option key={l.id} value={l.id}>
                     {"· ".repeat(Math.max(0, l.level ?? 0))}
@@ -259,7 +259,7 @@ export default function LocationForm({
               </span>
               {sizeNum != null && sizeNum <= 2 ? (
                 <span className="px-2 py-0.5 rounded-full bg-amber-400/10 text-amber-400 uppercase tracking-widest font-semibold">
-                  Battle map
+                  Mapa de batalha
                 </span>
               ) : null}
             </div>
@@ -315,7 +315,7 @@ export default function LocationForm({
               <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} className={inputCls} />
             </div>
             <div>
-              <label className={labelCls}>Notas (other)</label>
+              <label className={labelCls}>Notas (outros)</label>
               <textarea value={other} onChange={(e) => setOther(e.target.value)} rows={2} className={inputCls} />
             </div>
           </div>
@@ -330,7 +330,7 @@ export default function LocationForm({
               href={isEdit ? `/location/${locId}` : currentTableId ? `/table/${currentTableId}/locations` : "/narrator"}
               className={cancelCls}
             >
-              Cancel
+              Cancelar
             </a>
           </div>
         </form>

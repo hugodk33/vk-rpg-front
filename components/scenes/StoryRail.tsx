@@ -56,9 +56,9 @@ export default function StoryRail({ tableId, scenes, state, modifierCount = 0 }:
   const meterFilled = Math.min(METER_SEGMENTS, taleMass);
   const meterOverflow = taleMass - METER_SEGMENTS;
   const massBreakdown =
-    `${chapters.length} chapter${chapters.length === 1 ? "" : "s"} · ${sorted.length} scene${sorted.length === 1 ? "" : "s"} · ` +
-    `${totalNarrations} narration${totalNarrations === 1 ? "" : "s"} · ${totalActions} action${totalActions === 1 ? "" : "s"} · ` +
-    `${modifierCount} modifier${modifierCount === 1 ? "" : "s"}`;
+    `${chapters.length} ${chapters.length === 1 ? "capítulo" : "capítulos"} · ${sorted.length} ${sorted.length === 1 ? "cena" : "cenas"} · ` +
+    `${totalNarrations} ${totalNarrations === 1 ? "narração" : "narrações"} · ${totalActions} ${totalActions === 1 ? "ação" : "ações"} · ` +
+    `${modifierCount} ${modifierCount === 1 ? "modificador" : "modificadores"}`;
 
   if (sorted.length === 0) return null;
 
@@ -69,7 +69,7 @@ export default function StoryRail({ tableId, scenes, state, modifierCount = 0 }:
         <div className="flex items-center gap-2.5">
           <span aria-hidden className="font-mono text-base leading-none text-teal-400">◍</span>
           <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-zinc-400">
-            Chronicle rail
+            Trilha da crônica
           </span>
           <span className="font-mono text-[9px] uppercase tracking-widest text-zinc-600 hidden sm:inline">
             {massBreakdown}
@@ -77,7 +77,7 @@ export default function StoryRail({ tableId, scenes, state, modifierCount = 0 }:
         </div>
         <div className="flex items-center gap-3" title={massBreakdown}>
           <div className="flex flex-col items-end leading-tight">
-            <span className="font-mono text-[9px] uppercase tracking-widest text-zinc-500">Tale told</span>
+            <span className="font-mono text-[9px] uppercase tracking-widest text-zinc-500">História contada</span>
             <span className="font-mono text-xs text-teal-300 tabular-nums">{taleMass}</span>
           </div>
           <div className="flex items-center gap-[3px]" aria-hidden>
@@ -97,7 +97,7 @@ export default function StoryRail({ tableId, scenes, state, modifierCount = 0 }:
             href={`/table/${tableId}/sessions`}
             className="font-mono text-[9px] uppercase tracking-widest text-teal-300/90 hover:text-teal-200 transition-colors rounded-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600/60 px-1"
           >
-            Open chronicle →
+            Abrir a crônica →
           </Link>
         </div>
       </div>
@@ -140,7 +140,7 @@ export default function StoryRail({ tableId, scenes, state, modifierCount = 0 }:
             <div className="flex flex-col items-center px-2" aria-hidden>
               <div className="h-[13px]" />
               <span className="block h-3 w-3 rounded-full border border-zinc-600 bg-zinc-900 shadow-[0_0_10px_rgba(148,163,184,0.25)]" />
-              <span className="font-mono text-[8px] uppercase tracking-widest text-zinc-600 mt-1.5">end</span>
+              <span className="font-mono text-[8px] uppercase tracking-widest text-zinc-600 mt-1.5">fim</span>
             </div>
           </div>
         </div>
@@ -161,15 +161,15 @@ function ChapterFolio({ chapter, isCurrent }: { chapter: number; isCurrent: bool
             ? "border-amber-400/60 bg-amber-400/10 text-amber-300 shadow-[0_0_12px_rgba(251,191,36,0.25)]"
             : "border-zinc-700 bg-zinc-900 text-zinc-400"
         }`}
-        title={isCurrent ? "Chapter in progress" : `Chapter ${roman(chapter)}`}
+        title={isCurrent ? "Capítulo em andamento" : `Capítulo ${roman(chapter)}`}
       >
         {roman(chapter)}
       </div>
       <span className={`font-mono text-[8px] uppercase tracking-[0.2em] mt-1.5 ${isCurrent ? "text-amber-400/80" : "text-zinc-600"}`}>
-        Ch. {roman(chapter)}
+        Cap. {roman(chapter)}
       </span>
       {isCurrent ? (
-        <span aria-hidden className="font-mono text-[9px] text-amber-400/70 -mt-0.5">▾ here</span>
+        <span aria-hidden className="font-mono text-[9px] text-amber-400/70 -mt-0.5">▾ agora</span>
       ) : null}
     </div>
   );
@@ -214,16 +214,16 @@ function NarrationNode({
         {narration.title ? (
           <span className="block text-[11px] font-medium leading-tight text-zinc-200">{narration.title}</span>
         ) : (
-          <span className="block text-[11px] italic leading-tight text-zinc-500">Beats</span>
+          <span className="block text-[11px] italic leading-tight text-zinc-500">Batidas</span>
         )}
         <span className="block font-mono text-[8px] uppercase tracking-widest text-zinc-600 mt-0.5">
-          moment {index + 1}{loc ? ` · ${loc}` : ""}
+          momento {index + 1}{loc ? ` · ${loc}` : ""}
         </span>
       </div>
 
-      <div className="mt-1.5 flex items-center justify-center gap-[3px]" title={actions.length > 0 ? "Actions told in this beat" : undefined}>
+      <div className="mt-1.5 flex items-center justify-center gap-[3px]" title={actions.length > 0 ? "Ações contadas neste momento" : undefined}>
         {actions.length === 0 ? (
-          <span className="font-mono text-[8px] uppercase tracking-widest text-zinc-700">— no moves —</span>
+          <span className="font-mono text-[8px] uppercase tracking-widest text-zinc-700">— sem ações —</span>
         ) : (
           <>
             {actions.slice(0, 6).map((a) => (
@@ -232,7 +232,7 @@ function NarrationNode({
                 title={
                   a.description || a.result || a.dice_roll
                     ? `${a.queue != null ? `${a.queue}. ` : ""}${a.description ?? ""}${a.dice_roll ? ` · ${a.dice_roll}` : ""}${a.result ? ` → ${a.result}` : ""}`
-                    : "Action"
+                    : "Ação"
                 }
                 className={`block h-3 w-1 rounded-full ${isCurrent ? "bg-teal-400/80" : "bg-amber-400/50"}`}
               />
@@ -256,7 +256,7 @@ function NarrationNode({
 /* ---------- scene caption ---------- */
 
 function SceneCaption({ scene, sceneIndex }: { scene: Scene; sceneIndex: number }) {
-  const shown = scene.title || (scene.moment != null ? `Part ${(scene.moment ?? 0) + 1}` : "");
+  const shown = scene.title || (scene.moment != null ? `Parte ${(scene.moment ?? 0) + 1}` : "");
   if (!shown) return null;
   return (
     <div className="mt-2.5 flex items-center justify-center gap-1.5 px-1.5 min-w-0" aria-hidden>

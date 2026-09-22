@@ -37,9 +37,9 @@ export default async function PlayerCharacterViewedPage({
   return (
     <div className="max-w-5xl mx-auto p-6">
       <div className="mb-4 rounded-lg border border-zinc-800 bg-zinc-900/60 px-4 py-3 text-xs text-zinc-500">
-        You are viewing this character as your character. Everything you
-        cannot see yet (the narrator has kept it hidden) is what you have not
-        discovered in play — not a page glitch.
+        Você está vendo este personagem como o seu personagem. Tudo o que você
+        ainda não consegue ver (o narrador manteve oculto) é o que você ainda não
+        descobriu em jogo — não é um bug da página.
       </div>
       <CharacterSheet
         data={data}

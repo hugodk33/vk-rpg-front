@@ -4,15 +4,17 @@ import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import type { GameTableItems, Item } from "@/lib/types";
 import TableTabs from "@/components/TableTabs";
+import RowActions from "@/components/table/RowActions";
 import { api } from "@/lib/api";
+import { submitJson } from "@/components/forms/submit";
 import { fitLabel } from "@/lib/fit";
 import ItemIcon from "@/components/items/ItemIcon";
 
 const KIND_BADGES: Record<string, { label: string; class: string }> = {
-  weapon: { label: "Weapon", class: "bg-red-400/10 text-red-400 border border-red-400/20" },
-  shield: { label: "Shield", class: "bg-orange-400/10 text-orange-400 border border-orange-400/20" },
-  armor: { label: "Armor", class: "bg-cyan-400/10 text-cyan-400 border border-cyan-400/20" },
-  equipment: { label: "Equipment", class: "bg-amber-400/10 text-amber-400 border border-amber-400/20" },
+  weapon: { label: "Arma", class: "bg-red-400/10 text-red-400 border border-red-400/20" },
+  shield: { label: "Escudo", class: "bg-orange-400/10 text-orange-400 border border-orange-400/20" },
+  armor: { label: "Armadura", class: "bg-cyan-400/10 text-cyan-400 border border-cyan-400/20" },
+  equipment: { label: "Equipamento", class: "bg-amber-400/10 text-amber-400 border border-amber-400/20" },
 };
 
 export default function TableItemsPage({ params }: { params: Promise<{ id: string }> }) {
@@ -44,20 +46,28 @@ export default function TableItemsPage({ params }: { params: Promise<{ id: strin
       <TableTabs tableId={id} />
 
       <div className="flex items-baseline gap-3 mb-1">
-        <h1 className="text-2xl font-bold text-zinc-100">Items</h1>
+        <h1 className="text-2xl font-bold text-zinc-100">Itens</h1>
         <span className="text-sm text-zinc-500">{data?.table?.title}</span>
       </div>
 
-      <div className="flex items-center gap-3 mb-6 text-xs text-zinc-500">
-        <span>{items.length} item{items.length !== 1 ? "s" : ""}</span>
-        {Object.entries(kindCounts).map(([t, c]) => {
-          const badge = KIND_BADGES[t];
-          return badge ? (
-            <span key={t} className={`px-1.5 py-0.5 rounded ${badge.class}`}>
-              {c} {badge.label}{c !== 1 ? "s" : ""}
-            </span>
-          ) : null;
-        })}
+      <div className="flex items-center justify-between gap-6 mb-6">
+        <div className="flex items-center gap-3 text-xs text-zinc-500">
+          <span>{items.length} {items.length !== 1 ? "itens" : "item"}</span>
+          {Object.entries(kindCounts).map(([t, c]) => {
+            const badge = KIND_BADGES[t];
+            return badge ? (
+              <span key={t} className={`px-1.5 py-0.5 rounded ${badge.class}`}>
+                {c} {badge.label}{c !== 1 ? "s" : ""}
+              </span>
+            ) : null;
+          })}
+        </div>
+        <Link
+          href={`/item/new?table_id=${id}`}
+          className="bg-green-800/70 hover:bg-green-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors"
+        >
+          + Novo item
+        </Link>
       </div>
 
       <div className="flex gap-2 mb-6">
@@ -75,7 +85,7 @@ export default function TableItemsPage({ params }: { params: Promise<{ id: strin
         </div>
         {search ? (
           <button type="button" onClick={() => setSearch("")} className="bg-zinc-800/60 hover:bg-zinc-700/60 text-zinc-400 text-sm px-3 py-2 rounded-lg transition-colors border border-zinc-700/50">
-            Clear
+            Limpar
           </button>
         ) : null}
       </div>
@@ -85,7 +95,7 @@ export default function TableItemsPage({ params }: { params: Promise<{ id: strin
           <svg className="w-10 h-10 text-zinc-700 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
           </svg>
-          <p className="text-zinc-500 text-sm">{search ? "No items match your filter." : "No items registered for this table yet."}</p>
+          <p className="text-zinc-500 text-sm">{search ? "Nenhum item corresponde ao seu filtro." : "Nenhum item cadastrado nesta mesa ainda."}</p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -101,7 +111,7 @@ export default function TableItemsPage({ params }: { params: Promise<{ id: strin
                   <div className="flex items-center gap-3 min-w-0">
                     <ItemIcon item={i} className="w-4 h-4 shrink-0" imgClassName="w-4 h-4 object-cover rounded" />
                     <span className="text-sm font-medium text-zinc-200 group-hover:text-zinc-100 truncate">
-                      {i.name || "Unnamed"}
+                      {i.name || "Sem nome"}
                     </span>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
@@ -113,6 +123,10 @@ export default function TableItemsPage({ params }: { params: Promise<{ id: strin
                     {i.weight_lb != null ? (
                       <span className="text-[10px] text-zinc-500">{i.weight_lb} lb</span>
                     ) : null}
+                    <RowActions
+                      editHref={`/item/${i.id}/edit?table_id=${id}`}
+                      onDelete={() => submitJson(`/api/game-table-item/${i.id}`, "DELETE")}
+                    />
                   </div>
                 </div>
                 <div className="flex items-center gap-2 mt-1.5 ml-7">

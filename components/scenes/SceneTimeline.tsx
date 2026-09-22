@@ -82,8 +82,8 @@ function locationPin(loc: Location | null, shownName?: string | null) {
 function CastChips({ chars, npcs, moment, mask, viewerId }: { chars: { id: string; name: string }[]; npcs: { characterId: string; name: string; status: string }[]; moment?: number; mask: (id: string, real: string) => string; viewerId?: string }) {
   const players = chars.map((c) => ({
     id: c.id,
-    name: viewerId && c.id === viewerId ? c.name : mask(c.id, c.name || "Player"),
-    sub: "Player",
+    name: viewerId && c.id === viewerId ? c.name : mask(c.id, c.name || "Jogador"),
+    sub: "Jogador",
     color: "#60a5fa",
   }));
   const npcList = npcs.map((n) => ({
@@ -125,11 +125,11 @@ function modifierChips(m: Modifier | null): StatChip[] {
   if (m.mod_iq != null) chips.push({ label: "IQ", hex: "#60a5fa", val: signed(m.mod_iq) });
   if (m.mod_ht != null) chips.push({ label: "HT", hex: "#a78bfa", val: signed(m.mod_ht) });
   if (m.mod_fatigue != null) chips.push({ label: "FP", hex: "#38bdf8", val: signed(m.mod_fatigue) });
-  if (m.hp != null) chips.push({ label: "HP→", hex: "#f87171", val: String(m.hp) });
-  if (m.damage_value != null) chips.push({ label: "dmg", hex: "#f87171", val: m.damage_value });
-  if (m.skill_value != null) chips.push({ label: "skill", hex: "#fbbf24", val: m.skill_value });
-  if (m.item_quantity != null) chips.push({ label: "qty", hex: "#fbbf24", val: String(m.item_quantity) });
-  if (m.item_weight != null) chips.push({ label: "wgt", hex: "#fbbf24", val: String(m.item_weight) });
+  if (m.hp != null) chips.push({ label: "PV→", hex: "#f87171", val: String(m.hp) });
+  if (m.damage_value != null) chips.push({ label: "dano", hex: "#f87171", val: m.damage_value });
+  if (m.skill_value != null) chips.push({ label: "perícia", hex: "#fbbf24", val: m.skill_value });
+  if (m.item_quantity != null) chips.push({ label: "qtd", hex: "#fbbf24", val: String(m.item_quantity) });
+  if (m.item_weight != null) chips.push({ label: "peso", hex: "#fbbf24", val: String(m.item_weight) });
   return chips;
 }
 
@@ -142,20 +142,20 @@ function rollTone(a: NarrationAction): { hex: string; tag: string } {
   const isDamage = m?.damage_value != null || m?.mod_hp != null || m?.mod_st != null;
   const roll = (a.dice_roll ?? "").toLowerCase();
   const isCrit = /crit|crítico|decisivo|por pouco|critical|decisive/i.test(a.description ?? "") || /=\s*18\b/.test(a.result ?? "");
-  if (isDamage) return { hex: "#f87171", tag: "damage" };
-  if (isCrit) return { hex: "#fbbf24", tag: "crit" };
-  if (roll.includes("d")) return { hex: "#60a5fa", tag: "test" };
-  return { hex: "#a1a1aa", tag: "record" };
+  if (isDamage) return { hex: "#f87171", tag: "dano" };
+  if (isCrit) return { hex: "#fbbf24", tag: "crítico" };
+  if (roll.includes("d")) return { hex: "#60a5fa", tag: "teste" };
+  return { hex: "#a1a1aa", tag: "registro" };
 }
 
 function RollSlip({ a, moment, mask, viewerId }: { a: NarrationAction; moment?: number; mask: (id: string, real: string) => string; viewerId?: string }) {
   const char = a.character;
   const shownName =
     char && viewerId && char.id === viewerId
-      ? char?.name || char?.username || "Someone"
+      ? char?.name || char?.username || "Alguém"
       : char
-      ? mask(char.id, char?.name || char?.username || "Someone")
-      : "Someone";
+      ? mask(char.id, char?.name || char?.username || "Alguém")
+      : "Alguém";
   const charName = shownName;
   const charId = char?.id ?? "";
   const charUrl = charId ? `/character/${charId}${moment != null ? `?moment=${moment}` : ""}` : "";
@@ -207,7 +207,7 @@ function RollSlip({ a, moment, mask, viewerId }: { a: NarrationAction; moment?: 
         {a.modifier?.name || a.modifier?.effect ? (
           <div className="mt-2 flex items-start gap-2 border-t border-dashed border-zinc-700/50 pt-2">
             <span className="font-mono text-[9px] uppercase tracking-widest text-amber-300/80 shrink-0 mt-px">
-              consequence
+              consequência
             </span>
             <div className="min-w-0">
               {a.modifier.name ? (
@@ -250,14 +250,14 @@ function Beat({ n, viewerId, mask, rules }: { n: { narration: string; title?: st
             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            you were here, unconscious
+            você estava aqui, inconsciente
           </div>
         ) : wasElsewhere ? (
           <div className="mb-2 inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-zinc-600 border border-zinc-700/50 rounded-full pl-2 pr-3 py-1">
             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1" />
             </svg>
-            you were elsewhere
+            você estava em outro lugar
           </div>
         ) : null}
 
@@ -301,16 +301,16 @@ function SceneCard({ scene, showEdit, badgeCls, viewerId, mask, rules }: { scene
         <h3 className="text-lg font-semibold text-zinc-100">
           {scene.title}
           <span className={`ml-3 font-mono text-[11px] tracking-widest uppercase rounded px-2 py-0.5 ${badgeCls}`}>
-            moment {sceneNum}
+            momento {sceneNum}
           </span>
         </h3>
         {showEdit ? (
-          <span className="ml-auto font-mono text-[10px] text-zinc-600 uppercase tracking-widest hidden sm:inline">open</span>
+          <span className="ml-auto font-mono text-[10px] text-zinc-600 uppercase tracking-widest hidden sm:inline">abrir</span>
         ) : null}
       </div>
       <div className="pl-[18px] border-l border-zinc-700/40">
         {scene.narrations.length === 0 ? (
-          <p className="text-sm text-zinc-600 italic font-mono">No entries in this scene.</p>
+          <p className="text-sm text-zinc-600 italic font-mono">Nenhum registro nesta cena.</p>
         ) : (
           <div className="space-y-5">
             {scene.narrations.map((n) => (
@@ -357,15 +357,15 @@ export default function SceneTimeline({ table, scenes, showEditButtons = true, r
       {/* canopy */}
       <Panel>
         <h1 className={`text-[clamp(30px,6vw,52px)] leading-[0.95] font-bold tracking-tight mt-3 ${titleCls}`}>
-          {table?.title || "The Chronicle"}
+          {table?.title || "A Crônica"}
         </h1>
         {table?.intro ? (
           <p className="text-zinc-400 mt-4 max-w-2xl leading-relaxed border-l-2 border-zinc-700 pl-4">{table.intro}</p>
         ) : null}
         <div className="mt-6 flex items-center gap-2 font-mono text-[11px] text-zinc-500">
-          <span className="w-1.5 h-1.5 rounded-full bg-blue-400" /> {chapters.size} chapter{chapters.size !== 1 ? "s" : ""}
-          <span className="text-zinc-700">·</span> {scenes.length} scene{scenes.length !== 1 ? "s" : ""}
-          <span className="text-zinc-700">·</span> {scenes.reduce((a, s) => a + s.narrations.length, 0)} log entry(ies)
+          <span className="w-1.5 h-1.5 rounded-full bg-blue-400" /> {chapters.size} {chapters.size !== 1 ? "capítulos" : "capítulo"}
+          <span className="text-zinc-700">·</span> {scenes.length} {scenes.length !== 1 ? "cenas" : "cena"}
+          <span className="text-zinc-700">·</span> {scenes.reduce((a, s) => a + s.narrations.length, 0)} registro(s)
         </div>
       </Panel>
 
@@ -374,18 +374,18 @@ export default function SceneTimeline({ table, scenes, showEditButtons = true, r
           <svg className="w-10 h-10 text-zinc-700 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
           </svg>
-          <p className="text-zinc-500 text-sm">No scenes recorded yet — the chronicle starts blank.</p>
+          <p className="text-zinc-500 text-sm">Nenhuma cena registrada ainda — a crônica começa em branco.</p>
         </div>
       ) : (
         chapterEntries.map(([chapter, chapterScenes]) => (
           <Panel key={chapter} className="mt-12">
             <div className="flex items-center gap-4 mb-8">
               <div className="min-w-0">
-                <div className="font-mono text-[15px] tracking-[0.3em] uppercase text-zinc-500">Chapter</div>
+                <div className="font-mono text-[15px] tracking-[0.3em] uppercase text-zinc-500">Capítulo</div>
               </div>
               <span className="select-none font-bold leading-none text-[24px] text-zinc-800 font-mono">{roman(chapter)}</span>
               <div className="flex-1 h-px bg-zinc-700/50" />
-              <span className="font-mono text-[11px] text-zinc-500">{chapterScenes.length} scene{chapterScenes.length !== 1 ? "s" : ""}</span>
+              <span className="font-mono text-[11px] text-zinc-500">{chapterScenes.length} {chapterScenes.length !== 1 ? "cenas" : "cena"}</span>
             </div>
 
             {chapterScenes.map((scene) => (

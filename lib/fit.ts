@@ -6,7 +6,7 @@ export const FIT_OPTIONS: Array<{ value: string; label: string; desc: string }> 
 ];
 
 export function fitLabel(fit?: string | null): string {
-  if (!fit) return "Unfitted";
+  if (!fit) return "Sem ajuste";
   const found = FIT_OPTIONS.find((o) => o.value === fit);
   return found ? found.label : fit.charAt(0).toUpperCase() + fit.slice(1);
 }

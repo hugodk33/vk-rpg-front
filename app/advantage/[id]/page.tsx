@@ -22,7 +22,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { id } = await params;
   const advantage = await getAdvantage(id);
-  return { title: `${advantage?.name || "Advantage"} — VKRPG` };
+  return { title: `${advantage?.name || "Vantagem"} — VKRPG` };
 }
 
 const TYPE_CONFIG: Record<string, { color: string; bg: string; ring: string; svg: string }> = {
@@ -66,7 +66,7 @@ export default async function AdvantageDetailPage({
     <div className="max-w-5xl mx-auto p-6">
       {tableId ? (
         <Link href={`/table/${tableId}`} className="text-zinc-500 hover:text-zinc-300 text-sm mb-4 inline-block transition-colors">
-          &larr; Back to table
+          &larr; Voltar à mesa
         </Link>
       ) : null}
 
@@ -82,7 +82,7 @@ export default async function AdvantageDetailPage({
                 </div>
               ) : null}
               <div className="min-w-0">
-                <h1 className="text-2xl font-bold text-green-100 leading-tight">{advantage.name || "Unnamed Advantage"}</h1>
+                <h1 className="text-2xl font-bold text-green-100 leading-tight">{advantage.name || "Vantagem sem nome"}</h1>
                 {advantage.category || advantage.subcategory ? (
                   <div className="flex items-center gap-2 mt-1 flex-wrap">
                     {advantage.category ? (
@@ -100,7 +100,7 @@ export default async function AdvantageDetailPage({
             </div>
 
             <div className="shrink-0 text-right">
-              <span className="block text-xs uppercase tracking-wider text-zinc-500">Cost</span>
+              <span className="block text-xs uppercase tracking-wider text-zinc-500">Custo</span>
               <span className="text-emerald-400 font-bold text-3xl tabular-nums leading-tight">
                 {advantage.cost_points != null ? formatCost(advantage.cost_points) : "—"}
               </span>
@@ -110,17 +110,17 @@ export default async function AdvantageDetailPage({
 
         <div className="p-6 space-y-6">
           <div>
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-2">Description</h3>
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-2">Descrição</h3>
             {advantage.description ? (
               <p className="text-zinc-300 text-sm leading-relaxed">{advantage.description}</p>
             ) : (
-              <p className="text-zinc-600 text-sm italic">No description recorded for this advantage yet.</p>
+              <p className="text-zinc-600 text-sm italic">Nenhuma descrição registrada para esta vantagem ainda.</p>
             )}
           </div>
 
           <div className="flex gap-3 pt-2">
             <Link href={`/advantage/${advantage.id}/edit`} className="bg-green-900/60 hover:bg-green-800 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
-              Edit
+              Editar
             </Link>
           </div>
         </div>

@@ -59,7 +59,7 @@ export default function PlayerCharacterIndex() {
       <div className="text-center space-y-3">
         <div className="w-2.5 h-2.5 rounded-full bg-blue-400 beacon mx-auto" />
         <p className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">
-          Finding your seat…
+          Encontrando seu assento…
         </p>
       </div>
     </div>

@@ -170,7 +170,7 @@ export default function RegionMap({
 
   return (
     <div className="relative overflow-hidden rounded-lg border border-zinc-700/40 bg-zinc-900/50">
-      <svg viewBox={`0 0 ${w} ${h}`} className="block w-full h-auto" role="group" aria-label="Territory map">
+      <svg viewBox={`0 0 ${w} ${h}`} className="block w-full h-auto" role="group" aria-label="Mapa do território">
         <rect x="0" y="0" width={w} height={h} fill="#141414" />
         {grid}
 
@@ -190,7 +190,7 @@ export default function RegionMap({
           const cx = toX(cell.cxp);
           const cy = toY(cell.cyp);
           const glyph = cell.c.kind ?? "site";
-          const name = cell.c.name || "Unnamed";
+          const name = cell.c.name || "Sem nome";
           const href = hrefOf ? hrefOf(id) : `/location/${id}`;
           return (
             <g key={id} className="location-region">

@@ -77,7 +77,7 @@ export function narrationBoardAt(n: Narration | null | undefined, opts?: Narrati
   const tokens: BoardToken[] = [
     ...(n.characters ?? []).map((c) => ({
       id: c.id,
-      name: c.name || c.username || "Player",
+      name: c.name || c.username || "Jogador",
       q: c.q,
       r: c.r,
       facing: c.facing,

@@ -6,18 +6,18 @@
 "use client";
 
 export const KIND_LABELS: Record<string, string> = {
-  world: "World",
-  continent: "Continent",
-  nation: "Nation",
-  region: "Region",
-  biome: "Biome",
-  province: "Province",
-  city: "City",
-  district: "District",
-  locale: "Locale",
-  site: "Site",
-  battlemap: "Battle Map",
-  point: "Point",
+  world: "Mundo",
+  continent: "Continente",
+  nation: "Nação",
+  region: "Região",
+  biome: "Bioma",
+  province: "Província",
+  city: "Cidade",
+  district: "Distrito",
+  locale: "Localidade",
+  site: "Local",
+  battlemap: "Mapa de Batalha",
+  point: "Ponto",
 };
 
 export const KIND_TINT: Record<string, string> = {

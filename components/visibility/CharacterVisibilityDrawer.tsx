@@ -103,7 +103,7 @@ export default function CharacterVisibilityDrawer({
             d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7zM12 9a3 3 0 100 6 3 3 0 000-6z"
           />
         </svg>
-        Visibility
+        Visibilidade
       </button>
 
       {open ? (
@@ -111,17 +111,17 @@ export default function CharacterVisibilityDrawer({
           <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-800">
             <div>
               <h2 className="font-mono text-xs uppercase tracking-[0.2em] text-green-500">
-                Visibility
+                Visibilidade
               </h2>
               <p className="text-xs text-zinc-500 mt-0.5">
-                Who sees what — players perspective for this character,
-                table perspective (NPCs) for a npc
+                Quem vê o quê — perspectiva de jogadores para este
+                personagem, perspectiva de mesa (NPCs) para um NPC
               </p>
             </div>
             <button
               onClick={() => setOpen(false)}
               className="p-1.5 rounded-md text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-green-800/60"
-              aria-label="Close visibility drawer"
+              aria-label="Fechar gaveta de visibilidade"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
@@ -153,7 +153,7 @@ export default function CharacterVisibilityDrawer({
               />
             ) : (
               <p className="text-sm text-zinc-500 animate-pulse">
-                Loading visibility data…
+                Carregando dados de visibilidade…
               </p>
             )}
           </div>

@@ -29,8 +29,8 @@ export default function ZoomControls({ zoom, onZoom, min = 0.5, max = 3.5, step 
             type="button"
             onClick={onToggleHand}
             aria-pressed={hand}
-            aria-label="Pan map (H)"
-            title="Pan map (H)"
+            aria-label="Mover o mapa (H)"
+            title="Mover o mapa (H)"
             className={`flex h-6 w-6 items-center justify-center rounded transition-colors ${
               hand ? "bg-sky-500/20 text-sky-300 ring-1 ring-sky-500/50" : "text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800"
             }`}
@@ -44,8 +44,8 @@ export default function ZoomControls({ zoom, onZoom, min = 0.5, max = 3.5, step 
         type="button"
         onClick={() => onZoom(clamp(zoom - step))}
         disabled={zoom <= min}
-        aria-label="Zoom out"
-        title="Zoom out"
+        aria-label="Diminuir zoom"
+        title="Diminuir zoom"
         className="flex h-6 w-6 items-center justify-center rounded text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-colors disabled:opacity-35 disabled:hover:bg-transparent"
       >
         <Minus className="w-3.5 h-3.5" strokeWidth={2.25} />
@@ -54,8 +54,8 @@ export default function ZoomControls({ zoom, onZoom, min = 0.5, max = 3.5, step 
         type="button"
         onClick={() => onZoom(clamp(zoom + step))}
         disabled={zoom >= max}
-        aria-label="Zoom in"
-        title="Zoom in"
+        aria-label="Aumentar zoom"
+        title="Aumentar zoom"
         className="flex h-6 w-6 items-center justify-center rounded text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-colors disabled:opacity-35 disabled:hover:bg-transparent"
       >
         <Plus className="w-3.5 h-3.5" strokeWidth={2.25} />
@@ -64,8 +64,8 @@ export default function ZoomControls({ zoom, onZoom, min = 0.5, max = 3.5, step 
         type="button"
         onClick={() => onZoom(1)}
         disabled={zoom === 1}
-        aria-label="Reset zoom"
-        title="Reset to 100%"
+        aria-label="Redefinir zoom"
+        title="Redefinir para 100%"
         className="flex h-6 min-w-[2.9rem] items-center justify-center rounded font-mono text-[10px] tabular-nums text-zinc-300 hover:text-white hover:bg-zinc-800 transition-colors disabled:opacity-60 disabled:hover:bg-transparent"
       >
         {Math.round(zoom * 100)}%

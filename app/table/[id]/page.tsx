@@ -144,19 +144,19 @@ function SeatRow({ s, hue }: { s: Seat; hue?: (typeof PALETTE)[number] }) {
           <span className="flex justify-end">
             {s.effects.length > 0 ? (
               <span
-                title={s.effects.map((e) => e.name).filter(Boolean).join(", ") || "Modifiers applied"}
+                title={s.effects.map((e) => e.name).filter(Boolean).join(", ") || "Modificadores aplicados"}
                 className="font-mono text-[9px] uppercase tracking-widest text-rose-300/90 bg-rose-500/10 border border-rose-500/30 rounded px-1.5 py-0.5 whitespace-nowrap"
               >
-                {s.effects.length} effect{s.effects.length === 1 ? "" : "s"}
+                {s.effects.length} efeito{s.effects.length === 1 ? "" : "s"}
               </span>
             ) : (
-              <span className="font-mono text-[9px] uppercase tracking-widest text-zinc-600 whitespace-nowrap">No effects</span>
+              <span className="font-mono text-[9px] uppercase tracking-widest text-zinc-600 whitespace-nowrap">Sem efeitos</span>
             )}
           </span>
         </span>
       ) : (
         <span className="block font-mono text-[9px] uppercase tracking-widest text-zinc-500 mt-2.5 pt-2.5 border-t border-zinc-700/40">
-          No sheet yet
+          Sem ficha ainda
         </span>
       )}
     </Link>
@@ -200,7 +200,7 @@ function ArchiveRow({ cell }: { cell: ArchiveCell }) {
             href={cell.href}
             className="inline-flex items-center gap-1 font-mono text-[9px] uppercase tracking-widest rounded-md border border-zinc-700/50 px-2 py-1 text-zinc-400 hover:text-zinc-100 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-green-800/60"
           >
-            Open
+            Abrir
             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 18l6-6-6-6" />
             </svg>
@@ -259,8 +259,8 @@ export default async function TableOverviewPage({ params }: { params: Promise<{ 
         const c = p.character;
         const base: Seat = {
           id: c?.id ?? "",
-          name: c?.name || p.username || "Unnamed player",
-          owner: p.username ?? "Player",
+          name: c?.name || p.username || "Jogador sem nome",
+          owner: p.username ?? "Jogador",
           effects: [],
           hasSheet: false,
         };
@@ -289,7 +289,7 @@ export default async function TableOverviewPage({ params }: { params: Promise<{ 
     npcs.map(async (n): Promise<Seat> => {
       const base: Seat = {
         id: n.character_id ?? "",
-        name: n.name || n.status || "Unnamed NPC",
+        name: n.name || n.status || "NPC sem nome",
         owner: n.status || "NPC",
         effects: [],
         hasSheet: false,
@@ -357,13 +357,13 @@ export default async function TableOverviewPage({ params }: { params: Promise<{ 
     (modsRes?.modifiers?.length ?? 0);
 
   const cells: ArchiveCell[] = [
-    { group: "People", name: "Characters", unit: "dossiers", count: characters.length, seal: "#34d399", icon: Users, href: `/table/${id}/characters`, addHref: `/character/new?table_id=${id}`, addLabel: "New character" },
-    { group: "Gear", name: "Items", unit: "records", count: items.length, seal: "#f59e0b", icon: Package, href: `/table/${id}/items`, addHref: `/item/new?table_id=${id}`, addLabel: "New item" },
-    { group: "Traits", name: "Advantages", unit: "records", count: advantages.length, seal: "#818cf8", icon: Sparkles, href: `/table/${id}/advantages`, addHref: `/advantage/new?table_id=${id}`, addLabel: "New advantage" },
-    { group: "Traits", name: "Disadvantages", unit: "records", count: disadvantages.length, seal: "#f87171", icon: Skull, href: `/table/${id}/disadvantages`, addHref: `/disadvantage/new?table_id=${id}`, addLabel: "New disadvantage" },
-    { group: "Study", name: "Skills", unit: "folios", count: skills.length, seal: "#a78bfa", icon: BookOpen, href: `/table/${id}/skills` },
-    { group: "Places", name: "Locations", unit: "places", count: places, seal: "#2dd4bf", icon: MapPin, href: `/table/${id}/locations` },
-    { group: "Conditions", name: "Modifiers", unit: "conditions", count: modsRes?.modifiers?.length ?? 0, seal: "#f472b6", icon: Activity, href: `/table/${id}/modifiers` },
+    { group: "People", name: "Personagens", unit: "dossiês", count: characters.length, seal: "#34d399", icon: Users, href: `/table/${id}/characters`, addHref: `/character/new?table_id=${id}`, addLabel: "Novo personagem" },
+    { group: "Gear", name: "Itens", unit: "registros", count: items.length, seal: "#f59e0b", icon: Package, href: `/table/${id}/items`, addHref: `/item/new?table_id=${id}`, addLabel: "Novo item" },
+    { group: "Traits", name: "Vantagens", unit: "registros", count: advantages.length, seal: "#818cf8", icon: Sparkles, href: `/table/${id}/advantages`, addHref: `/advantage/new?table_id=${id}`, addLabel: "Nova vantagem" },
+    { group: "Traits", name: "Desvantagens", unit: "registros", count: disadvantages.length, seal: "#f87171", icon: Skull, href: `/table/${id}/disadvantages`, addHref: `/disadvantage/new?table_id=${id}`, addLabel: "Nova desvantagem" },
+    { group: "Study", name: "Perícias", unit: "folhas", count: skills.length, seal: "#a78bfa", icon: BookOpen, href: `/table/${id}/skills` },
+    { group: "Places", name: "Locais", unit: "lugares", count: places, seal: "#2dd4bf", icon: MapPin, href: `/table/${id}/locations` },
+    { group: "Conditions", name: "Modificadores", unit: "condições", count: modsRes?.modifiers?.length ?? 0, seal: "#f472b6", icon: Activity, href: `/table/${id}/modifiers` },
   ];
 
   const system = table?.system?.trim();
@@ -389,13 +389,13 @@ export default async function TableOverviewPage({ params }: { params: Promise<{ 
           <div className="flex-1 p-6 md:p-7 min-w-0">
             <div className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-4 min-w-0">
-                <Sigil title={table?.title ?? "The Ledger"} name={sealer?.name || "GM"} />
+                <Sigil title={table?.title ?? "O Ledger"} name={sealer?.name || "GM"} />
                 <div className="min-w-0">
-                  <p className="font-mono text-[10px] tracking-widest uppercase text-green-500/90">Campaign Ledger</p>
+                  <p className="font-mono text-[10px] tracking-widest uppercase text-green-500/90">Ledger da Campanha</p>
                   <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500 mt-0.5 truncate">
-                    {[sealer ? `Ruled by ${sealer.username}` : null, system ? system.toUpperCase() : null]
+                    {[sealer ? `Regida por ${sealer.username}` : null, system ? system.toUpperCase() : null]
                       .filter(Boolean)
-                      .join(" · ") || "An unseeded table"}
+                      .join(" · ") || "Uma mesa sem semente"}
                   </p>
                 </div>
               </div>
@@ -406,12 +406,12 @@ export default async function TableOverviewPage({ params }: { params: Promise<{ 
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                 </svg>
-                Edit ledger
+                Editar ledger
               </Link>
             </div>
 
             <h1 className="text-[clamp(26px,5vw,44px)] font-bold tracking-tight text-green-100 leading-[1.05] mt-5">
-              {table?.title || "The Ledger"}
+              {table?.title || "O Ledger"}
             </h1>
 
             {table?.intro ? (
@@ -423,24 +423,24 @@ export default async function TableOverviewPage({ params }: { params: Promise<{ 
 
       {/* ---- running status line ---- */}
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-4 font-mono text-[10px] uppercase tracking-widest text-zinc-500 leading-none select-none">
-        <span>{seated} seat{seated === 1 ? "" : "s"}</span>
+        <span>{seated} assento{seated === 1 ? "" : "s"}</span>
         <span className="text-zinc-700">·</span>
         {hasChronicle ? (
           <>
             <span>
-              Chapter <span className="text-green-500/80">{roman(state.chapter)}</span>
+              Capítulo <span className="text-green-500/80">{roman(state.chapter)}</span>
             </span>
             <span className="text-zinc-700">·</span>
             <span>
-              {scenes.length} scene{scenes.length === 1 ? "" : "s"}
+              {scenes.length} cena{scenes.length === 1 ? "" : "s"}
             </span>
           </>
         ) : (
-          <span className="italic">The chronicle awaits its first scene</span>
+          <span className="italic">A crônica aguarda a primeira cena</span>
         )}
         <span className="text-zinc-700">·</span>
         <span>
-          {recordTotal} record{recordTotal === 1 ? "" : "s"} on file
+          {recordTotal} registro{recordTotal === 1 ? "" : "s"} no arquivo
         </span>
       </div>
 
@@ -453,25 +453,25 @@ export default async function TableOverviewPage({ params }: { params: Promise<{ 
 
       {/* ---- gm quick actions ---- */}
       <section className="mt-8">
-        <LedgerHeader title="GM Quick Actions" meta="status · item · experience" />
+        <LedgerHeader title="Ações Rápidas do Mestre" meta="status · item · experiência" />
         <TableQuickActions tableId={id} targets={quickTargets} items={quickItems} />
       </section>
 
       {/* ---- seating (players) ---- */}
       <section className="mt-8">
-        <LedgerHeader title="Players" meta={`${seated} of ${(table?.players ?? []).length} seated`} />
+        <LedgerHeader title="Jogadores" meta={`${seated} de ${(table?.players ?? []).length} sentados`} />
 
         {seats.length === 0 ? (
           <div className="rounded-xl border border-dashed border-zinc-700/60 px-4 py-10 text-center">
-            <div className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">No seats yet</div>
+            <div className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">Nenhum assento ainda</div>
             <p className="text-zinc-400 text-sm mt-2">
-              Players sit at this table as characters are placed here.
+              Os jogadores se sentam nesta mesa conforme personagens são colocados aqui.
             </p>
             <Link
               href={`/character/new?table_id=${id}`}
               className="inline-flex items-center gap-1.5 mt-5 font-mono text-[10px] uppercase tracking-widest text-green-400 border border-green-700/30 bg-green-700/10 rounded-md px-3 py-2 hover:bg-green-700/20 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-green-800/60"
             >
-              + Place a character
+              + Colocar um personagem
             </Link>
           </div>
         ) : (
@@ -486,7 +486,7 @@ export default async function TableOverviewPage({ params }: { params: Promise<{ 
       {/* ---- npcs ---- */}
       {npcs.length > 0 ? (
         <section className="mt-8">
-          <LedgerHeader title="NPCs" meta={`${npcs.length} marked as NPC`} />
+          <LedgerHeader title="NPCs" meta={`${npcs.length} marcados como NPC`} />
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
             {npcSeats.map((s) => (
               <SeatRow key={s.id || s.name} s={s} hue={{ dot: "#38bdf8", ring: "#38bdf855" }} />
@@ -497,7 +497,7 @@ export default async function TableOverviewPage({ params }: { params: Promise<{ 
 
       {/* ---- archive ---- */}
       <section className="mt-8">
-        <LedgerHeader title="The Archive" meta={`${recordTotal} records on file`} />
+        <LedgerHeader title="O Arquivo" meta={`${recordTotal} registros no arquivo`} />
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
           {cells.map((cell) => (
             <ArchiveRow key={`${cell.group}-${cell.name}`} cell={cell} />
@@ -511,7 +511,7 @@ export default async function TableOverviewPage({ params }: { params: Promise<{ 
           href={`/table/${id}/sessions`}
           className="inline-flex items-center gap-2 bg-green-800 hover:bg-green-700 text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors shadow-lg shadow-green-900/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-green-800/60"
         >
-          {hasChronicle ? "Continue the chronicle" : "Open the chronicle"}
+          {hasChronicle ? "Continuar a crônica" : "Abrir a crônica"}
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7l5 5-5 5M18 12H6" />
           </svg>

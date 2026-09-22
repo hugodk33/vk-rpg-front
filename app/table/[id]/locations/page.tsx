@@ -65,7 +65,7 @@ function ZoomRuler({ chain, onJump }: { chain: Location[]; onJump: (id: string) 
   const active = chain[chain.length - 1].id;
 
   return (
-    <nav aria-label="Zoom trail" className="rounded-xl border border-zinc-700/40 bg-zinc-800/30 px-4 py-3.5">
+    <nav aria-label="Trilha de zoom" className="rounded-xl border border-zinc-700/40 bg-zinc-800/30 px-4 py-3.5">
       {/* rung names */}
       <div className="flex flex-wrap items-center gap-y-1.5">
         {chain.map((node, i) => {
@@ -85,7 +85,7 @@ function ZoomRuler({ chain, onJump }: { chain: Location[]; onJump: (id: string) 
                   type="button"
                   onClick={() => onJump(node.id)}
                   className="font-mono text-[11px] uppercase tracking-widest truncate text-zinc-500 hover:text-zinc-200 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600/60 rounded-sm"
-                  title={`Zoom out to ${node.name}`}
+                  title={`Ir para ${node.name}`}
                 >
                   {node.name}
                 </button>
@@ -184,7 +184,7 @@ function Plate({
             type="button"
             disabled={busy}
             onClick={() => onSetDefault(node.id)}
-            title={isDefault ? "Location padrão dos players — clique para remover" : "Definir como location padrão dos players"}
+            title={isDefault ? "Local padrão dos jogadores — clique para remover" : "Definir como local padrão dos jogadores"}
             className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 font-mono text-[9px] tracking-widest uppercase transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-600/60 disabled:opacity-40 ${
               isDefault
                 ? "bg-amber-400/15 text-amber-300 hover:bg-amber-400/25"
@@ -198,7 +198,7 @@ function Plate({
         </button>
           {battle ? (
             <span className="font-mono text-[9px] tracking-widest uppercase px-1.5 py-0.5 rounded-full bg-amber-400/10 text-amber-400">
-              Battle
+              Batalha
             </span>
           ) : null}
           {hasChildren ? (
@@ -208,9 +208,9 @@ function Plate({
           ) : null}
         </div>
 
-        <span className="block mt-2 text-sm font-medium text-zinc-200 truncate">{node.name || "Unnamed"}</span>
+        <span className="block mt-2 text-sm font-medium text-zinc-200 truncate">{node.name || "Sem nome"}</span>
         <p className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 mt-0.5 truncate">
-          {KIND_LABELS[node.kind ?? "site"] ?? node.kind ?? "Location"}
+          {KIND_LABELS[node.kind ?? "site"] ?? node.kind ?? "Local"}
           {node.region ?? node.subRegion ? (
             <span className="text-zinc-600"> · {node.region ?? node.subRegion}</span>
           ) : null}
@@ -226,17 +226,17 @@ function Plate({
             type="button"
             onClick={() => onZoom(node.id)}
             disabled={!hasChildren}
-            title={hasChildren ? "Abrir subdivisões" : "Esta division não contém subdivisões"}
+            title={hasChildren ? "Abrir subdivisões" : "Esta divisão não contém subdivisões"}
             className="flex-1 inline-flex items-center justify-center gap-1 rounded-md border border-teal-400/25 bg-teal-400/5 px-2 py-1.5 font-mono text-[10px] tracking-widest uppercase text-teal-300/90 transition-colors hover:bg-teal-400/10 hover:text-teal-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600/60 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-teal-400/5 disabled:hover:text-teal-300/90"
           >
-            ◱ Sublocations
+            ◱ Sublocais
           </button>
           <Link
             href={`/location/${node.id}`}
-            title={`Abrir ${node.name || "location"} em página própria`}
+            title={`Abrir ${node.name || "local"} em página própria`}
             className="flex-1 inline-flex items-center justify-center gap-1 rounded-md border border-zinc-700/50 bg-zinc-800/60 px-2 py-1.5 font-mono text-[10px] tracking-widest uppercase text-zinc-300 transition-colors hover:border-amber-700/50 hover:text-amber-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600/60"
           >
-            Open →
+            Abrir →
           </Link>
         </div>
       </div>
@@ -253,7 +253,7 @@ function CurrentMapStrip({ node, isDefault = false }: { node: Location; isDefaul
         <div className="flex items-baseline gap-2 min-w-0">
           <span className="font-mono text-[12px] font-bold tracking-widest uppercase text-teal-100 truncate">{node.name}</span>
           <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 hidden sm:inline">
-            {KIND_LABELS[node.kind ?? "site"] ?? node.kind ?? "Location"} · {formatScale(hex?.sizeM)}
+            {KIND_LABELS[node.kind ?? "site"] ?? node.kind ?? "Local"} · {formatScale(hex?.sizeM)}
           </span>
           {isDefault ? (
             <span className="inline-flex items-center gap-1 font-mono text-[9px] tracking-widest uppercase px-1.5 py-0.5 rounded-full bg-amber-400/15 text-amber-300 shrink-0">
@@ -270,14 +270,14 @@ function CurrentMapStrip({ node, isDefault = false }: { node: Location; isDefaul
       </div>
       {(node.children?.length ?? 0) > 0 ? (
         <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 shrink-0">
-          {(node.children?.length ?? 0)} division{(node.children?.length ?? 0) !== 1 ? "s" : ""}
+          {(node.children?.length ?? 0)} {(node.children?.length ?? 0) !== 1 ? "divisões" : "divisão"}
         </span>
       ) : (
         <Link
           href={`/location/${node.id}`}
           className="font-mono text-[10px] tracking-widest uppercase text-teal-300/90 hover:text-teal-200 shrink-0 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600/60 rounded-sm"
         >
-          Open map →
+          Abrir mapa →
         </Link>
       )}
     </div>
@@ -347,19 +347,19 @@ export default function TableLocationsPage({ params }: { params: Promise<{ id: s
 
       <div className="flex items-center justify-between gap-3 mb-1">
         <div className="flex items-baseline gap-3 min-w-0">
-          <h1 className="text-2xl font-bold text-zinc-100">Locations</h1>
+          <h1 className="text-2xl font-bold text-zinc-100">Locais</h1>
           <span className="text-sm text-zinc-500">{data?.table?.title ?? ""}</span>
         </div>
         <Link
           href={`/table/${id}/locations/new${active ? `?parent_id=${active.node.id}` : ""}`}
           className="shrink-0 inline-flex items-center gap-1.5 bg-amber-600 hover:bg-amber-500 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/60"
         >
-          + New location
+          + Novo local
         </Link>
       </div>
 
       <div className="flex items-center gap-3 mb-6 text-xs text-zinc-500">
-        <span>{flat.length} location{flat.length !== 1 ? "s" : ""} · {data?.tree?.length ?? 0} territory root{(data?.tree?.length ?? 0) !== 1 ? "s" : ""}</span>
+        <span>{flat.length} {flat.length !== 1 ? "locais" : "local"} · {data?.tree?.length ?? 0} {(data?.tree?.length ?? 0) !== 1 ? "raízes de território" : "raiz de território"}</span>
       </div>
 
       <div className="flex gap-2 mb-5">
@@ -371,23 +371,23 @@ export default function TableLocationsPage({ params }: { params: Promise<{ id: s
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search the territory…"
+            placeholder="Pesquisar o território…"
             className="w-full bg-zinc-800/60 border border-zinc-700/50 rounded-lg pl-9 pr-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-teal-700/60"
           />
         </div>
         {search ? (
           <button type="button" onClick={() => setSearch("")} className="bg-zinc-800/60 hover:bg-zinc-700/60 text-zinc-400 text-sm px-3 py-2 rounded-lg transition-colors border border-zinc-700/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600/60">
-            Clear
+            Limpar
           </button>
         ) : null}
       </div>
 
       {!data ? (
-        <div className="text-center py-16 text-zinc-600 text-sm">Loading territory…</div>
+        <div className="text-center py-16 text-zinc-600 text-sm">Carregando território…</div>
       ) : filtered !== null ? (
         filtered.length === 0 ? (
           <div className="text-center py-16">
-            <p className="text-zinc-500 text-sm">No locations match your search.</p>
+            <p className="text-zinc-500 text-sm">Nenhum local corresponde à sua pesquisa.</p>
           </div>
         ) : (
           <div ref={platesRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3" aria-live="polite">
@@ -406,12 +406,12 @@ export default function TableLocationsPage({ params }: { params: Promise<{ id: s
         )
       ) : flat.length === 0 ? (
         <div className="text-center py-16">
-          <p className="text-zinc-500 text-sm">No territory mapped yet. Create your first world.</p>
+          <p className="text-zinc-500 text-sm">Nenhum território mapeado ainda. Crie seu primeiro mundo.</p>
         </div>
       ) : !active && (data.tree?.length ?? 0) > 1 ? (
         <div>
           <p className="mb-4 font-mono text-[11px] tracking-widest uppercase text-zinc-600">
-            Multiple worlds — open one to survey it
+            Vários mundos — abra um para levantar
           </p>
           <div ref={platesRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {plates.map((node) => (
@@ -425,7 +425,7 @@ export default function TableLocationsPage({ params }: { params: Promise<{ id: s
           {active ? <CurrentMapStrip node={active.node} isDefault={defaultId === active.node.id} /> : null}
           {plates.length === 0 ? (
             <div className="text-center py-12">
-              <p className="text-zinc-500 text-sm">No divisions inside {active?.node.name ?? "this territory"} yet.</p>
+              <p className="text-zinc-500 text-sm">Nenhuma divisão dentro de {active?.node.name ?? "este território"} ainda.</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">

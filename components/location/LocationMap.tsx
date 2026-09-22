@@ -81,7 +81,7 @@ export default function LocationMap({
     <div>
       <div className="flex items-center gap-2.5 pb-1.5 mb-4 border-b border-zinc-700/60">
         <span aria-hidden className="font-mono text-base leading-none" style={{ color: accent }}>▦</span>
-        <span className="font-mono text-[13px] font-bold uppercase tracking-wider text-zinc-300">Local map</span>
+        <span className="font-mono text-[13px] font-bold uppercase tracking-wider text-zinc-300">Mapa do local</span>
         <span className="flex-1 h-px" style={{ background: `linear-gradient(90deg, ${accent}55, transparent)` }} />
       </div>
 
@@ -92,7 +92,7 @@ export default function LocationMap({
           height={H}
           className="block mx-auto"
           role="img"
-          aria-label="Local tactical grid"
+          aria-label="Grade tática do local"
           style={{
             width: `${Math.round(W * zoom)}px`,
             height: `${Math.round(H * zoom)}px`,
@@ -104,29 +104,29 @@ export default function LocationMap({
       <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-2 font-mono text-[10px] uppercase tracking-widest text-zinc-500">
         {footprint ? (
           <span className="flex items-center justify-between gap-2 border border-zinc-700/40 rounded px-2 py-1.5">
-            <span>Footprint</span>
+            <span>Área</span>
             <b className="font-semibold text-zinc-300">{footprint}</b>
           </span>
         ) : null}
         <span className="flex items-center justify-between gap-2 border border-zinc-700/40 rounded px-2 py-1.5">
-          <span>Scale</span>
+          <span>Escala</span>
           <b className="font-semibold text-zinc-300">{formatHexScale(hex?.sizeM)}</b>
         </span>
         <span className="flex items-center justify-between gap-2 border border-zinc-700/40 rounded px-2 py-1.5">
-          <span>Grid</span>
+          <span>Grade</span>
           <b className="font-semibold text-zinc-300">{spec.orientation}</b>
         </span>
         <span className="flex items-center justify-between gap-2 border border-zinc-700/40 rounded px-2 py-1.5">
-          <span>Rotation</span>
+          <span>Rotação</span>
           <b className="font-semibold text-zinc-300">{spec.rotationDeg}°</b>
         </span>
       </div>
 
       {drawing.length > 0 || tiles.length > 0 ? (
         <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[10px] uppercase tracking-widest text-zinc-600">
-          <span>{drawing.length} stroke{drawing.length === 1 ? "" : "s"}</span>
+          <span>{drawing.length} traço{drawing.length === 1 ? "" : "s"}</span>
           <span aria-hidden>·</span>
-          <span>{tiles.length} painted cell{tiles.length === 1 ? "" : "s"}</span>
+          <span>{tiles.length} célula{tiles.length === 1 ? " pintada" : "s pintadas"}</span>
         </div>
       ) : null}
     </div>

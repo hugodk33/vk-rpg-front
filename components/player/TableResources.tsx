@@ -37,12 +37,12 @@ interface TableResourcesProps {
 }
 
 export const RESOURCE_TABS: Array<{ key: ResourceTab; label: string }> = [
-  { key: "characters", label: "Characters" },
-  { key: "items", label: "Items" },
-  { key: "skills", label: "Skills" },
-  { key: "advantages", label: "Advantages" },
-  { key: "disadvantages", label: "Disadvantages" },
-  { key: "locations", label: "Locations" },
+  { key: "characters", label: "Personagens" },
+  { key: "items", label: "Itens" },
+  { key: "skills", label: "Perícias" },
+  { key: "advantages", label: "Vantagens" },
+  { key: "disadvantages", label: "Desvantagens" },
+  { key: "locations", label: "Locais" },
 ];
 
 export default function TableResources({
@@ -68,7 +68,7 @@ export default function TableResources({
   return (
     <div className="space-y-5">
       {controlledTab == null ? (
-      <div role="tablist" aria-label="Table resources" className="flex items-center gap-1 border-b border-zinc-700/40 flex-wrap">
+      <div role="tablist" aria-label="Recursos da mesa" className="flex items-center gap-1 border-b border-zinc-700/40 flex-wrap">
         {RESOURCE_TABS.map((t) => (
           <button
             key={t.key}
@@ -91,12 +91,12 @@ export default function TableResources({
       {/* ---- characters ---- */}
       {tab === "characters" ? (
         roster.length === 0 ? (
-          <Empty label="No characters seen at this table yet." />
+          <Empty label="Nenhum personagem visto nesta mesa ainda." />
         ) : (
           <div className="space-y-2">
             {roster.map((c) => {
               const s = c.sheet;
-              const name = s?.name || c.name || c.user?.username || "Unnamed";
+              const name = s?.name || c.name || c.user?.username || "Sem nome";
               const attrs = [
                 { label: "ST", value: s?.st ?? s?.base_st, hex: "#f87171" },
                 { label: "DX", value: s?.dx ?? s?.base_dx, hex: "#34d399" },
@@ -116,7 +116,7 @@ export default function TableResources({
                     <div className="text-sm font-semibold text-zinc-100 truncate">
                       {name}
                       {c.id === myId ? (
-                        <span className="ml-2 font-mono text-[9px] uppercase tracking-widest text-blue-400">you</span>
+                        <span className="ml-2 font-mono text-[9px] uppercase tracking-widest text-blue-400">você</span>
                       ) : null}
                       {npcIds.has(c.id) ? (
                         <span className="ml-2 font-mono text-[9px] uppercase tracking-widest text-amber-300">NPC</span>
@@ -144,7 +144,7 @@ export default function TableResources({
       {/* ---- items ---- */}
       {tab === "items" ? (
         items.length === 0 ? (
-          <Empty label="No items registered for this table." />
+          <Empty label="Nenhum item registrado para esta mesa." />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {items.map((i) => (
@@ -152,7 +152,7 @@ export default function TableResources({
                 <div className="flex justify-between items-start mb-1 gap-2">
                   <span className="flex items-center gap-2 text-zinc-200 font-medium min-w-0">
                     <ItemIcon item={i} className="w-4 h-4 shrink-0" imgClassName="w-4 h-4 object-cover rounded" />
-                    <span className="truncate">{i.name || "Unnamed"}</span>
+                    <span className="truncate">{i.name || "Sem nome"}</span>
                   </span>
                   {i.weight_lb != null ? <span className="text-zinc-500 text-xs shrink-0">{i.weight_lb} lb</span> : null}
                 </div>
@@ -169,7 +169,7 @@ export default function TableResources({
                     <span className="inline-flex items-center gap-1 bg-red-900/40 border border-red-700/50 text-red-300 px-2 py-0.5 rounded">
                       {i.weapon.attacks.length} ataque{i.weapon.attacks.length !== 1 ? "s" : ""}
                     </span>
-                    {i.weapon.reach ? <span className="text-zinc-500">Reach {i.weapon.reach}</span> : null}
+                    {i.weapon.reach ? <span className="text-zinc-500">Alcance {i.weapon.reach}</span> : null}
                   </div>
                 ) : null}
                 {i.armor ? (
@@ -189,7 +189,7 @@ export default function TableResources({
       {/* ---- skills ---- */}
       {tab === "skills" ? (
         skills.length === 0 ? (
-          <Empty label="No skills registered for this table." />
+          <Empty label="Nenhuma perícia registrada para esta mesa." />
         ) : (
           <div className="space-y-2">
             {skills.map((sk) => (
@@ -212,7 +212,7 @@ export default function TableResources({
       {/* ---- advantages ---- */}
       {tab === "advantages" ? (
         advantages.length === 0 ? (
-          <Empty label="No advantages registered for this table." />
+          <Empty label="Nenhuma vantagem registrada para esta mesa." />
         ) : (
           <div className="space-y-2">
             {advantages.map((a) => (
@@ -234,7 +234,7 @@ export default function TableResources({
       {/* ---- disadvantages ---- */}
       {tab === "disadvantages" ? (
         disadvantages.length === 0 ? (
-          <Empty label="No disadvantages registered for this table." />
+          <Empty label="Nenhuma desvantagem registrada para esta mesa." />
         ) : (
           <div className="space-y-2">
             {disadvantages.map((d) => (
@@ -257,12 +257,12 @@ export default function TableResources({
       {/* ---- locations ---- */}
       {tab === "locations" ? (
         locations.length === 0 ? (
-          <Empty label="No locations seen on this map yet." />
+          <Empty label="Nenhum local visto neste mapa ainda." />
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {locations.map((loc) => (
               <div key={loc.id} className="rounded-xl border border-zinc-700/40 bg-zinc-900/50 px-4 py-3">
-                <div className="text-sm font-semibold text-zinc-100">{loc.name || "Unnamed"}</div>
+                <div className="text-sm font-semibold text-zinc-100">{loc.name || "Sem nome"}</div>
                 {loc.kind || loc.path ? (
                   <p className="text-xs text-zinc-500 mt-0.5">
                     {[loc.kind, loc.path].filter(Boolean).join(" · ")}

@@ -42,7 +42,7 @@ export default function ItemListCard({ item }: { item: Item }) {
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline justify-between gap-2">
             <span className="text-sm font-medium text-zinc-200 group-hover:text-zinc-100 truncate">
-              {item.name || "Unnamed"}
+              {item.name || "Sem nome"}
             </span>
             <span className="font-mono text-[10px] text-zinc-500 shrink-0">
               {item.weight_lb != null ? `${item.weight_lb} lb` : ""}

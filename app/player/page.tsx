@@ -169,14 +169,14 @@ export default async function PlayerDashboard({
           <div className="absolute top-4 -left-6 w-56 h-56 rounded-full border border-blue-500" />
         </div>
         <div className="relative">
-          <p className="font-mono text-[10px] tracking-widest uppercase text-blue-300/90">At the table</p>
+          <p className="font-mono text-[10px] tracking-widest uppercase text-blue-300/90">Na mesa</p>
           <div className="flex flex-wrap items-end justify-between gap-4 mt-1">
             <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-zinc-100">Your Company</h1>
+              <h1 className="text-2xl md:text-3xl font-bold text-zinc-100">Sua Companhia</h1>
               <p className="text-stone-400 text-sm mt-1.5">
                 {shown.length === 0
-                  ? "No adventurers yet — claim a seat in a campaign."
-                  : `${shown.length} ${shown.length === 1 ? "adventurer" : "adventurers"} ride under your banner.`}
+                  ? "Nenhum aventureiro ainda — assuma um assento em uma campanha."
+                  : `${shown.length} ${shown.length === 1 ? "aventureiro" : "aventureiros"} sob sua bandeira.`}
               </p>
             </div>
             {seatOptions.length > 0 ? <SeatPicker options={seatOptions} /> : null}
@@ -187,18 +187,18 @@ export default async function PlayerDashboard({
       {/* ---- company (characters only) ---- */}
       {shown.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-blue-700/40 text-center py-20 bg-zinc-900/40">
-          <div className="font-mono text-[10px] tracking-widest uppercase text-blue-400/60">Empty roster</div>
+          <div className="font-mono text-[10px] tracking-widest uppercase text-blue-400/60">Nenhum aventureiro</div>
           <p className="text-zinc-300 mt-2 max-w-sm mx-auto text-sm">
             {seat
-              ? "This user has no character seats yet — pick another user above."
-              : "When a narrator adds you to a campaign and you claim a character, it will appear here."}
+              ? "Este usuário ainda não tem personagens — escolha outro usuário acima."
+              : "Quando um narrador te adiciona a uma campanha e você assume um personagem, ele aparecerá aqui."}
           </p>
         </div>
       ) : (
         <div className="space-y-3">
           {shown.map(({ table, ch, npcStatus }) => {
             const s = ch.sheet ?? ({} as Sheet);
-            const name = s.name || ch.name || "Unnamed adventurer";
+            const name = s.name || ch.name || "Aventureiro sem nome";
             const hue = hueFor(name);
             const hp = hpBar(s);
             const attrs = statRow(s);
@@ -246,22 +246,22 @@ export default async function PlayerDashboard({
                           <h2 className="text-lg font-bold text-zinc-100 leading-tight truncate">{name}</h2>
                           {isNpc ? (
                             <span className="font-mono text-[9px] uppercase tracking-widest text-amber-300/80 border border-amber-500/30 rounded px-1.5 py-0.5">
-                              Ally NPC
+                              NPC Aliado
                             </span>
                           ) : seat ? (
                             isMine ? (
                               <span className="font-mono text-[9px] uppercase tracking-widest text-blue-300/80 border border-blue-500/30 rounded px-1.5 py-0.5">
-                                You
+                                Você
                               </span>
                             ) : (
                               <span className="font-mono text-[9px] uppercase tracking-widest text-zinc-500 border border-zinc-700/50 rounded px-1.5 py-0.5">
-                                Companion
+                                Companheiro
                               </span>
                             )
                           ) : null}
                         </div>
                         <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500 mt-0.5">
-                          {table ? table.title : "Unknown table"}
+                          {table ? table.title : "Mesa desconhecida"}
                           {isNpc ? "" : ownerName ? ` · ${ownerName}` : ""}
                         </p>
                       </div>
@@ -295,7 +295,7 @@ export default async function PlayerDashboard({
                               className="inline-flex items-center gap-1.5 bg-zinc-800/50 border border-zinc-700/40 rounded-md px-2 py-1"
                             >
                               <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dot}`} />
-                              <span className="text-zinc-300 text-xs font-medium">{m.name || "Effect"}</span>
+                              <span className="text-zinc-300 text-xs font-medium">{m.name || "Efeito"}</span>
                               {deltas.length > 0 ? (
                                 <span className="flex items-center gap-1.5">
                                   {deltas.map((d) => (
@@ -321,12 +321,12 @@ export default async function PlayerDashboard({
                         href={viewUrl}
                         className="w-full text-center bg-blue-600 hover:bg-blue-500 text-blue-950 text-sm font-semibold px-4 py-2 rounded-lg transition-colors shadow-lg shadow-blue-900/20"
                       >
-                        View sheet
+                        Ver ficha
                       </Link>
                       {observerId ? (
                         <p className="text-[11px] leading-snug text-zinc-500 text-center sm:text-right">
-                          As you see them — only what your character
-                          has discovered in play is shown.
+                          Como você os vê — só o que seu personagem
+                          descobriu em jogo aparece aqui.
                         </p>
                       ) : null}
                     </>
@@ -336,17 +336,17 @@ export default async function PlayerDashboard({
                         href={sessionUrl}
                         className="w-full text-center bg-blue-600 hover:bg-blue-500 text-blue-950 text-sm font-semibold px-4 py-2 rounded-lg transition-colors shadow-lg shadow-blue-900/20"
                       >
-                        Enter Session
+                        Entrar na Sessão
                       </Link>
                       <div className="flex items-center justify-center gap-4 sm:flex-col sm:gap-1.5 font-mono text-[11px] uppercase tracking-widest">
                         <Link
                           href={`/player/character/${ch.id}?tab=table`}
                           className="text-zinc-500 hover:text-blue-300 transition-colors"
                         >
-                          Table
+                          Mesa
                         </Link>
                         <Link href={sheetUrl} className="text-zinc-500 hover:text-blue-300 transition-colors">
-                          Sheet
+                          Ficha
                         </Link>
                       </div>
                     </>
@@ -356,11 +356,11 @@ export default async function PlayerDashboard({
                         href={viewUrl}
                         className="w-full text-center bg-blue-600 hover:bg-blue-500 text-blue-950 text-sm font-semibold px-4 py-2 rounded-lg transition-colors shadow-lg shadow-blue-900/20"
                       >
-                        View sheet
+                        Ver ficha
                       </Link>
                       <p className="text-[11px] leading-snug text-zinc-500 text-center sm:text-right">
-                        As you see them — only what your character
-                        has discovered in play is shown.
+                        Como você os vê — só o que seu personagem
+                        descobriu em jogo aparece aqui.
                       </p>
                     </>
                   )}
@@ -373,7 +373,7 @@ export default async function PlayerDashboard({
 
       <div className="mt-10 text-center">
         <Link href="/" className="text-zinc-500 hover:text-blue-300 text-sm transition-colors">
-          &larr; Back to home
+          &larr; Voltar ao início
         </Link>
       </div>
     </div>

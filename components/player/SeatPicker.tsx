@@ -37,13 +37,13 @@ export default function SeatPicker({ options }: { options: SeatOption[] }) {
 
   return (
     <label className="inline-flex items-center gap-2 text-sm text-zinc-400">
-      <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">Playing as</span>
+      <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">Jogando como</span>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
         className="bg-zinc-800/80 border border-zinc-700/60 rounded-lg px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:border-blue-700/60"
       >
-        <option value="">— choose user —</option>
+        <option value="">— escolher usuário —</option>
         {options.map((o) => (
           <option key={o.userId} value={o.userId}>
             {o.username}

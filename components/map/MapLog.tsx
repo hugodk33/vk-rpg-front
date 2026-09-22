@@ -27,7 +27,7 @@ function roman(n: number): string {
 }
 
 const hexLbl = (hex: { q: number; r: number } | null | undefined): string => {
-  if (!hex) return "off";
+  if (!hex) return "fora";
   const col = hex.q >= 0 ? String.fromCharCode(65 + (hex.q % 26)) : "?";
   return `${col}${hex.r + 1}`;
 };
@@ -116,14 +116,14 @@ export default function MapLog({
 
   const shownLocation = mapLocation
     ? isPlayer
-      ? maskedLocationName(visibility, mapLocation.id, mapLocation.name || "Unnamed")
-      : mapLocation.name || "Unnamed"
+      ? maskedLocationName(visibility, mapLocation.id, mapLocation.name || "Sem nome")
+      : mapLocation.name || "Sem nome"
     : null;
 
   /* ---- tokens: roster completes anyone a beat doesn't place ---- */
   const rosterTokens: BoardToken[] = characters.map((c) => ({
     id: c.id,
-    name: c.sheet?.name || c.name || c.user?.username || "Unknown",
+    name: c.sheet?.name || c.name || c.user?.username || "Desconhecido",
     isPlayer: !npcIds.includes(c.id),
     unconscious: false,
   }));
@@ -160,12 +160,12 @@ export default function MapLog({
 
   const charShown = (a: NarrationAction): string => {
     const c = a.character;
-    if (!c) return "Someone";
+    if (!c) return "Alguém";
     if (isPlayer) {
-      if (viewerId && c.id === viewerId) return c.name || c.username || "You";
-      return maskedTargetName(visibility, c.id, c.name || c.username || "Someone");
+      if (viewerId && c.id === viewerId) return c.name || c.username || "Você";
+      return maskedTargetName(visibility, c.id, c.name || c.username || "Alguém");
     }
-    return c.name || c.username || "Someone";
+    return c.name || c.username || "Alguém";
   };
 
   const wasUnconscious = isPlayer
@@ -180,22 +180,22 @@ export default function MapLog({
       {/* canopy */}
       <div className={`mb-5 ${fillViewport ? "lg:mb-3 lg:shrink-0" : ""}`}>
         <p className={`font-mono text-[10px] tracking-widest uppercase ${isPlayer ? "text-blue-300/90" : "text-green-500/90"}`}>
-          The battle log
+          O registro de batalha
         </p>
-        <h1 className="text-2xl md:text-3xl font-bold text-zinc-100 mt-1">Map</h1>
+        <h1 className="text-2xl md:text-3xl font-bold text-zinc-100 mt-1">Mapa</h1>
         <div className="mt-3 flex flex-wrap items-center gap-2 font-mono text-[11px] text-zinc-500">
           <span className="w-1.5 h-1.5 rounded-full" style={{ background: t.accent }} />
-          {chapters.length} chapter{chapters.length !== 1 ? "s" : ""}
-          <span className="text-zinc-700">·</span> {scenes.length} scene{scenes.length !== 1 ? "s" : ""}
-          <span className="text-zinc-700">·</span> {narrationCount} narration{narrationCount !== 1 ? "s" : ""}
-          <span className="text-zinc-700">·</span> one movement at a time
+          {chapters.length} {chapters.length !== 1 ? "capítulos" : "capítulo"}
+          <span className="text-zinc-700">·</span> {scenes.length} {scenes.length !== 1 ? "cenas" : "cena"}
+          <span className="text-zinc-700">·</span> {narrationCount} {narrationCount !== 1 ? "narrações" : "narração"}
+          <span className="text-zinc-700">·</span> um movimento por vez
         </div>
       </div>
 
       {scenes.length === 0 ? (
         <div className="text-center py-24 rounded-xl border border-zinc-800 bg-zinc-900/40">
           <span className="text-zinc-600 block mb-2">{icon("M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7", "w-10 h-10")}</span>
-          <p className="text-zinc-500 text-sm">No scenes recorded yet — the log starts blank.</p>
+          <p className="text-zinc-500 text-sm">Nenhuma cena registrada ainda — o registro começa em branco.</p>
         </div>
       ) : (
         <div className={`grid grid-cols-1 gap-5 ${fillViewport ? "lg:flex-1 lg:min-h-0 lg:grid-rows-[minmax(0,44%)_minmax(0,1fr)]" : ""}`}>
@@ -204,7 +204,7 @@ export default function MapLog({
             {/* chapter + scene */}
             <div className="rounded-xl border border-zinc-700/40 bg-zinc-900/60 p-4 space-y-3 lg:self-start">
               <div>
-                <label className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Chapter</label>
+                <label className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Capítulo</label>
                 <div className="flex items-center gap-2">
                   <select
                     value={effChapter}
@@ -213,7 +213,7 @@ export default function MapLog({
                   >
                     {chapters.map(([ch]) => (
                       <option key={ch} value={ch} className="bg-zinc-800">
-                        Chapter {roman(ch)}
+                        Capítulo {roman(ch)}
                       </option>
                     ))}
                   </select>
@@ -224,7 +224,7 @@ export default function MapLog({
               </div>
 
               <div>
-                <label className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Scene</label>
+                <label className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Cena</label>
                 <select
                   value={effScene?.id ?? ""}
                   onChange={(e) => pickScene(e.target.value)}
@@ -239,7 +239,7 @@ export default function MapLog({
               </div>
 
               <div>
-                <label className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Narration</label>
+                <label className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Narração</label>
                 <select
                   value={effBeat?.id ?? ""}
                   onChange={(e) => pickNarration(e.target.value)}
@@ -247,7 +247,7 @@ export default function MapLog({
                 >
                   {narrations.map((n, idx) => (
                     <option key={n.id} value={n.id} className="bg-zinc-800">
-                      {String(idx + 1).padStart(2, "0")} · {n.title || "Untitled beat"}
+                      {String(idx + 1).padStart(2, "0")} · {n.title || "Batida sem título"}
                     </option>
                   ))}
                 </select>
@@ -257,15 +257,15 @@ export default function MapLog({
             {/* narrations — the timeline */}
             <div className="rounded-xl border border-zinc-700/40 bg-zinc-900/60 p-4 lg:min-h-0 lg:max-h-[72vh] lg:overflow-y-auto">
               <div className="flex items-center gap-2 mb-3">
-                <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">Narrations</span>
+                <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">Narrações</span>
                 <span className="font-mono text-[10px] text-zinc-600">({narrations.length})</span>
                 {moveCount ? (
-                  <span className="ml-auto font-mono text-[10px] text-zinc-600">{moveCount} move{moveCount !== 1 ? "s" : ""}</span>
+                  <span className="ml-auto font-mono text-[10px] text-zinc-600">{moveCount} {moveCount !== 1 ? "movimentos" : "movimento"}</span>
                 ) : null}
               </div>
 
               {narrations.length === 0 ? (
-                <p className="text-sm text-zinc-600 italic font-mono">No beats in this scene yet.</p>
+                <p className="text-sm text-zinc-600 italic font-mono">Nenhuma batida nesta cena ainda.</p>
               ) : (
                 <ol className="relative space-y-3 border-l border-zinc-800 pl-4">
                   {narrations.map((n, idx) => {
@@ -285,11 +285,11 @@ export default function MapLog({
                               {String(idx + 1).padStart(2, "0")}.
                             </span>
                             <span className={`text-[13px] font-medium ${wasUnconscious && active ? "text-zinc-600" : ""}`}>
-                              {n.title || "Untitled beat"}
+                              {n.title || "Batida sem título"}
                             </span>
                           </span>
                           <span className="mt-1 block font-mono text-[10px] uppercase tracking-widest text-zinc-600">
-                            {n.narration ? n.narration.slice(0, 90) : "no text"}
+                            {n.narration ? n.narration.slice(0, 90) : "sem texto"}
                             {n.narration && n.narration.length > 90 ? "…" : ""}
                           </span>
                         </button>
@@ -316,16 +316,16 @@ export default function MapLog({
                                         {charShown(a)}
                                       </span>
                                       <span className="block text-[11px] text-zinc-500 truncate">
-                                        {a.description || (isMove ? "moves on the map" : "recorded")}
+                                        {a.description || (isMove ? "move-se no mapa" : "registrado")}
                                       </span>
                                     </span>
                                     {isMove ? (
                                       <span className="shrink-0 inline-flex items-center gap-1 rounded bg-sky-500/10 border border-sky-500/30 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider text-sky-300">
-                                        move {hexLbl({ q: a.q as number, r: a.r as number })}
+                                        mov {hexLbl({ q: a.q as number, r: a.r as number })}
                                       </span>
                                     ) : a.dice_roll ? (
                                       <span className="shrink-0 inline-flex items-center gap-1 rounded bg-zinc-800/70 border border-zinc-700/50 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider text-zinc-400">
-                                        roll
+                                        rolagem
                                       </span>
                                     ) : null}
                                   </button>
@@ -347,11 +347,11 @@ export default function MapLog({
             <div className={`rounded-xl border border-zinc-700/40 bg-zinc-900/80 overflow-hidden ${fillViewport ? "lg:h-full lg:flex lg:flex-col" : ""}`}>
               <div className={`flex flex-wrap items-center gap-3 px-5 py-3.5 border-b border-zinc-700/40 ${fillViewport ? "lg:shrink-0" : ""}`}>
                 <span className="w-2.5 h-2.5 rounded-full" style={{ background: t.accent, boxShadow: `0 0 8px ${t.accent}` }} />
-                <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">Floor plan</span>
+                <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">Planta do local</span>
                 {shownLocation ? (
                   <span className="text-sm font-semibold text-zinc-100">{shownLocation}</span>
                 ) : (
-                  <span className="text-sm text-zinc-500 italic">No floor plan pinned to this beat</span>
+                  <span className="text-sm text-zinc-500 italic">Nenhuma planta fixada nesta batida</span>
                 )}
                 {mapLocation?.hex?.width != null ? (
                   <span className="ml-auto font-mono text-[10px] text-zinc-500 uppercase tracking-widest">
@@ -360,7 +360,7 @@ export default function MapLog({
                 ) : null}
                 {effAction?.locationId && actionLoc && actionLoc.id !== effBeat?.location?.id ? (
                   <span className="font-mono text-[10px] uppercase tracking-widest px-2 py-0.5 rounded border border-amber-500/40 text-amber-300">
-                    this action moved the fight to another map
+                    esta ação levou o combate para outro mapa
                   </span>
                 ) : null}
               </div>
@@ -380,7 +380,7 @@ export default function MapLog({
               ) : (
                 <div className={`px-5 py-14 text-center ${fillViewport ? "lg:flex-1" : ""}`}>
                   <p className="text-sm text-zinc-600 font-mono italic">
-                    Register a location with a hex grid to open the tactical map.
+                    Registre um local com grade hexagonal para abrir o mapa tático.
                   </p>
                 </div>
               )}
@@ -389,14 +389,14 @@ export default function MapLog({
               {/* the current moment, read out loud */}
               <div className={`border-t border-zinc-700/40 px-5 py-4 space-y-3 ${fillViewport ? "lg:shrink-0" : ""}`}>
                 <div className="flex items-center gap-2">
-                  <span className={`font-mono text-[10px] tracking-widest uppercase ${t.text}`}>Moment</span>
+                  <span className={`font-mono text-[10px] tracking-widest uppercase ${t.text}`}>Momento</span>
                   {effAction ? (
                     <button
                       type="button"
                       onClick={() => setActionSel("")}
                       className="ml-auto font-mono text-[10px] uppercase tracking-widest px-2 py-0.5 rounded-md border border-zinc-700/50 text-zinc-500 hover:text-zinc-200 hover:border-zinc-500"
                     >
-                      Show beat (no arrows)
+                      Mostrar batida (sem setas)
                     </button>
                   ) : null}
                 </div>
@@ -404,7 +404,7 @@ export default function MapLog({
                 {effBeat ? (
                   <>
                     <div className="flex items-baseline gap-2 flex-wrap">
-                      <span className="font-mono text-[11px] tabular-nums text-zinc-500">Chapter {roman(effChapter)}</span>
+                      <span className="font-mono text-[11px] tabular-nums text-zinc-500">Capítulo {roman(effChapter)}</span>
                       <span className="text-zinc-700">·</span>
                       <span className="text-[13px] text-zinc-400">{effScene?.title}</span>
                       <span className="text-zinc-700">·</span>
@@ -416,7 +416,7 @@ export default function MapLog({
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className={`font-mono text-[11px] font-semibold ${t.text}`}>{charShown(effAction)}</span>
                           <span className="font-mono text-[10px] text-zinc-600">{effAction.queue ?? "—"}.</span>
-                          <span className="text-sm text-zinc-300 flex-1 min-w-0">{effAction.description || "recorded"}</span>
+                          <span className="text-sm text-zinc-300 flex-1 min-w-0">{effAction.description || "registrado"}</span>
                         </div>
                         {effAction.dice_roll || effAction.result ? (
                           <div className="mt-2 flex items-center gap-2.5">
@@ -427,22 +427,22 @@ export default function MapLog({
                         ) : null}
                         {effAction.q != null && effAction.r != null ? (
                           <p className="mt-2 font-mono text-[11px] text-sky-300">
-                            this move → hex {effAction.q},{effAction.r}
+                            este movimento → hex {effAction.q},{effAction.r}
                           </p>
                         ) : null}
                       </div>
                     ) : (
                       <p className="text-sm text-zinc-500 italic">
                         {moveCount > 0
-                          ? "Select a move in the log to put one vector on the map."
-                          : "This beat has no movements recorded — the map shows the final positions."}
+                          ? "Selecione um movimento no registro para pôr um vetor no mapa."
+                          : "Esta batida não tem movimentos registrados — o mapa mostra as posições finais."}
                       </p>
                     )}
 
                     <p className="text-[13px] leading-relaxed text-zinc-400">{effBeat.narration}</p>
                   </>
                 ) : (
-                  <p className="text-sm text-zinc-600 italic">Pick a narration to see its board.</p>
+                  <p className="text-sm text-zinc-600 italic">Escolha uma narração para ver seu tabuleiro.</p>
                 )}
               </div>
             </div>

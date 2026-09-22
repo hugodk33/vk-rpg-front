@@ -31,7 +31,7 @@ export default async function DisadvantageDetailPage({ params }: { params: Promi
     <div className="max-w-5xl mx-auto p-6">
       {tableId ? (
         <Link href={`/table/${tableId}`} className="text-zinc-500 hover:text-zinc-300 text-sm mb-4 inline-block transition-colors">
-          &larr; Back to table
+          &larr; Voltar à mesa
         </Link>
       ) : null}
 
@@ -39,7 +39,7 @@ export default async function DisadvantageDetailPage({ params }: { params: Promi
         <div className="py-5 px-6 border-b border-zinc-700/40" style={{ borderBottomColor: colors.border }}>
           <div className="flex items-start justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-green-100">{disadvantage.name || "Unnamed Disadvantage"}</h1>
+              <h1 className="text-2xl font-bold text-green-100">{disadvantage.name || "Desvantagem sem nome"}</h1>
               {disadvantage.category ? (
                 <span className={`inline-block ${colors.badge} text-xs px-2 py-0.5 rounded-full mt-2`}>
                   {disadvantage.category}{disadvantage.subcategory ? ` / ${disadvantage.subcategory}` : ""}
@@ -55,28 +55,28 @@ export default async function DisadvantageDetailPage({ params }: { params: Promi
         <div className="p-6 space-y-6">
           {disadvantage.effect ? (
             <div>
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-2">Effect</h3>
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-2">Efeito</h3>
               <p className="text-zinc-300 text-sm">{disadvantage.effect}</p>
             </div>
           ) : null}
 
           {disadvantage.description ? (
             <div>
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-2">Description</h3>
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-2">Descrição</h3>
               <p className="text-zinc-300 text-sm">{disadvantage.description}</p>
             </div>
           ) : null}
 
           <div className="grid grid-cols-2 gap-4">
             <div className="bg-zinc-800/40 rounded-lg px-4 py-3 text-center">
-              <span className="text-zinc-500 text-xs uppercase block">Cost</span>
+              <span className="text-zinc-500 text-xs uppercase block">Custo</span>
               <span className="text-red-400 font-bold text-xl">
                 {disadvantage.cost_points != null ? `-${disadvantage.cost_points}` : "±0"}
               </span>
             </div>
             {disadvantage.category ? (
               <div className="bg-zinc-800/40 rounded-lg px-4 py-3 text-center">
-                <span className="text-zinc-500 text-xs uppercase block">Category</span>
+                <span className="text-zinc-500 text-xs uppercase block">Categoria</span>
                 <span className="text-zinc-200 font-medium text-sm">{disadvantage.category}</span>
               </div>
             ) : null}
@@ -84,7 +84,7 @@ export default async function DisadvantageDetailPage({ params }: { params: Promi
 
           <div className="flex gap-3 pt-2">
             <Link href={`/disadvantage/${disadvantage.id}/edit`} className="bg-green-900/60 hover:bg-green-800 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
-              Edit
+              Editar
             </Link>
           </div>
         </div>

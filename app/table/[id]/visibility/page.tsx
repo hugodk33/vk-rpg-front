@@ -35,10 +35,10 @@ export default async function TableVisibilityPage({
       <TableTabs tableId={id} role="narrator" active="visibility" />
 
       <div className="mb-6">
-        <h1 className="text-2xl font-bold tracking-tight">Visibility</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Visibilidade</h1>
         <p className="text-sm text-zinc-500 mt-1">
-          Decide how much each observer character gets to see of the others.
-          You see everything; players see only what the rules below allow.
+          Decida o quanto cada personagem observador consegue ver dos outros.
+          Você enxerga tudo; os jogadores veem apenas o que as regras abaixo permitem.
         </p>
       </div>
 

@@ -651,26 +651,26 @@ export default function MapStudio({ location }: MapStudioProps) {
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-3 border-b border-zinc-800">
         <div className="flex items-center gap-2.5">
           <span aria-hidden className="font-mono text-base leading-none text-green-300">◉</span>
-          <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-zinc-400">Map studio</span>
+          <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-zinc-400">Estúdio de Mapa</span>
           <span className="font-mono text-[9px] uppercase tracking-widest text-zinc-600 hidden sm:inline">
             {cols}×{rows} · {orientation} · {formatHexScale(sizeNum)}
           </span>
         </div>
         <div className="flex items-center gap-2">
           {savedAt > 0 ? (
-            <span className="font-mono text-[9px] uppercase tracking-widest text-emerald-400">Saved ✓</span>
+            <span className="font-mono text-[9px] uppercase tracking-widest text-emerald-400">Salvo ✓</span>
           ) : null}
           <button type="button" onClick={undo} disabled={!canUndo} className="font-mono text-[9px] uppercase tracking-widest px-2 py-1.5 rounded border border-zinc-700/50 text-zinc-400 hover:text-zinc-200 transition-colors disabled:opacity-40">
-            Undo
+            Desfazer
           </button>
           <button type="button" onClick={clearTiles} className="font-mono text-[9px] uppercase tracking-widest px-2 py-1.5 rounded border border-zinc-700/50 text-zinc-400 hover:text-red-300 transition-colors">
-            Clear tiles
+            Limpar células
           </button>
           <button type="button" onClick={clearStrokes} className="font-mono text-[9px] uppercase tracking-widest px-2 py-1.5 rounded border border-zinc-700/50 text-zinc-400 hover:text-red-300 transition-colors">
-            Clear strokes
+            Limpar traços
           </button>
           <button type="button" onClick={save} disabled={saving} className="bg-green-600 hover:bg-green-500 disabled:opacity-50 text-green-50 text-sm font-semibold px-4 py-1.5 rounded-lg transition-colors">
-            {saving ? "Saving…" : "Save map"}
+            {saving ? "Salvando…" : "Salvar mapa"}
           </button>
         </div>
       </div>
@@ -679,18 +679,18 @@ export default function MapStudio({ location }: MapStudioProps) {
         {/* control rail */}
         <div className="border-b lg:border-b-0 lg:border-r border-zinc-800 p-4 space-y-5">
           <div>
-            <p className="font-mono text-[9px] uppercase tracking-widest text-zinc-500 mb-2">Tool</p>
+            <p className="font-mono text-[9px] uppercase tracking-widest text-zinc-500 mb-2">Ferramenta</p>
             <div className="grid grid-cols-4 gap-1.5">
               {([
-                ["select", "✛", "Select"],
-                ["paint", "▦", "Paint"],
-                ["erase", "⌫", "Erase"],
-                ["fill", "≋", "Fill"],
-                ["pen", "✎", "Pen"],
-                ["line", "╱", "Line"],
-                ["rect", "▭", "Rect"],
-                ["ellipse", "◯", "Ellipse"],
-                ["asset", "⬒", "Asset"],
+                ["select", "✛", "Selecionar"],
+                ["paint", "▦", "Pintar"],
+                ["erase", "⌫", "Apagar"],
+                ["fill", "≋", "Preencher"],
+                ["pen", "✎", "Caneta"],
+                ["line", "╱", "Linha"],
+                ["rect", "▭", "Retângulo"],
+                ["ellipse", "◯", "Elipse"],
+                ["asset", "⬒", "Objeto"],
               ] as [Tool, string, string][]).map(([t, icon, label]) => (
                 <button
                   key={t}
@@ -709,16 +709,16 @@ export default function MapStudio({ location }: MapStudioProps) {
 
           {tool === "select" ? (
             <div>
-              <p className="font-mono text-[9px] uppercase tracking-widest text-zinc-500 mb-2">Selection</p>
+              <p className="font-mono text-[9px] uppercase tracking-widest text-zinc-500 mb-2">Seleção</p>
               <div className="space-y-2">
                 <p className="text-[10px] leading-snug text-zinc-500">
                   {activeShape ? (
                     <>
-                      <b className="text-zinc-300">{activeShape.type === "asset" ? `${ASSETS.includes(activeShape.kind ?? "crate") ? (activeShape.kind ?? "crate") : "asset"} asset` : activeShape.type}</b> selected — drag to move,{" "}
+                      <b className="text-zinc-300">{activeShape.type === "asset" ? (ASSETS.includes(activeShape.kind ?? "crate") ? ASSET_LABELS[activeShape.kind ?? "crate"] : "objeto") : activeShape.type}</b> selecionado — arraste para mover,{" "}
                       <b className="text-red-300">Del</b> remove.
                     </>
                   ) : (
-                    "Click a stroke or asset to select it. Drag to move, Del/Backspace to remove."
+                    "Clique num traço ou objeto para selecioná-lo. Arraste para mover, Del/Backspace para remover."
                   )}
                 </p>
 
@@ -733,7 +733,7 @@ export default function MapStudio({ location }: MapStudioProps) {
                           }
                           className="font-mono text-[9px] uppercase tracking-widest px-2 py-1 rounded border border-zinc-700/50 text-zinc-400 hover:text-zinc-200 transition-colors"
                         >
-                          − Size
+                          − Tamanho
                         </button>
                         <button
                           type="button"
@@ -742,21 +742,21 @@ export default function MapStudio({ location }: MapStudioProps) {
                           }
                           className="font-mono text-[9px] uppercase tracking-widest px-2 py-1 rounded border border-zinc-700/50 text-zinc-400 hover:text-zinc-200 transition-colors"
                         >
-                          + Size
+                          + Tamanho
                         </button>
                         <button
                           type="button"
                           onClick={() => updateSelected({ rot: ((activeShape.rot ?? 0) - 15 + 360) % 360 })}
                           className="font-mono text-[9px] uppercase tracking-widest px-2 py-1 rounded border border-zinc-700/50 text-zinc-400 hover:text-zinc-200 transition-colors"
                         >
-                          ↺ Rotate
+                          ↺ Girar
                         </button>
                         <button
                           type="button"
                           onClick={() => updateSelected({ rot: ((activeShape.rot ?? 0) + 15) % 360 })}
                           className="font-mono text-[9px] uppercase tracking-widest px-2 py-1 rounded border border-zinc-700/50 text-zinc-400 hover:text-zinc-200 transition-colors"
                         >
-                          ↻ Rotate
+                          ↻ Girar
                         </button>
                       </>
                     ) : null}
@@ -776,7 +776,7 @@ export default function MapStudio({ location }: MapStudioProps) {
                       }
                       className="font-mono text-[9px] uppercase tracking-widest px-2 py-1 rounded border border-zinc-700/50 text-zinc-400 hover:text-zinc-200 transition-colors"
                     >
-                      Recolor
+                      Recorar
                     </button>
                   </div>
                 ) : null}
@@ -787,7 +787,7 @@ export default function MapStudio({ location }: MapStudioProps) {
           {tool === "asset" ? (
             <div className="space-y-4">
               <div>
-                <p className="font-mono text-[9px] uppercase tracking-widest text-zinc-500 mb-2">Asset catalog</p>
+                <p className="font-mono text-[9px] uppercase tracking-widest text-zinc-500 mb-2">Catálogo de objetos</p>
                 <div className="grid grid-cols-3 gap-1.5">
                   {ASSETS.map((k) => (
                     <button
@@ -806,7 +806,7 @@ export default function MapStudio({ location }: MapStudioProps) {
                 </div>
               </div>
               <div>
-                <p className="font-mono text-[9px] uppercase tracking-widest text-zinc-500 mb-2">Stroke</p>
+                <p className="font-mono text-[9px] uppercase tracking-widest text-zinc-500 mb-2">Traço</p>
                 <div className="flex flex-wrap gap-1.5">
                   {STROKES.map((c) => (
                     <button
@@ -821,7 +821,7 @@ export default function MapStudio({ location }: MapStudioProps) {
                 </div>
               </div>
               <div>
-                <p className="font-mono text-[9px] uppercase tracking-widest text-zinc-500 mb-2">Scale · {assetScale.toFixed(2)}×</p>
+                <p className="font-mono text-[9px] uppercase tracking-widest text-zinc-500 mb-2">Escala · {assetScale.toFixed(2)}×</p>
                 <input
                   type="range"
                   min={0.4}
@@ -833,7 +833,7 @@ export default function MapStudio({ location }: MapStudioProps) {
                 />
               </div>
               <div>
-                <p className="font-mono text-[9px] uppercase tracking-widest text-zinc-500 mb-2">Rotation · {((assetRot % 360) + 360) % 360}°</p>
+                <p className="font-mono text-[9px] uppercase tracking-widest text-zinc-500 mb-2">Rotação · {((assetRot % 360) + 360) % 360}°</p>
                 <div className="grid grid-cols-3 gap-1.5">
                   <button
                     type="button"
@@ -857,14 +857,14 @@ export default function MapStudio({ location }: MapStudioProps) {
                     0°
                   </button>
                 </div>
-                <p className="mt-1.5 text-[10px] leading-snug text-zinc-500">Click a hex to place. Switch to Select to move / scale / rotate / delete placed assets.</p>
+                <p className="mt-1.5 text-[10px] leading-snug text-zinc-500">Clique num hex para colocar. Mude para Selecionar para mover / escalar / girar / excluir objetos colocados.</p>
               </div>
             </div>
           ) : null}
 
           {tool === "paint" ? (
             <div>
-              <p className="font-mono text-[9px] uppercase tracking-widest text-zinc-500 mb-2">Terrain</p>
+              <p className="font-mono text-[9px] uppercase tracking-widest text-zinc-500 mb-2">Terreno</p>
               <div className="grid grid-cols-2 gap-1.5">
                 {Object.entries(TERRAIN).map(([k, meta]) => (
                   <button
@@ -890,7 +890,7 @@ export default function MapStudio({ location }: MapStudioProps) {
           {tool === "pen" || tool === "line" || tool === "rect" || tool === "ellipse" ? (
             <div className="space-y-4">
               <div>
-                <p className="font-mono text-[9px] uppercase tracking-widest text-zinc-500 mb-2">Stroke</p>
+                <p className="font-mono text-[9px] uppercase tracking-widest text-zinc-500 mb-2">Traço</p>
                 <div className="flex flex-wrap gap-1.5">
                   {STROKES.map((c) => (
                     <button
@@ -905,7 +905,7 @@ export default function MapStudio({ location }: MapStudioProps) {
                 </div>
               </div>
               <div>
-                <p className="font-mono text-[9px] uppercase tracking-widest text-zinc-500 mb-2">Weight</p>
+                <p className="font-mono text-[9px] uppercase tracking-widest text-zinc-500 mb-2">Espessura</p>
                 <div className="flex flex-wrap gap-1.5">
                   {STROKE_WEIGHTS.map((w) => (
                     <button
@@ -930,15 +930,15 @@ export default function MapStudio({ location }: MapStudioProps) {
                     snap ? "border-green-500/70 bg-green-500/10 text-green-300" : "border-zinc-700/40 text-zinc-500"
                   }`}
                 >
-                  Snap to grid {snap ? "on" : "off"}
+                  Ajustar ao hex {snap ? "on" : "off"}
                 </button>
-                <p className="mt-1.5 text-[10px] leading-snug text-zinc-500">Lines snap to hex vertices; boxes snap to hex centers.</p>
+                <p className="mt-1.5 text-[10px] leading-snug text-zinc-500">Linhas se ajustam aos vértices do hex; caixas aos centros dos hexes.</p>
               </div>
             </div>
           ) : null}
 
           <div>
-            <p className="font-mono text-[9px] uppercase tracking-widest text-zinc-500 mb-2">Indoor / dungeon</p>
+            <p className="font-mono text-[9px] uppercase tracking-widest text-zinc-500 mb-2">Interior / masmorra</p>
             <div className="grid grid-cols-2 gap-1.5">
               <button
                 type="button"
@@ -956,19 +956,19 @@ export default function MapStudio({ location }: MapStudioProps) {
               </button>
             </div>
             {isIndoor ? (
-              <p className="mt-1.5 text-[10px] leading-snug text-zinc-500">Dungeon / building — walls and doors read clearly on dark stone.</p>
+              <p className="mt-1.5 text-[10px] leading-snug text-zinc-500">Masmorra / edifício — paredes e portas se destacam na pedra escura.</p>
             ) : null}
           </div>
 
           <div>
-            <p className="font-mono text-[9px] uppercase tracking-widest text-zinc-500 mb-2">Grid</p>
+            <p className="font-mono text-[9px] uppercase tracking-widest text-zinc-500 mb-2">Grade</p>
             <div className="grid grid-cols-2 gap-2">
               <label className="block">
-                <span className="block font-mono text-[9px] uppercase tracking-widest text-zinc-600 mb-0.5">Width</span>
+                <span className="block font-mono text-[9px] uppercase tracking-widest text-zinc-600 mb-0.5">Largura</span>
                 <input type="number" min={1} max={40} value={cols} onChange={(e) => setCols(Math.max(1, Math.min(40, Number(e.target.value) || 1)))} className="w-full bg-zinc-800/60 border border-zinc-700/50 rounded px-2 py-1 text-sm text-zinc-100" />
               </label>
               <label className="block">
-                <span className="block font-mono text-[9px] uppercase tracking-widest text-zinc-600 mb-0.5">Height</span>
+                <span className="block font-mono text-[9px] uppercase tracking-widest text-zinc-600 mb-0.5">Altura</span>
                 <input type="number" min={1} max={40} value={rows} onChange={(e) => setRows(Math.max(1, Math.min(40, Number(e.target.value) || 1)))} className="w-full bg-zinc-800/60 border border-zinc-700/50 rounded px-2 py-1 text-sm text-zinc-100" />
               </label>
               <label className="block">
@@ -976,15 +976,15 @@ export default function MapStudio({ location }: MapStudioProps) {
                 <input type="number" step="0.1" min="0" value={sizeM} onChange={(e) => setSizeM(e.target.value)} className="w-full bg-zinc-800/60 border border-zinc-700/50 rounded px-2 py-1 text-sm text-zinc-100" />
               </label>
               <label className="block">
-                <span className="block font-mono text-[9px] uppercase tracking-widest text-zinc-600 mb-0.5">Rotation °</span>
+                <span className="block font-mono text-[9px] uppercase tracking-widest text-zinc-600 mb-0.5">Rotação °</span>
                 <input type="number" step="15" value={rotationDeg} onChange={(e) => setRotationDeg(Number(e.target.value) || 0)} className="w-full bg-zinc-800/60 border border-zinc-700/50 rounded px-2 py-1 text-sm text-zinc-100" />
               </label>
               <label className="block col-span-2">
-                <span className="block font-mono text-[9px] uppercase tracking-widest text-zinc-600 mb-0.5">Orientation</span>
+                <span className="block font-mono text-[9px] uppercase tracking-widest text-zinc-600 mb-0.5">Orientação</span>
                 <select value={orientation} onChange={(e) => setOrientation(e.target.value)} className="w-full bg-zinc-800/60 border border-zinc-700/50 rounded px-2 py-1 text-sm text-zinc-100">
-                  <option value="flat">Flat-top</option>
-                  <option value="pointy">Pointy-top</option>
-                  <option value="square">Square grid</option>
+                  <option value="flat">Borda plana</option>
+                  <option value="pointy">Vértice em cima</option>
+                  <option value="square">Grade quadrada</option>
                 </select>
               </label>
             </div>
@@ -1013,7 +1013,7 @@ export default function MapStudio({ location }: MapStudioProps) {
                   onPointerLeave={onPointerLeave}
                   onPointerCancel={onPointerUp}
                   role="img"
-                  aria-label="Tactical map editor canvas"
+                  aria-label="Tela do editor de mapa tático"
                 />
               </div>
             </div>
@@ -1025,19 +1025,19 @@ export default function MapStudio({ location }: MapStudioProps) {
           {/* status bar */}
           <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-[10px] uppercase tracking-widest text-zinc-500">
             <span>
-              Cell <b className="text-zinc-300">{hoverCell ? `q${hoverCell.q} r${hoverCell.r}` : "—"}</b>
+              Célula <b className="text-zinc-300">{hoverCell ? `q${hoverCell.q} r${hoverCell.r}` : "—"}</b>
             </span>
             <span>
               Abs <b className="text-zinc-300">{hoverAbs ? `q${hoverAbs.q} r${hoverAbs.r}` : `q${abs.q} r${abs.r}`}</b>
             </span>
             <span>
-              Scale <b className="text-zinc-300">{formatHexScale(sizeNum)}</b>
+              Escala <b className="text-zinc-300">{formatHexScale(sizeNum)}</b>
             </span>
             <span>
-              Strokes <b className="text-zinc-300">{shapes.length}</b>
+              Traços <b className="text-zinc-300">{shapes.length}</b>
             </span>
             <span>
-              Chain <b className="text-zinc-400 truncate max-w-[16rem] inline-block align-top">
+              Cadeia <b className="text-zinc-400 truncate max-w-[16rem] inline-block align-top">
                 {(location.ancestors ?? []).map((a) => a.name).join(" › ") || "—"}
               </b>
             </span>
@@ -1061,10 +1061,10 @@ function shapeAnchor(shapes: DrawShape[], idx: number, fallback: Point): Point {
 /* ---------- asset preview ---------- */
 
 const ASSET_LABELS: Record<DrawAssetKind, string> = {
-  door: "Door", chest: "Chest", table: "Table", chair: "Chair", bed: "Bed",
-  barrel: "Barrel", crate: "Crate", bookcase: "Bookcase", brazier: "Brazier",
-  torch: "Torch", altar: "Altar", statue: "Statue", tree: "Tree", rock: "Rock",
-  well: "Well", rug: "Rug", stairs: "Stairs", fountain: "Fountain",
+  door: "Porta", chest: "Baú", table: "Mesa", chair: "Cadeira", bed: "Cama",
+  barrel: "Barril", crate: "Caixote", bookcase: "Estante", brazier: "Braseiro",
+  torch: "Tocha", altar: "Altar", statue: "Estátua", tree: "Árvore", rock: "Rocha",
+  well: "Poço", rug: "Tapete", stairs: "Escadas", fountain: "Fonte",
 };
 
 /** Tiny live vector preview of an asset stamp. */

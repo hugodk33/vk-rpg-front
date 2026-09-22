@@ -271,7 +271,7 @@ export default function TacticalPlate({
           height={H}
           className="block mx-auto"
           role="img"
-          aria-label="Floor plan"
+          aria-label="Planta baixa"
           style={{
             width: `${Math.round(boxW)}px`,
             height: `${Math.round(boxH)}px`,

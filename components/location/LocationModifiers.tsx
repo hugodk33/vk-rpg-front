@@ -50,7 +50,7 @@ const num = (v: string): number | undefined => {
 const effectChips = (m: Modifier): { label: string; value: string }[] => {
   const out: { label: string; value: string }[] = [];
   if (m.cost_points != null) out.push({ label: "Pts", value: `=${m.cost_points}` });
-  if (m.effect) out.push({ label: "Eff", value: m.effect });
+  if (m.effect) out.push({ label: "Efeito", value: m.effect });
   return out;
 };
 
@@ -123,14 +123,14 @@ export default function LocationModifiers({
     setModifiers(res.modifiers ?? []);
   };
 
-  const sceneName = (scene?: Scene) => scene?.title || "Untitled scene";
+  const sceneName = (scene?: Scene) => scene?.title || "Cena sem título";
 
   const coordsOf = (m: Modifier): string | null => {
     const scene = (scenes?.scenes ?? []).find((s) => s.id === m.scene_id);
     if (!scene) return null;
     const narration = scene.narrations?.find((n) => n.id === m.narration_id);
     return [
-      scene.chapter != null ? `Ch.${scene.chapter}` : null,
+      scene.chapter != null ? `Cap.${scene.chapter}` : null,
       sceneName(scene),
       narration?.title ? ` / ${narration.title}` : null,
     ].filter(Boolean).join(" · ");
@@ -159,7 +159,7 @@ export default function LocationModifiers({
       location_id: locationId,
       scene_id: txt(form.scene_id),
       narration_id: txt(form.narration_id),
-      name: form.name.trim() || "Condition",
+      name: form.name.trim() || "Condição",
       effect: txt(form.effect) ?? "",
       description: txt(form.description) ?? "",
       cost_points: num(form.cost_points),
@@ -174,7 +174,7 @@ export default function LocationModifiers({
       setShowForm(false);
       await refetch();
     } catch {
-      setError("Failed to save the condition.");
+      setError("Falha ao salvar a condição.");
     } finally {
       setSaving(false);
     }
@@ -184,7 +184,7 @@ export default function LocationModifiers({
     <div>
       <div className="mb-3 flex items-center gap-2.5 pb-1.5 border-b border-zinc-700/60">
         <span aria-hidden className="font-mono text-base leading-none text-teal-300">◐</span>
-        <span className="font-mono text-[13px] font-bold uppercase tracking-wider text-zinc-300">Field conditions</span>
+        <span className="font-mono text-[13px] font-bold uppercase tracking-wider text-zinc-300">Condições de campo</span>
         <span className="flex-1 h-px" style={{ background: "linear-gradient(90deg, #2dd4bf55, transparent)" }} />
         <button
           type="button"
@@ -195,7 +195,7 @@ export default function LocationModifiers({
           }}
           className="font-mono text-[10px] uppercase tracking-widest text-teal-300/90 hover:text-teal-200 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600/60 rounded-sm"
         >
-          {showForm && !form.id ? "Close" : "+ Condition"}
+          {showForm && !form.id ? "Fechar" : "+ Condição"}
         </button>
       </div>
 
@@ -203,7 +203,7 @@ export default function LocationModifiers({
 
       {local.length === 0 && !showForm ? (
         <p className="text-xs text-zinc-500">
-          No conditions recorded on this place. Add one when something changes the field.
+          Nenhuma condição registrada neste lugar. Adicione uma quando algo mudar o campo.
         </p>
       ) : null}
 
@@ -211,37 +211,37 @@ export default function LocationModifiers({
         <div className="space-y-3 mb-4">
           <div className="grid gap-2 sm:grid-cols-2">
             <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-zinc-500">
-              Name
+              Nome
               <input type="text" value={form.name} onChange={(e) => set("name", e.target.value)}
-                placeholder="e.g. The bridge is down" className={fieldCls} />
+                placeholder="ex.: A ponte caiu" className={fieldCls} />
             </label>
             <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-zinc-500">
-              Cost points
+              Pontos de custo
               <input type="number" value={form.cost_points} onChange={(e) => set("cost_points", e.target.value)} className={fieldCls} />
             </label>
           </div>
           <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-zinc-500">
-            Effect
+            Efeito
             <input type="text" value={form.effect} onChange={(e) => set("effect", e.target.value)}
-              placeholder="e.g. −2 to Crossing rolls" className={fieldCls} />
+              placeholder="ex.: −2 nos testes de Travessia" className={fieldCls} />
           </label>
           <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-zinc-500">
-            Description
+            Descrição
             <textarea value={form.description} onChange={(e) => set("description", e.target.value)}
-              rows={2} placeholder="What changed at this place" className={fieldCls} />
+              rows={2} placeholder="O que mudou neste lugar" className={fieldCls} />
           </label>
           <div className="grid gap-2 sm:grid-cols-3">
             <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-zinc-500">
-              Chapter
+              Capítulo
               <select value={form.chapter} onChange={(e) => { set("chapter", e.target.value); set("scene_id", ""); set("narration_id", ""); }} className={fieldCls}>
-                <option value="">Any</option>
+                <option value="">Qualquer</option>
                 {chapters.map((ch) => (
-                  <option key={ch} value={ch}>Chapter {ch}</option>
+                  <option key={ch} value={ch}>Capítulo {ch}</option>
                 ))}
               </select>
             </label>
             <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-zinc-500">
-              Scene
+              Cena
               <select value={form.scene_id} onChange={(e) => { set("scene_id", e.target.value); set("narration_id", ""); }} disabled={visibleScenes.length === 0} className={fieldCls}>
                 <option value="">—</option>
                 {visibleScenes.map((s) => (
@@ -250,11 +250,11 @@ export default function LocationModifiers({
               </select>
             </label>
             <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-zinc-500">
-              Narration
+              Narração
               <select value={form.narration_id} onChange={(e) => set("narration_id", e.target.value)} disabled={visibleNarrations.length === 0} className={fieldCls}>
                 <option value="">—</option>
                 {visibleNarrations.map((n) => (
-                  <option key={n.id} value={n.id}>{n.title || "Narration"}</option>
+                  <option key={n.id} value={n.id}>{n.title || "Narração"}</option>
                 ))}
               </select>
             </label>
@@ -266,12 +266,12 @@ export default function LocationModifiers({
               onClick={save}
               className="inline-flex items-center gap-2 bg-teal-700 hover:bg-teal-600 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600/60"
             >
-              {saving ? "Saving…" : form.id ? "Save changes" : "Add condition"}
+              {saving ? "Salvando…" : form.id ? "Salvar alterações" : "Adicionar condição"}
             </button>
             {form.id ? (
               <button type="button" onClick={() => { setForm(emptyForm()); setShowForm(false); setError(null); }}
                 className="text-sm text-zinc-500 hover:text-zinc-200 transition-colors">
-                Cancel
+                Cancelar
               </button>
             ) : null}
           </div>
@@ -286,13 +286,13 @@ export default function LocationModifiers({
             return (
               <li key={m.id} className="border-b border-zinc-700/40 py-3 last:border-b-0">
                 <div className="flex items-start justify-between gap-2">
-                  <p className="text-sm font-semibold text-zinc-100 truncate min-w-0">{m.name || "Condition"}</p>
+                  <p className="text-sm font-semibold text-zinc-100 truncate min-w-0">{m.name || "Condição"}</p>
                   <button
                     type="button"
                     onClick={() => startEdit(m)}
                     className="shrink-0 font-mono text-[10px] uppercase tracking-widest text-zinc-400 border border-zinc-700/60 rounded-md px-2 py-1 hover:text-zinc-100 hover:border-zinc-500 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600/60"
                   >
-                    Edit
+                    Editar
                   </button>
                 </div>
                 {m.description ? (
@@ -301,7 +301,7 @@ export default function LocationModifiers({
                 {coords ? (
                   <p className="font-mono text-[9px] uppercase tracking-widest text-zinc-500 mt-1.5">{coords}</p>
                 ) : (
-                  <p className="font-mono text-[9px] uppercase tracking-widest text-zinc-600 mt-1.5">This place, no story moment</p>
+                  <p className="font-mono text-[9px] uppercase tracking-widest text-zinc-600 mt-1.5">Este local, sem momento na história</p>
                 )}
                 {chips.length > 0 ? (
                   <div className="flex flex-wrap gap-1 mt-2">

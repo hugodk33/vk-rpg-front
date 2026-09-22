@@ -18,8 +18,8 @@ import type { Location } from "@/lib/types";
 type EditorTab = "form" | "map";
 
 const EDITOR_TABS: Array<{ key: EditorTab; label: string; hint: string }> = [
-  { key: "form", label: "Form", hint: "Cadastro do local" },
-  { key: "map", label: "Map", hint: "Desenho da planta / tabuleiro" },
+  { key: "form", label: "Formulário", hint: "Cadastro do local" },
+  { key: "map", label: "Mapa", hint: "Desenho da planta / tabuleiro" },
 ];
 
 export default function LocationEditor({
@@ -47,7 +47,7 @@ export default function LocationEditor({
               href={backHref}
               className="inline-flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-widest text-zinc-500 hover:text-green-400 transition-colors"
             >
-              <span aria-hidden>←</span> Back to locations
+              <span aria-hidden>←</span> Voltar aos locais
             </Link>
           ) : (
             <span />
@@ -55,7 +55,7 @@ export default function LocationEditor({
           <div className="flex items-center gap-3 text-[10px] font-mono uppercase tracking-widest text-zinc-500">
             <span className="hidden sm:inline">{location.name}</span>
             <span className="hidden sm:inline text-zinc-700">/</span>
-            <span className="text-green-300">Edit</span>
+            <span className="text-green-300">Editar</span>
           </div>
         </div>
 
@@ -63,24 +63,24 @@ export default function LocationEditor({
         <div className="px-6 lg:px-8 mt-5 flex items-end justify-between gap-4 flex-wrap">
           <div className="min-w-0">
             <h1 className="text-[clamp(24px,4vw,34px)] leading-none font-bold tracking-tight text-green-100">
-              {location.name || "Unmapped location"}
+              {location.name || "Local não mapeado"}
             </h1>
             <p className="mt-1.5 font-mono text-[10px] uppercase tracking-widest text-zinc-600">
-              {tab === "map" ? "Map studio — desenho da planta / tabuleiro" : "Cadastro — vínculo de território e hex"}
+              {tab === "map" ? "Estúdio de mapa — desenho da planta / tabuleiro" : "Cadastro — vínculo de território e hex"}
             </p>
           </div>
           <Link
             href={`/location/${location.id}`}
             className="inline-flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-widest text-zinc-500 hover:text-green-400 transition-colors"
           >
-            <span aria-hidden>←</span> Back to {location.name || "location"}
+            <span aria-hidden>←</span> Voltar a {location.name || "local"}
           </Link>
         </div>
 
         {/* editor tabs */}
         <div
           role="tablist"
-          aria-label="Location editor views"
+          aria-label="Visões do editor de local"
           className="mt-5 flex items-center gap-1 border-b border-zinc-700/40 px-6 lg:px-8"
         >
           {EDITOR_TABS.map((t) => (

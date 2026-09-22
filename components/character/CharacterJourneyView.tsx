@@ -32,7 +32,7 @@ export default function CharacterJourneyView({
         <div>
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-xs font-semibold uppercase tracking-wider text-zinc-500 mr-1">
-              History
+              História
             </span>
             <Link
               href={characterTabHref(basePath, tab, null)}
@@ -42,10 +42,10 @@ export default function CharacterJourneyView({
                   : "bg-zinc-800/60 text-zinc-400 border border-zinc-700/50 hover:text-zinc-200"
               }`}
             >
-              Present
+              Presente
             </Link>
             {[...moments].reverse().map((m, i, arr) => {
-              const label = i === arr.length - 1 ? "Starting" : `${m}`;
+              const label = i === arr.length - 1 ? "Início" : `${m}`;
               const isSel = selectedMoment === m;
               return (
                 <Link
@@ -64,8 +64,8 @@ export default function CharacterJourneyView({
           </div>
           {selectedMoment != null ? (
             <p className="text-xs text-zinc-500 mt-2">
-              Viewing character state at{" "}
-              <span className="text-green-500 font-medium">Moment {selectedMoment}</span>
+              Vendo o estado do personagem em{" "}
+              <span className="text-green-500 font-medium">Momento {selectedMoment}</span>
             </p>
           ) : null}
         </div>

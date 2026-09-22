@@ -94,14 +94,14 @@ export default function AdvantagesPage() {
   return (
     <div className="max-w-5xl mx-auto p-6">
       <div className="flex items-baseline gap-3 mb-1">
-        <h1 className="text-2xl font-bold text-zinc-100">Advantages</h1>
-        <span className="text-sm text-zinc-500">all tables</span>
+        <h1 className="text-2xl font-bold text-zinc-100">Vantagens</h1>
+        <span className="text-sm text-zinc-500">todas as mesas</span>
       </div>
 
       <div className="flex items-center gap-3 mb-6 text-xs text-zinc-500">
         <span>
-          {filtered.length} advantage{filtered.length !== 1 ? "s" : ""}
-          {entries ? ` of ${entries.length}` : ""}
+          {filtered.length} {filtered.length !== 1 ? "vantagens" : "vantagem"}
+          {entries ? ` de ${entries.length}` : ""}
         </span>
       </div>
 
@@ -114,7 +114,7 @@ export default function AdvantagesPage() {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Filter advantages..."
+            placeholder="Filtrar vantagens..."
             className="w-full bg-zinc-800/60 border border-zinc-700/50 rounded-lg pl-9 pr-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-emerald-700/60"
           />
         </div>
@@ -124,7 +124,7 @@ export default function AdvantagesPage() {
             onClick={() => setSearch("")}
             className="bg-zinc-800/60 hover:bg-zinc-700/60 text-zinc-400 text-sm px-3 py-2 rounded-lg transition-colors border border-zinc-700/50"
           >
-            Clear
+            Limpar
           </button>
         ) : null}
       </div>
@@ -142,7 +142,7 @@ export default function AdvantagesPage() {
               : "bg-zinc-800/60 border-zinc-700/50 text-zinc-400 hover:text-zinc-200 hover:border-zinc-600/60";
             return (
               <button key={cat} type="button" onClick={() => setCategory(cat)} className={`${base} ${classes}`}>
-                {cat}
+                {cat === "All" ? "Todas" : cat}
               </button>
             );
           })}
@@ -151,7 +151,7 @@ export default function AdvantagesPage() {
 
       {entries === null ? (
         <div className="text-center py-16">
-          <p className="text-zinc-600 text-sm">Loading advantages...</p>
+          <p className="text-zinc-600 text-sm">Carregando vantagens...</p>
         </div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-16">
@@ -160,8 +160,8 @@ export default function AdvantagesPage() {
           </svg>
           <p className="text-zinc-500 text-sm">
             {search || category !== "All"
-              ? "No advantages match your filter."
-              : "No advantages recorded on any table yet."}
+              ? "Nenhuma vantagem corresponde ao seu filtro."
+              : "Nenhuma vantagem registrada em nenhuma mesa ainda."}
           </p>
         </div>
       ) : (
@@ -180,7 +180,7 @@ export default function AdvantagesPage() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                     </svg>
                     <span className="text-sm font-medium text-zinc-200 group-hover:text-zinc-100 truncate">
-                      {entry.name || "Unnamed"}
+                      {entry.name || "Sem nome"}
                     </span>
                   </div>
                   {entry.cost_points != null ? (

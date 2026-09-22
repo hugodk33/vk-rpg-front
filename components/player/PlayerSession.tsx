@@ -61,13 +61,13 @@ const attrMeta: Record<string, { label: string; hex: string }> = {
 
 type Judgment = { crit: boolean; ok: boolean; text: string };
 function judgeRoll(total: number, target: number): Judgment {
-  if (total <= 4) return { crit: true, ok: true, text: "Critical success" };
+  if (total <= 4) return { crit: true, ok: true, text: "Sucesso crítico" };
   if (total >= 18 || (total === 17 && target <= 15))
-    return { crit: true, ok: false, text: "Critical failure" };
+    return { crit: true, ok: false, text: "Falha crítica" };
   const m = target - total;
   return m >= 0
-    ? { crit: false, ok: true, text: `Succeeded by ${m}` }
-    : { crit: false, ok: false, text: `Failed by ${-m}` };
+    ? { crit: false, ok: true, text: `Sucesso por ${m}` }
+    : { crit: false, ok: false, text: `Falha por ${-m}` };
 }
 
 function rollDice(count: number, die: number, mod: number): { r: number[]; tot: number } {
@@ -218,7 +218,7 @@ export default function TurnPanel({
     /* posição da próxima action = append na sequência da narração atual */
     const nextActionQueue =
       (latestBeat?.actions ?? []).reduce((m, a) => Math.max(m, Number(a.queue) || 0), 0) + 1;
-    const defaultDesc = `${skillMode ? (skillData ? skillLabel(skillData, myChar?.sheet ?? null) : "Skill") : actAttr.toUpperCase()} test — ${judgment.ok ? "success" : "failure"}.`;
+    const defaultDesc = `${skillMode ? (skillData ? skillLabel(skillData, myChar?.sheet ?? null) : "Perícia") : actAttr.toUpperCase()} teste — ${judgment.ok ? "sucesso" : "falha"}.`;
     const description = actDesc.trim() || defaultDesc;
     /* um teste encerra o turno só no modo 'after_test' (no 'after_move' o turno
        encerra ao mover; o teste fica como ação registrada e a vez continua) */
@@ -239,7 +239,7 @@ export default function TurnPanel({
         }),
       });
       const j = await res.json();
-      if (!j.success) throw new Error(j.error || "Failed to log your action");
+      if (!j.success) throw new Error(j.error || "Falha ao registrar sua ação");
       setCommitted(true);
       setActDesc("");
       setActTarget("");
@@ -456,7 +456,7 @@ export default function TurnPanel({
         }),
       });
       const j = await res.json();
-      if (!j.success) throw new Error(j.error || "Failed to end your turn");
+      if (!j.success) throw new Error(j.error || "Falha ao terminar seu turno");
       setCommitted(true);
       setMoveTarget(null);
       setFacingChoice("auto");
@@ -476,12 +476,12 @@ export default function TurnPanel({
         <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5">
           <div className="flex items-center gap-4 flex-wrap">
             <div className="flex items-baseline gap-1.5">
-              <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">Chapter</span>
+              <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">Capítulo</span>
               <span className="font-mono text-xl font-bold text-blue-300 tabular-nums">{chapter}</span>
             </div>
             <span className="w-px h-6 bg-zinc-700/60" aria-hidden />
             <div className="flex items-baseline gap-1.5">
-              <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">Part</span>
+              <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">Parte</span>
               <span className="font-mono text-xl font-bold text-blue-300 tabular-nums">{part}</span>
             </div>
             {latestTitle ? (
@@ -498,7 +498,7 @@ export default function TurnPanel({
           >
             <span className={`w-2 h-2 rounded-full ${isMyTurn ? "bg-blue-400 beacon" : "bg-zinc-600"}`}
               style={isMyTurn ? { boxShadow: "0 0 8px rgba(59,130,246,.7)" } : undefined} />
-            {isMyTurn ? "Your turn" : notInQueue ? "Not in queue" : "Waiting"}
+            {isMyTurn ? "Seu turno" : notInQueue ? "Fora da fila" : "Aguardando"}
           </span>
         </div>
         {latestNarration ? (
@@ -512,37 +512,37 @@ export default function TurnPanel({
         roster={roster}
         tone="blue"
         myId={myId}
-        emptyText="The queue is empty — the scene hasn't opened yet."
+        emptyText="A fila está vazia — a cena ainda não abriu."
       />
 
       {/* floor plan + action — the map, your move and the dice stay in one card */}
-      <section aria-label="Floor plan" className="bg-zinc-900/80 border border-zinc-700/40 rounded-xl overflow-hidden">
+      <section aria-label="Planta" className="bg-zinc-900/80 border border-zinc-700/40 rounded-xl overflow-hidden">
         <div className="p-5">
         <div className="flex flex-wrap items-center gap-3 mb-4">
           <span
             className={`w-2.5 h-2.5 rounded-full ${isMyTurn ? "bg-blue-400 beacon" : "bg-zinc-600"}`}
             style={isMyTurn ? { boxShadow: "0 0 10px rgba(96,165,250,.7)" } : undefined}
           />
-          <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">Floor plan</span>
+          <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">Planta</span>
           {mapGroup.length > 1 ? (
             <select
               value={mapLocation?.id ?? ""}
               onChange={(e) => { setLocSel(e.target.value); setMoveTarget(null); setMoveWarn(null); }}
-              aria-label="Where you are"
+              aria-label="Onde você está"
               className="max-w-xs bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-3 py-2 text-zinc-100 text-sm focus:outline-none focus:border-blue-600/70 transition-colors"
             >
               {mapGroup.map((l) => (
                 <option key={l.id} value={l.id} className="bg-zinc-800">
-                  {maskedLocationName(visibility, l.id, l.name || "Unnamed")}
+                  {maskedLocationName(visibility, l.id, l.name || "Sem nome")}
                 </option>
               ))}
             </select>
           ) : mapLocation ? (
             <span className="text-sm font-semibold text-zinc-100">
-              {maskedLocationName(visibility, mapLocation.id, mapLocation.name || "Unnamed")}
+              {maskedLocationName(visibility, mapLocation.id, mapLocation.name || "Sem nome")}
             </span>
           ) : (
-            <span className="text-sm text-zinc-500 italic">No floor plan on this table yet.</span>
+            <span className="text-sm text-zinc-500 italic">Nenhuma planta nesta mesa ainda.</span>
           )}
           {mapLocation?.hex?.width != null ? (
             <span className="ml-auto font-mono text-[10px] text-zinc-500 uppercase tracking-widest">
@@ -564,7 +564,7 @@ export default function TurnPanel({
           />
         ) : (
           <p className="text-sm text-zinc-600 font-mono italic">
-            The scene opens a floor plan here when the narrator draws it.
+            A cena abre uma planta aqui quando o narrador a desenhar.
           </p>
         )}
 
@@ -576,7 +576,7 @@ export default function TurnPanel({
                 type="button"
                 onClick={() => setReplayOpen((o) => !o)}
                 aria-expanded={replayOpen}
-                aria-label="Toggle replay movement"
+                aria-label="Alternar reprodução de movimento"
                 className="inline-flex items-center gap-1.5 font-mono text-[10px] tracking-widest uppercase text-zinc-500 hover:text-zinc-300 transition-colors"
               >
                 <span
@@ -586,7 +586,7 @@ export default function TurnPanel({
                 >
                   {icon("M9 18l6-6-6-6", "w-3.5 h-3.5")}
                 </span>
-                Replay movement
+                Reproduzir movimento
               </button>
               <span className="font-mono text-[10px] text-zinc-600">
                 ({boardMoves.length} move{boardMoves.length !== 1 ? "s" : ""})
@@ -603,19 +603,19 @@ export default function TurnPanel({
                     }
                     className="px-2 py-0.5 rounded-md text-[10px] font-mono uppercase tracking-wider text-blue-300 hover:text-blue-100 bg-blue-500/10 border border-blue-500/40"
                   >
-                    Latest
+                    Última
                   </button>
                   <button
                     onClick={() => setShownMoves(boardMoves.map((m) => m.actionId).filter((x): x is string => !!x))}
                     className="px-2 py-0.5 rounded-md text-[10px] font-mono uppercase tracking-wider text-zinc-400 hover:text-zinc-100 bg-zinc-800/60 border border-zinc-700/40"
                   >
-                    All
+                    Todas
                   </button>
                   <button
                     onClick={() => setShownMoves([])}
                     className="px-2 py-0.5 rounded-md text-[10px] font-mono uppercase tracking-wider text-zinc-400 hover:text-zinc-100 bg-zinc-800/60 border border-zinc-700/40"
                   >
-                    None
+                    Nenhuma
                   </button>
                 </div>
               ) : null}
@@ -653,46 +653,46 @@ export default function TurnPanel({
             <div className="flex flex-wrap items-center gap-3 pb-4 border-b border-zinc-700/40">
               <span className={`w-2.5 h-2.5 rounded-full ${isMyTurn ? "bg-blue-400 beacon" : "bg-zinc-600"}`}
                 style={isMyTurn ? { boxShadow: "0 0 10px rgba(251,191,36,.7)" } : undefined} />
-              <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">Acting now</span>
+              <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">Agindo agora</span>
               <span className="text-sm font-semibold text-zinc-100">
-                {pendingQueue[0] ? charName(pendingQueue[0].character_id) : "empty queue"}
+                {pendingQueue[0] ? charName(pendingQueue[0].character_id) : "fila vazia"}
               </span>
               <span className="ml-auto font-mono text-[10px] text-zinc-500 uppercase tracking-widest">
-                target: <span style={{ color: attrHex }}>{target}</span> ({skillMode ? (skillData ? skillLabel(skillData, myChar?.sheet ?? null) : "—") : attrMeta[actAttr]?.label})
+                alvo: <span style={{ color: attrHex }}>{target}</span> ({skillMode ? (skillData ? skillLabel(skillData, myChar?.sheet ?? null) : "—") : attrMeta[actAttr]?.label})
               </span>
             </div>
 
             {/* movement | dice test — two columns side by side */}
             <div className="grid gap-5 lg:grid-cols-2">
               <div className="rounded-xl border border-zinc-700/40 p-4">
-                <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-3">Movement</span>
+                <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-3">Movimento</span>
                 {isMyTurn ? (
           <div className="space-y-3">
             {/* move column: value + where you stand, label at the bottom */}
             <div className="flex flex-col items-center gap-1.5">
               <div className="flex flex-wrap items-baseline gap-1.5">
                 <span className="font-mono text-lg font-bold text-blue-300 tabular-nums">{myMove ?? "—"}</span>
-                <span className="text-[11px] text-zinc-500">hex{myMove === 1 ? "" : "es"}</span>
+                <span className="text-[11px] text-zinc-500">{myMove === 1 ? "hexágono" : "hexágonos"}</span>
                 <span className="text-sm text-zinc-500 flex-1 min-w-0">
                   {from ? (
                     <span className="font-mono text-[12px] text-zinc-400">
-                      you are at hex {from.q},{from.r}
-                      {me?.facing != null && me?.facing >= 0 ? ` · facing ${FACING_DIRS[me.facing]?.label ?? me.facing}` : ""}
+                      você está no hexágono {from.q},{from.r}
+                      {me?.facing != null && me?.facing >= 0 ? ` · orientação ${FACING_DIRS[me.facing]?.label ?? me.facing}` : ""}
                     </span>
                   ) : (
-                    <span className="text-zinc-600 italic">you&apos;re not placed yet</span>
+                    <span className="text-zinc-600 italic">você ainda não está posicionado</span>
                   )}
                   {moveTarget ? (
                     <span className="font-mono text-[12px] text-emerald-300 ml-2">→ {moveTarget.q},{moveTarget.r}</span>
                   ) : null}
                 </span>
               </div>
-              <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">Move</p>
+              <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">Movimento</p>
             </div>
 
             {moveTarget ? (
               <p className="font-mono text-[10px] uppercase tracking-widest text-emerald-300/80">
-                play preview — the token moves only when you confirm the move
+                prévia — o token só se move quando você confirma o movimento
               </p>
             ) : null}
 
@@ -733,7 +733,7 @@ export default function TurnPanel({
                       auto
                     </button>
                   </div>
-                <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">Facing</p>
+                <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">Orientação</p>
               </div>
 
               <div className="flex flex-col items-center gap-1.5">
@@ -743,25 +743,25 @@ export default function TurnPanel({
                   className="bg-blue-600 hover:bg-blue-500 text-blue-950 text-sm font-bold px-4 py-2 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   {moving
-                    ? "Logging…"
+                    ? "Registrando…"
                     : moveTarget
                       ? tableSettings?.turn_end_mode === "after_move"
-                        ? `Move & end turn → ${moveTarget.q},${moveTarget.r}`
-                        : `Log move → ${moveTarget.q},${moveTarget.r}`
+                        ? `Mover e terminar turno → ${moveTarget.q},${moveTarget.r}`
+                        : `Registrar movimento → ${moveTarget.q},${moveTarget.r}`
                       : facingChoice !== "auto"
                         ? tableSettings?.turn_end_mode === "after_move"
-                          ? "Turn & end turn"
-                          : "Turn in place"
-                        : "Log move · click a hex"}
+                          ? "Virar e terminar turno"
+                          : "Virar no lugar"
+                        : "Registrar movimento · clique em um hexágono"}
                 </button>
-                <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">Log move</p>
+                <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">Registrar movimento</p>
               </div>
             </div>
           </div>
         ) : (
           <p className="mt-3 font-mono text-[10px] text-zinc-600 uppercase tracking-widest">
-            the map opens for movement when it&apos;s your turn ·{" "}
-            {myMove != null ? `you can cover ${myMove} hex${myMove === 1 ? "" : "es"}` : "your sheet has no Move"}
+            o mapa abre para movimento no seu turno ·{" "}
+            {myMove != null ? `você pode percorrer ${myMove} hexágono${myMove === 1 ? "" : "s"}` : "sua ficha não tem Movimento"}
           </p>
         )}
 
@@ -770,7 +770,7 @@ export default function TurnPanel({
               </div>
 
               <div className="rounded-xl border border-zinc-700/40 p-4">
-                <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-3">Dice test</span>
+                <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-3">Teste de dados</span>
                 <div className="grid grid-cols-1 gap-5">
               <div className="flex flex-col items-center gap-5">
                 {/* line 1 — choose the test basis */}
@@ -788,11 +788,11 @@ export default function TurnPanel({
                             : "border-zinc-700/50 text-zinc-500 hover:text-zinc-300"
                         }`}
                       >
-                        {b === "attr" ? "Attribute" : "Skill"}
+                        {b === "attr" ? "Atributo" : "Perícia"}
                       </button>
                     ))}
                   </div>
-                  <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">Test basis</p>
+                  <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">Base do teste</p>
                 </div>
 
                 {/* line 2 — the selector */}
@@ -804,7 +804,7 @@ export default function TurnPanel({
                       disabled={committed}
                       className="w-48 bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-3 py-2 text-zinc-100 text-sm focus:outline-none focus:border-blue-600/70 transition-colors disabled:opacity-50"
                     >
-                      <option value="" className="bg-zinc-800">Select…</option>
+                      <option value="" className="bg-zinc-800">Selecionar…</option>
                       {mySkills.map((sk) => (
                         <option key={sk.id} value={sk.skill_id || sk.id} className="bg-zinc-800">
                           {skillLabel(sk, myChar?.sheet ?? null)}
@@ -824,7 +824,7 @@ export default function TurnPanel({
                     </select>
                   )}
                   <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">
-                    {basis === "skill" ? "Skill" : "Attribute"}
+                    {basis === "skill" ? "Perícia" : "Atributo"}
                   </p>
                 </div>
 
@@ -832,11 +832,11 @@ export default function TurnPanel({
                 <div className="flex flex-wrap items-start justify-center gap-x-8 gap-y-4">
                   <div className="flex flex-col items-center gap-1.5">
                     <span className="inline-flex items-center justify-center min-w-[3.5rem] h-10 bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-3 text-zinc-100 text-sm font-mono">d{testDie}</span>
-                    <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">Die</p>
+                    <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">Dado</p>
                   </div>
                   <div className="flex flex-col items-center gap-1.5">
                     <span className="inline-flex items-center justify-center min-w-[3.5rem] h-10 bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-3 text-zinc-100 text-sm font-mono">{testCount}</span>
-                    <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">Count</p>
+                    <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">Quantidade</p>
                   </div>
                   <div className="flex flex-col items-center gap-1.5">
                     <span className="inline-flex items-center justify-center min-w-[3.5rem] h-10 bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-3 text-zinc-100 text-sm font-mono">{testMod >= 0 ? `+${testMod}` : testMod}</span>
@@ -847,8 +847,8 @@ export default function TurnPanel({
                 {/* status */}
                 <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-600 text-center">
                   {testSet
-                    ? `Seat test locked (${testCount}d${testDie}${testMod >= 0 ? `+${testMod}` : testMod}) — the dice come from the narrator; pick an attribute or skill to roll against.`
-                    : "No seat test set yet — dice default until the narrator tunes it. You pick the attribute or skill."}
+                    ? `Teste do assento travado (${testCount}d${testDie}${testMod >= 0 ? `+${testMod}` : testMod}) — os dados vêm do narrador; escolha um atributo ou perícia para rolar.`
+                    : "Nenhum teste de assento definido ainda — dados padrão até o narrador ajustar. Você escolhe o atributo ou a perícia."}
                 </p>
               </div>
 
@@ -856,7 +856,7 @@ export default function TurnPanel({
                 {rolls.length === 0 ? (
                   <div className="flex items-center gap-2 text-sm text-zinc-500">
                     {icon("M12 3l1.5 6.5L20 11l-6.5 1.5L12 19l-1.5-6.5L4 11l6.5-1.5L12 3z", "w-7 h-7 text-zinc-600")}
-                    {isMyTurn ? "It's your turn — roll to act." : "Dice unlock when it's your turn."}
+                    {isMyTurn ? "É seu turno — role para agir." : "Os dados liberam no seu turno."}
                   </div>
                 ) : (
                   rolls.map((r, i) => (
@@ -880,7 +880,7 @@ export default function TurnPanel({
                   </div>
                 ) : (
                   <span className="text-sm text-zinc-600">
-                    Click <span className={isMyTurn ? "text-blue-400 font-semibold" : "text-zinc-500"}>Roll</span> to test.
+                    Clique em <span className={isMyTurn ? "text-blue-400 font-semibold" : "text-zinc-500"}>Rolar</span> para testar.
                   </span>
                 )}
                 <button
@@ -892,7 +892,7 @@ export default function TurnPanel({
                       : "bg-zinc-800 text-zinc-500 cursor-not-allowed"
                   } text-sm font-bold px-6 py-2.5 rounded-lg transition-colors`}
                 >
-                  {icon("M12 3l1.5 6.5L20 11l-6.5 1.5L12 19l-1.5-6.5L4 11l6.5-1.5L12 3z", "w-4 h-4 inline mr-1")}Roll {testCount}d{testDie}
+                  {icon("M12 3l1.5 6.5L20 11l-6.5 1.5L12 19l-1.5-6.5L4 11l6.5-1.5L12 3z", "w-4 h-4 inline mr-1")}Rolar {testCount}d{testDie}
                 </button>
               </div>
 
@@ -900,11 +900,11 @@ export default function TurnPanel({
                 <div className="mt-5 rounded-xl border border-blue-500/30 bg-blue-500/[0.05] p-4">
                   <div className="flex items-center gap-2 mb-3">
                     <span className="w-2.5 h-2.5 rounded-full bg-blue-400 shrink-0" />
-                    <span className="font-mono text-[10px] tracking-widest uppercase text-blue-300/90">Finish your turn</span>
+                    <span className="font-mono text-[10px] tracking-widest uppercase text-blue-300/90">Termine seu turno</span>
                     <span aria-hidden className="flex-1 h-px" style={{ background: "linear-gradient(90deg, rgba(96,165,250,.3), transparent)" }} />
                   </div>
                   <p className="text-[12px] text-zinc-400 mb-3">
-                    Describe what you did and pass the spotlight to the next adventurer.
+                    Descreva o que fez e passe o holofote ao próximo aventureiro.
                   </p>
                   <input
                     type="text"
@@ -916,11 +916,11 @@ export default function TurnPanel({
                         void commitAction();
                       }
                     }}
-                    placeholder="What did you do? (optional)"
+                    placeholder="O que você fez? (opcional)"
                     className="w-full bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-blue-600/70 transition-colors"
                   />
                   <div className="mt-3">
-                    <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-500 block mb-1">Target</span>
+                    <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-500 block mb-1">Alvo</span>
                     <select
                       value={actTarget}
                       onChange={(e) => setActTarget(e.target.value)}
@@ -943,7 +943,7 @@ export default function TurnPanel({
                       className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-blue-950 text-sm font-bold px-5 py-2.5 rounded-lg transition-colors shadow-lg shadow-blue-900/20 disabled:opacity-60 disabled:cursor-not-allowed"
                     >
                       {icon("M5 13l4 4L19 7", "w-4 h-4")}
-                      {submitting ? "Logging…" : "Log action & end turn"}
+                      {submitting ? "Registrando…" : "Registrar ação e terminar turno"}
                     </button>
                     <span className="text-[10px] font-mono uppercase tracking-widest text-zinc-600">
                       {skillMode && skillData
@@ -962,9 +962,9 @@ export default function TurnPanel({
                 <div className="mt-5 rounded-xl border border-emerald-500/30 bg-emerald-500/[0.05] p-4 flex items-center gap-3">
                   {icon("M5 13l4 4L19 7", "w-5 h-5 text-emerald-400")}
                   <div>
-                    <p className="text-sm font-medium text-emerald-300">Turn logged — you&apos;re out of the queue.</p>
+                    <p className="text-sm font-medium text-emerald-300">Turno registrado — você saiu da fila.</p>
                     <p className="text-[11px] text-zinc-500 mt-0.5">
-                      The roll is in the chronicle. The narrator will call you back in for the next round.
+                      A rolagem está na crônica. O narrador te chamará de volta no próximo turno.
                     </p>
                   </div>
                 </div>
@@ -987,12 +987,12 @@ export default function TurnPanel({
                   {icon(notInQueue ? "M12 8v8m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" : "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z", "w-6 h-6")}
                 </div>
                 <p className="font-mono text-[11px] uppercase tracking-widest text-zinc-500">
-                  {notInQueue ? "Not in the queue" : `Waiting — ${myIndex} seat${myIndex === 1 ? "" : "s"} ahead`}
+                  {notInQueue ? "Fora da fila" : `Aguardando — ${myIndex} ${myIndex === 1 ? "assento" : "assentos"} à frente`}
                 </p>
                 <p className="text-[13px] text-zinc-500 mt-1 max-w-xs mx-auto">
                   {notInQueue
-                    ? "The dice stay sealed until the narrator opens the scene for you."
-                    : "The dice stay sealed while another adventurer acts."}
+                    ? "Os dados ficam lacrados até o narrador abrir a cena para você."
+                    : "Os dados ficam lacrados enquanto outro aventureiro age."}
                 </p>
               </div>
             </div>
@@ -1002,16 +1002,16 @@ export default function TurnPanel({
 
       {/* recent rolls */}
       {sortedActions.length ? (
-        <section aria-label="Recently rolled">
+        <section aria-label="Rolagens recentes">
           <div className="flex items-center gap-3 mb-2">
-            <span className="font-mono text-[11px] tracking-widest uppercase text-zinc-400">Recently rolled</span>
+            <span className="font-mono text-[11px] tracking-widest uppercase text-zinc-400">Rolagens recentes</span>
             <span className="flex-1 h-px bg-zinc-700/40" />
           </div>
           <div className="space-y-1.5">
             {sortedActions.slice(-4).reverse().map((a) => (
               <div key={a.id} className="flex items-center gap-2 text-sm text-zinc-400 border border-zinc-700/40 bg-zinc-900/50 rounded-lg px-3 py-2">
                 <span className="font-mono text-xs font-semibold text-zinc-200">
-                  {a.character?.name || a.character?.username || "Someone"}
+                  {a.character?.name || a.character?.username || "Alguém"}
                 </span>
                 <span className="font-mono text-xs text-zinc-600">{a.dice_roll}</span>
                 <span className="text-zinc-500 truncate flex-1 min-w-0">{a.description}</span>

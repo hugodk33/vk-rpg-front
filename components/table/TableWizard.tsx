@@ -14,7 +14,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { submitJson } from "../forms/submit";
 import { interpolate, useTranslation } from "@/lib/i18n";
-import type { ContentCatalog } from "@/lib/types";
+import type { ContentCatalog, ContentReference } from "@/lib/types";
 
 const mono = "font-mono uppercase tracking-widest text-[11px]";
 
@@ -101,6 +101,8 @@ export default function TableWizard({ narratorOptions, defaultNarratorId, catalo
   const [title, setTitle] = useState("");
   const [intro, setIntro] = useState("");
   const [moduleIds, setModuleIds] = useState<string[]>([]);
+  const [catSel, setCatSel] = useState<Array<{ domain: string; category: string; subcategories: string[] }>>([]);
+  const [openModule, setOpenModule] = useState<string | null>(null);
   const [budget, setBudget] = useState(150);
   const [customBudget, setCustomBudget] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -153,6 +155,99 @@ export default function TableWizard({ narratorOptions, defaultNarratorId, catalo
   const toggleModule = (id: string) =>
     setModuleIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
 
+  /* --- seletor manual por categoria/subcategoria (navega dentro dos pacotes) --- */
+  const catPick = (domain: string, category: string) =>
+    catSel.find((c) => c.domain === domain && c.category === category);
+  const catPickIn = (
+    arr: Array<{ domain: string; category: string; subcategories: string[] }>,
+    domain: string,
+    category: string
+  ) => arr.find((c) => c.domain === domain && c.category === category);
+  const hasCat = (domain: string, category: string) => !!catPick(domain, category);
+  const hasSub = (domain: string, category: string, sub: string) =>
+    !!catPick(domain, category)?.subcategories.includes(sub);
+
+  const toggleCat = (domain: string, category: string) =>
+    setCatSel((prev) => {
+      const existing = catPickIn(prev, domain, category);
+      if (existing) {
+        return existing.subcategories.length
+          ? [...prev.filter((c) => c !== existing), { domain, category, subcategories: [] }]
+          : prev.filter((c) => c !== existing);
+      }
+      return [...prev, { domain, category, subcategories: [] }];
+    });
+
+  const toggleSub = (domain: string, category: string, sub: string) =>
+    setCatSel((prev) => {
+      const existing = catPickIn(prev, domain, category);
+      const subs = new Set(existing?.subcategories ?? []);
+      if (subs.has(sub)) subs.delete(sub);
+      else subs.add(sub);
+      const next = [...subs].sort();
+      if (!next.length) return prev.filter((c) => c !== existing);
+      if (existing) return prev.map((c) => (c === existing ? { domain, category, subcategories: next } : c));
+      return [...prev, { domain, category, subcategories: next }];
+    });
+
+  /* árvore de conteúdo por módulo: domain -> category -> { sub: count } */
+  const moduleTree = useMemo(() => {
+    const map = new Map<string, Map<string, Map<string, Map<string, number>>>>();
+    for (const m of catalog?.modules ?? []) map.set(m.id, new Map());
+    for (const c of catalog?.counts ?? []) {
+      const dom = map.get(c.moduleId);
+      if (!dom) continue;
+      let cat = dom.get(c.domain);
+      if (!cat) {
+        cat = new Map();
+        dom.set(c.domain, cat);
+      }
+      let group = cat.get(c.category);
+      if (!group) {
+        group = new Map();
+        cat.set(c.category, group);
+      }
+      const key = c.subcategory ?? "__all__";
+      group.set(key, (group.get(key) ?? 0) + c.count);
+    }
+    return map;
+  }, [catalog]);
+
+  /* entradas reais (nome + descrição) indexadas por module/domain/category/sub */
+  const refsIndex = useMemo(() => {
+    const map = new Map<string, ContentReference[]>();
+    for (const r of catalog?.references ?? []) {
+      const key = `${r.moduleId}|${r.domain}|${r.category}|${r.subcategory ?? "__all__"}`;
+      const bucket = map.get(key) ?? [];
+      bucket.push(r);
+      map.set(key, bucket);
+    }
+    return map;
+  }, [catalog]);
+
+  const refsFor = (moduleId: string, domain: string, category: string, sub: string) =>
+    refsIndex.get(`${moduleId}|${domain}|${category}|${sub}`) ?? [];
+
+  const catLabel = (domain: string, name: string) =>
+    catalog?.categories.find((x) => x.domain === domain && x.name === name)?.display_name ?? name;
+
+  const subLabel = (domain: string, category: string, sub: string) => {
+    const parent = catalog?.categories.find((x) => x.domain === domain && x.name === category);
+    return (
+      catalog?.categories.find((x) => x.domain === domain && x.parent_id === parent?.id && x.name === sub)
+        ?.display_name ?? sub
+    );
+  };
+
+  const totalCatSel = catSel.length;
+  const selectedLabel =
+    moduleIds.length === 0 && totalCatSel === 0
+      ? t("s2.selectedZero")
+      : interpolate(t("s2.selection"), {
+          n: moduleIds.length,
+          c: totalCatSel,
+        });
+
   const baseComplete = title.trim().length > 0 && narratorId.length > 0;
   const canContinue = (to: number) => to === 1 || baseComplete;
 
@@ -175,7 +270,7 @@ export default function TableWizard({ narratorOptions, defaultNarratorId, catalo
         system: "GURPS",
         intro: intro.trim(),
         modules: moduleIds,
-        categories: [] as string[],
+        categories: catSel,
       };
       const result = await submitJson<{ gameTable?: { id: string }; id?: string }>(
         "/api/create-game-table",
@@ -198,13 +293,6 @@ export default function TableWizard({ narratorOptions, defaultNarratorId, catalo
       setSaving(false);
     }
   }
-
-  const selectedLabel =
-    moduleIds.length === 0
-      ? t("s2.selectedZero")
-      : moduleIds.length === 1
-        ? t("s2.selectedOne")
-        : interpolate(t("s2.selectedMany"), { n: moduleIds.length });
 
   /* ------------------------------------------------------------ */
 
@@ -368,11 +456,22 @@ export default function TableWizard({ narratorOptions, defaultNarratorId, catalo
               <p className="text-sm text-zinc-400 leading-snug">
                 <span style={{ color: "#22c55e" }}>{selectedLabel}</span> · {t("s2.hint")}
               </p>
-              <div className="flex gap-2">
-                <button type="button" onClick={() => setModuleIds(modules.map((m) => m.id))} className={secondaryBtn}>
+              <div className="flex gap-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => setModuleIds(modules.map((m) => m.id))}
+                  className={secondaryBtn}
+                >
                   {t("s2.addAll")}
                 </button>
-                <button type="button" onClick={() => setModuleIds([])} className={secondaryBtn}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setModuleIds([]);
+                    setCatSel([]);
+                  }}
+                  className={secondaryBtn}
+                >
                   {t("s2.clearAll")}
                 </button>
               </div>
@@ -384,33 +483,64 @@ export default function TableWizard({ narratorOptions, defaultNarratorId, catalo
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {moduleList.map((m) => {
                   const active = moduleIds.includes(m.id);
+                  const open = openModule === m.id;
+                  const dom = moduleTree.get(m.id);
                   return (
-                    <button
-                      key={m.id}
-                      type="button"
-                      role="checkbox"
-                      aria-checked={active}
-                      onClick={() => toggleModule(m.id)}
-                      className={moduleCard(active)}
-                    >
-                      <span className="flex items-center justify-between gap-2">
-                        <span className="flex items-center gap-2 min-w-0">
-                          {m.accent ? (
+                    <div key={m.id} className={moduleCard(active)}>
+                      <div className="flex items-start justify-between gap-3">
+                        <button
+                          type="button"
+                          role="checkbox"
+                          aria-checked={active}
+                          onClick={() => toggleModule(m.id)}
+                          className="flex-1 text-left min-w-0"
+                        >
+                          <span className="flex flex-wrap items-center gap-2 min-w-0">
                             <span
-                              className="w-2 h-2 rounded-full shrink-0"
-                              style={{ background: m.accent, boxShadow: `0 0 6px ${m.accent}88` }}
-                            />
-                          ) : null}
-                          <span className="font-semibold text-[15px] truncate text-zinc-100">{m.name}</span>
-                        </span>
-                        {m.tech_level ? (
-                          <span className={mono + " text-zinc-500"}>{m.tech_level}</span>
-                        ) : null}
-                      </span>
+                              className={`shrink-0 w-4 h-4 rounded border flex items-center justify-center transition-colors ${
+                                active ? "bg-green-500 border-green-500" : "border-zinc-600"
+                              }`}
+                            >
+                              {active ? (
+                                <svg className="w-3 h-3 text-zinc-950" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
+                                </svg>
+                              ) : null}
+                            </span>
+                            {m.accent ? (
+                              <span
+                                className="w-2 h-2 rounded-full shrink-0"
+                                style={{ background: m.accent, boxShadow: `0 0 6px ${m.accent}88` }}
+                              />
+                            ) : null}
+                            <span className="font-semibold text-[15px] truncate text-zinc-100">{m.name}</span>
+                            {m.tech_level ? (
+                              <span className={mono + " text-zinc-500"}>{m.tech_level}</span>
+                            ) : null}
+                          </span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setOpenModule(open ? null : m.id)}
+                          aria-expanded={open}
+                          className="shrink-0 inline-flex items-center gap-1 font-mono text-[10px] uppercase tracking-widest px-2 py-1 rounded-md border border-zinc-700/60 text-zinc-400 hover:text-green-400 hover:border-green-700 transition-colors"
+                        >
+                          {t("s2.explore")}
+                          <svg
+                            className={`w-3.5 h-3.5 transition-transform ${open ? "rotate-180" : ""}`}
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </button>
+                      </div>
+
                       {m.description ? (
-                        <span className="block mt-1.5 text-xs text-zinc-500 leading-snug">{m.description}</span>
+                        <p className="mt-1.5 text-xs text-zinc-500 leading-snug">{m.description}</p>
                       ) : null}
-                      <span className="flex flex-wrap gap-1.5 mt-3">
+                      <div className="flex flex-wrap gap-1.5 mt-3">
                         {DOMAINS.map(({ key, domain }) => {
                           const n = m.counts[domain];
                           if (!n) return null;
@@ -421,14 +551,100 @@ export default function TableWizard({ narratorOptions, defaultNarratorId, catalo
                             </span>
                           );
                         })}
-                      </span>
-                    </button>
+                      </div>
+
+                      {open && dom ? (
+                        <div className="mt-4 border-t border-zinc-700/50 pt-4 space-y-5">
+                          {DOMAINS.map(({ key, domain }) => {
+                            const cats = dom.get(domain);
+                            if (!cats || cats.size === 0) return null;
+                            return (
+                              <div key={domain}>
+                                <p className={mono + " text-zinc-500 mb-2"}>{t(key)}</p>
+                                <div className="rounded-lg border border-zinc-800 divide-y divide-zinc-800/70 overflow-hidden">
+                                  {[...cats.entries()].map(([category, group]) => {
+                                    const total = [...group.values()].reduce((s, n) => s + n, 0);
+                                    const subs = [...group.entries()].filter(([k]) => k !== "__all__");
+                                    const baseEntries = refsFor(m.id, domain, category, "__all__");
+                                    return (
+                                      <div key={category}>
+                                        <label className="flex items-center gap-2.5 px-3 py-2.5 cursor-pointer hover:bg-zinc-900/50 transition-colors">
+                                          <input
+                                            type="checkbox"
+                                            checked={hasCat(domain, category)}
+                                            onChange={() => toggleCat(domain, category)}
+                                            className="accent-green-600"
+                                          />
+                                          <span className="text-sm text-zinc-200">{catLabel(domain, category)}</span>
+                                          <span className="ml-auto font-mono text-[10px] text-zinc-500 tabular-nums">
+                                            ×{total}
+                                          </span>
+                                        </label>
+                                        {baseEntries.length ? (
+                                          <ul className="pb-2 px-9 space-y-1">
+                                            {baseEntries.map((r, i) => (
+                                              <li key={`${r.name}-${i}`} className="flex flex-col">
+                                                <span className="text-xs text-zinc-300">{r.name}</span>
+                                                {r.description ? (
+                                                  <span className="text-[11px] text-zinc-600 leading-snug">{r.description}</span>
+                                                ) : null}
+                                              </li>
+                                            ))}
+                                          </ul>
+                                        ) : null}
+                                        {subs.length ? (
+                                          <div className="pb-2.5 px-9 space-y-2">
+                                            {subs.map(([sub, n]) => {
+                                              const subEntries = refsFor(m.id, domain, category, sub);
+                                              return (
+                                                <div key={sub}>
+                                                  <label className="flex items-center gap-2 py-1 cursor-pointer group">
+                                                    <input
+                                                      type="checkbox"
+                                                      checked={hasSub(domain, category, sub)}
+                                                      onChange={() => toggleSub(domain, category, sub)}
+                                                      className="accent-green-600"
+                                                    />
+                                                    <span className="text-xs text-zinc-400 group-hover:text-zinc-200 transition-colors">
+                                                      {subLabel(domain, category, sub)}
+                                                    </span>
+                                                    <span className="ml-auto font-mono text-[10px] text-zinc-600 tabular-nums">
+                                                      ×{n}
+                                                    </span>
+                                                  </label>
+                                                  {subEntries.length ? (
+                                                    <ul className="pl-7 space-y-1">
+                                                      {subEntries.map((r, i) => (
+                                                        <li key={`${r.name}-${i}`} className="flex flex-col">
+                                                          <span className="text-xs text-zinc-400">{r.name}</span>
+                                                          {r.description ? (
+                                                            <span className="text-[11px] text-zinc-600 leading-snug">{r.description}</span>
+                                                          ) : null}
+                                                        </li>
+                                                      ))}
+                                                    </ul>
+                                                  ) : null}
+                                                </div>
+                                              );
+                                            })}
+                                          </div>
+                                        ) : null}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : null}
+                    </div>
                   );
                 })}
               </div>
             )}
 
-            {moduleIds.length === 0 ? (
+            {moduleIds.length === 0 && totalCatSel === 0 ? (
               <p className="mt-4 text-xs text-zinc-500/80 italic">{t("s2.empty")}</p>
             ) : null}
           </section>

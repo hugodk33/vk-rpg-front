@@ -5,7 +5,9 @@ import Link from "next/link";
 import type { GameTableCharacters, GameTableNpcs, TableCharacter } from "@/lib/types";
 import TableTabs from "@/components/TableTabs";
 import RadarChart from "@/components/RadarChart";
+import RowActions from "@/components/table/RowActions";
 import { api } from "@/lib/api";
+import { submitJson } from "@/components/forms/submit";
 
 export default function TableCharactersPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -27,6 +29,7 @@ export default function TableCharactersPage({ params }: { params: Promise<{ id: 
   });
 
   const npcStatusById = new Map((npcs?.npcs ?? []).map((n) => [n.character_id, n.status]));
+  const npcIdByCharacter = new Map((npcs?.npcs ?? []).map((n) => [n.character_id, n.id]));
 
   const isNpc = (ch: TableCharacter): boolean => ch.user?.type === 0;
   const isAlly = (ch: TableCharacter): boolean => {
@@ -40,12 +43,20 @@ export default function TableCharactersPage({ params }: { params: Promise<{ id: 
       <TableTabs tableId={id} />
 
       <div className="flex items-baseline gap-3 mb-1">
-        <h1 className="text-2xl font-bold text-zinc-100">Characters</h1>
+        <h1 className="text-2xl font-bold text-zinc-100">Personagens</h1>
         <span className="text-sm text-zinc-500">{data?.table?.title}</span>
       </div>
 
-      <div className="flex items-center gap-3 mb-6 text-xs text-zinc-500">
-        <span>{characters.length} character{characters.length !== 1 ? "s" : ""}</span>
+      <div className="flex items-center justify-between gap-6 mb-6">
+        <div className="flex items-center gap-3 text-xs text-zinc-500">
+          <span>{characters.length} {characters.length !== 1 ? "personagens" : "personagem"}</span>
+        </div>
+        <Link
+          href={`/character/new?table_id=${id}`}
+          className="bg-green-800/70 hover:bg-green-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors"
+        >
+          + Novo personagem
+        </Link>
       </div>
 
       <div className="flex gap-2 mb-6">
@@ -57,13 +68,13 @@ export default function TableCharactersPage({ params }: { params: Promise<{ id: 
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Filter characters..."
+            placeholder="Filtrar personagens..."
             className="w-full bg-zinc-800/60 border border-zinc-700/50 rounded-lg pl-9 pr-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-violet-700/60"
           />
         </div>
         {search ? (
           <button type="button" onClick={() => setSearch("")} className="bg-zinc-800/60 hover:bg-zinc-700/60 text-zinc-400 text-sm px-3 py-2 rounded-lg transition-colors border border-zinc-700/50">
-            Clear
+            Limpar
           </button>
         ) : null}
       </div>
@@ -73,7 +84,7 @@ export default function TableCharactersPage({ params }: { params: Promise<{ id: 
           <svg className="w-10 h-10 text-zinc-700 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
           </svg>
-          <p className="text-zinc-500 text-sm">{search ? "No characters match your filter." : "No characters in this table yet."}</p>
+          <p className="text-zinc-500 text-sm">{search ? "Nenhum personagem corresponde ao seu filtro." : "Nenhum personagem nesta mesa ainda."}</p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -95,7 +106,7 @@ export default function TableCharactersPage({ params }: { params: Promise<{ id: 
                       </svg>
                       <div className="min-w-0">
                         <span className="text-sm font-medium text-zinc-200 group-hover:text-zinc-100 truncate block">
-                          {s?.name || ch.name || "Unnamed"}
+                          {s?.name || ch.name || "Sem nome"}
                         </span>
                         <span className="text-[11px] text-zinc-500">NPC</span>
                       </div>
@@ -103,7 +114,7 @@ export default function TableCharactersPage({ params }: { params: Promise<{ id: 
                         className="shrink-0 font-mono text-[9px] uppercase tracking-widest text-zinc-900 bg-zinc-200 rounded px-1.5 py-0.5"
                         style={{ background: ally ? "#34d399" : "#f87171", color: "#18181b" }}
                       >
-                        {ally ? "Ally" : "Enemy"}
+                        {ally ? "Aliado" : "Inimigo"}
                       </span>
                     </div>
                     {s ? (
@@ -117,8 +128,12 @@ export default function TableCharactersPage({ params }: { params: Promise<{ id: 
                         <RadarChart st={s.st} dx={s.dx} iq={s.iq} ht={s.ht} size={48} />
                       </div>
                     ) : (
-                      <span className="text-[11px] text-zinc-600 italic shrink-0">No sheet</span>
+                      <span className="text-[11px] text-zinc-600 italic shrink-0">Sem ficha</span>
                     )}
+                    <RowActions
+                      editHref={`/npc/${npcIdByCharacter.get(ch.id) ?? ""}/edit`}
+                      onDelete={() => submitJson(`/api/game-table-npc/${npcIdByCharacter.get(ch.id) ?? ""}`, "DELETE")}
+                    />
                   </div>
                 </Link>
               );
@@ -136,7 +151,7 @@ export default function TableCharactersPage({ params }: { params: Promise<{ id: 
                     </svg>
                     <div className="min-w-0">
                       <span className="text-sm font-medium text-zinc-200 group-hover:text-zinc-100 truncate block">
-                        {s?.name || ch.name || "Unnamed"}
+                        {s?.name || ch.name || "Sem nome"}
                       </span>
                       {ch.user?.username ? (
                         <span className="text-[11px] text-zinc-500">{ch.user.username}</span>
@@ -154,8 +169,12 @@ export default function TableCharactersPage({ params }: { params: Promise<{ id: 
                       <RadarChart st={s.st} dx={s.dx} iq={s.iq} ht={s.ht} size={48} />
                     </div>
                   ) : (
-                    <span className="text-[11px] text-zinc-600 italic shrink-0">No sheet</span>
+                    <span className="text-[11px] text-zinc-600 italic shrink-0">Sem ficha</span>
                   )}
+                  <RowActions
+                    editHref={`/character/${ch.id}/edit?table_id=${id}`}
+                    onDelete={() => submitJson(`/api/game-table-character/${ch.id}`, "DELETE")}
+                  />
                 </div>
               </Link>
             );

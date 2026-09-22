@@ -160,10 +160,10 @@ export default function PerspectiveSwitch() {
   const displayName = seat.username ?? fallbackName;
   const seatLabel = isPlayer
     ? displayName
-      ? `Player · ${displayName}`
-      : "Player"
-    : "Narrator";
-  const hint = isPlayer ? "→ GM" : "→ Player";
+      ? `Jogador · ${displayName}`
+      : "Jogador"
+    : "Narrador";
+  const hint = isPlayer ? "→ Mestre" : "→ Jogador";
 
   return (
     <div className="fixed bottom-4 right-4 z-50 print:hidden">
@@ -172,8 +172,8 @@ export default function PerspectiveSwitch() {
         onClick={onSwitch}
         title={
           isPlayer
-            ? "Switch to the narrator (GM) perspective"
-            : "Switch to the player perspective (your seat)"
+            ? "Mudar para a perspectiva do mestre (GM)"
+            : "Mudar para a perspectiva do jogador (seu assento)"
         }
         className={`inline-flex items-center gap-2 rounded-full border px-3.5 py-2 text-xs font-medium shadow-lg backdrop-blur-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 ${
           isPlayer

@@ -51,21 +51,21 @@ const STATUS_META: Record<
   { label: string; buttonCls: string; dot: string; textCls: string }
 > = {
   unknown: {
-    label: "Unknown",
+    label: "Desconhecido",
     buttonCls:
       "text-zinc-300 border-zinc-700/70 bg-zinc-800/50 hover:border-zinc-500 hover:bg-zinc-700/40",
     dot: "bg-zinc-500",
     textCls: "text-zinc-400",
   },
   known: {
-    label: "Known",
+    label: "Conhecido",
     buttonCls:
       "text-emerald-300 border-emerald-500/40 bg-emerald-500/10 hover:border-emerald-400 hover:bg-emerald-500/20",
     dot: "bg-emerald-400",
     textCls: "text-emerald-300",
   },
   specialist: {
-    label: "Specialist",
+    label: "Especialista",
     buttonCls:
       "text-violet-300 border-violet-500/40 bg-violet-500/10 hover:border-violet-400 hover:bg-violet-500/20",
     dot: "bg-violet-400",
@@ -133,25 +133,25 @@ const entityField = (t: RowTarget): Record<string, string> => {
 };
 
 const ATTRS: { key: string; label: string }[] = [
-  { key: "name", label: "Name" },
-  { key: "bio", label: "Bio" },
-  { key: "backstory", label: "Backstory" },
+  { key: "name", label: "Nome" },
+  { key: "bio", label: "Biografia" },
+  { key: "backstory", label: "Antecedentes" },
   { key: "st", label: "ST" },
   { key: "dx", label: "DX" },
   { key: "iq", label: "IQ" },
   { key: "ht", label: "HT" },
   { key: "hp", label: "HP" },
   { key: "fatigue", label: "FP" },
-  { key: "points", label: "Points" },
-  { key: "basic_speed", label: "Speed" },
-  { key: "move", label: "Move" },
-  { key: "encumbrance", label: "Encumbrance" },
-  { key: "parry", label: "Parry" },
-  { key: "block", label: "Block" },
-  { key: "dodge", label: "Dodge" },
+  { key: "points", label: "Pontos" },
+  { key: "basic_speed", label: "Velocidade" },
+  { key: "move", label: "Movimento" },
+  { key: "encumbrance", label: "Carga" },
+  { key: "parry", label: "Aparar" },
+  { key: "block", label: "Bloquear" },
+  { key: "dodge", label: "Esquiva" },
 ];
 
-const charName = (c: TableCharacter) => c.sheet?.name || c.name || "Unnamed";
+const charName = (c: TableCharacter) => c.sheet?.name || c.name || "Sem nome";
 
 type Perspective = "players" | "world";
 
@@ -159,11 +159,11 @@ type WorldTab = "npcs" | "items" | "locations" | "skills" | "advantages" | "disa
 
 const WORLD_TABS: { key: WorldTab; label: string }[] = [
   { key: "npcs", label: "NPCs" },
-  { key: "items", label: "Items" },
-  { key: "locations", label: "Locations" },
-  { key: "skills", label: "Skills" },
-  { key: "advantages", label: "Advantages" },
-  { key: "disadvantages", label: "Disadvantages" },
+  { key: "items", label: "Itens" },
+  { key: "locations", label: "Locais" },
+  { key: "skills", label: "Perícias" },
+  { key: "advantages", label: "Vantagens" },
+  { key: "disadvantages", label: "Desvantagens" },
 ];
 
 interface VisibilityPanelProps {
@@ -340,15 +340,15 @@ export default function VisibilityPanel({
     }));
 
     if (perspective === "players") {
-      return [{ key: "identity", label: "Identity & Attributes", rows: attrRows }];
+      return [{ key: "identity", label: "Identidade e Atributos", rows: attrRows }];
     }
     return [
       { key: "npcs", label: "NPCs", rows: npcRows },
-      { key: "items", label: "Items", rows: itemRows },
-      { key: "locations", label: "Locations", rows: locRows },
-      { key: "skills", label: "Skills", rows: skillRows },
-      { key: "advantages", label: "Advantages", rows: advRows },
-      { key: "disadvantages", label: "Disadvantages", rows: disRows },
+      { key: "items", label: "Itens", rows: itemRows },
+      { key: "locations", label: "Locais", rows: locRows },
+      { key: "skills", label: "Perícias", rows: skillRows },
+      { key: "advantages", label: "Vantagens", rows: advRows },
+      { key: "disadvantages", label: "Desvantagens", rows: disRows },
     ];
   }, [characters, items, locations, skills, advantages, disadvantages, perspective]);
 
@@ -423,7 +423,7 @@ export default function VisibilityPanel({
       await saveRule(row, status, value);
       await refetch(curObserver);
     } catch {
-      setError("Failed to save visibility rule.");
+      setError("Falha ao salvar a regra de visibilidade.");
     } finally {
       setSaving(false);
     }
@@ -438,7 +438,7 @@ export default function VisibilityPanel({
       await Promise.all(group.rows.map((r) => saveRule(r, status, valueOf(r))));
       await refetch(curObserver);
     } catch {
-      setError(`Failed to liberate ${group.label} at once.`);
+      setError(`Falha ao liberar ${group.label} de uma vez.`);
     } finally {
       setBulkApplying(null);
     }
@@ -475,8 +475,8 @@ export default function VisibilityPanel({
         <div className="flex flex-wrap gap-1 mb-4">
           {(
             [
-              { key: "players", label: "Player → Player" },
-              { key: "world", label: "Player → Table" },
+              { key: "players", label: "Jogador → Jogador" },
+              { key: "world", label: "Jogador → Mesa" },
             ] as { key: Perspective; label: string }[]
           ).map((p) => (
             <button
@@ -498,14 +498,14 @@ export default function VisibilityPanel({
       {/* Controls */}
       <div className="flex flex-wrap items-center gap-3 mb-4">
         <label className="flex flex-col gap-1 text-xs uppercase tracking-wider text-zinc-500 font-mono">
-          Seen by
+          Visto por
           <select
             value={curObserver ?? ""}
             onChange={(e) => setObserverId(e.target.value || null)}
             className="bg-zinc-900 border border-zinc-700 rounded-md px-2 py-1.5 text-sm text-zinc-100 font-medium uppercase-none normal-case"
           >
             {observers.length === 0 ? (
-              <option value="">No player characters</option>
+              <option value="">Nenhum personagem de jogador</option>
             ) : null}
             {observers.map((c) => (
               <option key={c.id} value={c.id}>
@@ -517,14 +517,14 @@ export default function VisibilityPanel({
 
         {perspective === "players" ? (
           <label className="flex flex-col gap-1 text-xs uppercase tracking-wider text-zinc-500 font-mono">
-            Target
+            Alvo
             <select
               value={curTarget ?? ""}
               onChange={(e) => setTarget(e.target.value || null)}
               className="bg-zinc-900 border border-zinc-700 rounded-md px-2 py-1.5 text-sm text-zinc-100 font-medium uppercase-none normal-case"
             >
               {targetOptions.length === 0 ? (
-                <option value="">No other characters</option>
+                <option value="">Nenhum outro personagem</option>
               ) : null}
               {targetOptions.map((c) => (
                 <option key={c.id} value={c.id}>
@@ -537,25 +537,25 @@ export default function VisibilityPanel({
 
         {saving ? (
           <span className="text-xs text-zinc-500 font-mono animate-pulse">
-            saving…
+            salvando…
           </span>
         ) : null}
         {error ? <span className="text-xs text-red-400">{error}</span> : null}
       </div>
 
       <p className="text-xs text-zinc-500 mb-4">
-        Three tiers per entity —{" "}
-        <span className="text-zinc-300">Unknown</span> keeps it hidden
-        (name reads “???”),{" "}
-        <span className="text-emerald-300">Known</span> shows the{" "}
-        <span className="font-mono text-zinc-400">masked value</span>{" "}
-        you type (you know the person <em>by that name</em> — or the item
-        is read “unidentified”), and{" "}
-        <span className="text-violet-300">Specialist</span> reveals the{" "}
-        <em>real</em> value in full. Anything never touched defaults to
-        Unknown. The switch in each group header liberates or hides the
-        whole group at once; the switch on each row does the same for a
-        single entity.
+        Três níveis por entidade —{" "}
+        <span className="text-zinc-300">Desconhecido</span> mantém oculto
+        (o nome aparece como “???”),{" "}
+        <span className="text-emerald-300">Conhecido</span> mostra o{" "}
+        <span className="font-mono text-zinc-400">valor mascarado</span>{" "}
+        que você digita (você conhece a pessoa <em>por aquele nome</em> —
+        ou o item aparece como “não identificado”), e{" "}
+        <span className="text-violet-300">Especialista</span> revela o{" "}
+        <em>valor real</em> por completo. Tudo que nunca foi tocado
+        permanece Desconhecido. O interruptor no cabeçalho de cada grupo
+        libera ou oculta o grupo inteiro de uma vez; o interruptor em cada
+        linha faz o mesmo para uma única entidade.
       </p>
 
       {/* World tab bar */}
@@ -596,7 +596,7 @@ export default function VisibilityPanel({
               <div className="ml-auto flex items-center gap-2">
                 {bulkApplying === g.key ? (
                   <span className="text-[10px] font-mono text-zinc-500 uppercase animate-pulse">
-                    apply all…
+                    aplicar tudo…
                   </span>
                 ) : (
                   <>
@@ -611,8 +611,8 @@ export default function VisibilityPanel({
                       disabled={g.rows.length === 0}
                       title={
                         groupStateOf(g) === "on"
-                          ? "Hide the whole group"
-                          : "Liberate the whole group"
+                          ? "Ocultar o grupo inteiro"
+                          : "Liberar o grupo inteiro"
                       }
                       className={`relative inline-flex h-4 w-8 shrink-0 items-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-green-800/60 disabled:opacity-40 disabled:cursor-not-allowed ${
                         groupStateOf(g) === "on"
@@ -632,10 +632,10 @@ export default function VisibilityPanel({
                     </button>
                     <span className="text-[10px] font-mono uppercase text-zinc-500 w-20 text-left">
                       {groupStateOf(g) === "on"
-                        ? "all revealed"
+                        ? "tudo revelado"
                         : groupStateOf(g) === "mixed"
-                        ? "mixed"
-                        : "all hidden"}
+                        ? "misto"
+                        : "tudo oculto"}
                     </span>
                   </>
                 )}
@@ -657,7 +657,7 @@ export default function VisibilityPanel({
                           persist(row, revealed ? "unknown" : "known", valueOf(row))
                         }
                         aria-pressed={revealed}
-                        title={revealed ? "Hide this one" : "Liberate (reveal now)"}
+                        title={revealed ? "Ocultar este" : "Liberar (revelar agora)"}
                         className={`relative inline-flex h-4 w-8 shrink-0 items-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-green-800/60 ${
                           revealed ? "bg-emerald-500/60" : "bg-zinc-700"
                         }`}
@@ -697,7 +697,7 @@ export default function VisibilityPanel({
                         <input
                           type="text"
                           defaultValue={valueOf(row)}
-                          placeholder="Masked value (shown at Known/Unknown)"
+                          placeholder="Valor mascarado (mostrado em Conhecido/Desconhecido)"
                           onBlur={(e) => {
                             const v = e.target.value;
                             if (v !== valueOf(row))
@@ -706,7 +706,7 @@ export default function VisibilityPanel({
                           className="flex-1 bg-zinc-950 border border-zinc-800 rounded px-2 py-1 text-xs text-zinc-300 placeholder-zinc-600 focus:outline-none focus:border-zinc-600"
                         />
                         <span className="text-[10px] font-mono text-zinc-600 uppercase">
-                          alias
+                          apelido
                         </span>
                       </div>
                     ) : null}
@@ -731,7 +731,7 @@ export default function VisibilityPanel({
                                 }))
                               }
                               aria-expanded={open}
-                              title="Attach / edit this discovery's own moment"
+                              title="Anexar/editar o momento desta descoberta"
                               className={`inline-flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-wider rounded-full px-2 py-0.5 border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-green-800/60 ${
                                 attached
                                   ? "text-green-400 border-green-700/50 bg-green-500/5"
@@ -751,7 +751,7 @@ export default function VisibilityPanel({
                                   d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"
                                 />
                               </svg>
-                              {attached ? "moment attached" : "moment"}
+                              {attached ? "momento anexado" : "momento"}
                               {fromRule ? (
                                 <span className="text-[9px] text-zinc-500">· {fromRule.moment ?? "?"}</span>
                               ) : null}

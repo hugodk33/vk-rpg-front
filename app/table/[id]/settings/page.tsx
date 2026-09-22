@@ -25,10 +25,10 @@ export default async function TableSettingsPage({
       <TableTabs tableId={id} role="narrator" active="settings" />
 
       <div className="mb-6">
-        <h1 className="text-2xl font-bold tracking-tight">Settings</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Configurações</h1>
         <p className="text-sm text-zinc-500 mt-1">
-          House rules for this table only — how turns close, how items and
-          reactions are resolved, and whether a starting shop is in play.
+          Regras da casa apenas desta mesa — como os turnos fecham, como itens e
+          reações são resolvidos e se uma loja inicial está em jogo.
         </p>
       </div>
 

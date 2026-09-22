@@ -81,7 +81,7 @@ function queuePos(e: QueueEntry): number {
 function AttrSummary({ c }: { c: QueueRosterEntry }) {
   const s = c.sheet;
   if (!s && c.st == null && c.dx == null && c.iq == null && c.ht == null) {
-    return <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-600">No sheet</span>;
+    return <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-600">Sem ficha</span>;
   }
   const attrs = [
     { label: "ST", value: s?.st ?? s?.base_st ?? c.st ?? null, hex: "#f87171" },
@@ -112,7 +112,7 @@ export default function QueueProcession({
   tone = "blue",
   myId,
   npcIds = [],
-  emptyText = "The queue is empty — the scene hasn't opened yet.",
+  emptyText = "A fila está vazia — a cena ainda não abriu.",
   linkHref,
   onRemove,
   onEndTurn,
@@ -123,11 +123,11 @@ export default function QueueProcession({
   const T = TONES[tone];
 
   return (
-    <section aria-label="Initiative queue">
+    <section aria-label="Fila de iniciativa">
       <div className="flex items-center gap-3 mb-3">
-        <span className="font-mono text-[11px] tracking-widest uppercase text-zinc-400">Turn order</span>
+        <span className="font-mono text-[11px] tracking-widest uppercase text-zinc-400">Ordem dos turnos</span>
         <span className="flex-1 h-px bg-zinc-700/40" />
-        <span className="font-mono text-[10px] text-zinc-600">{pending.length} in queue</span>
+        <span className="font-mono text-[10px] text-zinc-600">{pending.length} na fila</span>
       </div>
 
       {pending.length === 0 ? (
@@ -142,7 +142,7 @@ export default function QueueProcession({
             const c = roster.find((r) => r.id === cid);
             const mine = myId ? cid === myId : false;
             const up = i === 0;
-            const name = c?.sheet?.name || c?.name || c?.username || "Someone";
+            const name = c?.sheet?.name || c?.name || c?.username || "Alguém";
             const isNpc = npcIds.includes(cid);
             return (
               <div
@@ -158,7 +158,7 @@ export default function QueueProcession({
                   style={up ? { boxShadow: T.shadow } : undefined}
                 />
                 <span className="font-mono text-[11px] text-zinc-500 w-6 text-right shrink-0">
-                  {up ? <span className={`font-bold ${T.now}`}>NOW</span> : `#${i + 1}`}
+                  {up ? <span className={`font-bold ${T.now}`}>AGORA</span> : `#${i + 1}`}
                 </span>
                 <div className="flex-1 min-w-0">
                   <div className={`text-sm font-semibold truncate ${mine ? T.mineName : T.name}`}>
@@ -168,7 +168,7 @@ export default function QueueProcession({
                       name
                     )}
                     {mine ? (
-                      <span className={`ml-2 font-mono text-[9px] uppercase tracking-widest ${T.you}`}>you</span>
+                      <span className={`ml-2 font-mono text-[9px] uppercase tracking-widest ${T.you}`}>você</span>
                     ) : null}
                     {isNpc ? (
                       <span className="ml-2 font-mono text-[9px] uppercase tracking-widest text-amber-300">NPC</span>
@@ -181,19 +181,19 @@ export default function QueueProcession({
                 {up && onEndTurn ? (
                   <button
                     onClick={() => onEndTurn(entry)}
-                    aria-label={`End ${name}'s turn`}
+                    aria-label={`Terminar turno de ${name}`}
                     className={`shrink-0 font-mono text-[10px] font-semibold uppercase tracking-widest px-3 py-1.5 rounded-lg border transition-colors ${T.endTurn}`}
                   >
-                    End turn
+                    Terminar turno
                   </button>
                 ) : up && mine ? (
-                  <span className={`shrink-0 font-mono text-[10px] uppercase tracking-widest ${T.rollNow}`}>Roll now</span>
+                  <span className={`shrink-0 font-mono text-[10px] uppercase tracking-widest ${T.rollNow}`}>Rolar agora</span>
                 ) : up ? (
-                  <span className={`shrink-0 font-mono text-[10px] uppercase tracking-widest ${T.acting}`}>acting</span>
+                  <span className={`shrink-0 font-mono text-[10px] uppercase tracking-widest ${T.acting}`}>agindo</span>
                 ) : onRemove ? (
                   <button
                     onClick={() => onRemove(entry)}
-                    aria-label={`Remove ${name} from queue`}
+                    aria-label={`Remover ${name} da fila`}
                     className="shrink-0 text-zinc-600 hover:text-red-400 transition-colors p-1 rounded"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

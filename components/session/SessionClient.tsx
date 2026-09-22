@@ -95,9 +95,9 @@ const icon = (path: string, cls = "w-4 h-4") => (
 );
 
 const TABS: Array<{ key: SessionTab; label: string; icon: string }> = [
-  { key: "turn", label: "Turn", icon: "M4 5a2 2 0 012-2h12a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm0 8a2 2 0 012-2h12a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm0 8a2 2 0 012-2h6a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2z" },
-  { key: "dice", label: "Dice", icon: "M12 3l1.5 6.5L20 11l-6.5 1.5L12 19l-1.5-6.5L4 11l6.5-1.5L12 3zM5 20l1-1M19 20l1-1" },
-  { key: "journal", label: "Journal", icon: "M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" },
+  { key: "turn", label: "Turno", icon: "M4 5a2 2 0 012-2h12a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm0 8a2 2 0 012-2h12a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm0 8a2 2 0 012-2h6a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2z" },
+  { key: "dice", label: "Dados", icon: "M12 3l1.5 6.5L20 11l-6.5 1.5L12 19l-1.5-6.5L4 11l6.5-1.5L12 3zM5 20l1-1M19 20l1-1" },
+  { key: "journal", label: "Diário", icon: "M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" },
 ];
 
 const attrMeta: Record<string, { label: string; hex: string }> = {
@@ -109,13 +109,13 @@ const attrMeta: Record<string, { label: string; hex: string }> = {
 
 type Judgment = { crit: boolean; ok: boolean; text: string };
 function judgeRoll(total: number, target: number): Judgment {
-  if (total <= 4) return { crit: true, ok: true, text: "Critical success" };
+  if (total <= 4) return { crit: true, ok: true, text: "Sucesso crítico" };
   if (total >= 18 || (total === 17 && target <= 15))
-    return { crit: true, ok: false, text: "Critical failure" };
+    return { crit: true, ok: false, text: "Falha crítica" };
   const m = target - total;
   return m >= 0
-    ? { crit: false, ok: true, text: `Succeeded by ${m}` }
-    : { crit: false, ok: false, text: `Failed by ${-m}` };
+    ? { crit: false, ok: true, text: `Sucesso por ${m}` }
+    : { crit: false, ok: false, text: `Falha por ${-m}` };
 }
 
 function performRoll(diceCount: number, diceType: string, modValue: number): { r: number[]; tot: number } {
@@ -307,10 +307,10 @@ export default function SessionClient({
         body: JSON.stringify(payload),
       });
       const j = await res.json();
-      if (!j.success) alert("Error: " + (j.error || "Unknown"));
+      if (!j.success) alert("Erro: " + (j.error || "Desconhecido"));
       router.refresh();
     } catch (err: unknown) {
-      alert("Network error: " + (err instanceof Error ? err.message : "Unknown"));
+      alert("Erro de rede: " + (err instanceof Error ? err.message : "Desconhecido"));
     }
   }
 
@@ -441,7 +441,7 @@ export default function SessionClient({
       /* a narration vem logo em seguida da cena (capítulo/parte) */
       setModal("narration");
     }
-    else alert("Error: " + (j.error || "Unknown"));
+    else alert("Erro: " + (j.error || "Desconhecido"));
   }
 
   async function submitMoment() {
@@ -460,7 +460,7 @@ export default function SessionClient({
       /* a narration vem logo em seguida da parte */
       setModal("narration");
     }
-    else alert("Error: " + (j.error || "Unknown"));
+    else alert("Erro: " + (j.error || "Desconhecido"));
   }
 
   async function submitNarration() {
@@ -487,7 +487,7 @@ export default function SessionClient({
       const sceneJson = await sceneRes.json();
       if (!sceneJson.success) { alert("Error: " + (sceneJson.error || "Unknown")); return; }
       sceneId = sceneJson.scene?.id ?? "";
-      if (!sceneId) { alert("Error: could not create the scene"); return; }
+      if (!sceneId) { alert("Erro: não foi possível criar a cena"); return; }
     }
     const loc = narrationLocation || defaultLocation?.id || latestBeat?.location?.id || null;
     const res = await fetch("/api/game-table-narration", {
@@ -505,12 +505,12 @@ export default function SessionClient({
     });
     const j = await res.json();
     if (j.success) { setModal(null); setModalTitle(""); setNarrationChars([]); setNarrationConsc({}); setNarrationText(""); setNarrationLocation(defaultLocation?.id ?? ""); router.refresh(); }
-    else alert("Error: " + (j.error || "Unknown"));
+    else alert("Erro: " + (j.error || "Desconhecido"));
   }
 
   async function addAction() {
-    if (!actorCharId) { alert("No one is up in the queue"); return; }
-    if (!actDesc) { alert("Enter an action description"); return; }
+    if (!actorCharId) { alert("Ninguém está agindo na fila"); return; }
+    if (!actDesc) { alert("Digite uma descrição da ação"); return; }
     const payload = {
       narrations_id: latestNarrationId || null,
       character_id: actorCharId,
@@ -534,9 +534,9 @@ export default function SessionClient({
       if (j.success) {
         try { await advanceQueue(actorCharId); } catch { /* ignore */ }
         setActDesc(""); setActRoll(""); setActTarget(""); setActionHex(null); router.refresh();
-      } else alert("Error: " + (j.error || "Unknown"));
+      } else alert("Erro: " + (j.error || "Desconhecido"));
     } catch (err: unknown) {
-      alert("Network error: " + (err instanceof Error ? err.message : "Unknown"));
+      alert("Erro de rede: " + (err instanceof Error ? err.message : "Desconhecido"));
     }
   }
 
@@ -693,16 +693,16 @@ export default function SessionClient({
 
   async function logMove() {
     const loc = mapLocation;
-    if (!loc?.id) { alert("No floor plan selected for this session."); return; }
+    if (!loc?.id) { alert("Nenhuma planta selecionada para esta sessão."); return; }
     const actor = actorCharId;
-    if (!actor) { alert("No one is up in the queue to move."); return; }
+    if (!actor) { alert("Ninguém está agindo na fila para se mover."); return; }
     const fromTok = mapTokens.find((t) => t.id === actor) ?? null;
     const from = { q: fromTok?.q ?? null, r: fromTok?.r ?? null, facing: fromTok?.facing ?? null };
-    if (from.q == null || from.r == null) { alert(`${charName(actor)} isn't placed on the map yet.`); return; }
+    if (from.q == null || from.r == null) { alert(`${charName(actor)} ainda não está posicionado no mapa.`); return; }
     const start: { q: number; r: number } = { q: from.q, r: from.r };
     const target = moveTarget;
     const turnOnly = !target && facingChoice !== "auto";
-    if (!turnOnly && !target) { alert("Click a destination hex on the map first."); return; }
+    if (!turnOnly && !target) { alert("Clique primeiro em um hexágono de destino no mapa."); return; }
     const facing =
       facingChoice === "auto"
         ? target
@@ -717,7 +717,7 @@ export default function SessionClient({
         const fatigued = sheet.fatigue_state !== "active";
         const cap = fatigued ? (sheet.effective_move ?? sheet.move) : sheet.move;
         if (dist > cap) {
-          alert(`${charName(actor)} has Move ${cap} — ${dist} hexes is too far.`);
+          alert(`${charName(actor)} tem Move ${cap} — ${dist} hexágonos é longe demais.`);
           return;
         }
       }
@@ -771,10 +771,10 @@ export default function SessionClient({
         setFacingChoice("auto");
         window.location.reload();
       } else {
-        alert("Error: " + (j.error || "Unknown"));
+        alert("Erro: " + (j.error || "Desconhecido"));
       }
     } catch (err: unknown) {
-      alert("Network error: " + (err instanceof Error ? err.message : "Unknown"));
+      alert("Erro de rede: " + (err instanceof Error ? err.message : "Desconhecido"));
     }
   }
 
@@ -818,10 +818,10 @@ export default function SessionClient({
         setCombatTarget("");
         router.refresh();
       } else {
-        alert("Error: " + (j.error || "Unknown"));
+        alert("Erro: " + (j.error || "Desconhecido"));
       }
     } catch (err: unknown) {
-      alert("Network error: " + (err instanceof Error ? err.message : "Unknown"));
+      alert("Erro de rede: " + (err instanceof Error ? err.message : "Desconhecido"));
     } finally {
       setMapSaving(false);
     }
@@ -837,12 +837,12 @@ export default function SessionClient({
         <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5">
           <div className="flex items-center gap-4 flex-wrap">
             <div className="flex items-baseline gap-1.5">
-              <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">Chapter</span>
+              <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">Capítulo</span>
               <span className={`font-mono text-xl font-bold ${T.text} tabular-nums`}>{chapter}</span>
             </div>
             <span className="w-px h-6 bg-zinc-700/60" aria-hidden />
             <div className="flex items-baseline gap-1.5">
-              <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">Part</span>
+              <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">Parte</span>
               <span className={`font-mono text-xl font-bold ${T.text} tabular-nums`}>{part}</span>
             </div>
             <span className="w-px h-6 bg-zinc-700/60 hidden sm:block" aria-hidden />
@@ -853,9 +853,9 @@ export default function SessionClient({
           {!isPlayer ? (
             <div className="flex gap-2 flex-wrap items-center">
               {[
-                { m: "chapter" as const, label: "+ Chapter", hex: T.hex },
-                { m: "moment" as const, label: "+ Part", hex: "#a1a1aa" },
-                { m: "narration" as const, label: "+ Narration", hex: "#a1a1aa" },
+                { m: "chapter" as const, label: "+ Capítulo", hex: T.hex },
+                { m: "moment" as const, label: "+ Parte", hex: "#a1a1aa" },
+                { m: "narration" as const, label: "+ Narração", hex: "#a1a1aa" },
               ].map((b) => (
                 <button
                   key={b.m}
@@ -876,7 +876,7 @@ export default function SessionClient({
       </div>
 
       {/* ---- TAB SWITCHER ---- */}
-      <div role="tablist" aria-label="Session console" className="inline-flex bg-zinc-800/50 border border-zinc-700/40 rounded-lg p-0.5 mb-5">
+      <div role="tablist" aria-label="Console da sessão" className="inline-flex bg-zinc-800/50 border border-zinc-700/40 rounded-lg p-0.5 mb-5">
         {TABS.map((t) => (
           <button
             key={t.key}
@@ -907,8 +907,8 @@ export default function SessionClient({
           onEndTurn={!isPlayer ? (entry) => removeFromQueue(entry) : undefined}
           emptyText={
             isPlayer
-              ? "The queue is empty — the scene hasn't opened yet."
-              : "The queue is empty — pick who acts next."
+              ? "A fila está vazia — a cena ainda não abriu."
+              : "A fila está vazia — escolha quem age a seguir."
           }
         />
 
@@ -917,15 +917,15 @@ export default function SessionClient({
             <select
               value={queueChar}
               onChange={(e) => setQueueChar(e.target.value)}
-              aria-label="Who enters the queue"
+              aria-label="Quem entra na fila"
               className={`${inputCls(T.inputBorder)} flex-1`}
             >
-              <option value="">Who acts next?…</option>
+              <option value="">Quem age a seguir?…</option>
               {characters
                 .filter((c) => sceneCharIds.has(c.id))
                 .map((c) => (
                   <option key={c.id} value={c.id}>
-                    {c.name || c.username || "Unknown"}{npcIds.includes(c.id) ? " — NPC" : ""}
+                    {c.name || c.username || "Desconhecido"}{npcIds.includes(c.id) ? " — NPC" : ""}
                   </option>
                 ))}
             </select>
@@ -934,7 +934,7 @@ export default function SessionClient({
               disabled={!queueChar}
               className={`font-mono text-[12px] font-semibold uppercase tracking-widest px-4 py-2 rounded-lg border ${T.borderCta} transition-colors disabled:opacity-40 w-full sm:w-auto`}
             >
-              + Add to queue
+              + Adicionar à fila
             </button>
           </div>
         ) : null}
@@ -947,7 +947,7 @@ export default function SessionClient({
         <div className="bg-zinc-900/80 border border-zinc-700/40 rounded-xl p-5">
           <div className="flex flex-wrap items-center gap-3 mb-4">
             <span className={`w-2.5 h-2.5 rounded-full ${T.dot}`} style={{ boxShadow: `0 0 8px ${T.shadow}` }} />
-            <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">Floor plan</span>
+            <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">Planta</span>
             {mapGroup.length > 1 ? (
               <select
                 value={mapLocation?.id ?? ""}
@@ -963,7 +963,7 @@ export default function SessionClient({
             ) : mapLocation ? (
               <span className="text-sm font-semibold text-zinc-100">{mapLocation.name}</span>
             ) : (
-              <span className="text-sm text-zinc-500 italic">No floor plan registered yet</span>
+              <span className="text-sm text-zinc-500 italic">Nenhuma planta registrada ainda</span>
             )}
             {mapLocation?.hex?.width != null ? (
               <span className="ml-auto font-mono text-[10px] text-zinc-500 uppercase tracking-widest">
@@ -1002,7 +1002,7 @@ export default function SessionClient({
             />
           ) : (
             <p className="text-sm text-zinc-600 font-mono italic">
-              Register a location with a hex grid to open the tactical map.
+              Registre um local com grade hexagonal para abrir o mapa tático.
             </p>
           )}
 
@@ -1014,7 +1014,7 @@ export default function SessionClient({
                   type="button"
                   onClick={() => setReplayOpen((o) => !o)}
                   aria-expanded={replayOpen}
-                  aria-label="Toggle replay movement"
+                  aria-label="Alternar reprodução de movimento"
                   className="inline-flex items-center gap-1.5 font-mono text-[10px] tracking-widest uppercase text-zinc-500 hover:text-zinc-300 transition-colors"
                 >
                   <span
@@ -1024,7 +1024,7 @@ export default function SessionClient({
                   >
                     {icon("M9 18l6-6-6-6", "w-3.5 h-3.5")}
                   </span>
-                  Replay movement
+                  Reproduzir movimento
                 </button>
                 <span className="font-mono text-[10px] text-zinc-600">
                   ({boardMoves.length} move{boardMoves.length !== 1 ? "s" : ""})
@@ -1041,19 +1041,19 @@ export default function SessionClient({
                       }
                       className="px-2 py-0.5 rounded-md text-[10px] font-mono uppercase tracking-wider text-sky-300 hover:text-sky-100 bg-sky-500/10 border border-sky-500/40"
                     >
-                      Latest
+                      Última
                     </button>
                     <button
                       onClick={() => setShownMoves(boardMoves.map((m) => m.actionId).filter((x): x is string => !!x))}
                       className="px-2 py-0.5 rounded-md text-[10px] font-mono uppercase tracking-wider text-zinc-400 hover:text-zinc-100 bg-zinc-800/60 border border-zinc-700/40"
                     >
-                      All
+                      Todas
                     </button>
                     <button
                       onClick={() => setShownMoves([])}
                       className="px-2 py-0.5 rounded-md text-[10px] font-mono uppercase tracking-wider text-zinc-400 hover:text-zinc-100 bg-zinc-800/60 border border-zinc-700/40"
                     >
-                      None
+                      Nenhuma
                     </button>
                   </div>
                 ) : null}
@@ -1088,7 +1088,7 @@ export default function SessionClient({
           <div className="bg-zinc-900/80 border border-zinc-700/40 rounded-xl p-5">
             <div className="flex flex-wrap items-center gap-3 mb-4">
               <span className={`w-2.5 h-2.5 rounded-full ${T.dot}`} style={{ boxShadow: `0 0 8px ${T.shadow}` }} />
-              <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">Action on map</span>
+              <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">Ação no mapa</span>
               <div className="flex items-center gap-1">
                 {(["move", "melee", "ranged"] as const).map((m) => (
                   <button
@@ -1099,13 +1099,13 @@ export default function SessionClient({
                       actionMode === m ? T.borderCta + " text-zinc-100" : "border-zinc-700/50 text-zinc-500 hover:text-zinc-300"
                     }`}
                   >
-                    {m}
+                    {m === "move" ? "Mover" : m === "melee" ? "Corpo a corpo" : "Distância"}
                   </button>
                 ))}
               </div>
               {actionMode === "melee" ? (
                 <div className="flex items-center gap-1.5">
-                  <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">Reach</span>
+                  <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">Alcance</span>
                   <button
                     type="button"
                     onClick={() => setMeleeReach((v) => Math.max(1, v - 1))}
@@ -1139,14 +1139,14 @@ export default function SessionClient({
                           ) : null}
                         </>
                       ) : (
-                        <span className="text-sm text-zinc-600 italic">no one is up yet — authorize in the queue</span>
+                        <span className="text-sm text-zinc-600 italic">ninguém agindo ainda — autorize na fila</span>
                       )}
                       {moveTarget ? (
                         <span className="font-mono text-[12px] font-bold text-emerald-300">→ {moveTarget.q},{moveTarget.r}</span>
                       ) : null}
                     </div>
                     <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">
-                      Moving
+                      Movendo
                     </p>
                   </div>
 
@@ -1191,7 +1191,7 @@ export default function SessionClient({
                         </button>
                       </div>
                     <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">
-                      Facing
+                      Orientação
                     </p>
                   </div>
 
@@ -1203,25 +1203,25 @@ export default function SessionClient({
                       className={`${T.btnFill} text-sm font-bold px-5 py-2 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed`}
                     >
                       {!moveTarget && facingChoice !== "auto"
-                        ? `Log turn · face ${FACING_DIRS[facingChoice]?.label ?? facingChoice}`
+                        ? `Registrar turno · virado para ${FACING_DIRS[facingChoice]?.label ?? facingChoice}`
                         : moveTarget
-                          ? `Log move → ${moveTarget.q},${moveTarget.r}`
-                          : "Log move · pick a hex"}
+                          ? `Registrar movimento → ${moveTarget.q},${moveTarget.r}`
+                          : "Registrar movimento · escolha um hexágono"}
                     </button>
                     <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">
-                      Log move
+                      Registro de movimento
                     </p>
                   </div>
                 </div>
                 <p className="mt-2 font-mono text-[10px] text-zinc-600 uppercase tracking-widest">
-                  each move becomes an action with the destination hex: {shownActor ? charName(shownActor) : "—"} from {actorPos ? `${actorPos.q},${actorPos.r}` : "—"} {moveTarget ? `→ ${moveTarget.q},${moveTarget.r}` : facingChoice !== "auto" ? `→ turns to face ${FACING_DIRS[facingChoice]?.label}` : "→ click a hex"}
+                  cada movimento vira uma ação com o hexágono de destino: {shownActor ? charName(shownActor) : "—"} de {actorPos ? `${actorPos.q},${actorPos.r}` : "—"} {moveTarget ? `→ ${moveTarget.q},${moveTarget.r}` : facingChoice !== "auto" ? `→ vira-se para ${FACING_DIRS[facingChoice]?.label}` : "→ clique em um hexágono"}
                 </p>
               </>
             ) : (
               <>
                 <div className="flex flex-wrap items-end gap-4">
                   <div className="flex-1 min-w-[13rem]">
-                    <label className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Attacker</label>
+                    <label className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Atacante</label>
                     <select
                       value={combatActor}
                       onChange={(e) => { setCombatActor(e.target.value); setMapRoll(null); setCombatTarget(""); }}
@@ -1229,12 +1229,12 @@ export default function SessionClient({
                     >
                       {characters.map((c) => (
                         <option key={c.id} value={c.id} className="bg-zinc-800">
-                          {c.name || c.username || "Unknown"}{npcIds.includes(c.id) ? " — NPC" : ""}
+                          {c.name || c.username || "Desconhecido"}{npcIds.includes(c.id) ? " — NPC" : ""}
                         </option>
                       ))}
                     </select>
                     <div className="mt-2 flex items-center gap-3">
-                      <span className="font-mono text-[9px] uppercase tracking-widest text-zinc-600">Basis</span>
+                      <span className="font-mono text-[9px] uppercase tracking-widest text-zinc-600">Base</span>
                       <select
                         value={mapCastAttr}
                         onChange={(e) => { setMapCastAttr(e.target.value as "st" | "dx" | "iq" | "ht"); setMapRoll(null); }}
@@ -1248,14 +1248,14 @@ export default function SessionClient({
                   </div>
 
                   <div className="flex-1 min-w-[13rem]">
-                    <label className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Target</label>
+                    <label className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Alvo</label>
                     <select
                       value={combatTarget}
                       onChange={(e) => { setCombatTarget(e.target.value); setMapRoll(null); }}
                       className={inputCls(T.inputBorder)}
                     >
                       <option value="" className="bg-zinc-800">
-                        …click a token on the map
+                        …clique em um token no mapa
                       </option>
                       {mapTokens
                         .filter((t) => t.q != null && t.r != null && t.id !== combatActor)
@@ -1266,31 +1266,31 @@ export default function SessionClient({
                         ))}
                     </select>
                     <p className="mt-2 font-mono text-[10px] text-zinc-600 uppercase tracking-widest">
-                      {combatTarget ? `hex ${tgtPos ? `${tgtPos.q},${tgtPos.r}` : "—"}` : "click a token on the map"}
+                      {combatTarget ? `hexágono ${tgtPos ? `${tgtPos.q},${tgtPos.r}` : "—"}` : "clique em um token no mapa"}
                     </p>
                   </div>
 
                   <div className="flex-1 min-w-[13rem]">
-                    <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Resolution</span>
+                    <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Resolução</span>
                     <div className="flex flex-col gap-1.5 rounded-lg border border-zinc-700/40 bg-zinc-800/30 px-3 py-2">
                       {combat ? (
                         <>
                           <span className="flex items-center justify-between font-mono text-[11px]">
-                            <span className="text-zinc-500 uppercase tracking-widest text-[10px]">Distance</span>
+                            <span className="text-zinc-500 uppercase tracking-widest text-[10px]">Distância</span>
                             <b className={`tabular-nums ${T.text}`}>{combat.dist} hex</b>
                           </span>
                           <span className="flex items-center justify-between font-mono text-[11px]">
-                            <span className="text-zinc-500 uppercase tracking-widest text-[10px]">Posture</span>
+                            <span className="text-zinc-500 uppercase tracking-widest text-[10px]">Postura</span>
                             <span className={combat.reachable ? "text-zinc-200" : "text-red-400"}>{combat.label}</span>
                           </span>
                           <span className="flex items-center justify-between font-mono text-[11px]">
-                            <span className="text-zinc-500 uppercase tracking-widest text-[10px]">Penalty</span>
+                            <span className="text-zinc-500 uppercase tracking-widest text-[10px]">Penalidade</span>
                             <b className={`tabular-nums ${combat.penalty >= 0 ? "text-emerald-300" : "text-amber-300"}`}>
                               {combat.penalty >= 0 ? "+0" : combat.penalty}
                             </b>
                           </span>
                           <span className="flex items-center justify-between font-mono text-[13px] border-t border-zinc-700/40 pt-1.5">
-                            <span className="text-zinc-500 uppercase tracking-widest text-[10px]">Target</span>
+                            <span className="text-zinc-500 uppercase tracking-widest text-[10px]">Alvo</span>
                             <b className={`tabular-nums font-bold ${combat.reachable ? (adjustedTarget <= 4 ? "text-emerald-300" : T.text) : "text-red-400"}`}>
                               {mapBaseTarget}{combat.penalty ? ` ${combat.penalty > 0 ? "+" : ""}${combat.penalty} = ${adjustedTarget}` : ""}
                             </b>
@@ -1298,7 +1298,7 @@ export default function SessionClient({
                         </>
                       ) : (
                         <span className="text-[11px] text-zinc-500 italic">
-                          click a token on the map to resolve
+                          clique em um token no mapa para resolver
                         </span>
                       )}
                     </div>
@@ -1311,7 +1311,7 @@ export default function SessionClient({
                       {mapRoll.r.join(" + ")} = {mapRoll.tot} · {mapRoll.j.text}
                     </span>
                   ) : (
-                    <span className="text-sm text-zinc-600 italic">3d6 · {combat ? `under ${adjustedTarget}` : "awaiting combatants"}</span>
+                    <span className="text-sm text-zinc-600 italic">3d6 · {combat ? `abaixo de ${adjustedTarget}` : "aguardando combatentes"}</span>
                   )}
                   <button
                     type="button"
@@ -1319,7 +1319,7 @@ export default function SessionClient({
                     disabled={!combat?.reachable}
                     className="bg-zinc-700 hover:bg-zinc-600 text-zinc-200 text-sm font-bold px-4 py-2 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                   >
-                    Roll 3d6
+                    Rolar 3d6
                   </button>
                   <button
                     type="button"
@@ -1327,11 +1327,11 @@ export default function SessionClient({
                     disabled={mapSaving || !mapRoll || !combat?.reachable}
                     className={`${T.btnFill} text-sm font-bold px-4 py-2 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed`}
                   >
-                    {mapSaving ? "Saving…" : "+ Log test"}
+                    {mapSaving ? "Salvando…" : "+ Registrar teste"}
                   </button>
                 </div>
                 <p className="mt-2 font-mono text-[10px] text-zinc-600 uppercase tracking-widest">
-                  melee: full at adjacent · −2/hex beyond (reach {meleeReach}) — ranged: −1/hex of distance · logged as an action with the attacker&apos;s hex {combatActor ? charName(combatActor) : "—"}
+                  corpo a corpo: completo ao lado · −2/hexágono além (alcance {meleeReach}) — distância: −1/hexágono de distância · registrado como ação com o hexágono do atacante {combatActor ? charName(combatActor) : "—"}
                 </p>
               </>
             )}
@@ -1348,13 +1348,13 @@ export default function SessionClient({
             {/* acting now */}
             <div className="flex items-center gap-3 mb-5 pb-4 border-b border-zinc-700/40">
               <span className={`w-2.5 h-2.5 rounded-full ${T.dot}`} style={{ boxShadow: `0 0 8px ${T.shadow}` }} />
-              <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">Acting now</span>
+              <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">Agindo agora</span>
               <span className="text-sm font-semibold text-zinc-100">
-                {actorCharId ? charName(actorCharId) : <span className="text-zinc-500">empty queue</span>}
+                {actorCharId ? charName(actorCharId) : <span className="text-zinc-500">fila vazia</span>}
               </span>
               {actorIsNpc ? <span className="font-mono text-[9px] uppercase tracking-widest px-1.5 py-px rounded bg-amber-400/15 text-amber-300">NPC</span> : null}
 <span className="ml-auto font-mono text-[10px] text-zinc-500 uppercase tracking-widest">
-                  target: <span style={{ color: attrHex }}>{targetValue()}</span> ({basis === "skill" ? (selectedSkill ? skillLabel(selectedSkill, selectedChar?.sheet ?? null) : "—") : (attrMeta[actSkill]?.label ?? "DX")})
+                  alvo: <span style={{ color: attrHex }}>{targetValue()}</span> ({basis === "skill" ? (selectedSkill ? skillLabel(selectedSkill, selectedChar?.sheet ?? null) : "—") : (attrMeta[actSkill]?.label ?? "DX")})
                 </span>
             </div>
 
@@ -1362,19 +1362,19 @@ export default function SessionClient({
               <div className="flex items-center gap-2 mb-5 -mt-1">
                 <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-600">
                   {upEntry && (upEntry.test_dice ?? null) != null
-                    ? `Seat test: ${upEntry.test_count ?? 3}d${upEntry.test_dice ?? "6"}${(upEntry.test_mod ?? 0) >= 0 ? "+" : ""}${upEntry.test_mod ?? 0}${
+                    ? `Teste do assento: ${upEntry.test_count ?? 3}d${upEntry.test_dice ?? "6"}${(upEntry.test_mod ?? 0) >= 0 ? "+" : ""}${upEntry.test_mod ?? 0}${
                         upEntry.test_kind === "skill"
-                          ? ` · ${seatSkillNote ?? "skill"}`
+                          ? ` · ${seatSkillNote ?? "perícia"}`
                           : ` (${(upEntry.test_attr ?? "dx").toUpperCase()})`
                       }`
-                    : "No test set for this seat yet"}
+                    : "Nenhum teste definido para este assento ainda"}
                 </span>
                 <span className="flex-1 h-px bg-zinc-700/40" />
                 <button
                   onClick={applyTest}
                   className={`font-mono text-[10px] font-semibold uppercase tracking-widest px-3 py-1.5 rounded-lg border border-zinc-600 text-zinc-300 ${T.borderHover} transition-colors shrink-0`}
                 >
-                  Save as this seat&apos;s test
+                  Salvar como teste deste assento
                 </button>
               </div>
             ) : null}
@@ -1384,7 +1384,7 @@ export default function SessionClient({
                 {/* roll builder — a base (skill × attribute) vai primeiro */}
                 <div className="flex flex-wrap items-end gap-3 mb-5">
                   <div>
-                    <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Test basis</span>
+                    <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Base do teste</span>
                     {allowSkill ? (
                       <div className="flex items-center gap-1">
                         {(["attr", "skill"] as const).map((b) => (
@@ -1395,21 +1395,21 @@ export default function SessionClient({
                               basis === b ? T.borderCta + " text-zinc-100" : "border-zinc-700/50 text-zinc-500 hover:text-zinc-300"
                             }`}
                           >
-                            {b === "attr" ? "Attribute" : "Skill"}
+                            {b === "attr" ? "Atributo" : "Perícia"}
                           </button>
                         ))}
                       </div>
                     ) : (
                       <div className="inline-flex items-center font-mono text-[11px] font-semibold uppercase tracking-widest px-3 py-2 rounded-lg border border-zinc-700/50 text-zinc-400">
-                        Attribute
+                        Atributo
                       </div>
                     )}
                   </div>
                   {basis === "skill" ? (
                     <div>
-                      <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Skill (target level)</span>
+                      <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Perícia (nível alvo)</span>
                       <select value={skillId} onChange={(e) => setSkillId(e.target.value)} className={`bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-3 py-2 text-zinc-100 text-sm focus:outline-none ${T.inputBorder}`}>
-                        <option value="" className="bg-zinc-800">Select…</option>
+                        <option value="" className="bg-zinc-800">Selecionar…</option>
                         {actorSkills.map((s) => (
                           <option key={s.id} value={s.skill_id || s.id} className="bg-zinc-800">
                             {skillLabel(s, selectedChar?.sheet ?? null)}
@@ -1419,7 +1419,7 @@ export default function SessionClient({
                     </div>
                   ) : (
                     <div>
-                      <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Attribute</span>
+                      <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Atributo</span>
                       <select value={actSkill} onChange={(e) => setActSkill(e.target.value)} className={`bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-3 py-2 text-zinc-100 text-sm focus:outline-none ${T.inputBorder}`}>
                         {["st", "dx", "iq", "ht"].map((s) => (
                           <option key={s} value={s} className="bg-zinc-800">{s.toUpperCase()}</option>
@@ -1428,7 +1428,7 @@ export default function SessionClient({
                     </div>
                   )}
                   <div>
-                    <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Die</span>
+                    <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Dado</span>
                     <select value={diceType} onChange={(e) => setDiceType(e.target.value)} className={`bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-3 py-2 text-zinc-100 text-sm focus:outline-none ${T.inputBorder}`}>
                       {["4", "6", "8", "10", "12", "20"].map((d) => (
                         <option key={d} value={d} className="bg-zinc-800">d{d}</option>
@@ -1436,7 +1436,7 @@ export default function SessionClient({
                     </select>
                   </div>
                   <div>
-                    <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Count</span>
+                    <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Quantidade</span>
                     <div className="flex items-center gap-1">
                       <button onClick={() => setDiceCount((c) => Math.max(1, c - 1))} className="w-8 h-9 bg-zinc-800/60 border border-zinc-700/50 rounded-lg text-zinc-300 hover:bg-zinc-700 transition-colors leading-none">−</button>
                       <span className={`w-10 text-center text-lg font-bold font-mono ${T.text}`}>{diceCount}</span>
@@ -1452,7 +1452,7 @@ export default function SessionClient({
                 {/* faces */}
                 <div className="flex flex-wrap items-center gap-2 mb-5 min-h-[3.5rem]">
                   {rolls.length === 0 ? (
-                    <div className="flex items-center gap-2 text-sm text-zinc-500">{icon("M12 3l1.5 6.5L20 11l-6.5 1.5L12 19l-1.5-6.5L4 11l6.5-1.5L12 3z", "w-7 h-7 text-zinc-600")} Roll? Your faces appear here.</div>
+                    <div className="flex items-center gap-2 text-sm text-zinc-500">{icon("M12 3l1.5 6.5L20 11l-6.5 1.5L12 19l-1.5-6.5L4 11l6.5-1.5L12 3z", "w-7 h-7 text-zinc-600")} Rolar? Suas faces aparecem aqui.</div>
                   ) : (
                     <DiceMystery
                       burn={revealKey}
@@ -1479,12 +1479,12 @@ export default function SessionClient({
                     </div>
                   ) : (
                     <span className="text-sm text-zinc-600">
-                      {revealKey > 0 ? "The dice are still in the air…" : <>Click <span className={`${T.textSofter} font-semibold`}>Roll</span> to test.</>}
+                      {revealKey > 0 ? "Os dados ainda estão no ar…" : <>Clique em <span className={`${T.textSofter} font-semibold`}>Rolar</span> para testar.</>}
                     </span>
                   )}
                   <div className="flex gap-2 flex-wrap">
-                    <button onClick={rollBtn} disabled={revealKey > 0 && !revealed} className={`${T.btnFill} text-sm font-bold px-5 py-2.5 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}>{icon("M12 3l1.5 6.5L20 11l-6.5 1.5L12 19l-1.5-6.5L4 11l6.5-1.5L12 3z", "w-4 h-4 inline mr-1")}{revealKey > 0 && !revealed ? "Rolling…" : `Roll ${diceCount}d${diceType}`}</button>
-                    <button onClick={copyRoll} className="bg-zinc-700 hover:bg-zinc-600 text-zinc-300 text-sm font-medium px-4 py-2.5 rounded-lg transition-colors">Copy</button>
+                    <button onClick={rollBtn} disabled={revealKey > 0 && !revealed} className={`${T.btnFill} text-sm font-bold px-5 py-2.5 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}>{icon("M12 3l1.5 6.5L20 11l-6.5 1.5L12 19l-1.5-6.5L4 11l6.5-1.5L12 3z", "w-4 h-4 inline mr-1")}{revealKey > 0 && !revealed ? "Rolando…" : `Rolar ${diceCount}d${diceType}`}</button>
+                    <button onClick={copyRoll} className="bg-zinc-700 hover:bg-zinc-600 text-zinc-300 text-sm font-medium px-4 py-2.5 rounded-lg transition-colors">Copiar</button>
                   </div>
                 </div>
 
@@ -1498,7 +1498,7 @@ export default function SessionClient({
                 {isPlayer ? (
                   <div className="mt-6">
                     <div className="flex items-center gap-2 mb-1.5">
-                      <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">3d6 curve</span>
+                      <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">Curva 3d6</span>
                       <span className="flex-1 h-px bg-zinc-700/40" />
                     </div>
                     <div className="flex h-16 items-end gap-0.5 border-b border-zinc-700/40">
@@ -1520,35 +1520,35 @@ export default function SessionClient({
               {/* log action */}
               {!isPlayer ? (
                 <div className="border-l border-zinc-700/40 pl-6 space-y-3">
-                  <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block">Log action</span>
+                  <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block">Registrar ação</span>
                   <div className="rounded-lg border border-zinc-700/40 bg-zinc-800/30 px-3 py-2">
-                    <span className="font-mono text-[9px] uppercase tracking-widest text-zinc-600">Action hex (from the board)</span>
+                    <span className="font-mono text-[9px] uppercase tracking-widest text-zinc-600">Hexágono da ação (do mapa)</span>
                     <p className="mt-0.5 font-mono text-[12px] text-zinc-300">
                       {actHex ? (
-                        <>hex {actHex.q},{actHex.r} · {actionLocation?.name ?? "—"}{actActorHex ? ` · facing from ${actActorHex.q},${actActorHex.r}` : ""}</>
+                        <>hexágono {actHex.q},{actHex.r} · {actionLocation?.name ?? "—"}{actActorHex ? ` · orientação a partir de ${actActorHex.q},${actActorHex.r}` : ""}</>
                       ) : (
-                        "click a hex on the floor plan"
+                        "clique em um hexágono na planta"
                       )}
                     </p>
                   </div>
                   <div>
-                    <label className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Dice (prefilled)</label>
+                    <label className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Dados (pré-preenchidos)</label>
                     <input type="text" value={actRoll} onChange={(e) => setActRoll(e.target.value)} placeholder="3d6+2=14" className={inputCls(T.inputBorder)} />
                   </div>
                   <div>
-                    <label className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Target</label>
+                    <label className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Alvo</label>
                     <select value={actTarget} onChange={(e) => setActTarget(e.target.value)} className={inputCls(T.inputBorder)}>
                       <option value="">—</option>
                       {characters.map((c) => (
-                        <option key={c.id} value={c.id}>{c.name || c.username || "Unknown"}</option>
+                        <option key={c.id} value={c.id}>{c.name || c.username || "Desconhecido"}</option>
                       ))}
                     </select>
                   </div>
                   <div>
-                    <label className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Description</label>
-                    <input type="text" value={actDesc} onChange={(e) => setActDesc(e.target.value)} placeholder="Attacks the goblin…" className={inputCls(T.inputBorder)} />
+                    <label className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Descrição</label>
+                    <input type="text" value={actDesc} onChange={(e) => setActDesc(e.target.value)} placeholder="Ataca o goblin…" className={inputCls(T.inputBorder)} />
                   </div>
-                  <button onClick={addAction} className={`w-full ${T.btnFill} text-sm font-bold px-4 py-2.5 rounded-lg transition-colors`}>+ Log action</button>
+                  <button onClick={addAction} className={`w-full ${T.btnFill} text-sm font-bold px-4 py-2.5 rounded-lg transition-colors`}>+ Registrar ação</button>
                 </div>
               ) : null}
             </div>
@@ -1562,7 +1562,7 @@ export default function SessionClient({
           {latestNarration ? (
             <div className="bg-zinc-900/80 border border-zinc-700/40 rounded-xl p-5">
               <div className="flex items-center gap-2 mb-2">
-                <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">Latest entry</span>
+                <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">Última entrada</span>
                 <span className="flex-1 h-px bg-zinc-700/40" />
                 <span className={`font-mono text-[10px] ${T.text}`}>M.{latestMoment}</span>
               </div>
@@ -1572,7 +1572,7 @@ export default function SessionClient({
 
           <div className="bg-zinc-900/80 border border-zinc-700/40 rounded-xl p-5">
             <div className="flex items-center gap-2 mb-3">
-              <span className="font-mono text-[11px] tracking-widest uppercase text-zinc-400">Moment rolls</span>
+              <span className="font-mono text-[11px] tracking-widest uppercase text-zinc-400">Rolagens do momento</span>
               <span className="flex-1 h-px bg-zinc-700/40" />
               <span className="font-mono text-[10px] text-zinc-600">{sortedActions.length}</span>
             </div>
@@ -1583,7 +1583,7 @@ export default function SessionClient({
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-zinc-600 font-mono italic">No actions recorded for this moment yet.</p>
+              <p className="text-sm text-zinc-600 font-mono italic">Nenhuma ação registrada para este momento ainda.</p>
             )}
           </div>
         </div>
@@ -1594,7 +1594,7 @@ export default function SessionClient({
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
           <div className="bg-zinc-900 border border-zinc-700/50 rounded-2xl p-6 w-full max-w-md mx-4">
             <h3 className="text-lg font-bold text-zinc-100 mb-4">
-              {modal === "chapter" ? "New Chapter" : modal === "moment" ? "New Part" : "New Narration"}
+              {modal === "chapter" ? "Novo Capítulo" : modal === "moment" ? "Nova Parte" : "Nova Narração"}
             </h3>
             <form
               className="space-y-4"
@@ -1606,24 +1606,24 @@ export default function SessionClient({
               }}
             >
               <div>
-                <label className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Title</label>
-                <input type="text" value={modalTitle} onChange={(e) => setModalTitle(e.target.value)} required placeholder="Title…" className={inputCls(T.inputBorder)} />
+                <label className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Título</label>
+                <input type="text" value={modalTitle} onChange={(e) => setModalTitle(e.target.value)} required placeholder="Título…" className={inputCls(T.inputBorder)} />
               </div>
               {modal === "narration" ? (
                 <>
                   <div>
-                    <label className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Floor plan (location)</label>
+                    <label className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Planta (local)</label>
                     <select value={narrationLocation} onChange={(e) => setNarrationLocation(e.target.value)} className={inputCls(T.inputBorder)}>
-                      <option value="" className="bg-zinc-800">No map</option>
+                      <option value="" className="bg-zinc-800">Sem mapa</option>
                       {narrationPool.map((l) => (
                         <option key={l.id} value={l.id} className="bg-zinc-800">
-                          {l.name || "Unnamed"}
+                          {l.name || "Sem nome"}
                         </option>
                       ))}
                     </select>
                   </div>
                   <div>
-                    <label className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Characters in scene</label>
+                    <label className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Personagens na cena</label>
                     <div className="space-y-1.5 max-h-40 overflow-y-auto border border-zinc-700/50 rounded-lg p-2">
                       {characters.map((c) => {
                         const checked = narrationChars.includes(c.id);
@@ -1641,12 +1641,12 @@ export default function SessionClient({
                               className={T.accent}
                             />
                             <span className={checked ? "text-zinc-100" : "text-zinc-400"}>
-                              {c.name || c.username || "Unknown"}
+                              {c.name || c.username || "Desconhecido"}
                               {npcIds.includes(c.id) ? " — NPC" : ""}
                             </span>
                             <input
                               type="checkbox"
-                              title="Conscious"
+                              title="Consciente"
                               checked={checked ? (narrationConsc[c.id] !== false) : true}
                               disabled={!checked}
                               onChange={() =>
@@ -1658,25 +1658,25 @@ export default function SessionClient({
                               className={T.accent}
                             />
                             <span className={`text-[10px] uppercase tracking-wider ${checked ? (narrationConsc[c.id] !== false ? "text-emerald-400/80" : "text-red-400/80") : "text-zinc-600"}`}>
-                              {checked ? (narrationConsc[c.id] !== false ? "conscious" : "unconscious") : "—"}
+                              {checked ? (narrationConsc[c.id] !== false ? "consciente" : "inconsciente") : "—"}
                             </span>
                           </label>
                         );
                       })}
                       {characters.length === 0 ? (
-                        <p className="text-zinc-600 text-sm font-mono italic">No characters in this table.</p>
+                        <p className="text-zinc-600 text-sm font-mono italic">Nenhum personagem nesta mesa.</p>
                       ) : null}
                     </div>
                   </div>
                   <div>
-                    <label className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Narration</label>
-                    <textarea value={narrationText} onChange={(e) => setNarrationText(e.target.value)} rows={3} placeholder="Describe what happens…" className={`${inputCls(T.inputBorder)} resize-none`} />
+                    <label className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">Narração</label>
+                    <textarea value={narrationText} onChange={(e) => setNarrationText(e.target.value)} rows={3} placeholder="Descreva o que acontece…" className={`${inputCls(T.inputBorder)} resize-none`} />
                   </div>
                 </>
               ) : null}
               <div className="flex gap-3 justify-end">
-                <button type="button" onClick={() => setModal(null)} className="bg-zinc-700 hover:bg-zinc-600 text-zinc-300 text-sm px-4 py-2 rounded-lg transition-colors">Cancel</button>
-                <button type="submit" className={`text-sm font-semibold px-4 py-2 rounded-lg transition-colors ${T.btnFill}`}>Create</button>
+                <button type="button" onClick={() => setModal(null)} className="bg-zinc-700 hover:bg-zinc-600 text-zinc-300 text-sm px-4 py-2 rounded-lg transition-colors">Cancelar</button>
+                <button type="submit" className={`text-sm font-semibold px-4 py-2 rounded-lg transition-colors ${T.btnFill}`}>Criar</button>
               </div>
             </form>
           </div>
@@ -1689,7 +1689,7 @@ export default function SessionClient({
 /* ---- roll slip (journal) ---- */
 function RollSlip({ a, linkHover }: { a: NarrationAction; linkHover: string }) {
   const charId = a.character?.id || "";
-  const charName = a.character?.name || a.character?.username || "Unknown";
+  const charName = a.character?.name || a.character?.username || "Desconhecido";
   const roll = (a.dice_roll ?? "").toLowerCase();
   const tone = a.modifier?.damage_value != null || a.modifier?.mod_hp != null || a.modifier?.mod_st != null
     ? "#f87171"

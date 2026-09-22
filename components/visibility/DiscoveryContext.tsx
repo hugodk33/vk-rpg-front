@@ -76,10 +76,10 @@ export default function DiscoveryContext({
         <span className="font-mono text-[10px] uppercase tracking-[0.15em] text-zinc-500">
           {attached ? (
             <span className="inline-flex items-center gap-1.5 text-green-400">
-              <span className="w-1.5 h-1.5 rounded-full bg-green-500" /> moment attached
+              <span className="w-1.5 h-1.5 rounded-full bg-green-500" /> momento anexado
             </span>
           ) : (
-            "Discovery moment"
+            "Momento da descoberta"
           )}
         </span>
         {attached && allowClear ? (
@@ -88,13 +88,13 @@ export default function DiscoveryContext({
             onClick={() => onChange({})}
             className="text-[10px] font-mono uppercase tracking-wider text-zinc-500 hover:text-zinc-200 transition-colors"
           >
-            clear
+            limpar
           </button>
         ) : null}
       </div>
       <div className="grid gap-2 sm:grid-cols-2 mt-2">
         <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-zinc-500">
-          Scene
+          Cena
           <select
             value={value.sceneId ?? ""}
             onChange={(e) => setScene(e.target.value)}
@@ -103,14 +103,14 @@ export default function DiscoveryContext({
             <option value="">—</option>
             {sceneOptions.map((s) => (
               <option key={s.id} value={s.id}>
-                {s.chapter != null ? `Ch.${s.chapter} · ` : ""}
-                {s.title || "Untitled scene"}
+                {s.chapter != null ? `Cap.${s.chapter} · ` : ""}
+                {s.title || "Cena sem título"}
               </option>
             ))}
           </select>
         </label>
         <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-zinc-500">
-          Narration
+          Narração
           <select
             value={value.narrationId ?? ""}
             onChange={(e) => setNarration(e.target.value)}
@@ -120,14 +120,14 @@ export default function DiscoveryContext({
             <option value="">—</option>
             {narrationOptions.map((n, i) => (
               <option key={n.id} value={n.id}>
-                {n.title || `Narration ${(n.moment ?? i) + 1}`}
+                {n.title || `Narração ${(n.moment ?? i) + 1}`}
               </option>
             ))}
           </select>
         </label>
         {value.moment != null ? (
           <p className="text-[10px] text-zinc-600 sm:col-span-2">
-            In-story moment: <span className="text-green-500">{value.moment}</span>
+            Momento na história: <span className="text-green-500">{value.moment}</span>
           </p>
         ) : null}
       </div>

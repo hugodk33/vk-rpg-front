@@ -31,15 +31,15 @@ export default async function CharacterViewerPage({
     <div className="max-w-5xl mx-auto p-6">
       {tableId ? (
         <Link href={`/table/${tableId}`} className="text-zinc-500 hover:text-zinc-300 text-sm mb-4 inline-block transition-colors">
-          &larr; Back to table
+          &larr; Voltar à mesa
         </Link>
       ) : null}
 
       <div className="flex flex-wrap items-end justify-between gap-4 mb-5">
         <div>
-          <p className="font-mono text-[10px] tracking-widest uppercase text-green-300/90">Character record</p>
+          <p className="font-mono text-[10px] tracking-widest uppercase text-green-300/90">Ficha de personagem</p>
           <h1 className="text-2xl md:text-3xl font-bold text-zinc-100 mt-1">
-            {data.character.sheet?.name || data.character.name || "Character"}
+            {data.character.sheet?.name || data.character.name || "Personagem"}
           </h1>
           {data.table?.title ? (
             <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500 mt-0.5">{data.table.title}</p>

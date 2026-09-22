@@ -26,7 +26,7 @@ export default async function TableSessionPage({ params }: { params: Promise<{ i
       <div className="max-w-5xl mx-auto p-6 pb-0">
         <TableTabs tableId={id} active="sessions" />
         <h1 className="text-2xl font-bold text-green-100 mt-3 mb-4">
-          {scenesData.table?.title || "Session"}
+          {scenesData.table?.title || "Sessão"}
         </h1>
         <SessionClient
           tableId={id}

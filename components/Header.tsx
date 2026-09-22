@@ -66,17 +66,17 @@ export default function Header() {
         </div>
         {open && (
           <div className="absolute left-1/2 -translate-x-1/2 top-full mt-0 w-52 bg-zinc-800 border border-zinc-700/60 rounded-lg shadow-xl py-2 z-50 text-center">
-            <Link href="/" className={linkClass}>Home</Link>
-            <div className="text-zinc-500 text-xs uppercase tracking-wider px-4 pt-3 pb-1">New</div>
-            <Link href="/table/new" className={linkClass}>Table</Link>
-            <Link href={charNewHref} className={linkClass}>Character</Link>
+            <Link href="/" className={linkClass}>Início</Link>
+            <div className="text-zinc-500 text-xs uppercase tracking-wider px-4 pt-3 pb-1">Novo</div>
+            <Link href="/table/new" className={linkClass}>Mesa</Link>
+            <Link href={charNewHref} className={linkClass}>Personagem</Link>
             <Link href="/npc/new" className={linkClass}>NPC</Link>
             <Link href="/item/new" className={linkClass}>Item</Link>
-            <Link href="/advantage/new" className={linkClass}>Advantage</Link>
-            <Link href="/disadvantage/new" className={linkClass}>Disadvantage</Link>
-            <div className="text-zinc-500 text-xs uppercase tracking-wider px-4 pt-3 pb-1">Dashboards</div>
-            <Link href="/narrator" className={linkClass}>Narrator</Link>
-            <Link href="/player" className={linkClass}>Player</Link>
+            <Link href="/advantage/new" className={linkClass}>Vantagem</Link>
+            <Link href="/disadvantage/new" className={linkClass}>Desvantagem</Link>
+            <div className="text-zinc-500 text-xs uppercase tracking-wider px-4 pt-3 pb-1">Painéis</div>
+            <Link href="/narrator" className={linkClass}>Narrador</Link>
+            <Link href="/player" className={linkClass}>Jogador</Link>
           </div>
         )}
       </div>

@@ -82,12 +82,12 @@ function armorDiagram(armors: CharacterViewer["character"]["armors"]): React.Rea
           <circle cx="256" cy="56" r="56" />
           <path d="M437,128H75a27,27,0,0,0,0,54H176.88c6.91,0,15,3.09,19.58,15,5.35,13.83,2.73,40.54-.57,61.23l-4.32,24.45a.42.42,0,0,1-.12.35l-34.6,196.81A27.43,27.43,0,0,0,179,511.58a27.06,27.06,0,0,0,31.42-22.29l23.91-136.8S242,320,256,320c14.23,0,21.74,32.49,21.74,32.49l23.91,136.92a27.24,27.24,0,1,0,53.62-9.6L320.66,283a.45.45,0,0,0-.11-.35l-4.33-24.45c-3.3-20.69-5.92-47.4-.57-61.23,4.56-11.88,12.91-15,19.28-15H437a27,27,0,0,0,0-54Z" />
         </svg>
-        {zoneBadge("Head", head, { top: -41, left: "50%", transform: "translateX(-50%)" })}
-        {zoneBadge("Right Arm", armR, { top: 2, right: -64 })}
-        {zoneBadge("Left Arm", armL, { top: 2, left: -64 })}
+        {zoneBadge("Cabeça", head, { top: -41, left: "50%", transform: "translateX(-50%)" })}
+        {zoneBadge("B. Dir.", armR, { top: 2, right: -64 })}
+        {zoneBadge("B. Esq.", armL, { top: 2, left: -64 })}
         {zoneBadge("Torso", torso, { top: 48, left: -64 })}
-        {zoneBadge("Right Leg", legR, { top: 95, left: "50%", transform: "translateX(3px)" })}
-        {zoneBadge("Left Leg", legL, { top: 95, left: "50%", transform: "translateX(calc(-100% - 3px))" })}
+        {zoneBadge("P. Dir.", legR, { top: 95, left: "50%", transform: "translateX(3px)" })}
+        {zoneBadge("P. Esq.", legL, { top: 95, left: "50%", transform: "translateX(calc(-100% - 3px))" })}
       </div>
     </div>
   );
@@ -425,7 +425,7 @@ interface CharacterSheetProps {
 export default function CharacterSheet({ data, visibility, showName = true }: CharacterSheetProps) {
   const ch = data.character;
   const s = ch.sheet;
-  const name = s?.name || ch.name || "Character";
+  const name = s?.name || ch.name || "Personagem";
   const modifiers = ch.active_effects ?? [];
   const effects = modifiers.filter(activeEffects);
   const fatigueState = s?.fatigue_state ?? "active";
@@ -447,7 +447,7 @@ export default function CharacterSheet({ data, visibility, showName = true }: Ch
   const weaponGroups = (ch.items ?? [])
     .filter((it) => isCarried(it) && it.weapon && it.weapon.attacks.length > 0)
     .map((it) => ({
-      name: it.name || "Unnamed",
+      name: it.name || "Sem nome",
       kind: it.kind,
       category: it.category,
       quality: it.quality,
@@ -485,26 +485,26 @@ export default function CharacterSheet({ data, visibility, showName = true }: Ch
     .filter((it) => isCarried(it) && it.armor)
     .map((it) => ({
       id: it.armor?.id || it.id,
-      name: it.name || it.armor?.locations || "Armor",
+      name: it.name || it.armor?.locations || "Armadura",
       dr: it.armor?.dr ?? 0,
       fit: it.armor?.fit || it.armor?.locations || "",
-      status: it.equipment_status || "Equipped",
+      status: it.equipment_status || "Equipado",
       locations: it.equipment_location || it.armor?.locations || "",
     }));
   const visibleArmors = vis ? fittedArmors.filter((a) => !itemHidden(ch.items?.find((it) => (it.armor?.id || it.id) === a.id)?.id)) : fittedArmors;
   const gearGroups = [
     {
-      label: "Wielded",
+      label: "Empunhado",
       icon: swordsIcon(),
       items: (ch.items ?? []).filter((it) => it.equipment_status === "wielded"),
     },
     {
-      label: "Equipped",
+      label: "Equipado",
       icon: shieldIcon("w-4 h-4 text-cyan-400"),
       items: (ch.items ?? []).filter((it) => it.equipment_status === "equipped"),
     },
     {
-      label: "In bag",
+      label: "Na mochila",
       icon: (
         <svg className="w-4 h-4 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
@@ -537,7 +537,7 @@ export default function CharacterSheet({ data, visibility, showName = true }: Ch
             {s?.backstory ? <p className="text-zinc-500 text-sm mt-1 max-w-2xl">{s.backstory}</p> : null}
           </div>
           <div className="flex flex-col items-end">
-            <span className="text-zinc-500 text-xs font-semibold uppercase tracking-wider">Build Points</span>
+            <span className="text-zinc-500 text-xs font-semibold uppercase tracking-wider">Pontos de Criação</span>
             <p className="text-amber-400 font-bold text-2xl leading-none mt-1">{masked("points", s?.points, "0")}</p>
           </div>
         </div>
@@ -546,7 +546,7 @@ export default function CharacterSheet({ data, visibility, showName = true }: Ch
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div>
               <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-3">
-                Core Attributes
+                Atributos Centrais
               </h3>
               <div className="flex justify-center flex-wrap gap-1 mb-6">
                 {attrCards.map((a) => (
@@ -587,7 +587,7 @@ export default function CharacterSheet({ data, visibility, showName = true }: Ch
 
             <div>
               <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-3">
-                Vitals
+                Vitais
               </h3>
               <div className="space-y-4">
                 <div className="flex w-full items-center gap-2">
@@ -621,71 +621,71 @@ export default function CharacterSheet({ data, visibility, showName = true }: Ch
                   <p
                     title={
                       fatigueState === "exhausted"
-                        ? "GURPS: no FP left — at the brink of collapse; further FP costs 1 HP each."
-                        : "GURPS: less than 1/3 of max FP remaining — halve ST, Move and Dodge (round up)."
+                        ? "GURPS: sem PE — à beira do colapso; PE adicionais custam 1 PV cada."
+                        : "GURPS: resta menos de 1/3 do PE máximo — reduza pela metade ST, Mov e Esquiva (arredonde para cima)."
                     }
                     className="font-mono text-[9px] uppercase tracking-widest text-zinc-600"
                   >
-                    {fatigueState === "exhausted" ? "at the brink of collapse" : "fatigued"} — ST, Move &amp; Dodge halved
+                    {fatigueState === "exhausted" ? "à beira do colapso" : "cansado"} — ST, Mov e Esquiva pela metade
                   </p>
                 ) : null}
               </div>
 
               <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 mt-6 mb-3">
-                Movement
+                Movimento
               </h3>
               <div className="grid grid-cols-3 gap-1">
                 <div className="flex flex-col items-center gap-1 p-2 bg-zinc-800/40 rounded-lg">
                   {windIcon()}
                   <span className="text-cyan-400 text-sm font-bold">{masked("basic_speed", s?.basic_speed)}</span>
-                  <span className="text-zinc-500 text-[10px] font-semibold uppercase text-center">Basic Speed</span>
+                  <span className="text-zinc-500 text-[10px] font-semibold uppercase text-center">Vel. Básica</span>
                 </div>
                 <div className="flex flex-col items-center gap-1 p-2 bg-zinc-800/40 rounded-lg">
                   {footprintsIcon()}
                   <span className="text-cyan-400 text-sm font-bold">{masked("move", fatigued ? s?.effective_move : s?.move)}</span>
-                  <span className="text-zinc-500 text-[10px] font-semibold uppercase text-center">Move</span>
+                  <span className="text-zinc-500 text-[10px] font-semibold uppercase text-center">Mov</span>
                 </div>
                 <div className="flex flex-col items-center gap-1 p-2 bg-zinc-800/40 rounded-lg">
                   {packageIcon()}
                   <span className="text-cyan-400 text-sm font-bold truncate max-w-full">
                     {masked("encumbrance", s?.encumbrance)}
                   </span>
-                  <span className="text-zinc-500 text-[10px] font-semibold uppercase text-center">Encumbrance</span>
+                  <span className="text-zinc-500 text-[10px] font-semibold uppercase text-center">Carga</span>
                 </div>
               </div>
 
               <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 mt-6 mb-3">
-                Passive Defenses
+                Defesas Passivas
               </h3>
               <div className="grid grid-cols-3 gap-1">
                 <div className="flex flex-col items-center gap-1 p-2 bg-zinc-800/40 rounded-lg">
                   {swordsIcon()}
                   <span className="text-amber-400 text-sm font-bold">{masked("parry", s?.dx == null ? null : passive.parry)}</span>
-                  <span className="text-zinc-500 text-[10px] font-semibold uppercase text-center">Parry</span>
+                  <span className="text-zinc-500 text-[10px] font-semibold uppercase text-center">Aparar</span>
                 </div>
                 <div className="flex flex-col items-center gap-1 p-2 bg-zinc-800/40 rounded-lg">
                   {shieldIcon("w-4 h-4 text-amber-400")}
                   <span className="text-amber-400 text-sm font-bold">{masked("block", s?.dx == null ? null : passive.block)}</span>
-                  <span className="text-zinc-500 text-[10px] font-semibold uppercase text-center">Block</span>
+                  <span className="text-zinc-500 text-[10px] font-semibold uppercase text-center">Bloquear</span>
                 </div>
                 <div className="flex flex-col items-center gap-1 p-2 bg-zinc-800/40 rounded-lg">
                   {dodgeIcon()}
                   <span className="text-amber-400 text-sm font-bold">{masked("dodge", s?.basic_speed == null ? null : fatigued && s?.effective_dodge != null ? s.effective_dodge : passive.dodge)}</span>
-                  <span className="text-zinc-500 text-[10px] font-semibold uppercase text-center">Dodge</span>
+                  <span className="text-zinc-500 text-[10px] font-semibold uppercase text-center">Esquiva</span>
                 </div>
               </div>
             </div>
 
             <div>
               <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-3">
-                Offense
+                Ofensiva
               </h3>
               {visibleWeaponGroups.length === 0 ? (
-                <p className="text-zinc-600 text-sm italic">No weapons equipped</p>
+                <p className="text-zinc-600 text-sm italic">Nenhuma arma equipada</p>
               ) : (
                 visibleWeaponGroups.map((g, gi) => {
-                  const hand = g.weapon.handedness === 2 ? "2H" : g.weapon.handedness === 1 ? "1H" : "";
-                  const tags = [hand, g.weapon.reach ? `Reach ${g.weapon.reach}` : null]
+                  const hand = g.weapon.handedness === 2 ? "2M" : g.weapon.handedness === 1 ? "1M" : "";
+                  const tags = [hand, g.weapon.reach ? `Alcance ${g.weapon.reach}` : null]
                     .filter(Boolean)
                     .join(" · ");
                   return (
@@ -707,19 +707,19 @@ export default function CharacterSheet({ data, visibility, showName = true }: Ch
                         <div className="space-y-1 text-xs mb-2">
                           {g.quality ? (
                             <div className="flex items-center">
-                              <span className="w-20 shrink-0 text-zinc-500 uppercase tracking-wide">Quality</span>
+                              <span className="w-20 shrink-0 text-zinc-500 uppercase tracking-wide">Qualidade</span>
                               <span className="text-amber-400/90 capitalize">{g.quality}</span>
                             </div>
                           ) : null}
                           {g.condition && g.condition !== "new" ? (
                             <div className="flex items-center">
-                              <span className="w-20 shrink-0 text-zinc-500 uppercase tracking-wide">Condition</span>
+                              <span className="w-20 shrink-0 text-zinc-500 uppercase tracking-wide">Condição</span>
                               <span className="text-zinc-300 capitalize">{g.condition}</span>
                             </div>
                           ) : null}
                           {tags ? (
                             <div className="flex items-center">
-                              <span className="w-20 shrink-0 text-zinc-500 uppercase tracking-wide">Weapon</span>
+                              <span className="w-20 shrink-0 text-zinc-500 uppercase tracking-wide">Arma</span>
                               <span className="text-zinc-400 uppercase">{tags}</span>
                             </div>
                           ) : null}
@@ -734,7 +734,7 @@ export default function CharacterSheet({ data, visibility, showName = true }: Ch
                                 <span className={ranged ? "text-cyan-400" : "text-red-400"}>
                                   {ranged ? rangedIcon() : meleeIcon()}
                                 </span>
-                                <span className="text-zinc-300 font-medium">{atk.name || "Attack"}</span>
+                                <span className="text-zinc-300 font-medium">{atk.name || "Ataque"}</span>
                                 {atk.usage ? <span className="text-zinc-500 text-xs">{atk.usage}</span> : null}
                                 <span className="text-red-400 font-bold ml-auto">{resolved}</span>
                                 <span className="text-zinc-400 text-xs">
@@ -759,7 +759,7 @@ export default function CharacterSheet({ data, visibility, showName = true }: Ch
             <div className="mt-6 pt-4 border-t border-zinc-700/40">
               <div className="flex items-center gap-2 mb-3">
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                  Active effects
+                  Efeitos ativos
                 </h3>
                 <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-600">
                   {effects.length}
@@ -779,7 +779,7 @@ export default function CharacterSheet({ data, visibility, showName = true }: Ch
                       className="flex items-center gap-2 bg-zinc-800/50 border border-zinc-700/40 rounded-lg px-2.5 py-1.5"
                     >
                       <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dot}`} />
-                      <span className="text-zinc-200 text-sm font-medium">{m.name || "Effect"}</span>
+                      <span className="text-zinc-200 text-sm font-medium">{m.name || "Efeito"}</span>
                       {deltas.length > 0 ? (
                         <span className="flex items-center gap-1.5 ml-1">
                           {deltas.map((d) => (
@@ -799,13 +799,13 @@ export default function CharacterSheet({ data, visibility, showName = true }: Ch
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
             <div>
               {sectionTitle(
-                "Advantages",
+                "Vantagens",
                 <svg className="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                 </svg>
               )}
               {!visibleAdvantages || visibleAdvantages.length === 0 ? (
-                <p className="text-zinc-600 text-sm italic">None</p>
+                <p className="text-zinc-600 text-sm italic">Nenhuma</p>
               ) : (
                 visibleAdvantages.map((a) => (
                   <div
@@ -823,13 +823,13 @@ export default function CharacterSheet({ data, visibility, showName = true }: Ch
             </div>
             <div>
               {sectionTitle(
-                "Disadvantages",
+                "Desvantagens",
                 <svg className="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
                 </svg>
               )}
               {!visibleDisadvantages || visibleDisadvantages.length === 0 ? (
-                <p className="text-zinc-600 text-sm italic">None</p>
+                <p className="text-zinc-600 text-sm italic">Nenhuma</p>
               ) : (
                 visibleDisadvantages.map((d) => (
                   <div
@@ -847,7 +847,7 @@ export default function CharacterSheet({ data, visibility, showName = true }: Ch
             </div>
             <div>
               {sectionTitle(
-                "Peculiarities",
+                "Peculiaridades",
                 <svg className="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
@@ -858,7 +858,7 @@ export default function CharacterSheet({ data, visibility, showName = true }: Ch
                 </svg>
               )}
               {!ch.peculiarities || ch.peculiarities.length === 0 ? (
-                <p className="text-zinc-600 text-sm italic">None</p>
+                <p className="text-zinc-600 text-sm italic">Nenhuma</p>
               ) : (
                 ch.peculiarities.map((p) => (
                   <div
@@ -879,7 +879,7 @@ export default function CharacterSheet({ data, visibility, showName = true }: Ch
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
             <div>
               {sectionTitle(
-                "Skills",
+                "Perícias",
                 <svg className="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
@@ -890,7 +890,7 @@ export default function CharacterSheet({ data, visibility, showName = true }: Ch
                 </svg>
               )}
               {!visibleSkills || visibleSkills.length === 0 ? (
-                <p className="text-zinc-600 text-sm italic">None</p>
+                <p className="text-zinc-600 text-sm italic">Nenhuma</p>
               ) : (
                 visibleSkills.map((sk) => {
                   const level = sk.value ?? null;
@@ -913,7 +913,7 @@ export default function CharacterSheet({ data, visibility, showName = true }: Ch
                       {level != null ? (
                         <div className="text-xs text-zinc-500">
                           {[sk.predefinition_type, sk.predefinition_difficulty].filter(Boolean).join(" · ") ||
-                            "Roll against value"}
+                            "Rolar contra o valor"}
                         </div>
                       ) : null}
                       {sk.effect ? <p className="text-zinc-500 text-xs mt-0.5">{sk.effect}</p> : null}
@@ -925,7 +925,7 @@ export default function CharacterSheet({ data, visibility, showName = true }: Ch
 
             <div>
               {sectionTitle(
-                "Body & Armor",
+                "Corpo e Armadura",
                 <svg className="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
@@ -938,7 +938,7 @@ export default function CharacterSheet({ data, visibility, showName = true }: Ch
               {armorDiagram(ch.armors)}
               <div className="space-y-1 border-t border-zinc-700/40 pt-3">
                 {visibleArmors.length === 0 ? (
-                  <p className="text-zinc-600 text-sm italic">Unarmored</p>
+                  <p className="text-zinc-600 text-sm italic">Sem armadura</p>
                 ) : (
                   visibleArmors.map((a) => (
                     <div key={a.id} className="flex justify-between items-center text-xs">
@@ -960,19 +960,19 @@ export default function CharacterSheet({ data, visibility, showName = true }: Ch
 
             <div>
               {sectionTitle(
-                "Equipment",
+                "Equipamento",
                 <svg className="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                 </svg>
               )}
               {gearGroups.length === 0 ? (
-                <p className="text-zinc-600 text-sm italic">Nothing carried</p>
+                <p className="text-zinc-600 text-sm italic">Nada carregado</p>
               ) : (
                 gearGroups.map((g) => {
                   const statusCls =
-                    g.label === "Wielded"
+                    g.label === "Empunhado"
                       ? "text-amber-300/90"
-                      : g.label === "Equipped"
+                      : g.label === "Equipado"
                         ? "text-cyan-300/90"
                         : "text-zinc-500";
                   return (
@@ -995,7 +995,7 @@ export default function CharacterSheet({ data, visibility, showName = true }: Ch
                               <div className="min-w-0 flex-1">
                                 <div className="flex items-center justify-between gap-2">
                                   <span className="text-zinc-200 text-sm font-medium truncate">
-                                    {it.name || "Unidentified item"}
+                                    {it.name || "Item não identificado"}
                                   </span>
                                   {it.equipment_quantity != null && it.equipment_quantity > 1 ? (
                                     <span className="text-zinc-500 text-xs shrink-0">×{it.equipment_quantity}</span>

@@ -23,7 +23,7 @@ export default async function TableMapPage({ params }: { params: Promise<{ id: s
       <div className="max-w-6xl mx-auto px-6 pt-6 pb-0">
         <TableTabs tableId={id} active="map" />
         <h1 className="text-2xl font-bold text-green-100 mt-3">
-          {scenesData.table?.title || "Map"}
+          {scenesData.table?.title || "Mapa"}
         </h1>
       </div>
       <MapLog scenes={scenesData.scenes} locations={locations} characters={characters} npcIds={npcIds} role="narrator" fillViewport />

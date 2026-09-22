@@ -62,12 +62,12 @@ const ICONS = {
 };
 
 const RESOURCES = [
-  { href: "/items", label: "Items", icon: "bag" },
-  { href: "/advantages", label: "Advantages", icon: "adv" },
-  { href: "/disadvantages", label: "Disadvantages", icon: "dis" },
-  { href: "/skills", label: "Skills", icon: "skills" },
-  { href: "/characters", label: "Characters", icon: "chars" },
-  { href: "/locations", label: "Locations", icon: "loc" },
+  { href: "/items", label: "Itens", icon: "bag" },
+  { href: "/advantages", label: "Vantagens", icon: "adv" },
+  { href: "/disadvantages", label: "Desvantagens", icon: "dis" },
+  { href: "/skills", label: "Perícias", icon: "skills" },
+  { href: "/characters", label: "Personagens", icon: "chars" },
+  { href: "/locations", label: "Locais", icon: "loc" },
 ] as const;
 
 function tabActive(active: boolean, tone: TrailTone): string {
@@ -96,27 +96,27 @@ export default function TableTabs({ tableId, role = "narrator", active, characte
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
           </svg>
-          Tables
+          Mesas
         </a>
       ) : null}
 
-      <nav aria-label="Table navigation" className="flex gap-0.5 border-b border-zinc-800 mb-6">
+      <nav aria-label="Navegação da mesa" className="flex gap-0.5 border-b border-zinc-800 mb-6">
         {/* Table — narrator gets the resource dropdown; players get a plain link to the shared hub */}
         {role === "player" ? (
           <Link
             href={`${prefix}/table/${tableId}`}
             className={`${tabActive(active === "overview", tone)} ${active === "overview" ? underlineCls : ""}`}
           >
-            {icon(ICONS.overview, "w-4 h-4")} Table
+            {icon(ICONS.overview, "w-4 h-4")} Mesa
           </Link>
         ) : (
         <details className="group relative">
           <summary
             className="list-none cursor-pointer select-none inline-flex items-center gap-1.5 px-3 py-2.5 font-mono text-[12px] uppercase tracking-[0.12em] rounded-md text-zinc-400 hover:text-zinc-100 transition-colors"
-            aria-label="Table resources"
+            aria-label="Recursos da mesa"
           >
             {icon(ICONS.overview, "w-4 h-4")}
-            <span className={active === "overview" ? tone.activeText : ""}>Table</span>
+            <span className={active === "overview" ? tone.activeText : ""}>Mesa</span>
             <svg className="w-3.5 h-3.5 text-zinc-500 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
             </svg>
@@ -131,7 +131,7 @@ export default function TableTabs({ tableId, role = "narrator", active, characte
               className={`flex items-center gap-2.5 px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-700/50 ${tone.hoverText} rounded transition-colors`}
             >
               {icon(ICONS.overview, "w-4 h-4 text-zinc-500")}
-              Overview
+              Visão geral
             </Link>
             <div className="my-1.5 h-px bg-zinc-700/50" />
             {RESOURCES.map((r) => (
@@ -149,7 +149,7 @@ export default function TableTabs({ tableId, role = "narrator", active, characte
         )}
 
         <Link href={`${prefix}/table/${tableId}/sessions`} className={`${tabActive(active === "sessions", tone)} ${active === "sessions" ? underlineCls : ""}`}>
-          {icon(ICONS.sessions, "w-4 h-4")} Sessions
+          {icon(ICONS.sessions, "w-4 h-4")} Sessões
         </Link>
 
         {/* Chronicle — the read-only story record: timeline + battle-log map */}
@@ -158,10 +158,10 @@ export default function TableTabs({ tableId, role = "narrator", active, characte
             className={`list-none cursor-pointer select-none inline-flex items-center gap-1.5 px-3 py-2.5 font-mono text-[12px] uppercase tracking-[0.12em] rounded-md transition-colors focus:outline-none focus-visible:ring-2 ${tone.ring} ${
               chronicleActive ? tone.activeText : "text-zinc-400 hover:text-zinc-100"
             }`}
-            aria-label="Chronicle views"
+            aria-label="Vistas de crônica"
           >
             {icon(ICONS.timeline, "w-4 h-4")}
-            <span>Chronicle</span>
+            <span>Crônica</span>
             <svg className="w-3.5 h-3.5 text-zinc-500 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
             </svg>
@@ -176,7 +176,7 @@ export default function TableTabs({ tableId, role = "narrator", active, characte
               }`}
             >
               {icon(ICONS.timeline, "w-4 h-4 text-zinc-500")}
-              Timeline
+              Linha do tempo
             </Link>
             {role !== "player" ? (
               <Link
@@ -186,7 +186,7 @@ export default function TableTabs({ tableId, role = "narrator", active, characte
                 }`}
               >
                 {icon(ICONS.map, "w-4 h-4 text-zinc-500")}
-                Map
+                Mapa
               </Link>
             ) : null}
           </div>
@@ -194,31 +194,31 @@ export default function TableTabs({ tableId, role = "narrator", active, characte
 
         {role !== "player" ? (
         <Link href={`${prefix}/table/${tableId}/visibility`} className={`${tabActive(active === "visibility", tone)} ${active === "visibility" ? underlineCls : ""}`}>
-          {icon(ICONS.visibility, "w-4 h-4")} Visibility
+          {icon(ICONS.visibility, "w-4 h-4")} Visibilidade
         </Link>
         ) : null}
 
         {role !== "player" ? (
         <Link href={`${prefix}/table/${tableId}/modifiers`} className={`${tabActive(active === "modifiers", tone)} ${active === "modifiers" ? underlineCls : ""}`}>
-          {icon(ICONS.modifiers, "w-4 h-4")} Modifiers
+          {icon(ICONS.modifiers, "w-4 h-4")} Modificadores
         </Link>
         ) : null}
 
         {role !== "player" ? (
         <Link href={`${prefix}/table/${tableId}/settings`} className={`${tabActive(active === "settings", tone)} ${active === "settings" ? underlineCls : ""}`}>
-          {icon(ICONS.settings, "w-4 h-4")} Settings
+          {icon(ICONS.settings, "w-4 h-4")} Configurações
         </Link>
         ) : null}
 
         {active === "character" && characterHref ? (
           <Link href={characterHref} className={`${tabActive(true, tone)} ${underlineCls}`}>
-            {icon(ICONS.character, "w-4 h-4")} Character
+            {icon(ICONS.character, "w-4 h-4")} Personagem
           </Link>
         ) : null}
 
         {role === "player" && characterUrl && active !== "character" ? (
           <Link href={characterUrl} className={tabActive(false, tone)}>
-            {icon(ICONS.character, "w-4 h-4")} Character
+            {icon(ICONS.character, "w-4 h-4")} Personagem
           </Link>
         ) : null}
       </nav>

@@ -9,22 +9,22 @@ import { fitLabel } from "@/lib/fit";
 import ItemIcon from "@/components/items/ItemIcon";
 
 const KIND_BADGES: Record<string, { label: string; class: string }> = {
-  weapon: { label: "Weapon", class: "bg-red-400/10 text-red-400 border border-red-400/20" },
-  shield: { label: "Shield", class: "bg-orange-400/10 text-orange-400 border border-orange-400/20" },
-  armor: { label: "Armor", class: "bg-cyan-400/10 text-cyan-400 border border-cyan-400/20" },
-  equipment: { label: "Equipment", class: "bg-amber-400/10 text-amber-400 border border-amber-400/20" },
+  weapon: { label: "Arma", class: "bg-red-400/10 text-red-400 border border-red-400/20" },
+  shield: { label: "Escudo", class: "bg-orange-400/10 text-orange-400 border border-orange-400/20" },
+  armor: { label: "Armadura", class: "bg-cyan-400/10 text-cyan-400 border border-cyan-400/20" },
+  equipment: { label: "Equipamento", class: "bg-amber-400/10 text-amber-400 border border-amber-400/20" },
 };
 
 const STATUS_LABELS: Record<string, string> = {
-  in_inventory: "Inventory",
-  equipped: "Equipped",
-  wielded: "Wielded",
+  in_inventory: "Inventário",
+  equipped: "Equipado",
+  wielded: "Empunhado",
 };
 
 const BODY_PARTS = [
   {
     key: "head",
-    label: "Head",
+    label: "Cabeça",
     cls: "text-sky-300 border-sky-400/40 bg-sky-400/10 shadow-[0_0_12px_rgba(56,189,248,0.3)]",
     icon: "M12 2a3.5 3.5 0 100 7 3.5 3.5 0 000-7zM5.5 19c0-3.5 3-6 6.5-6s6.5 2.5 6.5 6v1h-13v-1z",
   },
@@ -36,25 +36,25 @@ const BODY_PARTS = [
   },
   {
     key: "arm",
-    label: "Arms",
+    label: "Braços",
     cls: "text-rose-300 border-rose-400/40 bg-rose-400/10 shadow-[0_0_12px_rgba(251,113,133,0.3)]",
     icon: "M5 21l1.5-10.5C6.8 8.7 8.2 7.5 10.2 7.5h3.1c2 0 3.2 1.2 3.2 3.1V13c0 1.6-.8 2.4-2.1 2.4H10",
   },
   {
     key: "hand",
-    label: "Hands",
+    label: "Mãos",
     cls: "text-emerald-300 border-emerald-400/40 bg-emerald-400/10 shadow-[0_0_12px_rgba(52,211,153,0.3)]",
     icon: "M7.5 11V6.5a1.5 1.5 0 013 0V11m0-4.5a1.5 1.5 0 013 0v4m0-2.5a1.5 1.5 0 013 0V13c0 3.5-2.5 7-6 7-2.5 0-3.5-1-5-2.5L8 15",
   },
   {
     key: "leg",
-    label: "Legs",
+    label: "Pernas",
     cls: "text-violet-300 border-violet-400/40 bg-violet-400/10 shadow-[0_0_12px_rgba(167,139,250,0.3)]",
     icon: "M12 4v16m0-16c-3.5 0-5 2-5 2m8-2c3.5 0 5 2 5 2M12 20l-.8-7c-.2-2 1.3-3.5 3.3-3.5h1.5m-6.5 3h4",
   },
   {
     key: "foot",
-    label: "Feet",
+    label: "Pés",
     cls: "text-cyan-300 border-cyan-400/40 bg-cyan-400/10 shadow-[0_0_12px_rgba(34,211,238,0.3)]",
     icon: "M4 16v-1c0-1.5 1-2.5 2.5-2.5H16c1.5 0 2.5 1 2.5 2.5v1c0 1-1 2-2 2H6c-1 0-2-1-2-2z",
   },
@@ -92,7 +92,7 @@ function kindOf(i: CharacterItem): string {
 }
 
 function nameOf(i: CharacterItem): string {
-  return i.name || "Unnamed";
+  return i.name || "Sem nome";
 }
 
 function keyOf(i: CharacterItem): string {
@@ -130,7 +130,7 @@ export default function GearPanel({ data, historic }: GearPanelProps) {
       });
       router.refresh();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to update equipment.");
+      setError(err instanceof Error ? err.message : "Falha ao atualizar o equipamento.");
     } finally {
       setBusy((prev) => ({ ...prev, [itemId]: false }));
     }
@@ -153,7 +153,7 @@ export default function GearPanel({ data, historic }: GearPanelProps) {
 
   const compareA = itemRef(compare[0]);
   const compareB = itemRef(compare[1]);
-  const compareHint = !compareA ? "Click a row to add an item" : !compareB ? "Click another item for slot 2" : "Click a row to change items";
+  const compareHint = !compareA ? "Clique numa linha para adicionar um item" : !compareB ? "Clique noutro item para o segundo slot" : "Clique numa linha para trocar itens";
 
   return (
     <div>
@@ -165,7 +165,7 @@ export default function GearPanel({ data, historic }: GearPanelProps) {
 
       {locked ? (
         <p className="text-xs text-zinc-500 mb-3">
-          Viewing a historic moment — wielding/equipping/storing is disabled.
+          Vendo um momento histórico — empunhar/equipar/guardar está desativado.
         </p>
       ) : null}
 
@@ -174,13 +174,13 @@ export default function GearPanel({ data, historic }: GearPanelProps) {
           <svg className="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
           </svg>
-          <h2 className="text-sm font-bold uppercase tracking-wider text-zinc-300">Equipment</h2>
+          <h2 className="text-sm font-bold uppercase tracking-wider text-zinc-300">Equipamento</h2>
           <span className="ml-auto text-xs text-zinc-500">{owned.length} item{owned.length !== 1 ? "s" : ""}</span>
         </div>
 
         <div className="p-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {owned.length === 0 ? (
-            <p className="text-zinc-600 text-sm italic col-span-full px-1 py-2">No items in inventory.</p>
+            <p className="text-zinc-600 text-sm italic col-span-full px-1 py-2">Nenhum item no inventário.</p>
           ) : null}
           {owned.map((i) => {
             const stt = i.equipment_status ?? "in_inventory";
@@ -198,9 +198,9 @@ export default function GearPanel({ data, historic }: GearPanelProps) {
             const statLine = w
               ? [
                   w.skill,
-                  w.handedness === 2 ? "2H" : w.handedness === 1 ? "1H" : null,
-                  w.reach ? `reach ${w.reach}` : null,
-                  w.parry ? `parry ${w.parry}` : null,
+                  w.handedness === 2 ? "2M" : w.handedness === 1 ? "1M" : null,
+                  w.reach ? `Alcance ${w.reach}` : null,
+                  w.parry ? `Aparar ${w.parry}` : null,
                 ]
                   .filter(Boolean)
                   .join(" · ")
@@ -254,7 +254,7 @@ export default function GearPanel({ data, historic }: GearPanelProps) {
                     </span>
                     {isCmp ? (
                       <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-600/30 text-amber-200 border border-amber-600/50">
-                        In compare
+                        Em comparação
                       </span>
                     ) : null}
                   </div>
@@ -308,7 +308,7 @@ export default function GearPanel({ data, historic }: GearPanelProps) {
                           onClick={() => mutate(keyOf(i), "wielded", "right_hand")}
                           className="text-[11px] px-2.5 py-1 rounded-md bg-amber-600/50 hover:bg-amber-600 text-amber-100 transition-colors disabled:opacity-50"
                         >
-                          Wield
+                          Empunhar
                         </button>
                       ) : null}
                       <button
@@ -317,7 +317,7 @@ export default function GearPanel({ data, historic }: GearPanelProps) {
                         onClick={() => mutate(keyOf(i), "equipped", "any")}
                         className="text-[11px] px-2.5 py-1 rounded-md bg-emerald-700/50 hover:bg-emerald-700 text-emerald-100 transition-colors disabled:opacity-50"
                       >
-                        Equip
+                        Equipar
                       </button>
                     </>
                   ) : stt === "wielded" ? (
@@ -327,7 +327,7 @@ export default function GearPanel({ data, historic }: GearPanelProps) {
                       onClick={() => mutate(keyOf(i), "in_inventory", "none")}
                       className="text-[11px] px-2.5 py-1 rounded-md bg-zinc-700/50 hover:bg-zinc-700 text-zinc-300 transition-colors disabled:opacity-50"
                     >
-                      Unwield
+                      Soltar arma
                     </button>
                   ) : (
                     <button
@@ -336,7 +336,7 @@ export default function GearPanel({ data, historic }: GearPanelProps) {
                       onClick={() => mutate(keyOf(i), "in_inventory", "none")}
                       className="text-[11px] px-2.5 py-1 rounded-md bg-zinc-700/50 hover:bg-zinc-700 text-zinc-300 transition-colors disabled:opacity-50"
                     >
-                      Store
+                      Guardar
                     </button>
                   )}
                 </div>
@@ -352,14 +352,14 @@ export default function GearPanel({ data, historic }: GearPanelProps) {
             <svg className="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 9V5l7 7-7 7v-4H3V9h6zM21 5v14" />
             </svg>
-            <h2 className="text-sm font-bold uppercase tracking-wider text-amber-100">Compare</h2>
+            <h2 className="text-sm font-bold uppercase tracking-wider text-amber-100">Comparar</h2>
             <span className="ml-auto text-[11px] text-zinc-500">{compareHint}</span>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-px bg-zinc-800/70">
             {[compareA, compareB].map((it, idx) => (
               <div key={idx} className="bg-zinc-900 p-4 min-h-[120px]">
                 {!it ? (
-                  <p className="text-zinc-600 text-sm italic">Select an item</p>
+                  <p className="text-zinc-600 text-sm italic">Selecionar um item</p>
                 ) : (
                   <GearCard item={it} st={st} status={it.equipment_status} />
                 )}
@@ -394,44 +394,44 @@ function GearCard({ item, st, status }: { item: CharacterItem; st: number; statu
       <dl className="space-y-1 text-xs">
         {item.weight_lb != null ? (
           <div className="flex justify-between">
-            <dt className="text-zinc-500 uppercase tracking-wide shrink-0 mr-3">Weight</dt>
+            <dt className="text-zinc-500 uppercase tracking-wide shrink-0 mr-3">Peso</dt>
             <dd className="text-zinc-300">{item.weight_lb} lb</dd>
           </div>
         ) : null}
         {item.cost != null ? (
           <div className="flex justify-between">
-            <dt className="text-zinc-500 uppercase tracking-wide shrink-0 mr-3">Cost</dt>
+            <dt className="text-zinc-500 uppercase tracking-wide shrink-0 mr-3">Custo</dt>
             <dd className="text-zinc-300">${item.cost}</dd>
           </div>
         ) : null}
         {item.quality ? (
           <div className="flex justify-between">
-            <dt className="text-zinc-500 uppercase tracking-wide shrink-0 mr-3">Quality</dt>
+            <dt className="text-zinc-500 uppercase tracking-wide shrink-0 mr-3">Qualidade</dt>
             <dd className="text-amber-400/90 capitalize">{item.quality}</dd>
           </div>
         ) : null}
         {item.condition ? (
           <div className="flex justify-between">
-            <dt className="text-zinc-500 uppercase tracking-wide shrink-0 mr-3">Condition</dt>
+            <dt className="text-zinc-500 uppercase tracking-wide shrink-0 mr-3">Condição</dt>
             <dd className="text-zinc-300 capitalize">{item.condition}</dd>
           </div>
         ) : null}
         {w ? (
           <>
             <div className="flex justify-between">
-              <dt className="text-zinc-500 uppercase tracking-wide shrink-0 mr-3">Fit</dt>
+              <dt className="text-zinc-500 uppercase tracking-wide shrink-0 mr-3">Ajuste</dt>
               <dd className="text-zinc-300">{fitLabel(w.fit)}</dd>
             </div>
             {w.skill ? (
               <div className="flex justify-between">
-                <dt className="text-zinc-500 uppercase tracking-wide shrink-0 mr-3">Skill</dt>
+                <dt className="text-zinc-500 uppercase tracking-wide shrink-0 mr-3">Perícia</dt>
                 <dd className="text-zinc-300">{w.skill}</dd>
               </div>
             ) : null}
             <div className="flex justify-between">
-              <dt className="text-zinc-500 uppercase tracking-wide shrink-0 mr-3">Weapon</dt>
+              <dt className="text-zinc-500 uppercase tracking-wide shrink-0 mr-3">Arma</dt>
               <dd className="text-zinc-300 uppercase">
-                {[w.handedness === 2 ? "2H" : w.handedness === 1 ? "1H" : null, w.reach ? `Reach ${w.reach}` : null, w.parry ? `Parry ${w.parry}` : null, w.block ? `Block ${w.block}` : null]
+                {[w.handedness === 2 ? "2M" : w.handedness === 1 ? "1M" : null, w.reach ? `Alcance ${w.reach}` : null, w.parry ? `Aparar ${w.parry}` : null, w.block ? `Bloquear ${w.block}` : null]
                   .filter(Boolean)
                   .join(" · ") || "—"}
               </dd>
@@ -445,17 +445,17 @@ function GearCard({ item, st, status }: { item: CharacterItem; st: number; statu
               <dd className="text-amber-400 font-bold">{a.dr ?? "—"}</dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-zinc-500 uppercase tracking-wide shrink-0 mr-3">Locations</dt>
+              <dt className="text-zinc-500 uppercase tracking-wide shrink-0 mr-3">Locais</dt>
               <dd className="text-zinc-300 capitalize">{a.locations || "torso"}</dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-zinc-500 uppercase tracking-wide shrink-0 mr-3">Fit</dt>
+              <dt className="text-zinc-500 uppercase tracking-wide shrink-0 mr-3">Ajuste</dt>
               <dd className="text-zinc-300">{fitLabel(a.fit)}</dd>
             </div>
             {a.flex ? (
               <div className="flex justify-between">
-                <dt className="text-zinc-500 uppercase tracking-wide shrink-0 mr-3">Flexible</dt>
-                <dd className="text-zinc-300">Yes</dd>
+                <dt className="text-zinc-500 uppercase tracking-wide shrink-0 mr-3">Flexível</dt>
+                <dd className="text-zinc-300">Sim</dd>
               </div>
             ) : null}
           </>
@@ -464,11 +464,11 @@ function GearCard({ item, st, status }: { item: CharacterItem; st: number; statu
 
       {w && w.attacks?.length ? (
         <div className="mt-3 space-y-1">
-          <p className="text-[10px] uppercase tracking-widest text-zinc-500">Attacks (ST {st})</p>
+          <p className="text-[10px] uppercase tracking-widest text-zinc-500">Ataques (ST {st})</p>
           {w.attacks.map((atk, ai) => (
             <div key={ai} className="flex items-center justify-between text-xs gap-2">
               <span className="text-zinc-300 truncate">
-                {atk.name || "Attack"}
+                {atk.name || "Ataque"}
                 {atk.usage ? <span className="text-zinc-500"> ({atk.usage})</span> : null}
               </span>
               <span className="text-red-400 font-bold shrink-0">{resolveAttack(atk, st, w.rated_st)}</span>

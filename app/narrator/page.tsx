@@ -103,12 +103,12 @@ function RosterChip({
                   title={modNames}
                   className="font-mono text-[9px] uppercase tracking-widest text-green-500/70"
                 >
-                  {mods} effect{mods === 1 ? "" : "s"}
+                  {mods} efeito{mods === 1 ? "" : "s"}
                 </span>
               ) : null}
             </>
           ) : (
-            <span className="font-mono text-[9px] uppercase tracking-widest text-zinc-500">No sheet yet</span>
+            <span className="font-mono text-[9px] uppercase tracking-widest text-zinc-500">Sem ficha ainda</span>
           )}
         </div>
       </div>
@@ -122,7 +122,7 @@ function EmptyPlayers() {
       <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="1.5">
         <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
       </svg>
-      No players yet — invite players to join the table.
+      Nenhum jogador ainda — convide jogadores para a mesa.
     </div>
   );
 }
@@ -135,7 +135,7 @@ export default async function NarratorDashboard() {
     tables = [];
   }
 
-  const narratorName = tables.find((t) => t.narrator)?.narrator?.username || "the Narrator";
+  const narratorName = tables.find((t) => t.narrator)?.narrator?.username || "o Narrador";
   const withPlayers = tables.filter((t) => (t.players ?? []).length > 0).length;
   const totalPlayers = tables.reduce((acc, t) => acc + (t.players ?? []).length, 0);
   const sealer = tables.find((t) => t.narrator)?.narrator;
@@ -152,23 +152,23 @@ export default async function NarratorDashboard() {
 
         <div className="flex flex-wrap items-start justify-between gap-4 relative">
           <div>
-            <p className="font-mono text-[10px] tracking-widest uppercase text-green-500/90">GM Desk</p>
-            <h1 className="text-2xl md:text-3xl font-bold text-zinc-100 mt-1">Command Center</h1>
-            <p className="text-stone-400 text-sm mt-1.5">Welcome, {narratorName}. The table awaits its storyteller.</p>
+            <p className="font-mono text-[10px] tracking-widest uppercase text-green-500/90">Mesa do Narrador</p>
+            <h1 className="text-2xl md:text-3xl font-bold text-zinc-100 mt-1">Central de Comando</h1>
+            <p className="text-stone-400 text-sm mt-1.5">Bem-vindo, {narratorName}. A mesa aguarda seu contador de histórias.</p>
           </div>
           <Link
             href="/table/new"
             className="bg-green-800 hover:bg-green-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors shadow-lg shadow-green-900/30"
           >
-            + New Table
+            + Nova Mesa
           </Link>
         </div>
 
         <div className="grid grid-cols-3 gap-3 mt-6 relative">
           {[
-            { label: "Campaigns", value: tables.length },
-            { label: "Tables with players", value: withPlayers },
-            { label: "Players", value: totalPlayers },
+            { label: "Campanhas", value: tables.length },
+            { label: "Mesas com jogadores", value: withPlayers },
+            { label: "Jogadores", value: totalPlayers },
           ].map((s) => (
             <div key={s.label} className="rounded-lg border border-zinc-700/40 bg-zinc-900/60 px-4 py-3">
               <div className="font-mono text-2xl font-bold text-green-400 leading-none">{s.value}</div>
@@ -181,13 +181,13 @@ export default async function NarratorDashboard() {
       {/* ---- campaign dossiers ---- */}
       {tables.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-zinc-700/60 text-center py-20">
-          <div className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">No campaigns yet</div>
-          <p className="text-zinc-300 text-lg mt-2">Found your first table and begin a campaign.</p>
+          <div className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">Nenhuma campanha ainda</div>
+          <p className="text-zinc-300 text-lg mt-2">Crie sua primeira mesa e comece uma campanha.</p>
           <Link
             href="/table/new"
             className="inline-block mt-5 bg-green-800 hover:bg-green-700 text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors"
           >
-            + Found a Table
+            + Criar Mesa
           </Link>
         </div>
       ) : (
@@ -204,15 +204,15 @@ export default async function NarratorDashboard() {
                   <Sigil title={t.title} name={sealer?.name || "GM"} />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <h2 className="text-lg font-bold text-zinc-100 leading-tight">{t.title || "Untitled"}</h2>
+                      <h2 className="text-lg font-bold text-zinc-100 leading-tight">{t.title || "Sem título"}</h2>
                     </div>
                     <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                       <span className="inline-flex items-center font-mono text-[10px] uppercase tracking-widest px-1.5 py-0.5 rounded bg-green-700/10 text-green-400 border border-green-700/20">
-                        {t.system || "System"}
+                        {t.system || "Sistema"}
                       </span>
                       <span className="text-zinc-700">·</span>
                       <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">
-                        {count} {count === 1 ? "player" : "players"}
+                        {count} {count === 1 ? "jogador" : "jogadores"}
                       </span>
                       {withSheets ? (
                         <>
@@ -235,7 +235,7 @@ export default async function NarratorDashboard() {
                     <div className="flex flex-wrap gap-2">
                       {players.map((p, idx) => {
                         const c = p.character;
-                        const name = c?.name || p.username || "Unnamed Player";
+                        const name = c?.name || p.username || "Jogador sem nome";
                         return (
                           <RosterChip
                             key={p.userId ?? c?.id ?? idx}
@@ -260,7 +260,7 @@ export default async function NarratorDashboard() {
                     href={`/table/${t.id}`}
                     className="block w-full text-center bg-green-900/60 group-hover:bg-green-800 text-white text-sm font-semibold px-3 py-2.5 rounded-lg transition-colors"
                   >
-                    Open Table
+                    Abrir Mesa
                   </Link>
                 </div>
               </div>
@@ -271,7 +271,7 @@ export default async function NarratorDashboard() {
 
       <div className="mt-8 text-center">
         <Link href="/" className="text-zinc-500 hover:text-zinc-300 text-sm transition-colors">
-          &larr; Back to home
+          &larr; Voltar ao início
         </Link>
       </div>
     </div>

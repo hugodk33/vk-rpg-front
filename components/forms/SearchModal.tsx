@@ -123,7 +123,7 @@ export default function SearchModal({ title, onSearch, isSelected, onToggle, onC
                   onChange={(e) => handleFilterChange(f.key, e.target.value)}
                   className={`${inputCls} !w-auto !px-3 !py-1.5 text-sm`}
                 >
-                  <option value="">{f.label}: All</option>
+                  <option value="">{f.label}: Todos</option>
                   {f.options.map((o) => (
                     <option key={o.value} value={o.value}>
                       {o.label}
@@ -147,7 +147,7 @@ export default function SearchModal({ title, onSearch, isSelected, onToggle, onC
                   key={i.id}
                   rows={[
                     { label: "Meta", value: i.meta },
-                    { label: "Description", value: i.description },
+                    { label: "Descrição", value: i.description },
                   ]}
                 >
                   <label
@@ -162,7 +162,7 @@ export default function SearchModal({ title, onSearch, isSelected, onToggle, onC
                       className="w-4 h-4 rounded border-zinc-600 text-white0 focus:ring-green-800 bg-zinc-900"
                     />
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium text-zinc-200 truncate">{i.name || "Unnamed"}</div>
+                      <div className="text-sm font-medium text-zinc-200 truncate">{i.name || "Sem nome"}</div>
                       {i.meta ? <div className="text-xs text-zinc-500 truncate">{i.meta}</div> : null}
                       {i.description ? <div className="text-xs text-zinc-500 truncate">{i.description}</div> : null}
                     </div>

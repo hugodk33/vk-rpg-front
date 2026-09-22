@@ -26,9 +26,9 @@ function eventChips(e: CharacterHistoryEvent): Array<{ key: string; label: strin
   if (e.mod_iq != null) chips.push({ key: "iq", label: "IQ", value: signed(e.mod_iq), cls: "text-blue-400" });
   if (e.mod_ht != null) chips.push({ key: "ht", label: "HT", value: signed(e.mod_ht), cls: "text-purple-400" });
   if (e.mod_fatigue != null) chips.push({ key: "fp", label: "FP", value: signed(e.mod_fatigue), cls: "text-blue-400" });
-  if (e.encumbrance != null) chips.push({ key: "enc", label: "ENC", value: e.encumbrance, cls: "text-zinc-400" });
-  if (e.damage_value != null) chips.push({ key: "dmg", label: "DMG", value: e.damage_value, cls: "text-amber-400/80" });
-  if (e.item_quantity != null) chips.push({ key: "qty", label: "QTY", value: String(e.item_quantity), cls: "text-zinc-400" });
+  if (e.encumbrance != null) chips.push({ key: "enc", label: "CAR", value: e.encumbrance, cls: "text-zinc-400" });
+  if (e.damage_value != null) chips.push({ key: "dmg", label: "DANO", value: e.damage_value, cls: "text-amber-400/80" });
+  if (e.item_quantity != null) chips.push({ key: "qty", label: "QTD", value: String(e.item_quantity), cls: "text-zinc-400" });
   return chips;
 }
 
@@ -156,7 +156,7 @@ function MomentFicha({
         <svg className="w-4 h-4 text-blue-300/80 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.7" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
         </svg>
-        <span className="font-mono text-[10px] tracking-widest uppercase text-blue-300/80">Sheet</span>
+        <span className="font-mono text-[10px] tracking-widest uppercase text-blue-300/80">Ficha</span>
         <span aria-hidden className="flex-1 h-px" style={{ background: "linear-gradient(90deg, rgba(96,165,250,.3), transparent)" }} />
         {ev.narration_moment != null ? (
           <span className="font-mono text-[10px] text-amber-300/80 shrink-0">M.{ev.narration_moment}</span>
@@ -224,10 +224,10 @@ function SkillsBlock({ skills, sheet, matchSheet }: { skills: CharacterSkill[]; 
   if (!skills || skills.length === 0) return null;
   return (
     <div>
-      <p className="font-mono text-[9px] tracking-widest uppercase text-zinc-500 mb-1.5">Skills</p>
+      <p className="font-mono text-[9px] tracking-widest uppercase text-zinc-500 mb-1.5">Perícias</p>
       <div className="flex flex-wrap gap-1">
         {skills.map((sk) => {
-          const name = sk.skill_name || sk.name || "Skill";
+          const name = sk.skill_name || sk.name || "Perícia";
           const lv = skillLevel(sk, sheet);
           const lvM = matchSheet ? skillLevel(sk, matchSheet) : null;
           const changed = lv != null && lvM != null && lv !== lvM;
@@ -272,7 +272,7 @@ function GearBlock({ items }: { items: Array<{ id: string; name?: string; quanti
   if (!items || items.length === 0) return null;
   return (
     <div>
-      <p className="font-mono text-[9px] tracking-widest uppercase text-zinc-500 mb-1.5">Gear</p>
+      <p className="font-mono text-[9px] tracking-widest uppercase text-zinc-500 mb-1.5">Equipamento</p>
       <ul className="space-y-1">
         {items.map((it) => (
           <li key={it.id} className="flex items-center gap-2 text-[11px] text-zinc-300">
@@ -337,12 +337,12 @@ function FullFicha({
       {ch ? (
         <>
           <SkillsBlock skills={ch.skills ?? []} sheet={sheet} matchSheet={matchSheet} />
-          <TagChips title="Advantages" items={ch.advantages ?? []} />
-          <TagChips title="Disadvantages" items={ch.disadvantages ?? []} />
+          <TagChips title="Vantagens" items={ch.advantages ?? []} />
+          <TagChips title="Desvantagens" items={ch.disadvantages ?? []} />
           <GearBlock items={ch.items ?? []} />
         </>
       ) : (
-        <p className="text-[10px] text-zinc-600 italic">Loading the full sheet…</p>
+        <p className="text-[10px] text-zinc-600 italic">Carregando a ficha completa…</p>
       )}
     </div>
   );
@@ -369,8 +369,8 @@ function momentLabel(ev: CharacterHistoryEvent): string {
 }
 
 function nodeTitle(ev: CharacterHistoryEvent): string {
-  if (ev.kind === "test") return ev.test_skill_name ?? ev.test_skill ?? "Test";
-  return ev.name || "Event";
+  if (ev.kind === "test") return ev.test_skill_name ?? ev.test_skill ?? "Teste";
+  return ev.name || "Evento";
 }
 
 const ATTR_STROKES: Array<{ key: "st" | "dx" | "iq" | "ht"; color: string; label: string }> = [
@@ -419,15 +419,15 @@ export default function CharacterJourney({
   }, [characterId, viewerId]);
 
   if (error) {
-    return <p className="text-xs text-zinc-600 italic">The chronicle is out of reach right now.</p>;
+    return <p className="text-xs text-zinc-600 italic">A crônica está inacessível no momento.</p>;
   }
   if (!data) {
-    return <p className="text-xs text-zinc-600 italic animate-pulse">Following the trail of events…</p>;
+    return <p className="text-xs text-zinc-600 italic animate-pulse">Seguindo o rastro dos eventos…</p>;
   }
   if (!data.events || data.events.length === 0) {
     return (
       <p className="text-zinc-600 text-sm italic">
-        No recorded events yet — the journey begins when the dice roll.
+        Nenhum evento registrado ainda — a jornada começa quando os dados rolam.
       </p>
     );
   }
@@ -506,9 +506,9 @@ export default function CharacterJourney({
   return (
     <div>
       <div className="flex items-center gap-2 mb-3">
-        <span className="text-xs font-semibold uppercase tracking-wider text-zinc-500 mr-1">Journey</span>
+        <span className="text-xs font-semibold uppercase tracking-wider text-zinc-500 mr-1">Jornada</span>
         <span className="text-[10px] uppercase tracking-widest text-zinc-600">
-          {events.length} event{events.length === 1 ? "" : "s"}
+          {events.length} {events.length === 1 ? "evento" : "eventos"}
         </span>
         <span aria-hidden className="flex-1 h-px" style={{ background: "linear-gradient(90deg, rgba(96,165,250,.35), transparent)" }} />
       </div>
@@ -616,7 +616,7 @@ export default function CharacterJourney({
                 <div className="absolute bottom-2 left-0 right-0 px-2">
                   <div className={`font-mono text-[10px] uppercase tracking-widest ${isTest ? "text-sky-300/80" : "text-amber-300/80"}`}>
                     {momentLabel(ev)}
-                    {isTest ? " · test" : ""}
+                    {isTest ? " · teste" : ""}
                   </div>
                   <div className={`text-[12px] font-medium leading-tight truncate ${isSelected ? "text-blue-100" : "text-zinc-300"}`}>
                     {nodeTitle(ev)}
@@ -640,7 +640,7 @@ export default function CharacterJourney({
               <div className="flex items-center gap-2">
                 {selected.kind === "test" ? (
                   <span className="text-[9px] font-mono uppercase tracking-widest text-sky-300/90 border border-sky-700/40 rounded px-1 py-0.5 shrink-0">
-                    Test
+                    Teste
                   </span>
                 ) : null}
                 <span className="text-sm font-medium text-zinc-100">{nodeTitle(selected)}</span>
@@ -712,14 +712,14 @@ export default function CharacterJourney({
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.7" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
             </svg>
             <span className="font-mono text-[10px] tracking-widest uppercase text-blue-300/80">
-              Full sheet — compare moments
+              Ficha completa — comparar momentos
             </span>
             <span aria-hidden className="flex-1 h-px" style={{ background: "linear-gradient(90deg, rgba(96,165,250,.3), transparent)" }} />
           </div>
 
           <div className="mt-3 flex items-center gap-2 flex-wrap font-mono text-[11px]">
             <label className="flex items-center gap-1.5 text-zinc-500">
-              <span className="uppercase tracking-widest text-emerald-400/90">From</span>
+              <span className="uppercase tracking-widest text-emerald-400/90">De</span>
               <select
                 value={caKey}
                 onChange={(e) => setCmpA(e.target.value || null)}
@@ -734,7 +734,7 @@ export default function CharacterJourney({
             </label>
             <span className="text-zinc-600" aria-hidden>→</span>
             <label className="flex items-center gap-1.5 text-zinc-500">
-              <span className="uppercase tracking-widest text-sky-400/90">To</span>
+              <span className="uppercase tracking-widest text-sky-400/90">Para</span>
               <select
                 value={cbKey}
                 onChange={(e) => setCmpB(e.target.value || null)}
@@ -748,12 +748,12 @@ export default function CharacterJourney({
               </select>
             </label>
             <span className="text-[10px] text-zinc-600 italic ml-auto hidden sm:block">
-              Skills are recomputed with the attributes of each moment.
+              As perícias são recalculadas com os atributos de cada momento.
             </span>
           </div>
 
           <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_auto_1fr] items-stretch">
-            <FullFicha ev={ca} profile={profile} match={cb} baseline={baseline} tag="From" />
+            <FullFicha ev={ca} profile={profile} match={cb} baseline={baseline} tag="De" />
 
             <div className="flex flex-row lg:flex-col items-center justify-center gap-1.5 lg:px-1.5">
               {compareRows.map((row) => {
@@ -771,11 +771,11 @@ export default function CharacterJourney({
               })}
             </div>
 
-            <FullFicha ev={cb} profile={profile} match={ca} baseline={baseline} tag="To" />
+            <FullFicha ev={cb} profile={profile} match={ca} baseline={baseline} tag="Para" />
           </div>
 
           <p className="mt-3 text-[10px] text-zinc-600 italic">
-            Skills, advantages and gear reflect the current table record — the core stats (HP/FP/ST/DX/IQ/HT) and derived skill levels are shown exactly as they stood at each selected moment.
+            Perícias, vantagens e equipamento refletem o registro atual da mesa — os atributos centrais (HP/FP/ST/DX/IQ/HT) e os níveis derivados de perícia aparecem exatamente como estavam em cada momento selecionado.
           </p>
         </div>
       ) : null}

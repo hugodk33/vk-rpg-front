@@ -5,18 +5,18 @@
 
 export type Lang = "pt" | "en";
 
-export const DEFAULT_LANG: Lang = "en";
+export const DEFAULT_LANG: Lang = "pt";
 
 export const LANGS: Array<{ id: Lang; label: string }> = [
-  { id: "en", label: "EN" },
   { id: "pt", label: "PT" },
+  { id: "en", label: "EN" },
 ];
 
 export const STORAGE_KEY = "vkrpg.lang";
 export const LANG_COOKIE = "vkrpg.lang";
 
 export function normalizeLang(value: string | null | undefined): Lang {
-  return value === "pt" ? "pt" : "en";
+  return value === "en" ? "en" : "pt";
 }
 
 export function langFromCookieValue(value: string | undefined): Lang {
@@ -55,6 +55,8 @@ const dict: Record<Lang, Record<string, string>> = {
     "s2.addAll": "Adicionar todos",
     "s2.clearAll": "Limpar",
     "s2.empty": "Sem módulos escolhidos — a mesa nasce vazia.",
+    "s2.explore": "Explorar",
+    "s2.selection": "{n} pacote(s) · {c} categoria(s)",
     "c.skills": "perícias",
     "c.items": "itens",
     "c.characters": "personagens",
@@ -152,6 +154,8 @@ const dict: Record<Lang, Record<string, string>> = {
     "s2.addAll": "Add all",
     "s2.clearAll": "Clear",
     "s2.empty": "No modules picked — the table starts empty.",
+    "s2.explore": "Browse",
+    "s2.selection": "{n} pack(s) · {c} categories",
     "c.skills": "skills",
     "c.items": "items",
     "c.characters": "characters",

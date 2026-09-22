@@ -579,10 +579,21 @@ export interface ContentCatalogCount {
   count: number
 }
 
+export interface ContentReference {
+  moduleId: string
+  domain: string
+  category: string
+  subcategory: string | null
+  name: string
+  description: string | null
+  kind: string | null
+}
+
 export interface ContentCatalog {
   modules: ContentModuleRow[]
   categories: ContentCategoryRow[]
   counts: ContentCatalogCount[]
+  references: ContentReference[]
 }
 
 export interface QueueEntry {

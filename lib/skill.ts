@@ -79,7 +79,7 @@ export function skillLabel(
   skill: Pick<CharacterSkill, "predefinition_type" | "predefinition_difficulty" | "cost_points" | "skill_name" | "name">,
   sheet?: Sheet | null
 ): string {
-  const name = skill.skill_name || skill.name || "Skill";
+  const name = skill.skill_name || skill.name || "Perícia";
   const level = skillLevel(skill, sheet);
   return level != null ? `${name} ${level}` : name;
 }

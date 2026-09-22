@@ -4,7 +4,9 @@ import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import type { GameTableSkills, SkillItem } from "@/lib/types";
 import TableTabs from "@/components/TableTabs";
+import RowActions from "@/components/table/RowActions";
 import { api } from "@/lib/api";
+import { submitJson } from "@/components/forms/submit";
 
 const TYPE_ICON: Record<string, { color: string; path: string }> = {
   Physical: { color: "text-amber-400", path: "M6.5 6.5v11M3.5 9v6M17.5 6.5v11M20.5 9v6M6.5 12h11" },
@@ -14,6 +16,8 @@ const TYPE_ICON: Record<string, { color: string; path: string }> = {
 const FALLBACK_ICON = { color: "text-zinc-400", path: "M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" };
 
 const DIFF_DOTS: Record<string, number> = { Easy: 1, Average: 2, Hard: 3, "Very Hard": 4 };
+const DIFF_LABEL: Record<string, string> = { Easy: "Fácil", Average: "Média", Hard: "Difícil", "Very Hard": "Muito difícil" };
+const TYPE_LABEL: Record<string, string> = { Physical: "Física", Mental: "Mental", Social: "Social" };
 
 export default function TableSkillsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -44,18 +48,26 @@ export default function TableSkillsPage({ params }: { params: Promise<{ id: stri
       <TableTabs tableId={id} />
 
       <div className="flex items-baseline gap-3 mb-1">
-        <h1 className="text-2xl font-bold text-zinc-100">Skills</h1>
+        <h1 className="text-2xl font-bold text-zinc-100">Perícias</h1>
         <span className="text-sm text-zinc-500">{data?.table?.title}</span>
       </div>
 
-      <div className="flex items-center gap-3 mb-6 text-xs text-zinc-500">
-        <span>{skills.length} skill{skills.length !== 1 ? "s" : ""}</span>
-        {Object.entries(typeCounts).map(([t, c]) => (
-          <span key={t} className="flex items-center gap-1">
-            <span className={`w-1.5 h-1.5 rounded-full ${TYPE_ICON[t]?.color?.replace("text-", "bg-") ?? "bg-zinc-500"}`} />
-            {c} {t}
-          </span>
-        ))}
+      <div className="flex items-center justify-between gap-3 mb-6">
+        <div className="flex items-center gap-3 text-xs text-zinc-500">
+          <span>{skills.length} {skills.length !== 1 ? "perícias" : "perícia"}</span>
+          {Object.entries(typeCounts).map(([t, c]) => (
+            <span key={t} className="flex items-center gap-1">
+              <span className={`w-1.5 h-1.5 rounded-full ${TYPE_ICON[t]?.color?.replace("text-", "bg-") ?? "bg-zinc-500"}`} />
+              {c} {TYPE_LABEL[t] ?? t}
+            </span>
+          ))}
+        </div>
+        <Link
+          href={`/skill/new?table_id=${id}`}
+          className="bg-green-800/70 hover:bg-green-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors"
+        >
+          + Nova perícia
+        </Link>
       </div>
 
       <div className="flex gap-2 mb-6">
@@ -67,13 +79,13 @@ export default function TableSkillsPage({ params }: { params: Promise<{ id: stri
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Filter skills..."
+            placeholder="Filtrar perícias..."
             className="w-full bg-zinc-800/60 border border-zinc-700/50 rounded-lg pl-9 pr-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-green-900/60"
           />
         </div>
         {search ? (
           <button type="button" onClick={() => setSearch("")} className="bg-zinc-800/60 hover:bg-zinc-700/60 text-zinc-400 text-sm px-3 py-2 rounded-lg transition-colors border border-zinc-700/50">
-            Clear
+            Limpar
           </button>
         ) : null}
       </div>
@@ -83,7 +95,7 @@ export default function TableSkillsPage({ params }: { params: Promise<{ id: stri
           <svg className="w-10 h-10 text-zinc-700 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
           </svg>
-          <p className="text-zinc-500 text-sm">{search ? "No skills match your filter." : "No skills added to this table yet."}</p>
+          <p className="text-zinc-500 text-sm">{search ? "Nenhuma perícia corresponde ao seu filtro." : "Nenhuma perícia adicionada a esta mesa ainda."}</p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -102,7 +114,7 @@ export default function TableSkillsPage({ params }: { params: Promise<{ id: stri
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={icon.path} />
                     </svg>
                     <span className="text-sm font-medium text-zinc-200 group-hover:text-zinc-100 truncate">
-                      {s.name || "Unnamed"}
+                      {s.name || "Sem nome"}
                     </span>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
@@ -111,12 +123,16 @@ export default function TableSkillsPage({ params }: { params: Promise<{ id: stri
                         {Array.from({ length: 4 }, (_, i) => (
                           <span key={i} className={`w-1.5 h-1.5 rounded-full ${i < dots ? "bg-amber-400" : "bg-zinc-700"}`} />
                         ))}
-                        <span className="text-[10px] text-zinc-500 ml-1">{s.predefinition_difficulty}</span>
+                        <span className="text-[10px] text-zinc-500 ml-1">{DIFF_LABEL[s.predefinition_difficulty] ?? s.predefinition_difficulty}</span>
                       </span>
                     ) : null}
                     {s.predefinition_type ? (
-                      <span className="text-[10px] text-zinc-600 hidden sm:inline">{s.predefinition_type}</span>
+                      <span className="text-[10px] text-zinc-600 hidden sm:inline">{TYPE_LABEL[s.predefinition_type] ?? s.predefinition_type}</span>
                     ) : null}
+                    <RowActions
+                      editHref={`/skill/${s.id}/edit?table_id=${id}`}
+                      onDelete={() => submitJson(`/api/game-table-skill/${s.id}`, "DELETE")}
+                    />
                   </div>
                 </div>
                 <div className="flex items-center gap-2 mt-1.5 ml-7">

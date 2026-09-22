@@ -25,7 +25,7 @@ import type {
   TableCharacter,
 } from "@/lib/types";
 
-const charName = (c: TableCharacter) => c.sheet?.name || c.name || "Unnamed";
+const charName = (c: TableCharacter) => c.sheet?.name || c.name || "Sem nome";
 const num = (v: string): number | undefined => {
   if (v.trim() === "") return undefined;
   const n = Number(v);
@@ -43,7 +43,7 @@ const SET_FIELDS: { key: string; label: string; numeric?: boolean }[] = [
   { key: "iq", label: "IQ", numeric: true },
   { key: "ht", label: "HT", numeric: true },
   { key: "fatigue", label: "FP", numeric: true },
-  { key: "encumbrance", label: "Encumbrance" },
+  { key: "encumbrance", label: "Carga" },
 ];
 
 const DELTA_FIELDS: { key: string; label: string; numeric?: boolean }[] = [
@@ -53,20 +53,20 @@ const DELTA_FIELDS: { key: string; label: string; numeric?: boolean }[] = [
   { key: "mod_iq", label: "Δ IQ", numeric: true },
   { key: "mod_ht", label: "Δ HT", numeric: true },
   { key: "mod_fatigue", label: "Δ FP", numeric: true },
-  { key: "mod_encumbrance", label: "Δ Encumbrance" },
+  { key: "mod_encumbrance", label: "Δ Carga" },
 ];
 
 const ITEM_FIELDS: { key: string; label: string; numeric?: boolean }[] = [
-  { key: "damage_value", label: "Damage" },
-  { key: "skill_value", label: "Skill value" },
-  { key: "armor_value", label: "Armor value" },
-  { key: "advantage_value", label: "Advantage value" },
-  { key: "disadvantage_value", label: "Disadvantage value" },
-  { key: "item_quantity", label: "Item quantity", numeric: true },
-  { key: "item_weight", label: "Item weight", numeric: true },
-  { key: "item_dimension", label: "Item dimension" },
-  { key: "item_range", label: "Item range" },
-  { key: "item_status", label: "Item status" },
+  { key: "damage_value", label: "Dano" },
+  { key: "skill_value", label: "Valor de perícia" },
+  { key: "armor_value", label: "Valor de armadura" },
+  { key: "advantage_value", label: "Valor de vantagem" },
+  { key: "disadvantage_value", label: "Valor de desvantagem" },
+  { key: "item_quantity", label: "Quantidade do item", numeric: true },
+  { key: "item_weight", label: "Peso do item", numeric: true },
+  { key: "item_dimension", label: "Dimensão do item" },
+  { key: "item_range", label: "Alcance do item" },
+  { key: "item_status", label: "Estado do item" },
 ];
 
 const effectChips = (m: Modifier): { label: string; value: string }[] => {
@@ -94,15 +94,15 @@ const effectChips = (m: Modifier): { label: string; value: string }[] => {
   for (const [label, v] of sets) {
     if (v != null) out.push({ label, value: `=${v}` });
   }
-  if (m.encumbrance) out.push({ label: "Enc", value: m.encumbrance });
-  if (m.mod_encumbrance) out.push({ label: "Enc", value: m.mod_encumbrance });
-  if (m.damage_value) out.push({ label: "Dmg", value: m.damage_value });
-  if (m.skill_value) out.push({ label: "Skill", value: m.skill_value });
+  if (m.encumbrance) out.push({ label: "CAR", value: m.encumbrance });
+  if (m.mod_encumbrance) out.push({ label: "CAR", value: m.mod_encumbrance });
+  if (m.damage_value) out.push({ label: "Dano", value: m.damage_value });
+  if (m.skill_value) out.push({ label: "Per.", value: m.skill_value });
   if (m.armor_value) out.push({ label: "DR", value: m.armor_value });
-  if (m.advantage_value) out.push({ label: "Adv", value: m.advantage_value });
-  if (m.disadvantage_value) out.push({ label: "Dis", value: m.disadvantage_value });
-  if (m.item_quantity) out.push({ label: "Qty", value: `=${m.item_quantity}` });
-  if (m.item_weight != null) out.push({ label: "Wt", value: `${m.item_weight} lb` });
+  if (m.advantage_value) out.push({ label: "Vant", value: m.advantage_value });
+  if (m.disadvantage_value) out.push({ label: "Desv", value: m.disadvantage_value });
+  if (m.item_quantity) out.push({ label: "Qtd", value: `=${m.item_quantity}` });
+  if (m.item_weight != null) out.push({ label: "Peso", value: `${m.item_weight} lb` });
   return out;
 };
 
@@ -257,7 +257,7 @@ export default function ModifiersPanel({
 
   const locationNameOf = useMemo(() => {
     const m = new Map<string, string>();
-    for (const l of locations ?? []) if (l.id) m.set(String(l.id), l.name || "Unnamed");
+    for (const l of locations ?? []) if (l.id) m.set(String(l.id), l.name || "Sem nome");
     return (id?: string | null) => (id ? m.get(String(id)) ?? null : null);
   }, [locations]);
 
@@ -329,7 +329,7 @@ export default function ModifiersPanel({
 
   const save = async () => {
     if (!form.character_id && !form.location_id) {
-      setError("Pick a character or a location to receive the modifier.");
+      setError("Escolha um personagem ou um local para receber o modificador.");
       return;
     }
     setSaving(true);
@@ -340,7 +340,7 @@ export default function ModifiersPanel({
       scene_id: txt(form.scene_id),
       narration_id: txt(form.narration_id),
       action_id: txt(form.action_id),
-      name: form.name.trim() || "Modifier",
+      name: form.name.trim() || "Modificador",
       description: txt(form.description) ?? "",
       effect: txt(form.effect) ?? "",
       cost_points: num(form.cost_points),
@@ -389,7 +389,7 @@ export default function ModifiersPanel({
       setTab("list");
       await refetch();
     } catch {
-      setError("Failed to save modifier.");
+      setError("Falha ao salvar o modificador.");
     } finally {
       setSaving(false);
     }
@@ -416,7 +416,7 @@ export default function ModifiersPanel({
               : "text-zinc-500 border-transparent hover:text-zinc-300"
           }`}
         >
-          On record
+          No registro
           <span className="ml-2 text-zinc-600">{modifiers.length}</span>
         </button>
         <button
@@ -432,7 +432,7 @@ export default function ModifiersPanel({
               : "text-zinc-500 border-transparent hover:text-zinc-300"
           }`}
         >
-          {form.id ? "Editing modifier" : "New modifier"}
+          {form.id ? "Editando modificador" : "Novo modificador"}
         </button>
       </div>
 
@@ -442,11 +442,11 @@ export default function ModifiersPanel({
           {modifiers.length === 0 ? (
             <div className="rounded-xl border border-dashed border-zinc-700/60 px-4 py-10 text-center">
               <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">
-                No modifiers yet
+                Nenhum modificador ainda
               </p>
               <p className="text-sm text-zinc-400 mt-2">
-                Every effect is replayable from the story moment it belongs
-                to. Create one on the New modifier tab.
+                Todo efeito pode ser reproduzido a partir do momento da
+                história a que pertence. Crie um na aba Novo modificador.
               </p>
             </div>
           ) : (
@@ -468,7 +468,7 @@ export default function ModifiersPanel({
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
                         <p className="text-sm font-semibold text-zinc-100 truncate">
-                          {m.name || "Unnamed modifier"}
+                          {m.name || "Modificador sem nome"}
                         </p>
                         <p className="font-mono text-[9px] uppercase tracking-widest text-zinc-500 mt-0.5">
                           {char ? charName(char) : "—"}
@@ -483,7 +483,7 @@ export default function ModifiersPanel({
                         }}
                         className="shrink-0 font-mono text-[10px] uppercase tracking-widest text-zinc-400 border border-zinc-700/60 rounded-md px-2 py-1 hover:text-zinc-100 hover:border-zinc-500 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-green-800/60"
                       >
-                        Edit
+                        Editar
                       </button>
                     </div>
 
@@ -495,33 +495,33 @@ export default function ModifiersPanel({
 
                     {locName ? (
                       <p className="font-mono text-[9px] uppercase tracking-widest text-teal-300/80 mt-1.5">
-                        ◍ At {locName}
+                        ◍ Em {locName}
                       </p>
                     ) : null}
 
                     {scene ? (
                       <p className="font-mono text-[9px] uppercase tracking-widest text-zinc-500 mt-1.5">
-                        {scene.chapter != null ? `Ch.${scene.chapter}` : "Any"}
+                        {scene.chapter != null ? `Cap.${scene.chapter}` : "Qualquer"}
                         {scene.title ? ` · ${scene.title}` : ""}
                         {narration?.title
                           ? ` / ${narration.title}`
                           : narration?.id === m.narration_id
-                          ? " / this narration"
+                          ? " / esta narração"
                           : ""}
                       </p>
                     ) : locName ? (
                       <p className="font-mono text-[9px] uppercase tracking-widest text-zinc-600 mt-1.5">
-                        This place, no story moment
+                        Este local, sem momento na história
                       </p>
                     ) : (
                       <p className="font-mono text-[9px] uppercase tracking-widest text-zinc-600 mt-1.5">
-                        Persistent (no story moment)
+                        Persistente (sem momento na história)
                       </p>
                     )}
 
                     {actionRef ? (
                       <p className="font-mono text-[9px] uppercase tracking-widest text-amber-300/80 mt-1">
-                        ⤷ after action{" "}
+                        ⤷ após a ação{" "}
                         {actionRef.action.queue != null
                           ? `${actionRef.action.queue}.`
                           : ""}{" "}
@@ -533,7 +533,7 @@ export default function ModifiersPanel({
 
                     {m.apply_on_roll === 1 ? (
                       <p className="font-mono text-[9px] uppercase tracking-widest text-green-400/90 mt-1">
-                        ⚡ applies when this skill&apos;s test succeeds
+                        ⚡ aplica quando o teste desta perícia tem sucesso
                       </p>
                     ) : null}
 
@@ -558,7 +558,7 @@ export default function ModifiersPanel({
       ) : (
         <section>
           <h3 className="font-mono text-xs uppercase tracking-[0.15em] text-green-500/80 mb-3">
-            {form.id ? "Editing modifier" : "New modifier"}
+            {form.id ? "Editando modificador" : "Novo modificador"}
           </h3>
 
           <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-4 space-y-4">
@@ -580,12 +580,12 @@ export default function ModifiersPanel({
                 </select>
               </label>
               <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-zinc-500">
-                Name
+                Nome
                 <input
                   type="text"
                   value={form.name}
                   onChange={(e) => set("name", e.target.value)}
-                  placeholder="e.g. Cantrip surge"
+                  placeholder="ex.: Surto de truque"
                   className={fieldCls}
                 />
               </label>
@@ -593,7 +593,7 @@ export default function ModifiersPanel({
 
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-zinc-500">
-                Chapter
+                Capítulo
                 <select
                   value={form.chapter}
                   onChange={(e) => {
@@ -604,16 +604,16 @@ export default function ModifiersPanel({
                   }}
                   className={fieldCls}
                 >
-                  <option value="">Any</option>
+                  <option value="">Qualquer</option>
                   {chapters.map((ch) => (
                     <option key={ch} value={ch}>
-                      Chapter {ch}
+                      Capítulo {ch}
                     </option>
                   ))}
                 </select>
               </label>
               <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-zinc-500">
-                Scene
+                Cena
                 <select
                   value={form.scene_id}
                   onChange={(e) => {
@@ -627,13 +627,13 @@ export default function ModifiersPanel({
                   <option value="">—</option>
                   {visibleScenes.map((s: { id: string; title: string }) => (
                     <option key={s.id} value={s.id}>
-                      {s.title || "Untitled scene"}
+                      {s.title || "Cena sem título"}
                     </option>
                   ))}
                 </select>
               </label>
               <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-zinc-500">
-                Narration
+                Narração
                 <select
                   value={form.narration_id}
                   onChange={(e) => {
@@ -646,13 +646,13 @@ export default function ModifiersPanel({
                   <option value="">—</option>
                   {visibleNarrations.map((n) => (
                     <option key={n.id} value={n.id}>
-                      {n.title || "Narration"}
+                      {n.title || "Narração"}
                     </option>
                   ))}
                 </select>
               </label>
               <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-amber-300/70">
-                Action (after)
+                Ação (após)
                 <select
                   value={form.action_id}
                   onChange={(e) => set("action_id", e.target.value)}
@@ -663,7 +663,7 @@ export default function ModifiersPanel({
                   {visibleActions.map((a) => (
                     <option key={a.id} value={a.id}>
                       {a.queue != null ? `${a.queue}. ` : ""}
-                      {a.description || "Action"}
+                      {a.description || "Ação"}
                       {a.result ? ` → ${a.result}` : ""}
                     </option>
                   ))}
@@ -673,9 +673,9 @@ export default function ModifiersPanel({
 
             <div className="grid gap-3 sm:grid-cols-2 border-t border-zinc-800 pt-4">
               <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-zinc-500">
-                Consequence skill
+                Perícia de consequência
                 <span className="normal-case text-zinc-600 font-sans text-[10px]">
-                  Locks to a skill — the deltas apply when that skill&apos;s test passes.
+                  Trava numa perícia — os deltas se aplicam quando o teste dela passa.
                 </span>
                 <select
                   value={form.skill_id}
@@ -695,7 +695,7 @@ export default function ModifiersPanel({
               </label>
               <div className="flex flex-col justify-center gap-1">
                 <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-500">
-                  Apply on test success
+                  Aplicar no sucesso do teste
                 </span>
                 <button
                   type="button"
@@ -722,34 +722,34 @@ export default function ModifiersPanel({
 
             {form.apply_on_roll === 1 && form.skill_id ? (
               <p className="text-[10px] text-amber-300/70 -mt-2">
-                On a successful test of this skill, the deltas above are materialized as an active
-                effect on the character. Damage stays applied; the max HP/FP never changes.
+                Num teste bem-sucedido desta perícia, os deltas acima são materializados como um
+                efeito ativo no personagem. O dano permanece aplicado; o HP/FP máximo nunca muda.
               </p>
             ) : null}
 
             <div className="grid gap-3">
               <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-zinc-500">
-                Description
+                Descrição
                 <textarea
                   value={form.description}
                   onChange={(e) => set("description", e.target.value)}
                   rows={2}
-                  placeholder="What happened to the character"
+                  placeholder="O que aconteceu com o personagem"
                   className={fieldCls}
                 />
               </label>
               <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-zinc-500">
-                Effect
+                Efeito
                 <input
                   type="text"
                   value={form.effect}
                   onChange={(e) => set("effect", e.target.value)}
-                  placeholder="e.g. +1 FP"
+                  placeholder="ex.: +1 FP"
                   className={fieldCls}
                 />
               </label>
               <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-zinc-500">
-                Cost points
+                Pontos de custo
                 <input
                   type="number"
                   value={form.cost_points}
@@ -761,7 +761,7 @@ export default function ModifiersPanel({
 
             <div>
               <p className="text-[10px] font-mono uppercase tracking-wider text-zinc-500 mb-2">
-                Set overrides <span className="text-zinc-600 normal-case">(absolute)</span>
+                Definir valores <span className="text-zinc-600 normal-case">(absoluto)</span>
               </p>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {SET_FIELDS.map((f) => (
@@ -785,7 +785,7 @@ export default function ModifiersPanel({
 
             <div>
               <p className="text-[10px] font-mono uppercase tracking-wider text-zinc-500 mb-2">
-                Deltas <span className="text-zinc-600 normal-case">(additive)</span>
+                Deltas <span className="text-zinc-600 normal-case">(aditivo)</span>
               </p>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {DELTA_FIELDS.map((f) => (
@@ -813,7 +813,7 @@ export default function ModifiersPanel({
                 onClick={() => setShowAdvanced((v) => !v)}
                 className="w-full flex items-center justify-between px-3 py-2 text-[10px] font-mono uppercase tracking-wider text-zinc-400 hover:text-zinc-200 transition-colors"
               >
-                Item & misc fields
+                Campos de item e diversos
                 <svg
                   className={`w-3.5 h-3.5 transition-transform ${showAdvanced ? "rotate-180" : ""}`}
                   fill="none"
@@ -853,10 +853,10 @@ export default function ModifiersPanel({
                 className="inline-flex items-center gap-2 bg-green-800 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-green-800/60"
               >
                 {saving
-                  ? "Saving…"
+                  ? "Salvando…"
                   : form.id
-                  ? "Save changes"
-                  : "Add modifier"}
+                  ? "Salvar alterações"
+                  : "Adicionar modificador"}
               </button>
               {form.id ? (
                 <button
@@ -868,7 +868,7 @@ export default function ModifiersPanel({
                   }}
                   className="text-sm text-zinc-500 hover:text-zinc-200 transition-colors"
                 >
-                  Cancel
+                  Cancelar
                 </button>
               ) : null}
             </div>
