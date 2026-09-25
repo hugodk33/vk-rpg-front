@@ -453,12 +453,6 @@ export default async function TableOverviewPage({ params }: { params: Promise<{ 
         </section>
       ) : null}
 
-      {/* ---- gm quick actions ---- */}
-      <section className="mt-8">
-        <LedgerHeader title={t("tp.ledger.gmActions")} meta={t("tp.ledger.gmActionsMeta")} />
-        <TableQuickActions tableId={id} targets={quickTargets} items={quickItems} />
-      </section>
-
       {/* ---- seating (players) ---- */}
       <section className="mt-8">
         <LedgerHeader title={t("tp.players")} meta={t("tp.seatedOf").replace("{a}", String(seated)).replace("{b}", String((table?.players ?? []).length))} />
@@ -494,6 +488,12 @@ export default async function TableOverviewPage({ params }: { params: Promise<{ 
           </div>
         </section>
       ) : null}
+
+      {/* ---- gm quick actions ---- */}
+      <section className="mt-8">
+        <LedgerHeader title={t("tp.ledger.gmActions")} meta={t("tp.ledger.gmActionsMeta")} />
+        <TableQuickActions tableId={id} targets={quickTargets} items={quickItems} />
+      </section>
 
       {/* ---- archive ---- */}
       <section className="mt-8">

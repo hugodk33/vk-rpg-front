@@ -179,13 +179,6 @@ export default function MapLog({
     return c.name || c.username || t("lc.log.someone");
   };
 
-  const wasUnconscious = isPlayer
-    ? (() => {
-        const c = (effBeat?.characters ?? []).find((x) => x.id === viewerId);
-        return !!c && c.conscious === false;
-      })()
-    : false;
-
   return (
     <div className={`max-w-6xl mx-auto px-4 py-6 ${fillViewport ? "lg:h-[calc(100dvh-9rem)] lg:flex lg:flex-col" : ""}`}>
       {/* canopy */}
@@ -209,29 +202,28 @@ export default function MapLog({
           <p className="text-zinc-500 text-sm">{t("lc.log.noScenes")}</p>
         </div>
       ) : (
-        <div className={`grid grid-cols-1 gap-5 ${fillViewport ? "lg:flex-1 lg:min-h-0 lg:grid-rows-[minmax(0,44%)_minmax(0,1fr)]" : ""}`}>
-          {/* ================= LOG ================= */}
-          <aside className="grid grid-cols-1 gap-5 lg:grid-cols-[17rem_minmax(0,1fr)] lg:items-start lg:gap-4">
-            {/* chapter + scene */}
-            <div className="rounded-xl border border-zinc-700/40 bg-zinc-900/60 p-4 space-y-3 lg:self-start">
+        <div className={`space-y-5 ${fillViewport ? "lg:flex-1 lg:min-h-0 lg:flex lg:flex-col" : ""}`}>
+          {/* ============ SELECTS — one line, inputs in columns ============ */}
+          <div className={`rounded-xl border border-zinc-700/40 bg-zinc-900/60 p-4 ${fillViewport ? "lg:shrink-0" : ""}`}>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
               <div>
-                <label className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">{t("lc.mod.chapter")}</label>
-                <div className="flex items-center gap-2">
-                  <select
-                    value={effChapter}
-                    onChange={(e) => pickChapter(Number(e.target.value))}
-                    className={`w-full bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-3 py-2 text-zinc-100 text-sm focus:outline-none ${tone.focusSelect} transition-colors`}
-                  >
-                    {chapters.map(([ch]) => (
-                      <option key={ch} value={ch} className="bg-zinc-800">
-                        {interpolate(t("lc.mod.chapterN"), { n: roman(ch) })}
-                      </option>
-                    ))}
-                  </select>
-                  <span className="shrink-0 font-mono text-[10px] uppercase tracking-widest text-zinc-600">
+                <div className="flex items-center justify-between gap-2 mb-1">
+                  <label className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block">{t("lc.mod.chapter")}</label>
+                  <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-600">
                     M {Math.max(0, effScene?.moment ?? 0) + 1}
                   </span>
                 </div>
+                <select
+                  value={effChapter}
+                  onChange={(e) => pickChapter(Number(e.target.value))}
+                  className={`w-full bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-3 py-2 text-zinc-100 text-sm focus:outline-none ${tone.focusSelect} transition-colors`}
+                >
+                  {chapters.map(([ch]) => (
+                    <option key={ch} value={ch} className="bg-zinc-800">
+                      {interpolate(t("lc.mod.chapterN"), { n: roman(ch) })}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>
@@ -264,9 +256,10 @@ export default function MapLog({
                 </select>
               </div>
             </div>
+          </div>
 
-            {/* narrations — the timeline */}
-            <div className="rounded-xl border border-zinc-700/40 bg-zinc-900/60 p-4 lg:min-h-0 lg:max-h-[72vh] lg:overflow-y-auto">
+            {/* ============ NARRATIONS — the rail of plates, centered ============ */}
+            <div className={`rounded-xl border border-zinc-700/40 bg-zinc-900/60 p-4 ${fillViewport ? "lg:shrink-0 lg:max-h-[28vh] lg:overflow-y-auto" : ""}`}>
               <div className="flex items-center gap-2 mb-3">
                 <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">{t("lc.log.narrationsTitle")}</span>
                 <span className="font-mono text-[10px] text-zinc-600">({narrations.length})</span>
@@ -276,85 +269,98 @@ export default function MapLog({
               </div>
 
               {narrations.length === 0 ? (
-                <p className="text-sm text-zinc-600 italic font-mono">{t("lc.log.noBeats")}</p>
+                <p className="text-sm text-zinc-600 italic font-mono text-center py-3">{t("lc.log.noBeats")}</p>
               ) : (
-                <ol className="relative space-y-3 border-l border-zinc-800 pl-4">
+                <div className="flex flex-wrap justify-center gap-2">
                   {narrations.map((n, idx) => {
                     const active = n.id === effBeat?.id;
-                    const acts = [...(n.actions ?? [])].sort((a, b) => (a.queue ?? 0) - (b.queue ?? 0));
+                    const loc = n.location?.name
+                      ? isPlayer
+                        ? maskedLocationName(visibility, n.location.id, n.location.name)
+                        : n.location.name
+                      : null;
                     return (
-                      <li key={n.id}>
+                      <button
+                        key={n.id}
+                        type="button"
+                        onClick={() => pickNarration(n.id)}
+                        className={`rounded-lg border px-3 py-1.5 text-center transition-colors focus:outline-none focus-visible:ring-2 ${tone.focusRing} ${
+                          active ? tone.sel : "border-zinc-800 bg-zinc-900/50 hover:border-zinc-600 text-zinc-300"
+                        }`}
+                      >
+                        <span className="flex items-baseline justify-center gap-1.5">
+                          <span className={`font-mono text-[10px] tabular-nums ${active ? tone.text : "text-zinc-600"}`}>
+                            {String(idx + 1).padStart(2, "0")}.
+                          </span>
+                          <span className="text-[13px] font-medium leading-tight">
+                            {n.title || t("lc.log.beatUntitled")}
+                          </span>
+                        </span>
+                        <span className="block font-mono text-[9px] uppercase tracking-widest text-zinc-600 mt-0.5">
+                          {interpolate(t("vs.sr.moment"), { n: idx + 1 })}{loc ? ` · ${loc}` : ""}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* ============ ACTIONS — the beat's rows ============ */}
+            <aside className={`rounded-xl border border-zinc-700/40 bg-zinc-900/60 p-4 ${fillViewport ? "lg:shrink-0 lg:max-h-[32vh] lg:overflow-y-auto" : "lg:max-h-[70vh] lg:overflow-y-auto"}`}>
+              <div className="flex items-center gap-2 mb-3">
+                <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">{t("vs.sr.actionsTitle")}</span>
+                <span className="font-mono text-[10px] text-zinc-600">({actionList.length})</span>
+              </div>
+
+              {!effBeat ? (
+                <p className="text-sm text-zinc-600 italic font-mono">{t("lc.log.pickNarration")}</p>
+              ) : actionList.length === 0 ? (
+                <p className="text-sm text-zinc-600 italic font-mono">{t("vs.sr.noActions")}</p>
+              ) : (
+                <ol className="space-y-1.5">
+                  {actionList.map((a) => {
+                    const aActive = a.id === actionSel;
+                    const isMove = a.q != null && a.r != null;
+                    return (
+                      <li key={a.id}>
                         <button
                           type="button"
-                          onClick={() => pickNarration(n.id)}
-                          className={`w-full text-left rounded-lg border px-3 py-2 transition-colors focus:outline-none focus-visible:ring-2 ${tone.focusRing} ${
-                            active ? tone.sel : "border-zinc-800 bg-zinc-900/50 hover:border-zinc-600 text-zinc-300"
+                          onClick={() => setActionSel((prev) => (prev === a.id ? "" : a.id))}
+                          className={`w-full flex items-start gap-2 rounded-md border px-2.5 py-1.5 text-left transition-colors ${
+                            aActive ? tone.sel : "border-zinc-800/80 bg-zinc-900/40 hover:border-zinc-600 text-zinc-400"
                           }`}
                         >
-                          <span className="flex items-baseline gap-2">
-                            <span className={`font-mono text-[10px] tabular-nums ${active ? tone.text : "text-zinc-600"}`}>
-                              {String(idx + 1).padStart(2, "0")}.
+                          <span className={`font-mono text-[10px] tabular-nums pt-px ${aActive ? tone.text : "text-zinc-600"}`}>
+                            {a.queue ?? "·"}.
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span className={`block text-[12px] font-medium truncate ${aActive ? "text-zinc-100" : "text-zinc-300"}`}>
+                              {charShown(a)}
                             </span>
-                            <span className={`text-[13px] font-medium ${wasUnconscious && active ? "text-zinc-600" : ""}`}>
-                              {n.title || t("lc.log.beatUntitled")}
+                            <span className="block text-[11px] text-zinc-500 truncate">
+                              {a.description || (isMove ? t("lc.log.descMove") : t("lc.log.descLogged"))}
                             </span>
                           </span>
-                          <span className="mt-1 block font-mono text-[10px] uppercase tracking-widest text-zinc-600">
-                            {n.narration ? n.narration.slice(0, 90) : t("lc.log.noText")}
-                            {n.narration && n.narration.length > 90 ? "…" : ""}
-                          </span>
+                          {isMove ? (
+                            <span className="shrink-0 inline-flex items-center gap-1 rounded bg-sky-500/10 border border-sky-500/30 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider text-sky-300">
+                              {t("lc.log.movTag")} {hexLbl({ q: a.q as number, r: a.r as number }, t("lc.log.offMap"))}
+                            </span>
+                          ) : a.dice_roll ? (
+                            <span className="shrink-0 inline-flex items-center gap-1 rounded bg-zinc-800/70 border border-zinc-700/50 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider text-zinc-400">
+                              {t("lc.log.roll")}
+                            </span>
+                          ) : null}
                         </button>
-
-                        {active && acts.length ? (
-                          <ol className="mt-2 space-y-1 border-l border-zinc-800 ml-2 pl-3">
-                            {acts.map((a) => {
-                              const aActive = a.id === actionSel;
-                              const isMove = a.q != null && a.r != null;
-                              return (
-                                <li key={a.id}>
-                                  <button
-                                    type="button"
-                                    onClick={() => setActionSel((prev) => (prev === a.id ? "" : a.id))}
-                                    className={`w-full flex items-start gap-2 rounded-md border px-2.5 py-1.5 text-left transition-colors ${
-                                      aActive ? tone.sel : "border-zinc-800/80 bg-zinc-900/40 hover:border-zinc-600 text-zinc-400"
-                                    }`}
-                                  >
-                                    <span className={`font-mono text-[10px] tabular-nums pt-px ${aActive ? tone.text : "text-zinc-600"}`}>
-                                      {a.queue ?? "·"}.
-                                    </span>
-                                    <span className="min-w-0 flex-1">
-                                      <span className={`block text-[12px] font-medium truncate ${aActive ? "text-zinc-100" : "text-zinc-300"}`}>
-                                        {charShown(a)}
-                                      </span>
-                                      <span className="block text-[11px] text-zinc-500 truncate">
-                                        {a.description || (isMove ? t("lc.log.descMove") : t("lc.log.descLogged"))}
-                                      </span>
-                                    </span>
-                                    {isMove ? (
-                                      <span className="shrink-0 inline-flex items-center gap-1 rounded bg-sky-500/10 border border-sky-500/30 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider text-sky-300">
-                                        {t("lc.log.movTag")} {hexLbl({ q: a.q as number, r: a.r as number }, t("lc.log.offMap"))}
-                                      </span>
-                                    ) : a.dice_roll ? (
-                                      <span className="shrink-0 inline-flex items-center gap-1 rounded bg-zinc-800/70 border border-zinc-700/50 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider text-zinc-400">
-                                        {t("lc.log.roll")}
-                                      </span>
-                                    ) : null}
-                                  </button>
-                                </li>
-                              );
-                            })}
-                          </ol>
-                        ) : null}
                       </li>
                     );
                   })}
                 </ol>
               )}
-            </div>
-          </aside>
+            </aside>
 
-          {/* ================= MAP ================= */}
-          <section className={`space-y-4 ${fillViewport ? "lg:min-h-0" : ""}`}>
+            {/* ================= MAP — the floor plan ================= */}
+            <section className={`space-y-4 ${fillViewport ? "lg:flex-1 lg:min-h-0 lg:flex lg:flex-col" : ""}`}>
             <div className={`rounded-xl border border-zinc-700/40 bg-zinc-900/80 overflow-hidden ${fillViewport ? "lg:h-full lg:flex lg:flex-col" : ""}`}>
               <div className={`flex flex-wrap items-center gap-3 px-5 py-3.5 border-b border-zinc-700/40 ${fillViewport ? "lg:shrink-0" : ""}`}>
                 <span className="w-2.5 h-2.5 rounded-full" style={{ background: tone.accent, boxShadow: `0 0 8px ${tone.accent}` }} />
