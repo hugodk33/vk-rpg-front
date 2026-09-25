@@ -53,6 +53,10 @@ export interface PlayerConsoleData {
   advantages: Advantage[];
   disadvantages: Disadvantage[];
   locations: Location[];
+  /** the viewer-shaped location TREE (server-filtered) for the atlas. */
+  locationTree: Location[];
+  /** the location the narrator pinned as the default route (rota padrão). */
+  defaultLocationId: string | null;
   npcs: TableNpc[];
 }
 
@@ -118,6 +122,8 @@ export async function loadPlayerConsole(characterId: string): Promise<PlayerCons
     advantages: advData?.advantages ?? [],
     disadvantages: disData?.disadvantages ?? [],
     locations: locData?.locations ?? [],
+    locationTree: locData?.tree ?? [],
+    defaultLocationId: locData?.defaultLocationId ?? null,
     npcs: npcsData?.npcs ?? [],
   };
 }

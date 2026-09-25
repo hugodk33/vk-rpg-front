@@ -12,6 +12,7 @@ import type {
   TableNpc,
 } from "@/lib/types";
 import ItemIcon from "@/components/items/ItemIcon";
+import PlayerAtlas from "@/components/player/PlayerAtlas";
 import { interpolate, useTranslation } from "@/lib/i18n";
 
 /* ============================================================
@@ -33,6 +34,10 @@ interface TableResourcesProps {
   advantages?: Advantage[];
   disadvantages?: Disadvantage[];
   locations?: Location[];
+  /** viewer-shaped tree for the "Locais" atlas tab. */
+  locationTree?: Location[];
+  defaultLocationId?: string | null;
+  currentLocationId?: string | null;
   /** Controlled mode — the parent owns the selection and hides the strip. */
   tab?: ResourceTab;
   onTabChange?: (tab: ResourceTab) => void;
@@ -56,6 +61,9 @@ export default function TableResources({
   advantages = [],
   disadvantages = [],
   locations = [],
+  locationTree = [],
+  defaultLocationId = null,
+  currentLocationId = null,
   tab: controlledTab,
   onTabChange,
 }: TableResourcesProps) {
@@ -272,26 +280,11 @@ export default function TableResources({
 
       {/* ---- locations ---- */}
       {tab === "locations" ? (
-        locations.length === 0 ? (
-          <Empty label={t("pl.res.empty.locations")} />
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {locations.map((loc) => (
-              <div key={loc.id} className="rounded-xl border border-zinc-700/40 bg-zinc-900/50 px-4 py-3">
-                <div className="text-sm font-semibold text-zinc-100">{loc.name || t("pl.res.unnamed")}</div>
-                {loc.kind || loc.path ? (
-                  <p className="text-xs text-zinc-500 mt-0.5">
-                    {[loc.kind, loc.path].filter(Boolean).join(" · ")}
-                  </p>
-                ) : null}
-                {loc.description ? <p className="text-zinc-500 text-xs mt-1">{loc.description}</p> : null}
-                <div className="mt-3 text-right">
-                  <GoButton href={`/location/${loc.id}`} label={t("pl.open")} />
-                </div>
-              </div>
-            ))}
-          </div>
-        )
+        <PlayerAtlas
+          tree={locationTree}
+          defaultLocationId={defaultLocationId}
+          currentLocationId={currentLocationId}
+        />
       ) : null}
     </div>
   );

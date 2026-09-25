@@ -13,7 +13,7 @@ export default async function TableMapPage({ params }: { params: Promise<{ id: s
     api<GameTableScenes>(`/game-table-scenes/${id}`),
     api<GameTableCharacters>(`/game-table-characters/${id}`),
     api<GameTableNpcs>(`/game-table-npcs/${id}`).catch(() => ({ table: null, npcs: [] })),
-    api<GameTableLocations>(`/game-table-locations/${id}`).catch(() => ({ table: null, locations: [] })),
+    api<GameTableLocations>(`/game-table-locations/${id}`).catch(() => ({ table: null, locations: [], defaultLocationId: null })),
   ]);
 
   const characters = charsData?.characters ?? [];
@@ -28,7 +28,7 @@ export default async function TableMapPage({ params }: { params: Promise<{ id: s
           {scenesData.table?.title || t("nav.map")}
         </h1>
       </div>
-      <MapLog scenes={scenesData.scenes} locations={locations} characters={characters} npcIds={npcIds} role="narrator" tableId={id} />
+      <MapLog scenes={scenesData.scenes} locations={locations} characters={characters} npcIds={npcIds} role="narrator" tableId={id} defaultLocationId={locationsData?.defaultLocationId ?? null} />
     </>
   );
 }

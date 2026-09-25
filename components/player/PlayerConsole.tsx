@@ -76,6 +76,8 @@ interface PlayerConsoleProps {
   advantages: Advantage[];
   disadvantages: Disadvantage[];
   locations: Location[];
+  locationTree: Location[];
+  defaultLocationId: string | null;
   npcs: TableNpc[];
   basePath: string;
   initialTab?: PlayerTab;
@@ -129,6 +131,8 @@ export default function PlayerConsole({
   advantages,
   disadvantages,
   locations,
+  locationTree,
+  defaultLocationId,
   npcs,
   basePath,
   initialTab = "sheet",
@@ -385,6 +389,7 @@ export default function PlayerConsole({
           viewerId={character?.id ?? undefined}
           visibility={visibility}
           tableId={tableId}
+          defaultLocationId={defaultLocationId}
         />
       ) : null}
 
@@ -420,6 +425,9 @@ export default function PlayerConsole({
               advantages={advantages}
               disadvantages={disadvantages}
               locations={locations}
+              locationTree={locationTree}
+              defaultLocationId={defaultLocationId}
+              currentLocationId={latestBeat?.location?.id ?? null}
               tab={tab as ResourceTab}
             />
           </div>

@@ -12,9 +12,13 @@
      · clicking the beat itself shows the snapshot with no arrows.
    The chronicle's mini-maps keep the full record; this tab exists
    to isolate each move without the noise of every vector at once.
+   Locations: the PRIMARY map (the narrator's default / a top-level
+   ancestor) keeps the full log layout. Opening a SUBLOCATION swaps
+   to a compact view — a location card sits ABOVE the map, with the
+   region's sublocation selector ("pesquisa") pinned to its bottom.
    ============================================================ */
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Location, Narration, NarrationAction, Scene, TableCharacter, VisibilityRule } from "@/lib/types";
 import { narrationBoardAt } from "@/lib/board";
@@ -22,7 +26,13 @@ import type { BoardToken } from "@/lib/board";
 import { maskedLocationName, maskedTargetName } from "@/lib/visibility";
 import { interpolate, useTranslation } from "@/lib/i18n";
 import { useTableLive } from "@/lib/useTableLive";
+import { floorPlanGroup, formatHexScale } from "@/lib/location";
 import TacticalPlate from "@/components/tactical/TacticalPlate";
+
+const KNOWN_KINDS = new Set([
+  "world", "continent", "nation", "region", "biome", "province",
+  "city", "district", "locale", "site", "battlemap", "point",
+]);
 
 const ROMAN = ["0","I","II","III","IV","V","VI","VII","VIII","IX","X","XI","XII","XIII","XIV","XV","XVI","XVII","XVIII","XIX","XX"];
 function roman(n: number): string {
@@ -66,6 +76,9 @@ interface MapLogProps {
   fillViewport?: boolean;
   /** optional tableId to subscribe to live updates without reloading the page. */
   tableId?: string | null;
+  /** the location the narrator pinned as the default route — the PRIMARY
+      map keeps the full log layout; everything else opens as a sublocation. */
+  defaultLocationId?: string | null;
 }
 
 export default function MapLog({
@@ -78,6 +91,7 @@ export default function MapLog({
   visibility = null,
   fillViewport = false,
   tableId = null,
+  defaultLocationId = null,
 }: MapLogProps) {
   const isPlayer = role === "player";
   const { t } = useTranslation();
@@ -91,6 +105,8 @@ export default function MapLog({
   const [sceneSel, setSceneSel] = useState<string>("");
   const [narrationSel, setNarrationSel] = useState<string>("");
   const [actionSel, setActionSel] = useState<string>("");
+  /** sublocation picked via the region selector (null = follow the narration). */
+  const [locOverride, setLocOverride] = useState<string | null>(null);
 
   const chapters = useMemo(() => {
     const map = new Map<number, Scene[]>();
@@ -118,16 +134,68 @@ export default function MapLog({
   });
 
   const actionLoc = effAction?.locationId ? locations.find((l) => l.id === effAction.locationId) : null;
-  const mapLocation =
+  const derivedMapLocation =
     actionLoc ??
     effBeat?.location ??
     locations.find((l) => !!l.hex?.width && !!l.hex?.height) ??
     locations[0] ??
     null;
+  const mapLocation =
+    locOverride ? (locations.find((l) => l.id === locOverride) ?? derivedMapLocation) : derivedMapLocation;
+
+  /* ---- primary vs sublocation: the default/master map keeps the full
+     log layout; a sublocation opens as a location card above the map,
+     with the region's selector pinned to the card's bottom. ---- */
+  const primaryLoc = useMemo(() => {
+    if (defaultLocationId) return locations.find((l) => l.id === defaultLocationId) ?? null;
+    let cur = derivedMapLocation;
+    if (!cur) return null;
+    const seen = new Set<string>();
+    while (cur.parentId && !seen.has(cur.id)) {
+      seen.add(cur.id);
+      const p = locations.find((l) => l.id === cur.parentId);
+      if (!p) break;
+      cur = p;
+    }
+    return cur;
+  }, [defaultLocationId, locations, derivedMapLocation]);
+
+  const group = useMemo(() => floorPlanGroup(mapLocation, locations), [mapLocation, locations]);
+  const isSubView = !!(primaryLoc && mapLocation && mapLocation.id !== primaryLoc.id);
+  const groupSiblings = group.length > 1 ? group.length - 1 : (mapLocation?.children?.length ?? 0);
+  /* visibilidade no player SEMPRE: um local FORA do catálogo do observador
+     é um lugar que o narrador não revelou — existe só como um tile "…",
+     sem nome, região, tipo, escala, divisões ou planta expostas. A fonte
+     da verdade é o catálogo já filtrado/mascarado pelo servidor. */
+  const locRevealed = !isPlayer || !mapLocation || locations.some((l) => l.id === mapLocation.id);
+  const kindLabel =
+    locRevealed && mapLocation?.kind && KNOWN_KINDS.has(mapLocation.kind)
+      ? t(`tp.locKind.${mapLocation.kind}`)
+      : t("tp.locKind.generic");
+  const locRegionLine = mapLocation
+    ? isPlayer
+      ? locRevealed
+        ? mapLocation.region ?? mapLocation.subRegion ?? mapLocation.address ?? mapLocation.country ?? "—"
+        : "…"
+      : mapLocation.region ?? mapLocation.subRegion ?? mapLocation.address ?? mapLocation.country ?? mapLocation.path ?? "—"
+    : "—";
+
+  /* follow the narration again: as soon as the beat/action moves to
+     another location, drop any manual sublocation override. */
+  const derivedLocId = actionLoc?.id ?? effBeat?.location?.id ?? "";
+  const prevDerivedLocId = useRef<string | null>(null);
+  useEffect(() => {
+    if (prevDerivedLocId.current !== null && prevDerivedLocId.current !== derivedLocId) {
+      setLocOverride(null);
+    }
+    prevDerivedLocId.current = derivedLocId;
+  }, [derivedLocId]);
 
   const shownLocation = mapLocation
     ? isPlayer
-      ? maskedLocationName(visibility, mapLocation.id, mapLocation.name || t("lc.common.noName"))
+      ? locRevealed
+        ? maskedLocationName(visibility, mapLocation.id, mapLocation.name || t("lc.common.noName"))
+        : "…"
       : mapLocation.name || t("lc.common.noName")
     : null;
 
@@ -203,6 +271,9 @@ export default function MapLog({
         </div>
       ) : (
         <div className={`space-y-5 ${fillViewport ? "lg:flex-1 lg:min-h-0 lg:flex lg:flex-col" : ""}`}>
+          {/* the full log layout only lives on the PRIMARY location's master route */}
+          {!isSubView ? (
+          <>
           {/* ============ SELECTS — one line, inputs in columns ============ */}
           <div className={`rounded-xl border border-zinc-700/40 bg-zinc-900/60 p-4 ${fillViewport ? "lg:shrink-0" : ""}`}>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
@@ -258,46 +329,52 @@ export default function MapLog({
             </div>
           </div>
 
-            {/* ============ NARRATIONS — the rail of plates, centered ============ */}
-            <div className={`rounded-xl border border-zinc-700/40 bg-zinc-900/60 p-4 ${fillViewport ? "lg:shrink-0 lg:max-h-[28vh] lg:overflow-y-auto" : ""}`}>
+            {/* ============ ACTIONS — the rail of plates, centered ============ */}
+            <div className={`rounded-xl border border-zinc-700/40 bg-zinc-900/60 p-4 ${fillViewport ? "lg:shrink-0 lg:max-h-[32vh] lg:overflow-y-auto" : "lg:max-h-[70vh] lg:overflow-y-auto"}`}>
               <div className="flex items-center gap-2 mb-3">
-                <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">{t("lc.log.narrationsTitle")}</span>
-                <span className="font-mono text-[10px] text-zinc-600">({narrations.length})</span>
-                {moveCount ? (
-                  <span className="ml-auto font-mono text-[10px] text-zinc-600">{moveCount} {moveCount !== 1 ? t("lc.log.moveMany") : t("lc.log.moveOne")}</span>
-                ) : null}
+                <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">{t("vs.sr.actionsTitle")}</span>
+                <span className="font-mono text-[10px] text-zinc-600">({actionList.length})</span>
               </div>
 
-              {narrations.length === 0 ? (
-                <p className="text-sm text-zinc-600 italic font-mono text-center py-3">{t("lc.log.noBeats")}</p>
+              {!effBeat ? (
+                <p className="text-sm text-zinc-600 italic font-mono text-center py-3">{t("lc.log.pickNarration")}</p>
+              ) : actionList.length === 0 ? (
+                <p className="text-sm text-zinc-600 italic font-mono text-center py-3">{t("vs.sr.noActions")}</p>
               ) : (
                 <div className="flex flex-wrap justify-center gap-2">
-                  {narrations.map((n, idx) => {
-                    const active = n.id === effBeat?.id;
-                    const loc = n.location?.name
-                      ? isPlayer
-                        ? maskedLocationName(visibility, n.location.id, n.location.name)
-                        : n.location.name
-                      : null;
+                  {actionList.map((a) => {
+                    const aActive = a.id === actionSel;
+                    const isMove = a.q != null && a.r != null;
                     return (
                       <button
-                        key={n.id}
+                        key={a.id}
                         type="button"
-                        onClick={() => pickNarration(n.id)}
+                        onClick={() => setActionSel((prev) => (prev === a.id ? "" : a.id))}
                         className={`rounded-lg border px-3 py-1.5 text-center transition-colors focus:outline-none focus-visible:ring-2 ${tone.focusRing} ${
-                          active ? tone.sel : "border-zinc-800 bg-zinc-900/50 hover:border-zinc-600 text-zinc-300"
+                          aActive ? tone.sel : "border-zinc-800 bg-zinc-900/50 hover:border-zinc-600 text-zinc-300"
                         }`}
                       >
                         <span className="flex items-baseline justify-center gap-1.5">
-                          <span className={`font-mono text-[10px] tabular-nums ${active ? tone.text : "text-zinc-600"}`}>
-                            {String(idx + 1).padStart(2, "0")}.
+                          <span className={`font-mono text-[10px] tabular-nums ${aActive ? tone.text : "text-zinc-600"}`}>
+                            {a.queue ?? "·"}.
                           </span>
-                          <span className="text-[13px] font-medium leading-tight">
-                            {n.title || t("lc.log.beatUntitled")}
+                          <span className="max-w-[10rem] truncate text-[13px] font-medium leading-tight">
+                            {charShown(a)}
                           </span>
                         </span>
-                        <span className="block font-mono text-[9px] uppercase tracking-widest text-zinc-600 mt-0.5">
-                          {interpolate(t("vs.sr.moment"), { n: idx + 1 })}{loc ? ` · ${loc}` : ""}
+                        <span className="block max-w-[12rem] text-[11px] text-zinc-500 leading-tight mt-0.5">
+                          {a.description || (isMove ? t("lc.log.descMove") : t("lc.log.descLogged"))}
+                        </span>
+                        <span className="mt-1 inline-flex items-center gap-1">
+                          {isMove ? (
+                            <span className="inline-flex items-center gap-1 rounded bg-sky-500/10 border border-sky-500/30 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider text-sky-300">
+                              {t("lc.log.movTag")} {hexLbl({ q: a.q as number, r: a.r as number }, t("lc.log.offMap"))}
+                            </span>
+                          ) : a.dice_roll ? (
+                            <span className="inline-flex items-center gap-1 rounded bg-zinc-800/70 border border-zinc-700/50 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider text-zinc-400">
+                              {t("lc.log.roll")}
+                            </span>
+                          ) : null}
                         </span>
                       </button>
                     );
@@ -305,62 +382,61 @@ export default function MapLog({
                 </div>
               )}
             </div>
-
-            {/* ============ ACTIONS — the beat's rows ============ */}
-            <aside className={`rounded-xl border border-zinc-700/40 bg-zinc-900/60 p-4 ${fillViewport ? "lg:shrink-0 lg:max-h-[32vh] lg:overflow-y-auto" : "lg:max-h-[70vh] lg:overflow-y-auto"}`}>
-              <div className="flex items-center gap-2 mb-3">
-                <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">{t("vs.sr.actionsTitle")}</span>
-                <span className="font-mono text-[10px] text-zinc-600">({actionList.length})</span>
-              </div>
-
-              {!effBeat ? (
-                <p className="text-sm text-zinc-600 italic font-mono">{t("lc.log.pickNarration")}</p>
-              ) : actionList.length === 0 ? (
-                <p className="text-sm text-zinc-600 italic font-mono">{t("vs.sr.noActions")}</p>
-              ) : (
-                <ol className="space-y-1.5">
-                  {actionList.map((a) => {
-                    const aActive = a.id === actionSel;
-                    const isMove = a.q != null && a.r != null;
-                    return (
-                      <li key={a.id}>
-                        <button
-                          type="button"
-                          onClick={() => setActionSel((prev) => (prev === a.id ? "" : a.id))}
-                          className={`w-full flex items-start gap-2 rounded-md border px-2.5 py-1.5 text-left transition-colors ${
-                            aActive ? tone.sel : "border-zinc-800/80 bg-zinc-900/40 hover:border-zinc-600 text-zinc-400"
-                          }`}
-                        >
-                          <span className={`font-mono text-[10px] tabular-nums pt-px ${aActive ? tone.text : "text-zinc-600"}`}>
-                            {a.queue ?? "·"}.
-                          </span>
-                          <span className="min-w-0 flex-1">
-                            <span className={`block text-[12px] font-medium truncate ${aActive ? "text-zinc-100" : "text-zinc-300"}`}>
-                              {charShown(a)}
-                            </span>
-                            <span className="block text-[11px] text-zinc-500 truncate">
-                              {a.description || (isMove ? t("lc.log.descMove") : t("lc.log.descLogged"))}
-                            </span>
-                          </span>
-                          {isMove ? (
-                            <span className="shrink-0 inline-flex items-center gap-1 rounded bg-sky-500/10 border border-sky-500/30 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider text-sky-300">
-                              {t("lc.log.movTag")} {hexLbl({ q: a.q as number, r: a.r as number }, t("lc.log.offMap"))}
-                            </span>
-                          ) : a.dice_roll ? (
-                            <span className="shrink-0 inline-flex items-center gap-1 rounded bg-zinc-800/70 border border-zinc-700/50 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider text-zinc-400">
-                              {t("lc.log.roll")}
-                            </span>
-                          ) : null}
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ol>
-              )}
-            </aside>
+          </>
+          ) : null}
 
             {/* ================= MAP — the floor plan ================= */}
             <section className={`space-y-4 ${fillViewport ? "lg:flex-1 lg:min-h-0 lg:flex lg:flex-col" : ""}`}>
+            {isSubView && mapLocation ? (
+              <div className={`rounded-xl border border-teal-400/20 bg-teal-400/[0.04] px-4 py-3 ${fillViewport ? "lg:shrink-0" : ""}`}>
+                <div className="flex items-center gap-3">
+                  <span className="w-1.5 h-1.5 rounded-full bg-teal-300 shrink-0 shadow-[0_0_8px_rgba(94,234,212,0.6)]" aria-hidden />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-baseline gap-2 min-w-0 flex-wrap">
+                      <span className="font-mono text-[12px] font-bold tracking-widest uppercase text-teal-100 truncate">{shownLocation}</span>
+                      <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 hidden sm:inline">
+                        {kindLabel}
+                        {locRevealed && mapLocation.hex?.sizeM != null ? ` · ${formatHexScale(mapLocation.hex.sizeM)}` : ""}
+                      </span>
+                      {primaryLoc && mapLocation.id === primaryLoc.id ? (
+                        <span className="inline-flex items-center gap-1 font-mono text-[9px] tracking-widest uppercase px-1.5 py-0.5 rounded-full bg-amber-400/15 text-amber-300 shrink-0">
+                          <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1.8"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" /></svg>
+                          {t("tp.default")}
+                        </span>
+                      ) : null}
+                    </div>
+                    <div className="font-mono text-[10px] tracking-widest uppercase text-zinc-600 mt-0.5 truncate">
+                      {locRegionLine}
+                    </div>
+                  </div>
+                  {locRevealed && groupSiblings > 0 ? (
+                    <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 shrink-0">
+                      {interpolate(t(groupSiblings !== 1 ? "tp.divisions" : "tp.division"), { n: groupSiblings })}
+                    </span>
+                  ) : null}
+                </div>
+
+                {group.length > 1 ? (
+                  <div className="mt-3 pt-3 border-t border-zinc-700/40">
+                    <label className="block font-mono text-[10px] tracking-widest uppercase text-zinc-500 mb-1.5">
+                      {t("tp.searchPh")}
+                    </label>
+                    <select
+                      value={mapLocation.id}
+                      onChange={(e) => setLocOverride(e.target.value || null)}
+                      className={`w-full bg-zinc-800/80 border border-zinc-700/60 rounded-lg px-3 py-2 text-zinc-100 text-sm focus:outline-none ${tone.focusSelect} transition-colors`}
+                    >
+                      {group.map((l) => (
+                        <option key={l.id} value={l.id} className="bg-zinc-800">
+                          {l.id === mapLocation.id ? "▸ " : ""}
+                          {isPlayer ? maskedLocationName(visibility, l.id, l.name || t("lc.common.noName")) : l.name || t("lc.common.noName")}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
             <div className={`rounded-xl border border-zinc-700/40 bg-zinc-900/80 overflow-hidden ${fillViewport ? "lg:h-full lg:flex lg:flex-col" : ""}`}>
               <div className={`flex flex-wrap items-center gap-3 px-5 py-3.5 border-b border-zinc-700/40 ${fillViewport ? "lg:shrink-0" : ""}`}>
                 <span className="w-2.5 h-2.5 rounded-full" style={{ background: tone.accent, boxShadow: `0 0 8px ${tone.accent}` }} />
@@ -370,7 +446,7 @@ export default function MapLog({
                 ) : (
                   <span className="text-sm text-zinc-500 italic">{t("lc.log.noFloorPlan")}</span>
                 )}
-                {mapLocation?.hex?.width != null ? (
+                {mapLocation?.hex?.width != null && locRevealed ? (
                   <span className="ml-auto font-mono text-[10px] text-zinc-500 uppercase tracking-widest">
                     {mapLocation.hex.width}×{mapLocation.hex.height} hex · {mapLocation.hex.sizeM ?? 1}m/hex
                   </span>
@@ -383,7 +459,7 @@ export default function MapLog({
               </div>
 
               <div className={`${fillViewport ? "lg:flex-1 lg:min-h-0 lg:flex lg:flex-col" : ""}`}>
-              {mapLocation ? (
+              {mapLocation && locRevealed ? (
                 <TacticalPlate
                   location={mapLocation}
                   tokens={mapTokens}
@@ -394,6 +470,11 @@ export default function MapLog({
                   M={14}
                   fill={fillViewport}
                 />
+              ) : mapLocation ? (
+                <div className={`px-5 py-16 text-center ${fillViewport ? "lg:flex-1" : ""}`}>
+                  <span className="font-mono text-3xl text-zinc-700 block mb-3" aria-hidden>…</span>
+                  <p className="text-sm text-zinc-500 italic">{t("lc.log.unrevealed")}</p>
+                </div>
               ) : (
                 <div className={`px-5 py-14 text-center ${fillViewport ? "lg:flex-1" : ""}`}>
                   <p className="text-sm text-zinc-600 font-mono italic">

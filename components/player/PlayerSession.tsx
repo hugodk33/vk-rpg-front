@@ -285,6 +285,9 @@ export default function TurnPanel({
     null;
   const mapLocation = locations.find((l) => l.id === locSel) ?? defaultLocation;
   const mapGroup = floorPlanGroup(mapLocation, locations);
+  /* visibilidade SEMPRE: um local fora do catálogo (não revelado pelo
+     narrador) aparece só como "…", sem planta nem detalhes expostos. */
+  const locRevealed = !mapLocation || locations.some((l) => l.id === mapLocation.id);
 
   /* ---- movement replay: default = ONLY the latest move; each action
      with a hex also gets its own toggle below ("All" stacks every
@@ -548,27 +551,32 @@ export default function TurnPanel({
               aria-label={t("pl.session.aria.whereYouAre")}
               className="max-w-xs bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-3 py-2 text-zinc-100 text-sm focus:outline-none focus:border-blue-600/70 transition-colors"
             >
+              {!locRevealed ? (
+                <option value={mapLocation?.id ?? ""} className="bg-zinc-800">…</option>
+              ) : null}
               {mapGroup.map((l) => (
                 <option key={l.id} value={l.id} className="bg-zinc-800">
                   {maskedLocationName(visibility, l.id, l.name || t("ss.unnamed"))}
                 </option>
               ))}
             </select>
-          ) : mapLocation ? (
+          ) : mapLocation && locRevealed ? (
             <span className="text-sm font-semibold text-zinc-100">
               {maskedLocationName(visibility, mapLocation.id, mapLocation.name || t("ss.unnamed"))}
             </span>
+          ) : mapLocation ? (
+            <span className="text-sm text-zinc-500 italic">…</span>
           ) : (
             <span className="text-sm text-zinc-500 italic">{t("ss.noFloorPlanYet")}</span>
           )}
-          {mapLocation?.hex?.width != null ? (
+          {mapLocation?.hex?.width != null && locRevealed ? (
             <span className="ml-auto font-mono text-[10px] text-zinc-500 uppercase tracking-widest">
               {mapLocation.hex.width}×{mapLocation.hex.height} hex · {mapLocation.hex.sizeM ?? 1}m/hex
             </span>
           ) : null}
         </div>
 
-        {mapLocation ? (
+        {mapLocation && locRevealed ? (
           <TacticalPlate
             location={mapLocation}
             tokens={mapTokens}
@@ -579,6 +587,11 @@ export default function TurnPanel({
             M={12}
             onHexClick={isMyTurn && !committed ? handleMapClick : undefined}
           />
+        ) : mapLocation ? (
+          <div className="p-10 text-center">
+            <span className="font-mono text-3xl text-zinc-700 block mb-3" aria-hidden>…</span>
+            <p className="text-sm text-zinc-500 italic">{t("lc.log.unrevealed")}</p>
+          </div>
         ) : (
           <p className="text-sm text-zinc-600 font-mono italic">
             {t("pl.session.sceneNoFloorPlan")}
