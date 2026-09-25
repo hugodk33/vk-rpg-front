@@ -3,11 +3,15 @@
 /* ============================================================
    TableWizard — montagem da mesa em 3 passos.
    Identidade → Kit inicial → Pontos da ficha.
-   Paleta e estrutura espelham a rota /table (ledger): hero com
-   anéis verdes, linha de status mono e barra de passos no padrão
-   TableTabs. Copia segue o idioma do LanguageSwitch (default EN).
-   Ao final, cria a mesa com os módulos e grava o orçamento de
-   pontos nas regras (game_table_settings).
+
+   O passo 2 é um compêndio: pacotes base em coluna única e, em
+   seções por domínio (perícias · itens · vantagens · desvantagens
+   · locais · npcs) separadas por traço, cada categoria em coluna
+   única com as entradas em grade de 3. A seleção é perícia a
+   perícia (ou item a item) e há busca em destaque sobre o acervo.
+   O payload envia apenas `references` (por domínio + id) — a
+   instalação no backend é exata, sem efeito de módulo inteiro.
+   Copia segue o idioma do LanguageSwitch (default PT).
    ============================================================ */
 
 import { useMemo, useState } from "react";
@@ -17,6 +21,7 @@ import { interpolate, useTranslation } from "@/lib/i18n";
 import type { ContentCatalog, ContentReference } from "@/lib/types";
 
 const mono = "font-mono uppercase tracking-widest text-[11px]";
+const EMPTY_REFS: ContentReference[] = [];
 
 interface TableWizardProps {
   narratorOptions: Array<{ id: string; name: string }>;
@@ -24,12 +29,13 @@ interface TableWizardProps {
   catalog: ContentCatalog | null;
 }
 
-const DOMAINS: Array<{ key: string; domain: string }> = [
-  { key: "c.skills", domain: "skill" },
-  { key: "c.items", domain: "item" },
-  { key: "c.npcs", domain: "npc" },
-  { key: "c.advantages", domain: "advantage" },
-  { key: "c.disadvantages", domain: "disadvantage" },
+const DOMAIN_ORDER: Array<{ label: string; domain: string }> = [
+  { label: "c.skills", domain: "skill" },
+  { label: "c.items", domain: "item" },
+  { label: "c.advantages", domain: "advantage" },
+  { label: "c.disadvantages", domain: "disadvantage" },
+  { label: "c.locations", domain: "location" },
+  { label: "c.npcs", domain: "npc" },
 ];
 
 /* ---------- sigil (igual ao ledger) ---------- */
@@ -83,16 +89,71 @@ function Sigil({ title, name }: { title: string; name: string }) {
 
 /* ---------- helpers de cor ---------- */
 
-const moduleCard = (active: boolean) =>
-  `text-left rounded-xl border p-4 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-green-500/70 ${
-    active ? "border-green-500/70 bg-green-500/10" : "border-zinc-700/60 hover:border-zinc-500"
-  }`;
-
 const chipTone =
   "inline-flex items-center gap-1 font-mono text-[10px] uppercase tracking-widest px-2 py-0.5 rounded-full border border-zinc-700/60 text-zinc-400";
 
 const secondaryBtn =
   "text-xs font-semibold px-3 py-1.5 rounded-lg border border-zinc-700 text-zinc-300 hover:border-green-600 hover:text-green-400 transition-colors";
+
+function ItemCard({
+  entry,
+  checked,
+  onToggle,
+  tag,
+}: {
+  entry: ContentReference;
+  checked: boolean;
+  onToggle: () => void;
+  tag?: string;
+}) {
+  return (
+    <label
+      className={`flex flex-col gap-1 py-2 cursor-pointer select-none border-b border-dashed border-zinc-800/80 last:border-b-0 ${
+        checked ? "text-green-400" : "text-zinc-100"
+      }`}
+    >
+      <span className="flex items-start gap-2">
+        <input
+          type="checkbox"
+          checked={checked}
+          onChange={onToggle}
+          className="mt-0.5 accent-green-600 shrink-0"
+        />
+        <span className="text-sm font-semibold leading-snug min-w-0">{entry.name}</span>
+      </span>
+      {entry.description ? (
+        <span className="text-[11px] text-zinc-500 leading-snug line-clamp-2">{entry.description}</span>
+      ) : null}
+      {tag ? <span className={mono + " text-zinc-600 pt-0.5"}>{tag}</span> : null}
+    </label>
+  );
+}
+
+function TypeHeader({
+  label,
+  checked,
+  total,
+  hint,
+}: {
+  label: string;
+  checked: number;
+  total: number;
+  hint?: string;
+}) {
+  return (
+    <header className="flex items-baseline justify-between gap-3 border-t-2 border-zinc-600/40 pt-5 relative before:content-[''] before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-gradient-to-r before:from-green-700/80 before:via-green-700/20 before:to-transparent">
+      <div className="min-w-0">
+        <h2 className={mono + " text-[16px] sm:text-[18px] uppercase tracking-[0.3em] text-green-400 leading-none"}>
+          {label}
+        </h2>
+        {hint ? <span className="block mt-1.5 text-xs text-zinc-500/80 leading-snug">{hint}</span> : null}
+      </div>
+      <span className="shrink-0 font-mono text-[11px] text-green-500/80 tabular-nums whitespace-nowrap">
+        {checked}/{total}
+      </span>
+    </header>
+  );
+}
 
 export default function TableWizard({ narratorOptions, defaultNarratorId, catalog }: TableWizardProps) {
   const router = useRouter();
@@ -100,9 +161,9 @@ export default function TableWizard({ narratorOptions, defaultNarratorId, catalo
   const [narratorId, setNarratorId] = useState(defaultNarratorId ?? narratorOptions[0]?.id ?? "");
   const [title, setTitle] = useState("");
   const [intro, setIntro] = useState("");
-  const [moduleIds, setModuleIds] = useState<string[]>([]);
-  const [catSel, setCatSel] = useState<Array<{ domain: string; category: string; subcategories: string[] }>>([]);
-  const [openModule, setOpenModule] = useState<string | null>(null);
+  const [sel, setSel] = useState<Set<string>>(new Set());
+  const [query, setQuery] = useState("");
+  const [typeFilter, setTypeFilter] = useState("");
   const [budget, setBudget] = useState(150);
   const [customBudget, setCustomBudget] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -110,7 +171,9 @@ export default function TableWizard({ narratorOptions, defaultNarratorId, catalo
 
   const { t } = useTranslation();
 
-  /* --- contagem de conteúdo por módulo (a "carga da mesa") --- */
+  const allRefs = catalog?.references ?? EMPTY_REFS;
+
+  /* ---- índices derivados ---- */
   const perModule = useMemo(() => {
     const map = new Map<string, Record<string, number>>();
     const add = (moduleId: string, domain: string, count: number) => {
@@ -123,130 +186,111 @@ export default function TableWizard({ narratorOptions, defaultNarratorId, catalo
     return map;
   }, [catalog]);
 
-  const totals = useMemo(() => {
-    const acc: Record<string, number> = {};
-    for (const id of moduleIds) {
-      const bucket = perModule.get(id);
-      if (!bucket) continue;
-      for (const [domain, n] of Object.entries(bucket)) {
-        if (domain === "_total") continue;
-        acc[domain] = (acc[domain] ?? 0) + n;
-      }
-    }
-    const sum = (keys: string[]) => keys.reduce((s, k) => s + (acc[k] ?? 0), 0);
-    return {
-      ...acc,
-      _total: sum(["skill", "item", "npc", "advantage", "disadvantage"]),
-    } as Record<string, number>;
-  }, [moduleIds, perModule]);
-
-  const modules = catalog?.modules ?? [];
-  const moduleList = useMemo(
-    () =>
-      (catalog?.modules ?? [])
-        .sort((a, b) => a.sort - b.sort)
-        .map((m) => ({
-          ...m,
-          counts: perModule.get(m.id) ?? {},
-        })),
-    [catalog, perModule]
-  );
-
-  const toggleModule = (id: string) =>
-    setModuleIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
-
-  /* --- seletor manual por categoria/subcategoria (navega dentro dos pacotes) --- */
-  const catPick = (domain: string, category: string) =>
-    catSel.find((c) => c.domain === domain && c.category === category);
-  const catPickIn = (
-    arr: Array<{ domain: string; category: string; subcategories: string[] }>,
-    domain: string,
-    category: string
-  ) => arr.find((c) => c.domain === domain && c.category === category);
-  const hasCat = (domain: string, category: string) => !!catPick(domain, category);
-  const hasSub = (domain: string, category: string, sub: string) =>
-    !!catPick(domain, category)?.subcategories.includes(sub);
-
-  const toggleCat = (domain: string, category: string) =>
-    setCatSel((prev) => {
-      const existing = catPickIn(prev, domain, category);
-      if (existing) {
-        return existing.subcategories.length
-          ? [...prev.filter((c) => c !== existing), { domain, category, subcategories: [] }]
-          : prev.filter((c) => c !== existing);
-      }
-      return [...prev, { domain, category, subcategories: [] }];
-    });
-
-  const toggleSub = (domain: string, category: string, sub: string) =>
-    setCatSel((prev) => {
-      const existing = catPickIn(prev, domain, category);
-      const subs = new Set(existing?.subcategories ?? []);
-      if (subs.has(sub)) subs.delete(sub);
-      else subs.add(sub);
-      const next = [...subs].sort();
-      if (!next.length) return prev.filter((c) => c !== existing);
-      if (existing) return prev.map((c) => (c === existing ? { domain, category, subcategories: next } : c));
-      return [...prev, { domain, category, subcategories: next }];
-    });
-
-  /* árvore de conteúdo por módulo: domain -> category -> { sub: count } */
-  const moduleTree = useMemo(() => {
-    const map = new Map<string, Map<string, Map<string, Map<string, number>>>>();
-    for (const m of catalog?.modules ?? []) map.set(m.id, new Map());
-    for (const c of catalog?.counts ?? []) {
-      const dom = map.get(c.moduleId);
-      if (!dom) continue;
-      let cat = dom.get(c.domain);
-      if (!cat) {
-        cat = new Map();
-        dom.set(c.domain, cat);
-      }
-      let group = cat.get(c.category);
-      if (!group) {
-        group = new Map();
-        cat.set(c.category, group);
-      }
-      const key = c.subcategory ?? "__all__";
-      group.set(key, (group.get(key) ?? 0) + c.count);
-    }
-    return map;
-  }, [catalog]);
-
-  /* entradas reais (nome + descrição) indexadas por module/domain/category/sub */
-  const refsIndex = useMemo(() => {
+  const domainRefs = useMemo(() => {
     const map = new Map<string, ContentReference[]>();
-    for (const r of catalog?.references ?? []) {
-      const key = `${r.moduleId}|${r.domain}|${r.category}|${r.subcategory ?? "__all__"}`;
-      const bucket = map.get(key) ?? [];
+    for (const r of allRefs) {
+      const bucket = map.get(r.domain) ?? [];
       bucket.push(r);
-      map.set(key, bucket);
+      map.set(r.domain, bucket);
     }
     return map;
-  }, [catalog]);
+  }, [allRefs]);
 
-  const refsFor = (moduleId: string, domain: string, category: string, sub: string) =>
-    refsIndex.get(`${moduleId}|${domain}|${category}|${sub}`) ?? [];
+  const moduleRefs = useMemo(() => {
+    const map = new Map<string, ContentReference[]>();
+    for (const r of allRefs) {
+      if (!r.moduleId) continue;
+      const bucket = map.get(r.moduleId) ?? [];
+      bucket.push(r);
+      map.set(r.moduleId, bucket);
+    }
+    return map;
+  }, [allRefs]);
+
+  const refById = useMemo(() => {
+    const map = new Map<string, ContentReference>();
+    for (const r of allRefs) map.set(r.id, r);
+    return map;
+  }, [allRefs]);
+
+  const q = query.trim().toLowerCase();
 
   const catLabel = (domain: string, name: string) =>
     catalog?.categories.find((x) => x.domain === domain && x.name === name)?.display_name ?? name;
 
-  const subLabel = (domain: string, category: string, sub: string) => {
-    const parent = catalog?.categories.find((x) => x.domain === domain && x.name === category);
-    return (
-      catalog?.categories.find((x) => x.domain === domain && x.parent_id === parent?.id && x.name === sub)
-        ?.display_name ?? sub
-    );
+  const searchMatches = useMemo(() => {
+    if (!q) return EMPTY_REFS;
+    const catDisplay = new Map<string, string>();
+    for (const ct of catalog?.categories ?? []) catDisplay.set(`${ct.domain}/${ct.name}`, ct.display_name);
+    return allRefs.filter((r) => {
+      if (typeFilter && r.domain !== typeFilter) return false;
+      const display = catDisplay.get(`${r.domain}/${r.category}`) ?? r.category ?? "";
+      return (
+        r.name.toLowerCase().includes(q) ||
+        (r.description ?? "").toLowerCase().includes(q) ||
+        (r.category ?? "").toLowerCase().includes(q) ||
+        display.toLowerCase().includes(q)
+      );
+    });
+  }, [q, typeFilter, allRefs, catalog]);
+
+  const moduleList = useMemo(
+    () =>
+      [...(catalog?.modules ?? [])]
+        .sort((a, b) => a.sort - b.sort)
+        .map((m) => ({ ...m, counts: perModule.get(m.id) ?? {} })),
+    [catalog, perModule]
+  );
+
+  /* ---- seleção (set de ids de referência — independe de módulo) ---- */
+  const isSel = (id: string) => sel.has(id);
+  const toggle = (id: string) =>
+    setSel((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
+  const countSelOf = (rows: ContentReference[]) => rows.reduce((s, r) => s + (sel.has(r.id) ? 1 : 0), 0);
+  const allOf = (rows: ContentReference[]) => rows.length > 0 && rows.every((r) => sel.has(r.id));
+  const setRows = (rows: ContentReference[], on: boolean) => {
+    const ids = rows.map((r) => r.id);
+    setSel((prev) => {
+      const next = new Set(prev);
+      for (const id of ids) {
+        if (on) next.add(id);
+        else next.delete(id);
+      }
+      return next;
+    });
   };
 
-  const totalCatSel = catSel.length;
+  const toggleModule = (moduleId: string) => {
+    const rows = moduleRefs.get(moduleId) ?? [];
+    setRows(rows, !allOf(rows));
+  };
+
+  const toggleCat = (domain: string, category: string) => {
+    const rows = (domainRefs.get(domain) ?? []).filter((r) => r.category === category);
+    setRows(rows, !allOf(rows));
+  };
+
+  const categoryGroups = (domain: string) => {
+    const seen = new Map<string, ContentReference[]>();
+    for (const r of domainRefs.get(domain) ?? []) {
+      const bucket = seen.get(r.category) ?? [];
+      bucket.push(r);
+      seen.set(r.category, bucket);
+    }
+    return [...seen.entries()];
+  };
+
+  const totalSelected = sel.size;
   const selectedLabel =
-    moduleIds.length === 0 && totalCatSel === 0
+    totalSelected === 0
       ? t("s2.selectedZero")
-      : interpolate(t("s2.selection"), {
-          n: moduleIds.length,
-          c: totalCatSel,
-        });
+      : interpolate(t("s2.selectedMany"), { n: totalSelected });
 
   const baseComplete = title.trim().length > 0 && narratorId.length > 0;
   const canContinue = (to: number) => to === 1 || baseComplete;
@@ -264,13 +308,24 @@ export default function TableWizard({ narratorOptions, defaultNarratorId, catalo
     setSaving(true);
     setError(null);
     try {
+      const byDomain = new Map<string, string[]>();
+      for (const id of sel) {
+        const ref = refById.get(id);
+        if (!ref) continue;
+        const arr = byDomain.get(ref.domain) ?? [];
+        arr.push(id);
+        byDomain.set(ref.domain, arr);
+      }
+      const references = [...byDomain.entries()].map(([domain, ids]) => ({ domain, ids }));
+
       const payload = {
         narratorId,
         title: title.trim(),
         system: "GURPS",
         intro: intro.trim(),
-        modules: moduleIds,
-        categories: catSel,
+        modules: [] as string[],
+        categories: [] as unknown[],
+        references,
       };
       const result = await submitJson<{ gameTable?: { id: string }; id?: string }>(
         "/api/create-game-table",
@@ -280,7 +335,6 @@ export default function TableWizard({ narratorOptions, defaultNarratorId, catalo
       const tableId = result?.gameTable?.id ?? result?.id;
       if (!tableId) throw new Error(t("w.createError"));
 
-      // grava o orçamento de pontos nas regras da mesa
       await submitJson("/api/game-table-settings", "PUT", {
         table_id: tableId,
         starting_points: budget,
@@ -330,6 +384,10 @@ export default function TableWizard({ narratorOptions, defaultNarratorId, catalo
     "mt-1.5 w-full bg-transparent border-b border-zinc-700/60 text-base text-zinc-100 py-2.5 placeholder:text-zinc-600 focus:outline-none focus:border-green-500 transition-colors";
   const fieldLabel = mono + " text-zinc-500";
 
+  /* domínio visíveis e com conteúdo */
+  const activeDomains = DOMAIN_ORDER.filter(({ domain }) => (domainRefs.get(domain) ?? []).length > 0);
+  const visibleDomains = activeDomains.filter(({ domain }) => !typeFilter || typeFilter === domain);
+
   return (
     <div className="max-w-5xl mx-auto p-6">
       {/* ---- breadcrumb ---- */}
@@ -345,7 +403,6 @@ export default function TableWizard({ narratorOptions, defaultNarratorId, catalo
 
       {/* ---- hero (campaign ledger) ---- */}
       <section className="relative rounded-2xl border border-zinc-700/50 bg-gradient-to-b from-zinc-900/80 to-zinc-950">
-        {/* ambience */}
         <div aria-hidden className="absolute inset-0 overflow-hidden rounded-2xl opacity-[0.06] pointer-events-none select-none">
           <div className="absolute -top-10 -right-8 w-80 h-80 rounded-full border border-green-700" />
           <div className="absolute -top-2 -right-2 w-64 h-64 rounded-full border border-green-700" />
@@ -380,9 +437,9 @@ export default function TableWizard({ narratorOptions, defaultNarratorId, catalo
           {t("w.step")} <span className="text-green-500/80">{step}/3</span>
         </span>
         <span className="text-zinc-700">·</span>
-        <span>{moduleIds.length} {t("w.modules")}</span>
-        <span className="text-zinc-700">·</span>
-        <span>{totals._total} {t("w.load")}</span>
+        <span>
+          <span className="text-green-500/80">{totalSelected}</span> {t("w.load")}
+        </span>
         <span className="text-zinc-700">·</span>
         <span>
           <span className="text-green-500/80">{budget}</span> {t("rail.points")}
@@ -395,7 +452,7 @@ export default function TableWizard({ narratorOptions, defaultNarratorId, catalo
       </nav>
 
       {/* ---- painel do passo ---- */}
-      <main className="mt-6 rounded-2xl border border-zinc-700/50 bg-zinc-950/60 p-6 sm:p-8">
+      <main>
         {step === 1 && (
           <section className="space-y-5">
             <div>
@@ -452,199 +509,223 @@ export default function TableWizard({ narratorOptions, defaultNarratorId, catalo
 
         {step === 2 && (
           <section>
-            <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-              <p className="text-sm text-zinc-400 leading-snug">
-                <span style={{ color: "#22c55e" }}>{selectedLabel}</span> · {t("s2.hint")}
-              </p>
-              <div className="flex gap-2 flex-wrap">
-                <button
-                  type="button"
-                  onClick={() => setModuleIds(modules.map((m) => m.id))}
-                  className={secondaryBtn}
+            {/* ---- barra de seleção + busca ---- */}
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="relative flex-1 min-w-[260px]">
+                <svg
+                  className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 pointer-events-none"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
                 >
-                  {t("s2.addAll")}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setModuleIds([]);
-                    setCatSel([]);
-                  }}
-                  className={secondaryBtn}
-                >
-                  {t("s2.clearAll")}
-                </button>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-4.35-4.35M17 10a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder={t("s2.searchPh")}
+                  aria-label={t("s2.searchPh")}
+                  className="w-full pl-10 pr-3 py-2.5 rounded-xl border border-zinc-700/60 bg-zinc-900/40 text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:border-green-500 transition-colors"
+                />
               </div>
+              <button type="button" onClick={() => setRows(allRefs, true)} className={secondaryBtn}>
+                {t("s2.addAll")}
+              </button>
+              <button type="button" onClick={() => setSel(new Set())} className={secondaryBtn}>
+                {t("s2.clearAll")}
+              </button>
             </div>
 
-            {moduleList.length === 0 ? (
+            <p className="mt-3 text-sm text-zinc-400 leading-snug">
+              <span style={{ color: "#22c55e" }}>{selectedLabel}</span> · {t("s2.hint")}
+            </p>
+
+            {moduleList.length === 0 && allRefs.length === 0 ? (
               <p className="text-sm text-zinc-500 py-10 text-center">—</p>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {moduleList.map((m) => {
-                  const active = moduleIds.includes(m.id);
-                  const open = openModule === m.id;
-                  const dom = moduleTree.get(m.id);
-                  return (
-                    <div key={m.id} className={moduleCard(active)}>
-                      <div className="flex items-start justify-between gap-3">
-                        <button
-                          type="button"
-                          role="checkbox"
-                          aria-checked={active}
-                          onClick={() => toggleModule(m.id)}
-                          className="flex-1 text-left min-w-0"
-                        >
-                          <span className="flex flex-wrap items-center gap-2 min-w-0">
-                            <span
-                              className={`shrink-0 w-4 h-4 rounded border flex items-center justify-center transition-colors ${
-                                active ? "bg-green-500 border-green-500" : "border-zinc-600"
-                              }`}
-                            >
-                              {active ? (
-                                <svg className="w-3 h-3 text-zinc-950" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
-                                </svg>
-                              ) : null}
-                            </span>
-                            {m.accent ? (
-                              <span
-                                className="w-2 h-2 rounded-full shrink-0"
-                                style={{ background: m.accent, boxShadow: `0 0 6px ${m.accent}88` }}
-                              />
-                            ) : null}
-                            <span className="font-semibold text-[15px] truncate text-zinc-100">{m.name}</span>
-                            {m.tech_level ? (
-                              <span className={mono + " text-zinc-500"}>{m.tech_level}</span>
-                            ) : null}
-                          </span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setOpenModule(open ? null : m.id)}
-                          aria-expanded={open}
-                          className="shrink-0 inline-flex items-center gap-1 font-mono text-[10px] uppercase tracking-widest px-2 py-1 rounded-md border border-zinc-700/60 text-zinc-400 hover:text-green-400 hover:border-green-700 transition-colors"
-                        >
-                          {t("s2.explore")}
-                          <svg
-                            className={`w-3.5 h-3.5 transition-transform ${open ? "rotate-180" : ""}`}
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                          </svg>
-                        </button>
-                      </div>
+              <>
+                {/* ================= barra de filtro por tipo ================= */}
+                <div className="mt-5">
+                  <p className={mono + " text-[10px] uppercase tracking-widest text-zinc-500"}>{t("s2.typeHint")}</p>
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    <button
+                      type="button"
+                      onClick={() => setTypeFilter("")}
+                      aria-pressed={typeFilter === ""}
+                      className={`px-3.5 py-1.5 rounded-full font-mono text-[11px] uppercase tracking-widest border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-green-800/60 ${
+                        typeFilter === ""
+                          ? "border-green-600/70 bg-green-700/15 text-green-400"
+                          : "border-zinc-700/60 text-zinc-400 hover:border-zinc-500"
+                      }`}
+                    >
+                      {t("s2.allTypes")}
+                    </button>
+                    {activeDomains.map(({ label, domain }) => (
+                      <button
+                        key={domain}
+                        type="button"
+                        onClick={() => setTypeFilter(domain)}
+                        aria-pressed={typeFilter === domain}
+                        className={`px-3.5 py-1.5 rounded-full font-mono text-[11px] uppercase tracking-widest border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-green-800/60 ${
+                          typeFilter === domain
+                            ? "border-green-600/70 bg-green-700/15 text-green-400"
+                            : "border-zinc-700/60 text-zinc-400 hover:border-zinc-500"
+                        }`}
+                      >
+                        {t(label)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
-                      {m.description ? (
-                        <p className="mt-1.5 text-xs text-zinc-500 leading-snug">{m.description}</p>
-                      ) : null}
-                      <div className="flex flex-wrap gap-1.5 mt-3">
-                        {DOMAINS.map(({ key, domain }) => {
-                          const n = m.counts[domain];
-                          if (!n) return null;
+                {q ? (
+                  /* ================= RESULTADOS DA BUSCA ================= */
+                  searchMatches.length === 0 ? (
+                    <p className="mt-6 text-sm text-zinc-500">{interpolate(t("s2.searchEmpty"), { q })}</p>
+                  ) : (
+                    visibleDomains.map(({ label, domain }) => {
+                      const rows = searchMatches.filter((r) => r.domain === domain);
+                      if (rows.length === 0) return null;
+                      const checkedCount = countSelOf(rows);
+                      return (
+                        <section key={domain} className="mt-8">
+                          <TypeHeader label={t(label)} checked={checkedCount} total={rows.length} />
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 mt-4">
+                            {rows.map((r) => (
+                              <ItemCard
+                                key={r.id}
+                                entry={r}
+                                checked={isSel(r.id)}
+                                onToggle={() => toggle(r.id)}
+                                tag={catLabel(domain, r.category)}
+                              />
+                            ))}
+                          </div>
+                        </section>
+                      );
+                    })
+                  )
+                ) : (
+                  /* ================= COMPÊNDIO por domínio ================= */
+                  visibleDomains.map(({ label, domain }) => {
+                    const domainRows = domainRefs.get(domain) ?? [];
+                    const checkedCount = countSelOf(domainRows);
+                    return (
+                      <section key={domain} className="mt-8">
+                        <TypeHeader label={t(label)} checked={checkedCount} total={domainRows.length} />
+                        {categoryGroups(domain).map(([category, rows]) => {
+                          const on = allOf(rows);
                           return (
-                            <span key={domain} className={chipTone}>
-                              <span className="tabular-nums font-bold text-zinc-100">{n}</span>
-                              {t(key)}
-                            </span>
+                            <div key={category} className="mt-5 pt-4 border-t border-dashed border-zinc-800">
+                              <div className="flex items-center gap-2.5">
+                                <label className="inline-flex items-center gap-2 cursor-pointer group">
+                                  <input
+                                    type="checkbox"
+                                    checked={on}
+                                    onChange={() => toggleCat(domain, category)}
+                                    className="accent-green-600"
+                                  />
+                                  <span className="text-[13px] font-semibold text-zinc-200 group-hover:text-zinc-100 transition-colors">
+                                    {catLabel(domain, category)}
+                                  </span>
+                                </label>
+                                <span className="font-mono text-[10px] text-zinc-600 tabular-nums">×{rows.length}</span>
+                                {countSelOf(rows) > 0 ? (
+                                  <span className="font-mono text-[10px] text-green-500/80 tabular-nums">
+                                    {interpolate(t("s2.selectedTag"), { n: countSelOf(rows) })}
+                                  </span>
+                                ) : null}
+                              </div>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 mt-3">
+                                {rows.map((r) => (
+                                  <ItemCard
+                                    key={r.id}
+                                    entry={r}
+                                    checked={isSel(r.id)}
+                                    onToggle={() => toggle(r.id)}
+                                  />
+                                ))}
+                              </div>
+                            </div>
                           );
                         })}
-                      </div>
+                      </section>
+                    );
+                  })
+                )}
 
-                      {open && dom ? (
-                        <div className="mt-4 border-t border-zinc-700/50 pt-4 space-y-5">
-                          {DOMAINS.map(({ key, domain }) => {
-                            const cats = dom.get(domain);
-                            if (!cats || cats.size === 0) return null;
-                            return (
-                              <div key={domain}>
-                                <p className={mono + " text-zinc-500 mb-2"}>{t(key)}</p>
-                                <div className="rounded-lg border border-zinc-800 divide-y divide-zinc-800/70 overflow-hidden">
-                                  {[...cats.entries()].map(([category, group]) => {
-                                    const total = [...group.values()].reduce((s, n) => s + n, 0);
-                                    const subs = [...group.entries()].filter(([k]) => k !== "__all__");
-                                    const baseEntries = refsFor(m.id, domain, category, "__all__");
-                                    return (
-                                      <div key={category}>
-                                        <label className="flex items-center gap-2.5 px-3 py-2.5 cursor-pointer hover:bg-zinc-900/50 transition-colors">
-                                          <input
-                                            type="checkbox"
-                                            checked={hasCat(domain, category)}
-                                            onChange={() => toggleCat(domain, category)}
-                                            className="accent-green-600"
-                                          />
-                                          <span className="text-sm text-zinc-200">{catLabel(domain, category)}</span>
-                                          <span className="ml-auto font-mono text-[10px] text-zinc-500 tabular-nums">
-                                            ×{total}
-                                          </span>
-                                        </label>
-                                        {baseEntries.length ? (
-                                          <ul className="pb-2 px-9 space-y-1">
-                                            {baseEntries.map((r, i) => (
-                                              <li key={`${r.name}-${i}`} className="flex flex-col">
-                                                <span className="text-xs text-zinc-300">{r.name}</span>
-                                                {r.description ? (
-                                                  <span className="text-[11px] text-zinc-600 leading-snug">{r.description}</span>
-                                                ) : null}
-                                              </li>
-                                            ))}
-                                          </ul>
-                                        ) : null}
-                                        {subs.length ? (
-                                          <div className="pb-2.5 px-9 space-y-2">
-                                            {subs.map(([sub, n]) => {
-                                              const subEntries = refsFor(m.id, domain, category, sub);
-                                              return (
-                                                <div key={sub}>
-                                                  <label className="flex items-center gap-2 py-1 cursor-pointer group">
-                                                    <input
-                                                      type="checkbox"
-                                                      checked={hasSub(domain, category, sub)}
-                                                      onChange={() => toggleSub(domain, category, sub)}
-                                                      className="accent-green-600"
-                                                    />
-                                                    <span className="text-xs text-zinc-400 group-hover:text-zinc-200 transition-colors">
-                                                      {subLabel(domain, category, sub)}
-                                                    </span>
-                                                    <span className="ml-auto font-mono text-[10px] text-zinc-600 tabular-nums">
-                                                      ×{n}
-                                                    </span>
-                                                  </label>
-                                                  {subEntries.length ? (
-                                                    <ul className="pl-7 space-y-1">
-                                                      {subEntries.map((r, i) => (
-                                                        <li key={`${r.name}-${i}`} className="flex flex-col">
-                                                          <span className="text-xs text-zinc-400">{r.name}</span>
-                                                          {r.description ? (
-                                                            <span className="text-[11px] text-zinc-600 leading-snug">{r.description}</span>
-                                                          ) : null}
-                                                        </li>
-                                                      ))}
-                                                    </ul>
-                                                  ) : null}
-                                                </div>
-                                              );
-                                            })}
-                                          </div>
-                                        ) : null}
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      ) : null}
-                    </div>
-                  );
-                })}
-              </div>
+                {/* ================= PACOTES BASE (coluna única, no fim) ================= */}
+                <section className="mt-10">
+                  <TypeHeader
+                    label={t("s2.kit")}
+                    checked={moduleList.reduce((s, m) => s + countSelOf(moduleRefs.get(m.id) ?? []), 0)}
+                    total={moduleList.reduce((s, m) => s + (moduleRefs.get(m.id) ?? []).length, 0)}
+                    hint={t("s2.kitHint")}
+                  />
+                  <div className="mt-4">
+                    {moduleList.map((m, idx) => {
+                      const rows = moduleRefs.get(m.id) ?? [];
+                      const on = allOf(rows);
+                      const partial = countSelOf(rows) > 0 && !on;
+                      return (
+                        <label
+                          key={m.id}
+                          className={`flex items-start gap-3 pb-4 pt-4 cursor-pointer transition-colors sm:pb-4 ${
+                            idx > 0 ? "border-t border-dashed border-zinc-800" : ""
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={on}
+                            onChange={() => toggleModule(m.id)}
+                            className="mt-1 accent-green-600 shrink-0"
+                            aria-label={m.name}
+                          />
+                          <span className="min-w-0">
+                            <span className="flex flex-wrap items-center gap-2 min-w-0">
+                              {m.accent ? (
+                                <span
+                                  className="w-2 h-2 rounded-full shrink-0"
+                                  style={{ background: m.accent, boxShadow: `0 0 6px ${m.accent}88` }}
+                                />
+                              ) : null}
+                              <span className="font-semibold text-[15px] text-zinc-100">{m.name}</span>
+                              {m.tech_level ? (
+                                <span className={mono + " text-zinc-500"}>{m.tech_level}</span>
+                              ) : null}
+                            </span>
+                            {m.description ? (
+                              <span className="block mt-1 text-xs text-zinc-500 leading-snug max-w-xl">
+                                {m.description}
+                              </span>
+                            ) : null}
+                            <span className="flex flex-wrap gap-1.5 mt-2.5">
+                              {DOMAIN_ORDER.map(({ label, domain }) => {
+                                const n = m.counts[domain];
+                                if (!n) return null;
+                                return (
+                                  <span key={domain} className={chipTone}>
+                                    <span className="tabular-nums font-bold text-zinc-100">{n}</span>
+                                    {t(label)}
+                                  </span>
+                                );
+                              })}
+                            </span>
+                            {partial ? (
+                              <span className="block mt-2 font-mono text-[10px] uppercase tracking-widest text-green-500/80">
+                                {interpolate(t("s2.selectedTag"), { n: countSelOf(rows) })}
+                              </span>
+                            ) : null}
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </section>
+              </>
             )}
 
-            {moduleIds.length === 0 && totalCatSel === 0 ? (
+            {totalSelected === 0 ? (
               <p className="mt-4 text-xs text-zinc-500/80 italic">{t("s2.empty")}</p>
             ) : null}
           </section>

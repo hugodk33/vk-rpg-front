@@ -3,7 +3,7 @@
 import { LANGS, useTranslation } from "@/lib/i18n";
 
 /* ============================================================
-   LanguageSwitch — PT / EN.
+   LanguageSwitch — EN / BR.
    A escolha fica persistida (vkrpg.lang) e o clique dispara
    `vkrpg:lang` para todas as páginas ouvintes trocarem de idioma.
    ============================================================ */
@@ -25,9 +25,12 @@ export default function LanguageSwitch() {
             type="button"
             onClick={() => setLang(l.id)}
             aria-pressed={active}
+            title={l.id === "en" ? "English" : "Português (Brasil)"}
             className={`font-mono text-[10px] font-bold tracking-widest px-2 py-0.5 rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/60 ${
               active
-                ? "bg-amber-500/20 text-amber-300"
+                ? l.id === "en"
+                  ? "bg-blue-500/20 text-blue-300"
+                  : "bg-green-500/20 text-green-300"
                 : "text-zinc-500 hover:text-zinc-300"
             }`}
           >

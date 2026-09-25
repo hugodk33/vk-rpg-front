@@ -110,6 +110,11 @@ export default function TableCharactersPage({ params }: { params: Promise<{ id: 
                         </span>
                         <span className="text-[11px] text-zinc-500">NPC</span>
                       </div>
+                      {ch.is_active === false ? (
+                        <span className="shrink-0 inline-block font-mono text-[9px] uppercase tracking-widest text-red-300/90 border border-red-500/40 rounded px-1.5 py-0.5">
+                          Desativado
+                        </span>
+                      ) : null}
                       <span
                         className="shrink-0 font-mono text-[9px] uppercase tracking-widest text-zinc-900 bg-zinc-200 rounded px-1.5 py-0.5"
                         style={{ background: ally ? "#34d399" : "#f87171", color: "#18181b" }}
@@ -155,6 +160,11 @@ export default function TableCharactersPage({ params }: { params: Promise<{ id: 
                       </span>
                       {ch.user?.username ? (
                         <span className="text-[11px] text-zinc-500">{ch.user.username}</span>
+                      ) : null}
+                      {ch.is_active === false ? (
+                        <span className="inline-block font-mono text-[9px] uppercase tracking-widest text-red-300/90 border border-red-500/40 rounded px-1.5 py-0.5 mt-0.5">
+                          Desativado
+                        </span>
                       ) : null}
                     </div>
                   </div>

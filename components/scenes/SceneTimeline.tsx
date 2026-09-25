@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import type { GameTable, Location, Modifier, Narration, NarrationAction, Scene, VisibilityRule } from "@/lib/types";
 import { maskedLocationName, maskedTargetName } from "@/lib/visibility";
 import { narrationBoard } from "@/lib/board";
+import { useTableLive } from "@/lib/useTableLive";
 import TacticalPlate from "@/components/tactical/TacticalPlate";
 
 /* ============================================================
@@ -337,6 +339,7 @@ interface SceneTimelineProps {
 }
 
 export default function SceneTimeline({ table, scenes, showEditButtons = true, role = "narrator", viewerId, visibility }: SceneTimelineProps) {
+  const router = useRouter();
   const isPlayer = role === "player";
   const titleCls = isPlayer ? "text-blue-100" : "text-green-100";
   const badgeCls = isPlayer ? "text-blue-300 border border-blue-700/40" : "text-green-600/90 border border-green-900/40";
@@ -351,6 +354,9 @@ export default function SceneTimeline({ table, scenes, showEditButtons = true, r
     chapters.get(ch)!.push(scene);
   }
   const chapterEntries = [...chapters.entries()];
+
+  /* tempo real: a crônica cresce sem recarregar a página */
+  useTableLive(table?.id ?? null, () => router.refresh());
 
   return (
     <div className="max-w-5xl mx-auto px-6 py-8">

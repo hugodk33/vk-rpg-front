@@ -228,6 +228,8 @@ export interface TableCharacter {
   userId?: string
   name?: string
   isNpc?: boolean
+  /** Se `false`, o personagem permanece na mesa mas está fora de jogo. */
+  is_active?: boolean
   known?: boolean
   user?: CharacterUser
   sheet?: Sheet | null
@@ -580,6 +582,7 @@ export interface ContentCatalogCount {
 }
 
 export interface ContentReference {
+  id: string
   moduleId: string
   domain: string
   category: string
@@ -587,6 +590,11 @@ export interface ContentReference {
   name: string
   description: string | null
   kind: string | null
+}
+
+export interface ContentRefSelection {
+  domain: string
+  ids: string[]
 }
 
 export interface ContentCatalog {

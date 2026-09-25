@@ -95,6 +95,7 @@ export default function MapStudio({ location }: MapStudioProps) {
   const [assetScale, setAssetScale] = useState(1);
   const [assetRot, setAssetRot] = useState(0);
   const [zoom, setZoom] = useState(1);
+  const [hand, setHand] = useState(false);
 
   const [tiles, setTiles] = useState<Map<string, HexTileKind>>(() => {
     const m = new Map<string, HexTileKind>();
@@ -237,7 +238,7 @@ export default function MapStudio({ location }: MapStudioProps) {
   /* ---------- pointer handlers ---------- */
 
   function onPointerDown(e: React.PointerEvent) {
-    if (e.button === 1 || (e.button === 0 && spaceRef.current)) {
+    if (e.button === 1 || e.button === 0 && (spaceRef.current || hand)) {
       e.preventDefault();
       const wrap = wrapRef.current;
       if (wrap) {
@@ -420,6 +421,11 @@ export default function MapStudio({ location }: MapStudioProps) {
     function onKey(e: KeyboardEvent) {
       const tag = (e.target as HTMLElement | null)?.tagName ?? "";
       if (tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA") return;
+      if (e.key.toLowerCase() === "h" && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        if (spaceRef.current) return;
+        setHand((prev) => !prev);
+        return;
+      }
       if (e.code === "Space") {
         e.preventDefault();
         spaceRef.current = true;
@@ -446,7 +452,7 @@ export default function MapStudio({ location }: MapStudioProps) {
       window.removeEventListener("keydown", onKey);
       window.removeEventListener("keyup", onKeyUp);
     };
-  }, [selection]);
+  }, [selection, hand]);
 
   /* ---------- zoom + pan ---------- */
 
@@ -1000,7 +1006,7 @@ export default function MapStudio({ location }: MapStudioProps) {
                   ref={canvasRef}
                   width={W}
                   height={H}
-                  className={`block touch-none select-none ${grab ? "cursor-grabbing" : "cursor-crosshair"}`}
+                  className={`block touch-none select-none ${hand ? (grab ? "cursor-grabbing" : "cursor-grab") : grab ? "cursor-grabbing" : "cursor-crosshair"}`}
                   style={{
                     width: `${W}px`,
                     height: `${H}px`,
@@ -1017,7 +1023,7 @@ export default function MapStudio({ location }: MapStudioProps) {
                 />
               </div>
             </div>
-            <ZoomControls zoom={zoom} onZoom={setZoom} min={0.5} max={4} step={0.25} />
+            <ZoomControls zoom={zoom} onZoom={setZoom} min={0.5} max={4} step={0.25} hand={hand} onToggleHand={() => setHand((h) => !h)} />
 
             {error ? <p className="absolute inset-x-0 bottom-0 bg-red-950/90 text-red-200 text-xs px-3 py-2">{error}</p> : null}
           </div>

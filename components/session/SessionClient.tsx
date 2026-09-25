@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { CharacterSkill, CharacterViewer, Location, Narration, NarrationAction, QueueEntry, Sheet, TableSettings } from "@/lib/types";
 import { api } from "@/lib/api";
+import { useTableLive } from "@/lib/useTableLive";
 import { skillLabel, skillLevel } from "@/lib/skill";
 import { narrationBoard, narrationBoardAt, tokenAt } from "@/lib/board";
 import type { BoardToken, BoardTrail, TrailMove } from "@/lib/board";
@@ -77,7 +78,11 @@ const FACING_DIRS: { label: string; arrow: string }[] = [
   { label: "N", arrow: "↑" },
   { label: "NE", arrow: "↗" },
 ];
-const COMPASS_ORDER = [5, 6, 7, 4, 0, 3, 2, 1]; /* NW N NE / W · AUTO · E / SW S SE */
+const COMPASS_ROWS: (number | "auto")[][] = [
+  [5, 6, 7],
+  [4, "auto", 0],
+  [3, 2, 1],
+]; /* NW N NE / W AUTO E / SW S SE */
 
 const hexLbl = (hex: { q: number; r: number } | null): string => {
   if (!hex) return "off";
@@ -202,6 +207,9 @@ export default function SessionClient({
       };
   const router = useRouter();
   const [tab, setTab] = useState<SessionTab>("turn");
+
+  /* tempo real: atualiza mapa + fila automaticamente quando a mesa muda */
+  useTableLive(tableId, () => router.refresh());
 
   /* config de mesa: decide se o movimento encerra o turno (after_move) */
   const [tableSettings, setTableSettings] = useState<TableSettings | null>(null);
@@ -1127,8 +1135,8 @@ export default function SessionClient({
 
             {actionMode === "move" ? (
               <>
-                <div className="flex flex-wrap items-start justify-center gap-x-8 gap-y-4">
-                  {/* who is moving + destination */}
+                <div className="grid gap-x-10 gap-y-6 sm:grid-cols-2">
+                  {/* col 1 — who is moving + destination */}
                   <div className="flex flex-col items-center gap-1.5">
                     <div className="flex items-center gap-2">
                       {actorCharId ? (
@@ -1150,67 +1158,78 @@ export default function SessionClient({
                     </p>
                   </div>
 
-                  {/* facing: horizontal strip · tap the arrow or AUTO */}
-                  <div className="flex flex-col items-center gap-1.5">
-                    <div className="inline-flex items-stretch rounded-lg border border-zinc-700/50 bg-zinc-950/40 overflow-hidden">
-                        {COMPASS_ORDER.map((i) => {
-                          const dir = FACING_DIRS[i];
-                          const isSel = facingChoice === i;
-                          const isCur = !isSel && facingChoice === "auto" && currentFacing === i;
-                          return (
-                            <button
-                              key={dir.label}
-                              type="button"
-                              title={dir.label}
-                              onClick={() => setFacingChoice(i)}
-                              disabled={!actorCharId || !actorPos}
-                              className={`w-9 h-10 flex flex-col items-center justify-center leading-none transition-colors border-r border-zinc-700/40 disabled:opacity-30 disabled:cursor-not-allowed ${
-                                isSel
-                                  ? "border-blue-500/60 bg-blue-700/20 text-blue-300"
-                                  : isCur
-                                    ? "text-zinc-200 bg-zinc-700/40"
-                                    : "text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/60"
-                              }`}
-                            >
-                              <span className="text-sm">{dir.arrow}</span>
-                              <span className="text-[8px] font-mono">{dir.label}</span>
-                            </button>
-                          );
-                        })}
-                        <button
-                          type="button"
-                          onClick={() => setFacingChoice("auto")}
-                          disabled={!actorCharId || !actorPos}
-                          className={`px-2.5 h-10 font-mono text-[10px] font-bold transition-colors disabled:opacity-30 disabled:cursor-not-allowed ${
-                            facingChoice === "auto"
-                              ? "bg-blue-700/20 text-blue-300"
-                              : "text-zinc-500 hover:text-zinc-300"
-                          }`}
-                        >
-                          auto
-                        </button>
-                      </div>
-                    <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">
-                      Orientação
-                    </p>
-                  </div>
+                  {/* col 2 — facing compass (same disposition as the player trail) + log move */}
+                  <div className="flex flex-col items-center gap-4">
+                    <div className="flex flex-col items-center gap-1.5">
+                      <div className="inline-grid grid-cols-3 rounded-lg border border-zinc-700/50 bg-zinc-950/40 overflow-hidden">
+                          {COMPASS_ROWS.map((row, ri) =>
+                            row.map((cell, ci) => {
+                              if (cell === "auto") {
+                                return (
+                                  <button
+                                    key={`auto-${ri}-${ci}`}
+                                    type="button"
+                                    onClick={() => setFacingChoice("auto")}
+                                    disabled={!actorCharId || !actorPos}
+                                    className={`h-10 px-2.5 font-mono text-[10px] font-bold transition-colors disabled:opacity-30 disabled:cursor-not-allowed ${
+                                      ri < COMPASS_ROWS.length - 1 ? "border-b border-zinc-700/40" : ""
+                                    } ${ci < row.length - 1 ? "border-r border-zinc-700/40" : ""} ${
+                                      facingChoice === "auto" ? "bg-blue-700/20 text-blue-300" : "text-zinc-500 hover:text-zinc-300"
+                                    }`}
+                                  >
+                                    AUTO
+                                  </button>
+                                );
+                              }
+                              const i = cell;
+                              const dir = FACING_DIRS[i];
+                              const isSel = facingChoice === i;
+                              const isCur = !isSel && facingChoice === "auto" && currentFacing === i;
+                              return (
+                                <button
+                                  key={`${ri}-${ci}-${dir.label}`}
+                                  type="button"
+                                  title={dir.label}
+                                  onClick={() => setFacingChoice(i)}
+                                  disabled={!actorCharId || !actorPos}
+                                  className={`h-10 flex flex-col items-center justify-center leading-none transition-colors disabled:opacity-30 disabled:cursor-not-allowed ${
+                                    ri < COMPASS_ROWS.length - 1 ? "border-b border-zinc-700/40" : ""
+                                  } ${ci < row.length - 1 ? "border-r border-zinc-700/40" : ""} ${
+                                    isSel
+                                      ? "border-blue-500/60 bg-blue-700/20 text-blue-300"
+                                      : isCur
+                                        ? "text-zinc-200 bg-zinc-700/40"
+                                        : "text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/60"
+                                  }`}
+                                >
+                                  <span className="text-sm">{dir.arrow}</span>
+                                  <span className="text-[8px] font-mono">{dir.label}</span>
+                                </button>
+                              );
+                            })
+                          )}
+                        </div>
+                      <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">
+                        Orientação
+                      </p>
+                    </div>
 
-                  {/* log move */}
-                  <div className="flex flex-col items-center gap-1.5">
-                    <button
-                      onClick={logMove}
-                      disabled={!actorCharId || !actorPos || (!moveTarget && facingChoice === "auto")}
-                      className={`${T.btnFill} text-sm font-bold px-5 py-2 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed`}
-                    >
-                      {!moveTarget && facingChoice !== "auto"
-                        ? `Registrar turno · virado para ${FACING_DIRS[facingChoice]?.label ?? facingChoice}`
-                        : moveTarget
-                          ? `Registrar movimento → ${moveTarget.q},${moveTarget.r}`
-                          : "Registrar movimento · escolha um hexágono"}
-                    </button>
-                    <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">
-                      Registro de movimento
-                    </p>
+                    <div className="flex flex-col items-center gap-1.5">
+                      <button
+                        onClick={logMove}
+                        disabled={!actorCharId || !actorPos || (!moveTarget && facingChoice === "auto")}
+                        className={`${T.btnFill} text-sm font-bold px-5 py-2 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed`}
+                      >
+                        {!moveTarget && facingChoice !== "auto"
+                          ? `Registrar turno · virado para ${FACING_DIRS[facingChoice]?.label ?? facingChoice}`
+                          : moveTarget
+                            ? `Registrar movimento → ${moveTarget.q},${moveTarget.r}`
+                            : "Registrar movimento · escolha um hexágono"}
+                      </button>
+                      <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">
+                        Registro de movimento
+                      </p>
+                    </div>
                   </div>
                 </div>
                 <p className="mt-2 font-mono text-[10px] text-zinc-600 uppercase tracking-widest">

@@ -15,10 +15,12 @@
    ============================================================ */
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { Location, Narration, NarrationAction, Scene, TableCharacter, VisibilityRule } from "@/lib/types";
 import { narrationBoardAt } from "@/lib/board";
 import type { BoardToken } from "@/lib/board";
 import { maskedLocationName, maskedTargetName } from "@/lib/visibility";
+import { useTableLive } from "@/lib/useTableLive";
 import TacticalPlate from "@/components/tactical/TacticalPlate";
 
 const ROMAN = ["0","I","II","III","IV","V","VI","VII","VIII","IX","X","XI","XII","XIII","XIV","XV","XVI","XVII","XVIII","XIX","XX"];
@@ -61,6 +63,8 @@ interface MapLogProps {
   /** present the page as a full-viewport console (no page scroll on lg):
       log and map each get a fixed row with their own internal scroll. */
   fillViewport?: boolean;
+  /** optional tableId to subscribe to live updates without reloading the page. */
+  tableId?: string | null;
 }
 
 export default function MapLog({
@@ -72,9 +76,14 @@ export default function MapLog({
   viewerId,
   visibility = null,
   fillViewport = false,
+  tableId = null,
 }: MapLogProps) {
   const isPlayer = role === "player";
   const t = toneOf(isPlayer);
+  const router = useRouter();
+
+  /* tempo real: novos beats (narração/ação) entram no mapa sem recarregar */
+  useTableLive(tableId, () => router.refresh());
 
   const [chapterSel, setChapterSel] = useState<number>(0);
   const [sceneSel, setSceneSel] = useState<string>("");

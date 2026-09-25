@@ -25,6 +25,8 @@ import CharacterJourney from "@/components/character/CharacterJourney";
 import TableResources, { RESOURCE_TABS, type ResourceTab } from "@/components/player/TableResources";
 import PlayerInventory from "@/components/player/PlayerInventory";
 import { getSessionState } from "@/lib/session";
+import { useTableLive } from "@/lib/useTableLive";
+import { useRouter } from "next/navigation";
 
 /* ============================================================
    Player Console — one panel per character.
@@ -135,7 +137,11 @@ export default function PlayerConsole({
   const tableRef = useRef<HTMLDivElement>(null);
   const [chronOpen, setChronOpen] = useState(false);
   const chronRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
   const name = character?.sheet?.name || character?.name || "Your character";
+
+  /* tempo real: a mesa muda (narração/fila/mapa) sem recarregar a página */
+  useTableLive(tableId, () => router.refresh());
 
   useEffect(() => {
     if (!tableOpen) return;
@@ -376,6 +382,7 @@ export default function PlayerConsole({
           role="player"
           viewerId={character?.id ?? undefined}
           visibility={visibility}
+          tableId={tableId}
         />
       ) : null}
 

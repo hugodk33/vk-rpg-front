@@ -26,6 +26,9 @@ async function loadPlayerEntries(): Promise<PlayerEntry[]> {
       const npcOf = new Map<string, TableNpc>();
       for (const n of npcs?.npcs ?? []) if (n.character_id) npcOf.set(n.character_id, n);
       for (const ch of chars?.characters ?? []) {
+        // Personagens desativados ficam na mesa, mas fora do jogo — não
+        // aparecem no painel do jogador.
+        if (ch.is_active === false) continue;
         const npc = npcOf.get(ch.id);
         if (npc) {
           // Companhia só inclui NPCs aliados — inimigos/neutros/bosses ficam

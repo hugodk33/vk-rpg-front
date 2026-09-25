@@ -102,7 +102,7 @@ export async function loadPlayerConsole(characterId: string): Promise<PlayerCons
     tableId,
     character: viewer?.character ?? null,
     viewer,
-    roster: charsData?.characters ?? [],
+    roster: (charsData?.characters ?? []).filter((c) => c.is_active !== false),
     table: scenesData.table ?? viewer?.table ?? null,
     scenes: scenesData.scenes ?? [],
     actions: state.actions,

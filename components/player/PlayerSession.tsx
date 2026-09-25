@@ -384,7 +384,11 @@ export default function TurnPanel({
     { label: "N", arrow: "↑" },
     { label: "NE", arrow: "↗" },
   ];
-  const COMPASS_ORDER = [5, 6, 7, 4, 0, 3, 2, 1]; /* NW N NE / W · AUTO · E / SW S SE */
+  const COMPASS_ROWS: (number | "auto")[][] = [
+    [5, 6, 7],
+    [4, "auto", 0],
+    [3, 2, 1],
+  ]; /* NW N NE / W AUTO E / SW S SE */
 
   function handleMapClick(q: number, r: number) {
     if (!isMyTurn || committed) return;
@@ -646,9 +650,10 @@ export default function TurnPanel({
           </div>
         ) : null}
         </div>
+      </section>
 
-        {/* action zone: movement + dice together */}
-        <div className="relative border-t border-zinc-700/40">
+      {/* action zone: movement + dice — fora da caixa da planta */}
+      <section aria-label="Ações" className="relative bg-zinc-900/80 border border-zinc-700/40 rounded-xl overflow-hidden">
           <div className="p-5 space-y-4">
             <div className="flex flex-wrap items-center gap-3 pb-4 border-b border-zinc-700/40">
               <span className={`w-2.5 h-2.5 rounded-full ${isMyTurn ? "bg-blue-400 beacon" : "bg-zinc-600"}`}
@@ -696,42 +701,54 @@ export default function TurnPanel({
               </p>
             ) : null}
 
-            {/* facing + log move — two columns side by side, labels at the bottom */}
-            <div className="flex flex-wrap items-start justify-center gap-x-8 gap-y-4">
+            {/* facing + log move — two rows stacked, labels at the bottom */}
+            <div className="flex flex-col items-center gap-4">
               <div className="flex flex-col items-center gap-1.5">
-                <div className="inline-flex items-stretch rounded-lg border border-zinc-700/50 bg-zinc-950/40 overflow-hidden">
-                    {COMPASS_ORDER.map((i) => {
-                      const dir = FACING_DIRS[i];
-                      const isSel = facingChoice === i;
-                      const isCur = !isSel && facingChoice === "auto" && me?.facing === i;
-                      return (
-                        <button
-                          key={dir.label}
-                          type="button"
-                          title={dir.label}
-                          onClick={() => pickFacing(i)}
-                          className={`w-9 h-10 flex flex-col items-center justify-center leading-none transition-colors border-r border-zinc-700/40 ${
-                            isSel
-                              ? "border-blue-500/60 bg-blue-700/20 text-blue-300"
-                              : isCur
-                                ? "text-zinc-200 bg-zinc-700/40"
-                                : "text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/60"
-                          }`}
-                        >
-                          <span className="text-sm">{dir.arrow}</span>
-                          <span className="text-[8px] font-mono">{dir.label}</span>
-                        </button>
-                      );
-                    })}
-                    <button
-                      type="button"
-                      onClick={() => pickFacing("auto")}
-                      className={`px-2.5 h-10 font-mono text-[10px] font-bold transition-colors ${
-                        facingChoice === "auto" ? "bg-blue-700/20 text-blue-300" : "text-zinc-500 hover:text-zinc-300"
-                      }`}
-                    >
-                      auto
-                    </button>
+                <div className="inline-grid grid-cols-3 rounded-lg border border-zinc-700/50 bg-zinc-950/40 overflow-hidden">
+                    {COMPASS_ROWS.map((row, ri) =>
+                      row.map((cell, ci) => {
+                        if (cell === "auto") {
+                          return (
+                            <button
+                              key={`auto-${ri}-${ci}`}
+                              type="button"
+                              onClick={() => pickFacing("auto")}
+                              className={`h-10 px-2.5 font-mono text-[10px] font-bold transition-colors ${
+                                ri < COMPASS_ROWS.length - 1 ? "border-b border-zinc-700/40" : ""
+                              } ${ci < row.length - 1 ? "border-r border-zinc-700/40" : ""} ${
+                                facingChoice === "auto" ? "bg-blue-700/20 text-blue-300" : "text-zinc-500 hover:text-zinc-300"
+                              }`}
+                            >
+                              AUTO
+                            </button>
+                          );
+                        }
+                        const i = cell;
+                        const dir = FACING_DIRS[i];
+                        const isSel = facingChoice === i;
+                        const isCur = !isSel && facingChoice === "auto" && me?.facing === i;
+                        return (
+                          <button
+                            key={`${ri}-${ci}-${dir.label}`}
+                            type="button"
+                            title={dir.label}
+                            onClick={() => pickFacing(i)}
+                            className={`h-10 flex flex-col items-center justify-center leading-none transition-colors ${
+                              ri < COMPASS_ROWS.length - 1 ? "border-b border-zinc-700/40" : ""
+                            } ${ci < row.length - 1 ? "border-r border-zinc-700/40" : ""} ${
+                              isSel
+                                ? "border-blue-500/60 bg-blue-700/20 text-blue-300"
+                                : isCur
+                                  ? "text-zinc-200 bg-zinc-700/40"
+                                  : "text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/60"
+                            }`}
+                          >
+                            <span className="text-sm">{dir.arrow}</span>
+                            <span className="text-[8px] font-mono">{dir.label}</span>
+                          </button>
+                        );
+                      })
+                    )}
                   </div>
                 <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">Orientação</p>
               </div>
@@ -740,19 +757,30 @@ export default function TurnPanel({
                 <button
                   onClick={() => void logMove()}
                   disabled={(!moveTarget && (facingChoice === "auto" || !from)) || moving}
-                  className="bg-blue-600 hover:bg-blue-500 text-blue-950 text-sm font-bold px-4 py-2 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="bg-blue-600 hover:bg-blue-500 text-blue-950 text-sm font-bold px-5 py-2.5 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed leading-tight"
                 >
-                  {moving
-                    ? "Registrando…"
-                    : moveTarget
-                      ? tableSettings?.turn_end_mode === "after_move"
-                        ? `Mover e terminar turno → ${moveTarget.q},${moveTarget.r}`
-                        : `Registrar movimento → ${moveTarget.q},${moveTarget.r}`
-                      : facingChoice !== "auto"
+                  <span className="block">
+                    {moving
+                      ? "Registrando…"
+                      : moveTarget
                         ? tableSettings?.turn_end_mode === "after_move"
-                          ? "Virar e terminar turno"
-                          : "Virar no lugar"
-                        : "Registrar movimento · clique em um hexágono"}
+                          ? "Mover e terminar turno"
+                          : "Registrar movimento"
+                        : facingChoice !== "auto"
+                          ? tableSettings?.turn_end_mode === "after_move"
+                            ? "Virar e terminar turno"
+                            : "Virar no lugar"
+                          : "Registrar movimento"}
+                  </span>
+                  <span className="block text-[10px] font-mono font-medium opacity-80 mt-0.5">
+                    {moving
+                      ? "aguarde…"
+                      : moveTarget
+                        ? `→ ${moveTarget.q},${moveTarget.r}`
+                        : facingChoice !== "auto"
+                          ? "no lugar"
+                          : "clique em um hexágono"}
+                  </span>
                 </button>
                 <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">Registrar movimento</p>
               </div>
@@ -850,6 +878,26 @@ export default function TurnPanel({
                     ? `Teste do assento travado (${testCount}d${testDie}${testMod >= 0 ? `+${testMod}` : testMod}) — os dados vêm do narrador; escolha um atributo ou perícia para rolar.`
                     : "Nenhum teste de assento definido ainda — dados padrão até o narrador ajustar. Você escolhe o atributo ou a perícia."}
                 </p>
+
+                {/* line 4 — alvo (quem você mira/afeta na ação) */}
+                <div className="flex flex-col items-center gap-1.5">
+                  <select
+                    value={actTarget}
+                    onChange={(e) => setActTarget(e.target.value)}
+                    disabled={committed}
+                    className="w-48 bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-3 py-2 text-zinc-100 text-sm focus:outline-none focus:border-blue-600/70 transition-colors disabled:opacity-50"
+                  >
+                    <option value="" className="bg-zinc-800">—</option>
+                    {(targets ?? roster)
+                      .filter((c) => c.id !== myId)
+                      .map((c) => (
+                        <option key={c.id} value={c.id} className="bg-zinc-800">
+                          {c.sheet?.name || c.name || c.user?.username || c.id}
+                        </option>
+                      ))}
+                  </select>
+                  <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">Alvo</p>
+                </div>
               </div>
 
               <div className="flex flex-wrap items-center gap-2 min-h-[3.5rem]">
@@ -919,23 +967,6 @@ export default function TurnPanel({
                     placeholder="O que você fez? (opcional)"
                     className="w-full bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-blue-600/70 transition-colors"
                   />
-                  <div className="mt-3">
-                    <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-500 block mb-1">Alvo</span>
-                    <select
-                      value={actTarget}
-                      onChange={(e) => setActTarget(e.target.value)}
-                      className="w-full bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:border-blue-600/70 transition-colors"
-                    >
-                      <option value="" className="bg-zinc-800">—</option>
-                      {(targets ?? roster)
-                        .filter((c) => c.id !== myId)
-                        .map((c) => (
-                          <option key={c.id} value={c.id} className="bg-zinc-800">
-                            {c.sheet?.name || c.name || c.user?.username || c.id}
-                          </option>
-                        ))}
-                    </select>
-                  </div>
                   <div className="mt-3 flex items-center gap-3 flex-wrap">
                     <button
                       onClick={() => void commitAction()}
@@ -997,7 +1028,6 @@ export default function TurnPanel({
               </div>
             </div>
           ) : null}
-        </div>
       </section>
 
       {/* recent rolls */}

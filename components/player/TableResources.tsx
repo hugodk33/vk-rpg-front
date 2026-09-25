@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import type {
   Advantage,
   Disadvantage,
@@ -134,6 +135,7 @@ export default function TableResources({
                       ) : null}
                     </div>
                   </div>
+                  <GoButton href={`/character/${c.id}`} label="Ficha" />
                 </div>
               );
             })}
@@ -180,6 +182,9 @@ export default function TableResources({
                     {i.armor.locations ? <span className="text-zinc-500">{i.armor.locations}</span> : null}
                   </div>
                 ) : null}
+                <div className="mt-3 text-right">
+                  <GoButton href={`/item/${i.id}`} label="Abrir" />
+                </div>
               </div>
             ))}
           </div>
@@ -203,6 +208,9 @@ export default function TableResources({
                 ) : null}
                 {sk.effect ? <p className="text-zinc-400 text-xs mt-1">{sk.effect}</p> : null}
                 {sk.description ? <p className="text-zinc-500 text-xs mt-0.5">{sk.description}</p> : null}
+                <div className="mt-3 text-right">
+                  <GoButton href={`/skill/${sk.id}`} label="Abrir" />
+                </div>
               </div>
             ))}
           </div>
@@ -225,6 +233,9 @@ export default function TableResources({
                 </div>
                 {a.category ? <p className="text-xs text-zinc-500 mt-0.5">{a.category}</p> : null}
                 {a.description ? <p className="text-zinc-400 text-xs mt-1">{a.description}</p> : null}
+                <div className="mt-3 text-right">
+                  <GoButton href={`/advantage/${a.id}`} label="Abrir" />
+                </div>
               </div>
             ))}
           </div>
@@ -248,6 +259,9 @@ export default function TableResources({
                 {d.category ? <p className="text-xs text-zinc-500 mt-0.5">{d.category}</p> : null}
                 {d.effect ? <p className="text-zinc-400 text-xs mt-1">{d.effect}</p> : null}
                 {d.description ? <p className="text-zinc-500 text-xs mt-0.5">{d.description}</p> : null}
+                <div className="mt-3 text-right">
+                  <GoButton href={`/disadvantage/${d.id}`} label="Abrir" />
+                </div>
               </div>
             ))}
           </div>
@@ -269,12 +283,29 @@ export default function TableResources({
                   </p>
                 ) : null}
                 {loc.description ? <p className="text-zinc-500 text-xs mt-1">{loc.description}</p> : null}
+                <div className="mt-3 text-right">
+                  <GoButton href={`/location/${loc.id}`} label="Abrir" />
+                </div>
               </div>
             ))}
           </div>
         )
       ) : null}
     </div>
+  );
+}
+
+export function GoButton({ href, label }: { href: string; label: string }) {
+  return (
+    <Link
+      href={href}
+      className="inline-flex items-center gap-1.5 shrink-0 bg-zinc-800 hover:bg-blue-600/80 text-zinc-300 hover:text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors border border-zinc-700/50 hover:border-blue-500/50"
+    >
+      {label}
+      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+      </svg>
+    </Link>
   );
 }
 
