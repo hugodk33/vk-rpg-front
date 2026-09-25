@@ -3,13 +3,14 @@
 import Link from "next/link";
 import { useEffect, useRef } from "react";
 import type { SkillItem } from "@/lib/types";
+import { interpolate, useTranslation } from "@/lib/i18n";
 import {
   SKILL_TYPES,
   DIFFICULTY_DEFS,
   attributeRange,
   rollTarget,
   successProbability,
-  resultNote,
+  resultNoteKey,
   targetHex,
 } from "./skillRules";
 
@@ -55,8 +56,9 @@ function Panel({ children }: { children: React.ReactNode }) {
 }
 
 function Pips({ count, hex }: { count: number; hex: string }) {
+  const { t } = useTranslation();
   return (
-    <div className="flex items-center gap-1" aria-label={`${count} de 4`}>
+    <div className="flex items-center gap-1" aria-label={interpolate(t("skx.of4"), { n: count })}>
       {[0, 1, 2, 3].map((i) => (
         <span
           key={i}
@@ -83,6 +85,7 @@ function DependencyRow({
   note?: string | null;
   hex: string;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="flex items-center gap-3 bg-zinc-900/40 border border-zinc-700/40 rounded-lg px-4 py-2.5">
       <span
@@ -92,16 +95,17 @@ function DependencyRow({
         {kindLabel}
       </span>
       <Link href={`/skill/${skill ?? ""}`} className="text-sm text-zinc-300 hover:text-amber-400 transition-colors truncate">
-        {skill || "Perícia"}
+        {skill || t("skx.skill")}
       </Link>
       {value ? <span className="font-mono text-xs text-zinc-500 ml-auto shrink-0">{value}</span> : null}
       {note ? <span className="font-mono text-[10px] text-zinc-600 shrink-0 hidden sm:inline">{note}</span> : null}
-      <span aria-hidden className="font-mono text-[10px] text-zinc-600 shrink-0">{kind === "requires" ? "← requer" : "→ padrão"}</span>
+      <span aria-hidden className="font-mono text-[10px] text-zinc-600 shrink-0">{kind === "requires" ? t("skx.backReq") : t("skx.frontDef")}</span>
     </div>
   );
 }
 
 export default function SkillExhibit({ skill, tableId }: { skill: SkillItem; tableId?: string }) {
+  const { t } = useTranslation();
   const typeKey = skill.predefinition_type ?? "";
   const type = SKILL_TYPES[typeKey];
   const diffKey = skill.predefinition_difficulty ?? "";
@@ -114,7 +118,7 @@ export default function SkillExhibit({ skill, tableId }: { skill: SkillItem; tab
     ? attrRange.map((a) => {
         const target = rollTarget(a, diff.offset);
         const prob = successProbability(target);
-        return { attr: a, target, prob, note: resultNote(target), hex: targetHex(prob, accent) };
+        return { attr: a, target, prob, note: t(resultNoteKey(target)), hex: targetHex(prob, accent) };
       })
     : [];
 
@@ -131,15 +135,15 @@ export default function SkillExhibit({ skill, tableId }: { skill: SkillItem; tab
               href={`/table/${tableId}`}
               className="inline-flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-widest text-zinc-500 hover:text-amber-400 transition-colors"
             >
-              <span aria-hidden>←</span> Voltar à mesa
+              <span aria-hidden>←</span> {t("skx.back")}
             </Link>
           ) : (
             <span />
           )}
           <div className="flex items-center gap-3 text-[10px] font-mono uppercase tracking-widest text-zinc-500">
-            <span className="hidden sm:inline">Tabela de perícias</span>
+            <span className="hidden sm:inline">{t("skx.skillTable")}</span>
             <span className="hidden sm:inline text-zinc-700">/</span>
-            <span>Ficha do compêndio</span>
+            <span>{t("skx.sheetType")}</span>
           </div>
         </div>
 
@@ -149,7 +153,7 @@ export default function SkillExhibit({ skill, tableId }: { skill: SkillItem; tab
             <div className="sticky lg:top-28">
               <div className="flex flex-col items-center bg-zinc-800/40 rounded-lg border border-zinc-700/50 px-4 py-5 text-center">
                 <span className="font-mono text-[10px] tracking-widest uppercase mb-4" style={{ color: accent }}>
-                  {type?.label ?? (typeKey || "Perícia")}
+                  {type ? t(type.label) : (typeKey || t("skx.skill"))}
                 </span>
                 <div
                   className="w-16 h-16 grid place-items-center rounded-full border border-dashed mb-4"
@@ -165,25 +169,25 @@ export default function SkillExhibit({ skill, tableId }: { skill: SkillItem; tab
                 </div>
 
                 <p className="font-mono text-[10px] text-zinc-500 leading-relaxed mb-5">
-                  Teste contra <span style={{ color: accent }}>{type?.attributeShort ?? "—"}</span>
-                  {type ? <> · {type.attribute}</> : null}
+                  {t("skx.testAgainst")} <span style={{ color: accent }}>{t(type?.attributeShort ?? "—")}</span>
+                  {type ? <> · {t(type.attribute)}</> : null}
                 </p>
 
                 {/* difficulty chain */}
                 <div className="w-full border-t border-zinc-700/50 pt-4 space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">Dificuldade</span>
+                    <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">{t("skx.difficulty")}</span>
                     {diff ? <Pips count={diff.pips} hex={diffHex} /> : <span className="text-zinc-600 text-xs">—</span>}
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">Nível padrão</span>
+                    <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">{t("skx.defaultLevel")}</span>
                     <span className="font-mono text-sm font-semibold" style={{ color: diffHex }}>
                       {metricRange(diff)}
                     </span>
                   </div>
                   {skill.predefinition_value != null ? (
                     <div className="flex items-center justify-between">
-                      <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">Valor</span>
+                      <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">{t("skx.value")}</span>
                       <span className="font-mono text-sm text-zinc-200">{skill.predefinition_value}</span>
                     </div>
                   ) : null}
@@ -196,7 +200,7 @@ export default function SkillExhibit({ skill, tableId }: { skill: SkillItem; tab
           <div className="order-2 min-w-0 flex flex-col gap-5">
             <Panel>
               <h1 className="text-[clamp(26px,5vw,40px)] leading-none font-bold tracking-tight text-amber-100">
-                {skill.name || "Perícia"}
+                {skill.name || t("skx.skill")}
               </h1>
               <div className="flex items-center gap-3 mt-3 flex-wrap">
                 {skill.category ? (
@@ -207,7 +211,7 @@ export default function SkillExhibit({ skill, tableId }: { skill: SkillItem; tab
                 ) : null}
                 {diff ? (
                   <span className="font-mono text-[10px] tracking-widest uppercase px-2 py-0.5 rounded border" style={{ borderColor: `${diffHex}66`, color: diffHex }}>
-                    {diff.label}
+                    {t(diff.label)}
                   </span>
                 ) : null}
               </div>
@@ -220,13 +224,13 @@ export default function SkillExhibit({ skill, tableId }: { skill: SkillItem; tab
 
             {/* -------- 3d6 SUCCESS TABLE (signature) -------- */}
             <Panel>
-              <SectionTitle icon="◈" tint={accent} label="Tabela de sucesso · teste de 3d6" />
+              <SectionTitle icon="◈" tint={accent} label={t("skx.successTable")} />
               <div className="bg-zinc-800/40 rounded-lg border border-zinc-700/50 overflow-hidden">
                 <div className="grid grid-cols-[1fr_auto] sm:grid-cols-[1fr_auto_auto_auto] items-center gap-x-6 gap-y-2 px-4 py-2.5 border-b border-zinc-700/60 font-mono text-[10px] tracking-widest uppercase text-zinc-500">
-                  <span>{type?.attributeShort ?? "Atributo"}</span>
-                  <span>Alvo</span>
-                  <span className="hidden sm:block">Sucesso</span>
-                  <span className="hidden sm:block">Domínio</span>
+                  <span>{t(type?.attributeShort ?? "skx.attr")}</span>
+                  <span>{t("skx.target")}</span>
+                  <span className="hidden sm:block">{t("skx.success")}</span>
+                  <span className="hidden sm:block">{t("skx.mastery")}</span>
                 </div>
                 {rows.map((r) => (
                   <div
@@ -250,14 +254,14 @@ export default function SkillExhibit({ skill, tableId }: { skill: SkillItem; tab
                   </div>
                 ))}
                 {!diff ? (
-                  <p className="font-mono text-xs text-zinc-500 italic px-4 py-4">Nenhuma dificuldade registrada.</p>
+                  <p className="font-mono text-xs text-zinc-500 italic px-4 py-4">{t("skx.noDifficulty")}</p>
                 ) : null}
               </div>
             </Panel>
 
             {skill.effect ? (
               <Panel>
-                <SectionTitle icon="✦" tint={accent} label="Efeito" />
+                <SectionTitle icon="✦" tint={accent} label={t("skx.effect")} />
                 <p className="text-[15px] leading-relaxed text-zinc-400">{skill.effect}</p>
               </Panel>
             ) : null}
@@ -265,34 +269,34 @@ export default function SkillExhibit({ skill, tableId }: { skill: SkillItem; tab
             {/* -------- REQUIRES / DEFAULTS (dependency ledger) -------- */}
             {(requires.length > 0 || defaults.length > 0) ? (
               <Panel>
-                <SectionTitle icon="⌁" tint={accent} label="Rede de perícias" />
+                <SectionTitle icon="⌁" tint={accent} label={t("skx.skillNet")} />
                 <div className="grid lg:grid-cols-2 gap-4">
                   <div>
-                    <div className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 mb-2">Requer</div>
+                    <div className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 mb-2">{t("skx.requires")}</div>
                     <div className="space-y-2">
                       {requires.length
                         ? requires.map((d, i) => (
-                            <DependencyRow key={i} kind="requires" kindLabel="Req" skill={d.skill} value={d.value} note={null} hex="#fb7185" />
+                            <DependencyRow key={i} kind="requires" kindLabel={t("skx.reqShort")} skill={d.skill} value={d.value} note={null} hex="#fb7185" />
                           ))
-                        : <p className="font-mono text-xs text-zinc-600 italic">Sem pré-requisitos.</p>}
+                        : <p className="font-mono text-xs text-zinc-600 italic">{t("skx.noPrereq")}</p>}
                     </div>
                   </div>
                   <div>
-                    <div className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 mb-2">Oferece padrão</div>
+                    <div className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 mb-2">{t("skx.offersDefault")}</div>
                     <div className="space-y-2">
                       {defaults.length
                         ? defaults.map((d, i) => (
                             <DependencyRow
                               key={i}
                               kind="defaults"
-                              kindLabel="Pad"
+                              kindLabel={t("skx.dftShort")}
                               skill={d.skill}
                               value={d.value}
                               note={d.depends_on_skill_for_others_attributes}
                               hex={accent}
                             />
                           ))
-                        : <p className="font-mono text-xs text-zinc-600 italic">Nenhum padrão definido.</p>}
+                        : <p className="font-mono text-xs text-zinc-600 italic">{t("skx.noDefault")}</p>}
                     </div>
                   </div>
                 </div>

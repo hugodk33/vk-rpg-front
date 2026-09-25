@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { submitJson } from "./submit";
 import { api } from "@/lib/api";
+import { interpolate, useTranslation } from "@/lib/i18n";
 import { inputCls, labelCls, submitCls } from "./formStyles";
 import SearchModal from "./SearchModal";
 import InfoTooltip from "./InfoTooltip";
@@ -42,7 +43,7 @@ const ATTR_NAMES: Array<{ key: "st" | "dx" | "iq" | "ht"; label: string; color: 
   },
   { key: "ht", label: "HT", color: "text-purple-400", svg: "M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" },
 ];
-  const ENCUMBRANCE_LABELS = ["Nenhuma", "Leve", "Média", "Pesada", "Muito pesada"];
+  const ENCUMBRANCE_LABELS = ["fr.enc.none", "fr.enc.light", "fr.enc.medium", "fr.enc.heavy", "fr.enc.veryHeavy"];
   const BODY_LOCATIONS = ["Head", "Torso", "Arms", "Legs", "Full Body"];
 
 const isArmorish = (item?: Item | null): boolean =>
@@ -130,6 +131,7 @@ function skillPredefLabel(sk: { predefinition?: SkillItem["predefinition"] }): s
 
 export default function CharacterForm({ tableId, tables, initial }: CharacterFormProps) {
   const router = useRouter();
+  const { t } = useTranslation();
   const isEdit = !!initial;
 
   const [currentTableId, setCurrentTableId] = useState(tableId ?? (initial ? initial.table?.id ?? "" : ""));
@@ -384,11 +386,11 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
 
   async function doSave() {
     if (!currentTableId) {
-      setError("Selecione a mesa.");
+      setError(t("fr.error.selectTable"));
       return;
     }
     if (charType === "pc" && !userId) {
-      setError("Selecione um jogador.");
+      setError(t("fr.error.pickPlayer"));
       return;
     }
     setSaving(true);
@@ -450,7 +452,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
       }
       router.refresh();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Falha ao salvar o personagem.");
+      setError(err instanceof Error ? err.message : t("fr.err.character"));
       setSaving(false);
     }
   }
@@ -482,7 +484,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
       <div className="flex items-center justify-between mb-6 mt-6">
         <div className="flex items-center gap-3">
           {currentTableId ? (
-            <a href={`/table/${currentTableId}`} className="text-zinc-500 hover:text-zinc-300 transition-colors" title="Voltar à mesa">
+            <a href={`/table/${currentTableId}`} className="text-zinc-500 hover:text-zinc-300 transition-colors" title={t("fr.backToTable")}>
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
               </svg>
@@ -490,9 +492,9 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
           ) : null}
           <div>
             <h1 className="text-2xl font-bold text-green-100">
-              {isEdit ? "Editar Personagem" : "Novo Personagem"}
+              {isEdit ? t("fr.ch.editTitle") : t("fr.ch.newTitle")}
             </h1>
-            <p className="text-zinc-400 text-sm">{isEdit ? "Salvar alterações" : "Criar um personagem para esta mesa"}</p>
+            <p className="text-zinc-400 text-sm">{isEdit ? t("fr.ch.subEdit") : t("fr.ch.subNew")}</p>
           </div>
         </div>
         {isEdit ? (
@@ -501,13 +503,13 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
             disabled={saving}
             className={`${submitCls} disabled:opacity-50`}
           >
-            {saving ? "Salvando..." : "Salvar Alterações"}
+            {saving ? t("fr.saving") : t("fr.saveChanges")}
           </button>
         ) : null}
       </div>
 
       <div className="flex items-center gap-1 border-b border-zinc-700/50 mb-6">
-        {([["bio", "Bio"], ["sheet", "Ficha"], ["items", "Itens"]] as const).map(([key, label]) => (
+        {([["bio", t("fr.ch.tabBio")], ["sheet", t("fr.ch.tabSheet")], ["items", t("fr.ch.tabItems")]] as const).map(([key, label]) => (
           <button
             key={key}
             type="button"
@@ -527,29 +529,29 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
         {activeTab === "bio" && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-5">
-              <h2 className="text-lg font-semibold text-green-100 mb-3">Identidade</h2>
+              <h2 className="text-lg font-semibold text-green-100 mb-3">{t("fr.ch.identity")}</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
               <div>
-                <label className={labelCls}>Nome</label>
+                <label className={labelCls}>{t("fr.name")}</label>
                 <input value={name} onChange={(e) => setName(e.target.value)} required className={inputCls} />
               </div>
               <div>
-                <label className={labelCls}>Bio</label>
+                <label className={labelCls}>{t("fr.ch.bio")}</label>
                 <input value={bio} onChange={(e) => setBio(e.target.value)} className={inputCls} />
               </div>
             </div>
             <div>
-              <label className={labelCls}>História</label>
+              <label className={labelCls}>{t("fr.ch.backstory")}</label>
               <textarea value={backstory} onChange={(e) => setBackstory(e.target.value)} rows={2} className={inputCls} />
             </div>
           </div>
 
           <div className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-5">
-            <h2 className="text-lg font-semibold text-green-100 mb-3">Personagem</h2>
+            <h2 className="text-lg font-semibold text-green-100 mb-3">{t("fr.ch.character")}</h2>
 
             {!isEdit && !tableId ? (
               <div className="mb-3">
-                <label className={labelCls}>Mesa</label>
+                <label className={labelCls}>{t("fr.table")}</label>
                 <select
                   value={currentTableId}
                   onChange={(e) => setCurrentTableId(e.target.value)}
@@ -557,7 +559,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                   className={inputCls}
                 >
                   <option value="" disabled>
-                    Selecione uma mesa
+                    {t("fr.pickTable")}
                   </option>
                   {(tables ?? []).map((t) => (
                     <option key={t.id} value={t.id}>
@@ -571,7 +573,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
             {!isEdit ? (
               <>
                 <div>
-                  <label className={`${labelCls} mb-2`}>Tipo</label>
+                  <label className={`${labelCls} mb-2`}>{t("fr.type")}</label>
                   <div className="flex gap-4 mb-3">
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input
@@ -582,7 +584,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                         onChange={() => setCharType("pc")}
                         className="w-4 h-4 border-zinc-600 text-white0 focus:ring-green-800 bg-zinc-900"
                       />
-                      <span className="text-zinc-200 text-sm">Personagem do Jogador</span>
+                      <span className="text-zinc-200 text-sm">{t("fr.ch.pc")}</span>
                     </label>
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input
@@ -593,15 +595,15 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                         onChange={() => setCharType("npc")}
                         className="w-4 h-4 border-zinc-600 text-white0 focus:ring-green-800 bg-zinc-900"
                       />
-                      <span className="text-zinc-200 text-sm">NPC</span>
+                      <span className="text-zinc-200 text-sm">{t("fr.ch.npc")}</span>
                     </label>
                   </div>
                 </div>
                 {charType === "pc" ? (
                   <div>
-                    <label className={labelCls}>Atribuir ao Jogador</label>
+                    <label className={labelCls}>{t("fr.ch.assignPlayer")}</label>
                     <select value={userId} onChange={(e) => setUserId(e.target.value)} required className={inputCls}>
-                      <option value="">Selecione um jogador</option>
+                      <option value="">{t("fr.pickPlayerPh")}</option>
                       {users
                         .filter((u) => u.type !== 2)
                         .map((u) => (
@@ -621,7 +623,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
         {activeTab === "sheet" && (
         <>
           <div className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-5">
-            <h2 className="text-lg font-semibold text-green-100 mb-6">Atributos</h2>
+            <h2 className="text-lg font-semibold text-green-100 mb-6">{t("fr.ch.attributes")}</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-8">
               {ATTR_NAMES.map(({ key, label, color, svg }) => (
                 <div key={key} className="flex flex-col items-center gap-2">
@@ -653,19 +655,19 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
             </div>
             <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-zinc-700/40">
               <div>
-                <label className={labelCls}>HP</label>
+                <label className={labelCls}>{t("fr.hp")}</label>
                 <div className="bg-zinc-700/40 rounded-lg px-4 py-2.5 text-green-500 font-bold font-mono text-center">
                   {attrs.ht}
                 </div>
               </div>
               <div>
-                <label className={labelCls}>Deslocamento Básico</label>
+                <label className={labelCls}>{t("fr.ch.basicSpeed")}</label>
                 <div className="bg-zinc-700/40 rounded-lg px-4 py-2.5 text-green-500 font-bold font-mono text-center">
                   {basicSpeed.toFixed(2)}
                 </div>
               </div>
               <div>
-                <label className={labelCls}>Deslocamento</label>
+                <label className={labelCls}>{t("fr.ch.move")}</label>
                 <div className="bg-zinc-700/40 rounded-lg px-4 py-2.5 text-green-500 font-bold font-mono text-center">
                   {move.toFixed(2)}
                 </div>
@@ -674,22 +676,22 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
           </div>
 
           <div className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-5">
-            <h3 className="text-sm font-semibold uppercase tracking-wider text-zinc-500 mb-3">Defesa &amp; Velocidade</h3>
+            <h3 className="text-sm font-semibold uppercase tracking-wider text-zinc-500 mb-3">{t("fr.ch.defenseSpeed")}</h3>
             <div className="flex justify-center flex-wrap gap-6">
               {([
-                { label: "Esquiva", value: String(Math.floor(basicSpeed + 3)), color: "text-cyan-400", d: "M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" },
-                { label: "HP", value: String(attrs.ht), color: "text-red-400", d: "M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" },
-                { label: "FP", value: String(initial?.character?.sheet?.fatigue ?? 10), color: "text-green-500", d: "M13 10V3L4 14h7v7l9-11h-7z" },
-                { label: "Deslocamento Básico", value: basicSpeed.toFixed(2), suffix: "km/h", color: "text-emerald-400", d: "M13 5l7 7-7 7M5 5l7 7-7 7" },
-                { label: "Deslocamento", value: String(move), color: "text-blue-400", d: "M5 12h14M12 5l7 7-7 7" },
-                { label: "Carga", value: ENCUMBRANCE_LABELS[encumbranceValue], sub: `${itemsWeight.toFixed(1)} lb`, color: "text-purple-400", d: "M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" },
+                { label: "fr.ch.dodge", value: String(Math.floor(basicSpeed + 3)), color: "text-cyan-400", d: "M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" },
+                { label: "fr.hp", value: String(attrs.ht), color: "text-red-400", d: "M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" },
+                { label: "fr.fp", value: String(initial?.character?.sheet?.fatigue ?? 10), color: "text-green-500", d: "M13 10V3L4 14h7v7l9-11h-7z" },
+                { label: "fr.ch.basicSpeed", value: basicSpeed.toFixed(2), suffix: "km/h", color: "text-emerald-400", d: "M13 5l7 7-7 7M5 5l7 7-7 7" },
+                { label: "fr.ch.move", value: String(move), color: "text-blue-400", d: "M5 12h14M12 5l7 7-7 7" },
+                { label: "fr.ch.encumbrance", value: t(ENCUMBRANCE_LABELS[encumbranceValue]), sub: `${itemsWeight.toFixed(1)} lb`, color: "text-purple-400", d: "M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" },
               ] as Array<{ label: string; value: string; suffix?: string; color: string; d: string }>).map(({ label, value, suffix, color, d }) => (
                 <div key={label} className="flex flex-col items-center gap-1 p-2 bg-zinc-800/40 rounded-lg min-w-[80px]">
                   <svg className={`w-5 h-5 ${color}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={d} />
                   </svg>
                   <span className={`${color} text-sm font-bold`}>{value}{suffix ? <span className="font-light text-xs ml-0.5">{suffix}</span> : null}</span>
-                  <span className="text-zinc-500 text-xs font-semibold uppercase">{label}</span>
+                  <span className="text-zinc-500 text-xs font-semibold uppercase">{t(label)}</span>
                 </div>
               ))}
             </div>
@@ -702,8 +704,8 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                 <svg className="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                 </svg>
-                <h2 className="text-lg font-semibold text-green-100">Vantagens</h2>
-                <span className="text-sm text-zinc-500">{selAdv.length} selecionadas</span>
+                <h2 className="text-lg font-semibold text-green-100">{t("fr.ch.advTitle")}</h2>
+                <span className="text-sm text-zinc-500">{interpolate(t("fr.list.slashF"), { n: selAdv.length })}</span>
               </div>
               <div className="flex items-center gap-2">
                 <SplitToggle active={splitAdv} onToggle={() => setSplitAdv((v) => !v)} />
@@ -715,7 +717,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-4.35-4.35M17 10.5a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z" />
                   </svg>
-                  Buscar
+                  {t("fr.search")}
                 </button>
               </div>
             </div>
@@ -730,10 +732,10 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                       <InfoTooltip
                         key={a.id}
                         rows={[
-                          { label: "Custo", value: a.cost_points != null ? (a.cost_points >= 0 ? "+" : "") + a.cost_points : undefined },
-                          { label: "Categoria", value: a.category },
-                          { label: "Subcategoria", value: a.subcategory },
-                          { label: "Descrição", value: a.description },
+                          { label: t("fr.tip.cost"), value: a.cost_points != null ? (a.cost_points >= 0 ? "+" : "") + a.cost_points : undefined },
+                          { label: t("fr.tip.category"), value: a.category },
+                          { label: t("fr.tip.subcategory"), value: a.subcategory },
+                          { label: t("fr.tip.description"), value: a.description },
                         ]}
                       >
                         <label
@@ -748,7 +750,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                             className="w-4 h-4 rounded border-zinc-600 text-white0 focus:ring-green-800 bg-zinc-900"
                           />
                           <div className="flex-1 min-w-0">
-                            <div className="text-sm font-medium text-zinc-200 truncate">{a.name || "Sem nome"}</div>
+                            <div className="text-sm font-medium text-zinc-200 truncate">{a.name || t("fr.noName")}</div>
                             {a.description ? <div className="text-xs text-zinc-500 truncate">{a.description}</div> : null}
                           </div>
                           <span className="text-xs font-mono text-green-500 font-bold shrink-0">
@@ -758,19 +760,19 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                       </InfoTooltip>
                     );
                   };
-                  if (available.advantages.length === 0) return <p className="text-zinc-600 text-sm">Nenhuma vantagem registrada para esta mesa.</p>;
+                  if (available.advantages.length === 0) return <p className="text-zinc-600 text-sm">{t("fr.list.noAdv")}</p>;
                   if (splitAdv) {
                     return (
                       <>
                         {selRows.length > 0 ? (
                           <>
-                            <div className="text-xs font-semibold text-zinc-500 uppercase tracking-wider pt-1">{selRows.length} selecionadas</div>
+                            <div className="text-xs font-semibold text-zinc-500 uppercase tracking-wider pt-1">{interpolate(t("fr.list.slashF"), { n: selRows.length })}</div>
                             {selRows.map(renderAdv)}
                           </>
                         ) : null}
                         {unselRows.length > 0 ? (
                           <>
-                            <div className="text-xs font-semibold text-zinc-500 uppercase tracking-wider pt-3">{unselRows.length} não selecionadas</div>
+                            <div className="text-xs font-semibold text-zinc-500 uppercase tracking-wider pt-3">{interpolate(t("fr.list.slashNF"), { n: unselRows.length })}</div>
                             {unselRows.map(renderAdv)}
                           </>
                         ) : null}
@@ -788,8 +790,8 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                   <svg className="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
                   </svg>
-                  <h2 className="text-lg font-semibold text-green-100">Desvantagens</h2>
-                  <span className="text-sm text-zinc-500">{selDis.length} selecionadas</span>
+                  <h2 className="text-lg font-semibold text-green-100">{t("fr.ch.disTitle")}</h2>
+                  <span className="text-sm text-zinc-500">{interpolate(t("fr.list.slashF"), { n: selDis.length })}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <SplitToggle active={splitDis} onToggle={() => setSplitDis((v) => !v)} />
@@ -801,7 +803,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-4.35-4.35M17 10.5a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z" />
                     </svg>
-                    Buscar
+                    {t("fr.search")}
                   </button>
                 </div>
               </div>
@@ -816,11 +818,11 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                       <InfoTooltip
                         key={d.id}
                         rows={[
-                          { label: "Custo", value: d.cost_points != null ? `-${d.cost_points}` : undefined },
-                          { label: "Categoria", value: d.category },
-                          { label: "Subcategoria", value: d.subcategory },
-                          { label: "Efeito", value: d.effect },
-                          { label: "Descrição", value: d.description },
+                          { label: t("fr.tip.cost"), value: d.cost_points != null ? `-${d.cost_points}` : undefined },
+                          { label: t("fr.tip.category"), value: d.category },
+                          { label: t("fr.tip.subcategory"), value: d.subcategory },
+                          { label: t("fr.tip.effect"), value: d.effect },
+                          { label: t("fr.tip.description"), value: d.description },
                         ]}
                       >
                         <label
@@ -835,7 +837,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                             className="w-4 h-4 rounded border-zinc-600 text-white0 focus:ring-green-800 bg-zinc-900"
                           />
                           <div className="flex-1 min-w-0">
-                            <div className="text-sm font-medium text-zinc-200 truncate">{d.name || "Sem nome"}</div>
+                            <div className="text-sm font-medium text-zinc-200 truncate">{d.name || t("fr.noName")}</div>
                             {d.description ? <div className="text-xs text-zinc-500 truncate">{d.description}</div> : null}
                           </div>
                           <span className="text-xs font-mono text-green-500 font-bold shrink-0">
@@ -845,19 +847,19 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                       </InfoTooltip>
                     );
                   };
-                  if (available.disadvantages.length === 0) return <p className="text-zinc-600 text-sm">Nenhuma desvantagem registrada para esta mesa.</p>;
+                  if (available.disadvantages.length === 0) return <p className="text-zinc-600 text-sm">{t("fr.list.noDis")}</p>;
                   if (splitDis) {
                     return (
                       <>
                         {selRows.length > 0 ? (
                           <>
-                            <div className="text-xs font-semibold text-zinc-500 uppercase tracking-wider pt-1">{selRows.length} selecionadas</div>
+                            <div className="text-xs font-semibold text-zinc-500 uppercase tracking-wider pt-1">{interpolate(t("fr.list.slashF"), { n: selRows.length })}</div>
                             {selRows.map(renderDis)}
                           </>
                         ) : null}
                         {unselRows.length > 0 ? (
                           <>
-                            <div className="text-xs font-semibold text-zinc-500 uppercase tracking-wider pt-3">{unselRows.length} não selecionadas</div>
+                            <div className="text-xs font-semibold text-zinc-500 uppercase tracking-wider pt-3">{interpolate(t("fr.list.slashNF"), { n: unselRows.length })}</div>
                             {unselRows.map(renderDis)}
                           </>
                         ) : null}
@@ -876,7 +878,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                   <svg className="w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
                   </svg>
-                  <h2 className="text-lg font-semibold text-green-100">Manias</h2>
+                  <h2 className="text-lg font-semibold text-green-100">{t("fr.ch.quirks")}</h2>
                   <span className="text-sm text-zinc-500">
                     {quirks.length} / {MAX_QUIRKS}
                   </span>
@@ -892,17 +894,17 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                         onClick={() => removeQuirk(index)}
                         className="ml-auto text-zinc-500 hover:text-red-400 text-xs transition-colors"
                       >
-                        Remover
+                        {t("fr.ch.quirkRemove")}
                       </button>
                     </div>
                     <div>
-                      <label className={labelCls}>Nome</label>
+                      <label className={labelCls}>{t("fr.name")}</label>
                       <div className="flex items-center gap-2">
                         <input
                           value={q.name}
                           onChange={(e) => updateQuirk(index, e.target.value)}
                           className={inputCls}
-                          placeholder="ex: Coruja Noturna"
+                          placeholder={t("fr.ch.quirkPh")}
                         />
                         <span className="text-xs font-mono text-green-500 font-bold shrink-0">-1</span>
                       </div>
@@ -910,7 +912,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                   </div>
                 ))}
                 {quirks.length === 0 ? (
-                  <p className="text-zinc-600 text-sm">Nenhuma mania adicionada ainda.</p>
+                  <p className="text-zinc-600 text-sm">{t("fr.ch.quirksEmpty")}</p>
                 ) : null}
               </div>
               <button
@@ -919,14 +921,14 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                 disabled={quirks.length >= MAX_QUIRKS}
                 className="mt-4 w-full bg-zinc-700 hover:bg-zinc-600 disabled:opacity-40 disabled:cursor-not-allowed text-zinc-200 text-sm font-semibold px-4 py-2 rounded-lg transition-colors"
               >
-                + Adicionar Mania
+                {t("fr.ch.quirkAdd")}
               </button>
             </section>
 
         <div className="border-t border-zinc-700/40 pt-6">
-          <span className="text-sm text-zinc-500 mb-2 block">{selSkills.length} selecionadas</span>
+          <span className="text-sm text-zinc-500 mb-2 block">{interpolate(t("fr.list.slashF"), { n: selSkills.length })}</span>
           <div className="flex items-center gap-2 mb-1">
-            <h2 className="text-lg font-semibold text-green-100">Perícias</h2>
+            <h2 className="text-lg font-semibold text-green-100">{t("fr.ch.skillsTitle")}</h2>
             <SplitToggle active={splitSkills} onToggle={() => setSplitSkills((v) => !v)} />
             <button
               type="button"
@@ -936,23 +938,21 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-4.35-4.35M17 10.5a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z" />
               </svg>
-              Buscar
+              {t("fr.search")}
             </button>
           </div>
-          <p className="text-xs text-zinc-500 mb-4">
-            Os pontos seguem a tabela de custo de perícia do GURPS por dificuldade. Ao selecionar uma perícia, mantém-se o nível padrão: a predefinição (atributo menos o valor predef, mostrado sob o nome) custa 0 pontos. Cada + sobe um nível rumo ao atributo e além; o − volta um nível. Os pontos são derivados automaticamente.
-          </p>
+          <p className="text-xs text-zinc-500 mb-4">{t("fr.ch.skillsHint")}</p>
           <section className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-5">
             <div className="flex flex-wrap items-center gap-x-2 p-2 pb-2 pr-2 text-xs font-medium text-zinc-500 border-b border-zinc-700/40 mb-1">
               <div className="w-4 shrink-0" />
-              <div className="flex-1 min-w-0" style={{maxWidth: "Calc(100% - 240px)"}}>Perícia</div>
+              <div className="flex-1 min-w-0" style={{maxWidth: "Calc(100% - 240px)"}}>{t("fr.ch.skillCol")}</div>
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-1">
                   <div className="w-6 shrink-0" />
-                  <span className="w-20 text-center">Nível da Perícia</span>
+                  <span className="w-20 text-center">{t("fr.ch.skillLevelCol")}</span>
                   <div className="w-6 shrink-0" />
                 </div>
-                <span className="w-10 text-center">Pts</span>
+                <span className="w-10 text-center">{t("fr.ch.ptsCol")}</span>
               </div>
             </div>
             <div className="space-y-2 max-h-60 overflow-y-auto scroll-thin pr-2">
@@ -970,15 +970,15 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                   return (
                     <InfoTooltip
                       key={sk.id}
-                      rows={[
-                        { label: "Tipo", value: [sk.predefinition_type, sk.predefinition_difficulty].filter(Boolean).join(" · ") },
-                        { label: "Padrão", value: skillPredefLabel(sk) },
-                        { label: "Categoria", value: sk.category },
-                        { label: "Subcategoria", value: sk.subcategory },
-                        { label: "Efeito", value: sk.effect },
-                        { label: "Descrição", value: sk.description },
-                        {
-                          label: "Predefinição",
+                        rows={[
+                          { label: t("fr.tip.type"), value: [sk.predefinition_type, sk.predefinition_difficulty].filter(Boolean).join(" · ") },
+                          { label: t("fr.tip.default"), value: skillPredefLabel(sk) },
+                          { label: t("fr.tip.category"), value: sk.category },
+                          { label: t("fr.tip.subcategory"), value: sk.subcategory },
+                          { label: t("fr.tip.effect"), value: sk.effect },
+                          { label: t("fr.tip.description"), value: sk.description },
+                          {
+                            label: t("fr.tip.predef"),
                           value:
                             sk.predefinition
                               ?.map((p) => [p.skill, p.depends_on_skill_for_others_attributes ?? p.value].filter(Boolean).join(" "))
@@ -986,7 +986,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                               .join(", ") || undefined,
                         },
                         {
-                          label: "Dependências",
+                          label: t("fr.tip.deps"),
                           value:
                             sk.dependencies
                               ?.map((d) => [d.skill, d.value].filter(Boolean).join(" "))
@@ -1007,7 +1007,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                           className="w-4 h-4 rounded border-zinc-600 text-white0 focus:ring-green-800 bg-zinc-900"
                         />
                         <div className="flex-1 min-w-0">
-                          <div className="text-sm font-medium text-zinc-200 truncate">{sk.name || "Sem nome"}</div>
+                          <div className="text-sm font-medium text-zinc-200 truncate">{sk.name || t("fr.noName")}</div>
                           <div className="flex items-center gap-1.5 text-xs text-zinc-500">
                             {SKILL_TYPE_META[type] ? (
                               <svg className={`w-3.5 h-3.5 ${SKILL_TYPE_META[type].color}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1015,24 +1015,26 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                               </svg>
                             ) : null}
                             <span>
-                              {sk.predefinition_type === "Physical" ? "Física" : sk.predefinition_type === "Mental" ? "Mental" : sk.predefinition_type || "Perícia"}
+                              {sk.predefinition_type === "Physical" ? t("fr.ch.typePhysicalPh") : sk.predefinition_type === "Mental" ? t("fr.ch.typeMentalPh") : sk.predefinition_type || t("fr.ch.skillCol")}
                               {sk.predefinition_difficulty
                                 ? ` · ${
                                     sk.predefinition_difficulty === "Easy"
-                                      ? "Fácil"
+                                      ? t("fr.diff.easy")
                                       : sk.predefinition_difficulty === "Medium"
-                                        ? "Média"
+                                        ? t("fr.diff.average")
                                         : sk.predefinition_difficulty === "Hard"
-                                          ? "Difícil"
+                                          ? t("fr.diff.hard")
                                           : sk.predefinition_difficulty === "Very Hard"
-                                            ? "Muito difícil"
+                                            ? t("fr.diff.veryHard")
                                             : sk.predefinition_difficulty
                                   }`
                                 : ""}
                             </span>
                           </div>
                           <div className="text-xs text-zinc-500 truncate">
-                            {skillPredefLabel(sk) ? `Padrão: ${skillPredefLabel(sk)}` : "Padrão: nenhum"}
+                            {skillPredefLabel(sk)
+                              ? interpolate(t("fr.tip.standardPrefix"), { v: skillPredefLabel(sk) })
+                              : t("fr.tip.standardNone")}
                           </div>
                           {sk.description ? <div className="text-xs text-zinc-500 truncate">{sk.description}</div> : null}
                         </div>
@@ -1064,19 +1066,19 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                     </InfoTooltip>
                   );
                 };
-                if (available.skills.length === 0) return <p className="text-zinc-600 text-sm">Nenhuma perícia registrada para esta mesa.</p>;
+                if (available.skills.length === 0) return <p className="text-zinc-600 text-sm">{t("fr.list.noSkill")}</p>;
                 if (splitSkills) {
                   return (
                     <>
                       {selRows.length > 0 ? (
                         <>
-                          <div className="text-xs font-semibold text-zinc-500 uppercase tracking-wider pt-1">{selRows.length} selecionadas</div>
+                          <div className="text-xs font-semibold text-zinc-500 uppercase tracking-wider pt-1">{interpolate(t("fr.list.slashF"), { n: selRows.length })}</div>
                           {selRows.map(renderSkill)}
                         </>
                       ) : null}
                       {unselRows.length > 0 ? (
                         <>
-                          <div className="text-xs font-semibold text-zinc-500 uppercase tracking-wider pt-3">{unselRows.length} não selecionadas</div>
+                          <div className="text-xs font-semibold text-zinc-500 uppercase tracking-wider pt-3">{interpolate(t("fr.list.slashNF"), { n: unselRows.length })}</div>
                           {unselRows.map(renderSkill)}
                         </>
                       ) : null}
@@ -1095,22 +1097,22 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
         <>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-5">
-              <h3 className="text-sm font-semibold uppercase tracking-wider text-zinc-500 mb-3">Defesa &amp; Velocidade</h3>
+              <h3 className="text-sm font-semibold uppercase tracking-wider text-zinc-500 mb-3">{t("fr.ch.defenseSpeed")}</h3>
               <div className="grid grid-cols-3 gap-2">
                 {([
-                  { label: "Esquiva", value: String(Math.floor(basicSpeed + 3)), color: "text-cyan-400", d: "M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" },
-                  { label: "HP", value: String(attrs.ht), color: "text-red-400", d: "M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" },
-                  { label: "FP", value: String(initial?.character?.sheet?.fatigue ?? 10), color: "text-green-500", d: "M13 10V3L4 14h7v7l9-11h-7z" },
-                  { label: "Deslocamento Básico", value: basicSpeed.toFixed(2), suffix: "km/h", color: "text-emerald-400", d: "M13 5l7 7-7 7M5 5l7 7-7 7" },
-                  { label: "Deslocamento", value: String(move), color: "text-blue-400", d: "M5 12h14M12 5l7 7-7 7" },
-                  { label: "Carga", value: ENCUMBRANCE_LABELS[encumbranceValue], sub: `${itemsWeight.toFixed(1)} lb`, color: "text-purple-400", d: "M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" },
+                  { label: "fr.ch.dodge", value: String(Math.floor(basicSpeed + 3)), color: "text-cyan-400", d: "M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" },
+                  { label: "fr.hp", value: String(attrs.ht), color: "text-red-400", d: "M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" },
+                  { label: "fr.fp", value: String(initial?.character?.sheet?.fatigue ?? 10), color: "text-green-500", d: "M13 10V3L4 14h7v7l9-11h-7z" },
+                  { label: "fr.ch.basicSpeed", value: basicSpeed.toFixed(2), suffix: "km/h", color: "text-emerald-400", d: "M13 5l7 7-7 7M5 5l7 7-7 7" },
+                  { label: "fr.ch.move", value: String(move), color: "text-blue-400", d: "M5 12h14M12 5l7 7-7 7" },
+                  { label: "fr.ch.encumbrance", value: t(ENCUMBRANCE_LABELS[encumbranceValue]), sub: `${itemsWeight.toFixed(1)} lb`, color: "text-purple-400", d: "M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" },
                 ] as Array<{ label: string; value: string; suffix?: string; color: string; d: string }>).map(({ label, value, suffix, color, d }) => (
                   <div key={label} className="flex flex-col items-center gap-1 p-2 bg-zinc-800/40 rounded-lg min-w-[80px]">
                     <svg className={`w-5 h-5 ${color}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={d} />
                     </svg>
                     <span className={`${color} text-sm font-bold`}>{value}{suffix ? <span className="font-light text-xs ml-0.5">{suffix}</span> : null}</span>
-                    <span className="text-zinc-500 text-xs font-semibold uppercase">{label}</span>
+                    <span className="text-zinc-500 text-xs font-semibold uppercase">{t(label)}</span>
                   </div>
                 ))}
               </div>
@@ -1125,7 +1127,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
               });
               return (
                 <div className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-5">
-                  <h3 className="text-sm font-semibold uppercase tracking-wider text-zinc-500 mb-3">Corpo</h3>
+                  <h3 className="text-sm font-semibold uppercase tracking-wider text-zinc-500 mb-3">{t("fr.ch.body")}</h3>
                   {(() => {
                     const drFor = (fits: string[]) => {
                       let total = 0;
@@ -1163,12 +1165,12 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                               );
                               return (
                                 <>
-                                  {badge("cabeça", head, { top: -54, left: "50%", transform: "translateX(-50%)" })}
-                                  {badge("b.dir", armR, { top: -32, right: -50 })}
-                                  {badge("b.esq", armL, { top: -32, left: -50 })}
-                                  {badge("torso", torso, { top: 23, width: 50, left: -45, height: 50 })}
-                                  {badge("p.dir", legR, { top: 85, right: -50 })}
-                                  {badge("p.esq", legL, { top: 85, left: -50 })}
+                                  {badge(t("fr.ch.badge.head"), head, { top: -54, left: "50%", transform: "translateX(-50%)" })}
+                                  {badge(t("fr.ch.badge.armR"), armR, { top: -32, right: -50 })}
+                                  {badge(t("fr.ch.badge.armL"), armL, { top: -32, left: -50 })}
+                                  {badge(t("fr.ch.badge.torso"), torso, { top: 23, width: 50, left: -45, height: 50 })}
+                                  {badge(t("fr.ch.badge.legR"), legR, { top: 85, right: -50 })}
+                                  {badge(t("fr.ch.badge.legL"), legL, { top: 85, left: -50 })}
                                 </>
                               );
                             })()}
@@ -1194,7 +1196,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
 
           {selItems.some((s) => isArmorish(available.items.find((i) => i.id === s.id))) ? (
             <div className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-5 mt-4">
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-3">Equipar</h3>
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-3">{t("fr.ch.equip")}</h3>
               <div className="space-y-3">
                 {selItems.filter((s) => isArmorish(available.items.find((i) => i.id === s.id))).map((s) => {
                   const item = available.items.find((i) => i.id === s.id);
@@ -1211,26 +1213,26 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                       </div>
                       <div className="grid grid-cols-2 gap-2 items-center">
                         <div>
-                          <label className="text-[10px] text-zinc-500 uppercase block mb-0.5">Estado</label>
+                          <label className="text-[10px] text-zinc-500 uppercase block mb-0.5">{t("fr.equipState")}</label>
                           <select
                             value={eq?.status ?? ""}
                             onChange={(e) => setEquipped((prev) => ({ ...prev, [s.id]: { ...prev[s.id], status: e.target.value || undefined } }))}
                             className="w-full bg-zinc-800 border border-zinc-600 rounded px-2 py-1 text-xs text-zinc-200"
                           >
                             <option value="">—</option>
-                            <option value="equipped">Equipado</option>
-                            <option value="wielded">Empunhado</option>
-                            <option value="in_inventory">Na mochila</option>
+                            <option value="equipped">{t("fr.equipped")}</option>
+                            <option value="wielded">{t("fr.wielded")}</option>
+                            <option value="in_inventory">{t("fr.inInventory")}</option>
                           </select>
                         </div>
                         <div>
-                          <label className="text-[10px] text-zinc-500 uppercase block mb-0.5">Local</label>
+                          <label className="text-[10px] text-zinc-500 uppercase block mb-0.5">{t("fr.loc.link")}</label>
                           <select
                             value={eq?.location ?? ""}
                             onChange={(e) => setEquipped((prev) => ({ ...prev, [s.id]: { ...prev[s.id], location: e.target.value || undefined } }))}
                             className="w-full bg-zinc-800 border border-zinc-600 rounded px-2 py-1 text-xs text-zinc-200"
                           >
-                            <option value="">Nenhum</option>
+                            <option value="">{t("fr.none")}</option>
                             {BODY_LOCATIONS.map((loc) => (
                               <option key={loc} value={loc}>{loc}</option>
                             ))}
@@ -1242,7 +1244,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                           <svg className="w-3 h-3 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                           </svg>
-                          <span className="text-[10px] text-emerald-400">{eq.status === "wielded" ? "Empunhado" : "Equipado"}{eq.location ? ` — ${eq.location}` : ""}</span>
+                          <span className="text-[10px] text-emerald-400">{eq.status === "wielded" ? t("fr.wielded") : t("fr.equipped")}{eq.location ? ` — ${eq.location}` : ""}</span>
                         </div>
                       ) : null}
                     </div>
@@ -1255,7 +1257,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
           <div className="border-t border-zinc-700/40 pt-6">
             <div className="flex items-center justify-between mb-1">
               <div className="flex items-center gap-2">
-                <h2 className="text-lg font-semibold text-green-100">Itens</h2>
+                <h2 className="text-lg font-semibold text-green-100">{t("fr.ch.itemsTitle")}</h2>
                 <SplitToggle active={splitItems} onToggle={() => setSplitItems((v) => !v)} />
                 <button
                   type="button"
@@ -1265,10 +1267,10 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-4.35-4.35M17 10.5a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z" />
                   </svg>
-                  Buscar
+                  {t("fr.search")}
                 </button>
               </div>
-              <span className="text-sm text-zinc-500">{selItems.length} selecionados</span>
+              <span className="text-sm text-zinc-500">{interpolate(t("fr.list.slashM"), { n: selItems.length })}</span>
             </div>
             <section className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-5">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-80 overflow-y-auto scroll-thin pr-2">
@@ -1279,12 +1281,12 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                       <InfoTooltip
                         key={item.id}
                         rows={[
-                          { label: "Categoria", value: item.category },
-                          { label: "Tipo", value: item.kind },
-                          { label: "Peso", value: item.weight_lb != null ? `${item.weight_lb} lb` : undefined },
-                          { label: "Qualidade", value: item.quality },
-                          { label: "Condição", value: item.condition },
-                          { label: "Descrição", value: item.description },
+                          { label: t("fr.tip.category"), value: item.category },
+                          { label: t("fr.tip.type"), value: item.kind },
+                          { label: t("fr.tip.weight"), value: item.weight_lb != null ? `${item.weight_lb} lb` : undefined },
+                          { label: t("fr.tip.quality"), value: item.quality },
+                          { label: t("fr.tip.condition"), value: item.condition },
+                          { label: t("fr.tip.description"), value: item.description },
                         ]}
                       >
                         <label
@@ -1299,7 +1301,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                             className="w-4 h-4 rounded border-zinc-600 text-white0 focus:ring-green-800 bg-zinc-900"
                           />
                           <div className="flex-1 min-w-0">
-                            <div className="text-sm font-medium text-zinc-200 truncate">{item.name || "Sem nome"}</div>
+                            <div className="text-sm font-medium text-zinc-200 truncate">{item.name || t("fr.noName")}</div>
                             <div className="text-xs text-zinc-500 truncate">
                               {[item.category, item.quality, item.condition].filter(Boolean).join(" · ") || ""}
                               {item.weight_lb != null ? ` · ${item.weight_lb} lb` : ""}
@@ -1318,13 +1320,13 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                       <>
                         {selRows.length > 0 ? (
                           <>
-                            <div className="col-span-full text-xs font-semibold text-zinc-500 uppercase tracking-wider pt-1">{selRows.length} selecionados</div>
+                            <div className="col-span-full text-xs font-semibold text-zinc-500 uppercase tracking-wider pt-1">{interpolate(t("fr.list.slashM"), { n: selRows.length })}</div>
                             {selRows.map(renderItem)}
                           </>
                         ) : null}
                         {unselRows.length > 0 ? (
                           <>
-                            <div className="col-span-full text-xs font-semibold text-zinc-500 uppercase tracking-wider pt-3">{unselRows.length} não selecionados</div>
+                            <div className="col-span-full text-xs font-semibold text-zinc-500 uppercase tracking-wider pt-3">{interpolate(t("fr.list.slashNM"), { n: unselRows.length })}</div>
                             {unselRows.map(renderItem)}
                           </>
                         ) : null}
@@ -1334,7 +1336,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                   return available.items.map(renderItem);
                 })()}
                 {available.items.length === 0 ? (
-                  <p className="col-span-full text-zinc-600 text-sm">Nenhum item registrado para esta mesa.</p>
+                  <p className="col-span-full text-zinc-600 text-sm">{t("fr.list.noItem")}</p>
                 ) : null}
               </div>
             </section>
@@ -1346,7 +1348,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
               </svg>
               <label className={labelCls}>
-                Carga — {ENCUMBRANCE_LABELS[encumbranceValue]} ({itemsWeight.toFixed(1)} lb carregadas)
+                {interpolate(t("fr.ch.encLoad"), { load: t(ENCUMBRANCE_LABELS[encumbranceValue]), w: itemsWeight.toFixed(1) })}
               </label>
             </div>
             <div className="mt-2 grid grid-cols-5 gap-1">
@@ -1360,7 +1362,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                       active ? "bg-green-700/20 text-green-300" : "bg-zinc-700/30 text-zinc-500"
                     }`}
                   >
-                    {label}
+                    {t(label)}
                     <div className="text-[10px] text-zinc-500">{i === 0 ? "0" : `>${threshold} lb`}</div>
                   </div>
                 );
@@ -1375,10 +1377,10 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
         {!isEdit ? (
           <div className="flex items-center gap-3 pt-2 pb-8">
             <button type="submit" disabled={saving} className={`${submitCls} disabled:opacity-50`}>
-              {saving ? "Salvando..." : "Criar Personagem"}
+              {saving ? t("fr.saving") : t("fr.ch.create")}
             </button>
             <a href={currentTableId ? `/table/${currentTableId}/characters` : "/narrator"} className="text-zinc-400 hover:text-zinc-300 text-sm transition-colors">
-              Cancelar
+              {t("fr.cancel")}
             </a>
           </div>
         ) : null}
@@ -1388,12 +1390,12 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
         <SearchModal
           title={
             searchFor === "advantages"
-              ? "Buscar Vantagens"
+              ? t("fr.search.advTitle")
               : searchFor === "disadvantages"
-                ? "Buscar Desvantagens"
+                ? t("fr.search.disTitle")
                 : searchFor === "skills"
-                  ? "Buscar Perícias"
-                  : "Buscar Itens"
+                  ? t("fr.search.skTitle")
+                  : t("fr.search.itemTitle")
           }
           onSearch={doSearch}
           filters={
@@ -1401,23 +1403,28 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
               ? [
                   {
                     key: "type",
-                    label: "Tipo",
+                    label: t("fr.type"),
                     options: [
-                      { value: "Physical", label: "Física" },
-                      { value: "Mental", label: "Mental" },
+                      { value: "Physical", label: t("fr.ch.typePhysicalPh") },
+                      { value: "Mental", label: t("fr.ch.typeMentalPh") },
                     ],
                   },
                   {
                     key: "difficulty",
-                    label: "Dificuldade",
-                    options: [["Easy", "Fácil"], ["Medium", "Média"], ["Hard", "Difícil"], ["Very Hard", "Muito difícil"]].map(([value, label]) => ({ value, label })),
+                    label: t("fr.ch.difficultyPh"),
+                    options: [
+                      ["Easy", t("fr.diff.easy")],
+                      ["Medium", t("fr.diff.average")],
+                      ["Hard", t("fr.diff.hard")],
+                      ["Very Hard", t("fr.diff.veryHard")],
+                    ].map(([value, label]) => ({ value, label })),
                   },
                 ]
               : searchFor === "items"
                 ? [
                     {
                       key: "category",
-                      label: "Categoria",
+                      label: t("fr.category"),
                       options: [
                         ...new Set(
                           available.items
@@ -1428,7 +1435,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                     },
                     {
                       key: "kind",
-                      label: "Tipo",
+                      label: t("fr.type"),
                       options: [
                         ...new Map(
                           available.items
@@ -1442,7 +1449,7 @@ export default function CharacterForm({ tableId, tables, initial }: CharacterFor
                 : [
                     {
                       key: "category",
-                      label: "Categoria",
+                      label: t("fr.category"),
                       options: [
                         ...new Set(
                           (searchFor === "advantages" ? available.advantages : available.disadvantages)

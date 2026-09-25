@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import type { CharacterViewer, GameTableCharacters, TableCharacter } from "@/lib/types";
+import { interpolate, useTranslation } from "@/lib/i18n";
 import { readSeat, writeSeat, type Seat } from "@/lib/seat";
 
 /* ============================================================
@@ -80,6 +81,7 @@ async function adoptSeat(tableId: string, preferCharId?: string): Promise<Seat |
 export default function PerspectiveSwitch() {
   const pathname = usePathname() ?? "/";
   const router = useRouter();
+  const { t } = useTranslation();
   const [fallbackName, setFallbackName] = useState<string | null>(null);
   const [seat, setSeat] = useState<Seat>({});
   const [busy, setBusy] = useState(false);
@@ -160,10 +162,10 @@ export default function PerspectiveSwitch() {
   const displayName = seat.username ?? fallbackName;
   const seatLabel = isPlayer
     ? displayName
-      ? `Jogador · ${displayName}`
-      : "Jogador"
-    : "Narrador";
-  const hint = isPlayer ? "→ Mestre" : "→ Jogador";
+      ? interpolate(t("ps.playerSeat"), { name: displayName })
+      : t("ps.player")
+    : t("ps.narrator");
+  const hint = isPlayer ? t("ps.toGm") : t("ps.toPlayer");
 
   return (
     <div className="fixed bottom-4 right-4 z-50 print:hidden">
@@ -172,8 +174,8 @@ export default function PerspectiveSwitch() {
         onClick={onSwitch}
         title={
           isPlayer
-            ? "Mudar para a perspectiva do mestre (GM)"
-            : "Mudar para a perspectiva do jogador (seu assento)"
+            ? t("ps.titleGm")
+            : t("ps.titlePlayer")
         }
         className={`inline-flex items-center gap-2 rounded-full border px-3.5 py-2 text-xs font-medium shadow-lg backdrop-blur-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 ${
           isPlayer

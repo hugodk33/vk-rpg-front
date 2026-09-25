@@ -7,6 +7,7 @@ import TableTabs from "@/components/TableTabs";
 import RowActions from "@/components/table/RowActions";
 import { api } from "@/lib/api";
 import { submitJson } from "@/components/forms/submit";
+import { interpolate, useTranslation } from "@/lib/i18n";
 
 const COLORS: Record<string, { bg: string; border: string; badge: string }> = {
   Mental: { bg: "#1e1b4b", border: "#4338ca", badge: "bg-purple-600/80 text-purple-200" },
@@ -19,6 +20,7 @@ const FALLBACK = { bg: "#27272a", border: "#52525b", badge: "bg-zinc-600/80 text
 
 export default function TableDisadvantagesPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  const { t } = useTranslation();
   const [data, setData] = useState<GameTableDisadvantages | null>(null);
   const [search, setSearch] = useState("");
 
@@ -46,13 +48,13 @@ export default function TableDisadvantagesPage({ params }: { params: Promise<{ i
       <TableTabs tableId={id} />
 
       <div className="flex items-baseline gap-3 mb-1">
-        <h1 className="text-2xl font-bold text-zinc-100">Desvantagens</h1>
+        <h1 className="text-2xl font-bold text-zinc-100">{t("nav.disadvantages")}</h1>
         <span className="text-sm text-zinc-500">{data?.table?.title}</span>
       </div>
 
       <div className="flex items-center justify-between gap-6 mb-6">
         <div className="flex items-center gap-3 text-xs text-zinc-500">
-          <span>{disadvantages.length} {disadvantages.length !== 1 ? "desvantagens" : "desvantagem"}</span>
+          <span>{interpolate(t(disadvantages.length !== 1 ? "tp.count.disadvantagesMany" : "tp.count.disadvantagesOne"), { n: disadvantages.length })}</span>
           {Object.entries(categoryCounts).map(([c, count]) => {
             const colors = COLORS[c] ?? FALLBACK;
             return (
@@ -67,7 +69,7 @@ export default function TableDisadvantagesPage({ params }: { params: Promise<{ i
           href={`/disadvantage/new?table_id=${id}`}
           className="bg-green-800/70 hover:bg-green-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors"
         >
-          + Nova desvantagem
+          + {t("tp.add.disadvantage")}
         </Link>
       </div>
 
@@ -80,13 +82,13 @@ export default function TableDisadvantagesPage({ params }: { params: Promise<{ i
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Filtrar desvantagens..."
+            placeholder={t("tp.disadvantages.searchPh")}
             className="w-full bg-zinc-800/60 border border-zinc-700/50 rounded-lg pl-9 pr-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-green-900/60"
           />
         </div>
         {search ? (
           <button type="button" onClick={() => setSearch("")} className="bg-zinc-800/60 hover:bg-zinc-700/60 text-zinc-400 text-sm px-3 py-2 rounded-lg transition-colors border border-zinc-700/50">
-            Limpar
+            {t("s2.clearAll")}
           </button>
         ) : null}
       </div>
@@ -96,7 +98,7 @@ export default function TableDisadvantagesPage({ params }: { params: Promise<{ i
           <svg className="w-10 h-10 text-zinc-700 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
           </svg>
-          <p className="text-zinc-500 text-sm">{search ? "Nenhuma desvantagem corresponde ao seu filtro." : "Nenhuma desvantagem adicionada a esta mesa ainda."}</p>
+          <p className="text-zinc-500 text-sm">{search ? t("tp.disadvantages.emptySearch") : t("tp.disadvantages.empty")}</p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -115,7 +117,7 @@ export default function TableDisadvantagesPage({ params }: { params: Promise<{ i
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
                     </svg>
                     <span className="text-sm font-medium text-zinc-200 group-hover:text-zinc-100 truncate">
-                      {d.name || "Sem nome"}
+                      {d.name || t("it.unnamed")}
                     </span>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">

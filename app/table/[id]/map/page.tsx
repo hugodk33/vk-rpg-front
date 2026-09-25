@@ -1,4 +1,5 @@
 import { api } from "@/lib/api";
+import { getLang, makeT } from "@/lib/i18n-server";
 import type { GameTableCharacters, GameTableLocations, GameTableNpcs, GameTableScenes } from "@/lib/types";
 import TableTabs from "@/components/TableTabs";
 import MapLog from "@/components/map/MapLog";
@@ -7,6 +8,7 @@ export const dynamic = "force-dynamic";
 
 export default async function TableMapPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  const t = makeT(await getLang());
   const [scenesData, charsData, npcsData, locationsData] = await Promise.all([
     api<GameTableScenes>(`/game-table-scenes/${id}`),
     api<GameTableCharacters>(`/game-table-characters/${id}`),
@@ -23,7 +25,7 @@ export default async function TableMapPage({ params }: { params: Promise<{ id: s
       <div className="max-w-6xl mx-auto px-6 pt-6 pb-0">
         <TableTabs tableId={id} active="map" />
         <h1 className="text-2xl font-bold text-green-100 mt-3">
-          {scenesData.table?.title || "Mapa"}
+          {scenesData.table?.title || t("nav.map")}
         </h1>
       </div>
       <MapLog scenes={scenesData.scenes} locations={locations} characters={characters} npcIds={npcIds} role="narrator" fillViewport tableId={id} />

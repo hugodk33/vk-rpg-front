@@ -5,6 +5,7 @@ import { useState } from "react";
 import type { CharacterItem, CharacterViewer, TableCharacter } from "@/lib/types";
 import { api } from "@/lib/api";
 import ItemIcon from "@/components/items/ItemIcon";
+import { interpolate, useTranslation } from "@/lib/i18n";
 
 /* ============================================================
    Player Inventory — the player's own gear, managed from the
@@ -21,16 +22,16 @@ interface PlayerInventoryProps {
 }
 
 const STATUS_LABELS: Record<string, string> = {
-  in_inventory: "Inventory",
-  equipped: "Equipado",
-  wielded: "Empunhado",
+  in_inventory: "pl.inv.status.inventory",
+  equipped: "pl.inv.status.equipped",
+  wielded: "pl.inv.status.wielded",
 };
 
-const KIND_BADGES: Record<string, { label: string; class: string }> = {
-  weapon: { label: "Arma", class: "bg-red-400/10 text-red-400 border border-red-400/20" },
-  shield: { label: "Escudo", class: "bg-orange-400/10 text-orange-400 border border-orange-400/20" },
-  armor: { label: "Armadura", class: "bg-cyan-400/10 text-cyan-400 border border-cyan-400/20" },
-  equipment: { label: "Equipamento", class: "bg-amber-400/10 text-amber-400 border border-amber-400/20" },
+const KIND_BADGES: Record<string, { labelKey: string; class: string }> = {
+  weapon: { labelKey: "pl.inv.kind.weapon", class: "bg-red-400/10 text-red-400 border border-red-400/20" },
+  shield: { labelKey: "pl.inv.kind.shield", class: "bg-orange-400/10 text-orange-400 border border-orange-400/20" },
+  armor: { labelKey: "pl.inv.kind.armor", class: "bg-cyan-400/10 text-cyan-400 border border-cyan-400/20" },
+  equipment: { labelKey: "pl.inv.kind.equipment", class: "bg-amber-400/10 text-amber-400 border border-amber-400/20" },
 };
 
 const icon = (path: string, cls = "w-3.5 h-3.5") => (
@@ -43,6 +44,7 @@ const keyOf = (i: CharacterItem): string => i.item_id ?? i.id ?? "";
 
 export default function PlayerInventory({ items, characterId, roster, targets }: PlayerInventoryProps) {
   const router = useRouter();
+  const { t } = useTranslation();
   const targetPool = targets ?? roster;
   const [busy, setBusy] = useState<Record<string, boolean>>({});
   const [error, setError] = useState<string | null>(null);
@@ -57,7 +59,7 @@ export default function PlayerInventory({ items, characterId, roster, targets }:
   const [priceQty, setPriceQty] = useState("1");
 
   const setName = (id?: string | null): string => {
-    if (!id) return "Alguém";
+    if (!id) return t("pl.inv.someone");
     const c = roster.find((x) => x.id === id);
     return c?.sheet?.name || c?.name || c?.user?.username || id;
   };
@@ -82,7 +84,7 @@ export default function PlayerInventory({ items, characterId, roster, targets }:
       });
       router.refresh();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Falha ao atualizar o equipamento.");
+      setError(err instanceof Error ? err.message : t("pl.inv.err.gear"));
     } finally {
       setItemBusy(itemKey, false);
     }
@@ -100,7 +102,7 @@ export default function PlayerInventory({ items, characterId, roster, targets }:
       setPendingDrop(null);
       router.refresh();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Falha ao remover o item.");
+      setError(err instanceof Error ? err.message : t("pl.inv.err.remove"));
     } finally {
       setItemBusy(itemKey, false);
     }
@@ -123,7 +125,7 @@ export default function PlayerInventory({ items, characterId, roster, targets }:
       setTrading((prev) => ({ ...prev, [itemKey]: "" }));
       router.refresh();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Falha ao transferir o item.");
+      setError(err instanceof Error ? err.message : t("pl.inv.err.transfer"));
     } finally {
       setItemBusy(itemKey, false);
     }
@@ -156,7 +158,7 @@ export default function PlayerInventory({ items, characterId, roster, targets }:
       setBuyerItems(viewer?.character?.items ?? []);
     } catch (err: unknown) {
       setBuyerItems([]);
-      setError(err instanceof Error ? err.message : "Não foi possível ler o inventário dele(a).");
+      setError(err instanceof Error ? err.message : t("pl.inv.err.read"));
     } finally {
       setBuyerLoading(false);
     }
@@ -183,7 +185,7 @@ export default function PlayerInventory({ items, characterId, roster, targets }:
           price_quantity: qty,
         }),
       });
-      if (result && result.success === false) throw new Error(result.error || "Venda falhou.");
+      if (result && result.success === false) throw new Error(result.error || t("pl.inv.err.sellFail"));
       setSellingFor(null);
       setSellBuyer("");
       setBuyerItems([]);
@@ -191,7 +193,7 @@ export default function PlayerInventory({ items, characterId, roster, targets }:
       setPriceQty("1");
       router.refresh();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Falha ao vender o item.");
+      setError(err instanceof Error ? err.message : t("pl.inv.err.sell"));
     } finally {
       setItemBusy(itemKey, false);
     }
@@ -208,15 +210,15 @@ export default function PlayerInventory({ items, characterId, roster, targets }:
       <div className="bg-zinc-900/60 border border-zinc-700/50 rounded-xl overflow-hidden">
         <div className="flex items-center gap-2 border-b border-zinc-700/50 px-4 py-3">
           {icon("M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4", "w-4 h-4 text-amber-400")}
-          <h2 className="text-sm font-bold uppercase tracking-wider text-zinc-300">Inventário</h2>
+          <h2 className="text-sm font-bold uppercase tracking-wider text-zinc-300">{t("pl.inv.title")}</h2>
           <span className="ml-auto text-xs text-zinc-500">
-            {items.length} item{items.length !== 1 ? "s" : ""}
+            {items.length === 1 ? t("pl.inv.itemOne") : interpolate(t("pl.inv.itemMany"), { n: items.length })}
           </span>
         </div>
 
         <div className="divide-y divide-zinc-800/80">
           {items.length === 0 ? (
-            <p className="text-zinc-600 text-sm italic px-4 py-4">Nenhum item no seu inventário ainda.</p>
+            <p className="text-zinc-600 text-sm italic px-4 py-4">{t("pl.inv.empty")}</p>
           ) : null}
 
           {items.map((i) => {
@@ -236,15 +238,15 @@ export default function PlayerInventory({ items, characterId, roster, targets }:
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-sm font-medium text-zinc-200 truncate">
-                        {i.name || "Sem nome"}
+                        {i.name || t("pl.res.unnamed")}
                         {qty > 1 ? <span className="text-zinc-500 ml-1">x{qty}</span> : null}
                       </span>
                       {badge ? (
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded ${badge.class}`}>{badge.label}</span>
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded ${badge.class}`}>{t(badge.labelKey)}</span>
                       ) : null}
                     </div>
                     <div className="text-[11px] text-zinc-500 mt-0.5 flex items-center gap-2 flex-wrap">
-                      <span className="text-zinc-400">{STATUS_LABELS[stt] ?? stt}</span>
+                      <span className="text-zinc-400">{STATUS_LABELS[stt] ? t(STATUS_LABELS[stt]) : stt}</span>
                       {i.equipment_location && stt !== "in_inventory" ? (
                         <span>· {i.equipment_location.replace(/_/g, " ")}</span>
                       ) : null}
@@ -264,7 +266,7 @@ export default function PlayerInventory({ items, characterId, roster, targets }:
                             onClick={() => mutate(itemKey, isWeaponish ? "wielded" : "equipped", isWeaponish ? "right_hand" : "any")}
                             className="text-[11px] px-2 py-1 rounded-md bg-emerald-600/40 hover:bg-emerald-600/70 text-emerald-100 border border-emerald-600/40 transition-colors"
                           >
-                            {isWeaponish ? "Empunhar" : "Equipar"}
+                            {isWeaponish ? t("pl.inv.wield") : t("pl.inv.equip")}
                           </button>
                         ) : (
                           <button
@@ -272,26 +274,26 @@ export default function PlayerInventory({ items, characterId, roster, targets }:
                             onClick={() => mutate(itemKey, "in_inventory", "none")}
                             className="text-[11px] px-2 py-1 rounded-md bg-zinc-700/60 hover:bg-zinc-600/60 text-zinc-200 border border-zinc-600/40 transition-colors"
                           >
-                            {stt === "wielded" ? "Guardar" : "Desequipar"}
+                            {stt === "wielded" ? t("pl.inv.stow") : t("pl.inv.unequip")}
                           </button>
                         )}
 
                         {pendingDropHere ? (
                           <span className="inline-flex items-center gap-1.5 text-[11px]">
-                            <span className="text-zinc-400">Descartar este item?</span>
+                            <span className="text-zinc-400">{t("pl.inv.dropConfirm")}</span>
                             <button
                               type="button"
                               onClick={() => void dropItem(itemKey)}
                               className="px-2 py-1 rounded-md bg-red-600/60 hover:bg-red-600 text-red-50 transition-colors"
                             >
-                              Sim
+                              {t("pl.yes")}
                             </button>
                             <button
                               type="button"
                               onClick={() => setPendingDrop(null)}
                               className="px-2 py-1 rounded-md bg-zinc-700/60 hover:bg-zinc-600/60 text-zinc-200 transition-colors"
                             >
-                              Não
+                              {t("pl.no")}
                             </button>
                           </span>
                         ) : (
@@ -301,7 +303,7 @@ export default function PlayerInventory({ items, characterId, roster, targets }:
                               onClick={() => openSell(itemKey)}
                               className="text-[11px] px-2 py-1 rounded-md bg-amber-600/30 hover:bg-amber-600/60 text-amber-100 border border-amber-600/30 transition-colors"
                             >
-                              Vender
+                              {t("pl.inv.sell")}
                             </button>
                             <button
                               type="button"
@@ -312,7 +314,7 @@ export default function PlayerInventory({ items, characterId, roster, targets }:
                               }}
                               className="text-[11px] px-2 py-1 rounded-md bg-red-500/15 hover:bg-red-500/40 text-red-300 border border-red-500/25 transition-colors"
                             >
-                              Descartar
+                              {t("pl.inv.drop")}
                             </button>
                             <button
                               type="button"
@@ -326,7 +328,7 @@ export default function PlayerInventory({ items, characterId, roster, targets }:
                               }}
                               className="text-[11px] px-2 py-1 rounded-md bg-blue-600/25 hover:bg-blue-600/50 text-blue-200 border border-blue-600/30 transition-colors"
                             >
-                              Trocar
+                              {t("pl.inv.trade")}
                             </button>
                           </>
                         )}
@@ -337,14 +339,14 @@ export default function PlayerInventory({ items, characterId, roster, targets }:
 
                 {tradingFor === itemKey ? (
                   <div className="mt-2 flex items-center gap-2 flex-wrap pl-5">
-                    <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">Dar a</span>
+                    <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">{t("pl.inv.giveTo")}</span>
                     <select
                       value={targetChoice}
                       onChange={(e) => setTrading((prev) => ({ ...prev, [itemKey]: e.target.value }))}
                       className="bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-2 py-1.5 text-sm text-zinc-100 focus:outline-none focus:border-blue-600/70"
                     >
                       <option value="" className="bg-zinc-800">
-                        Selecionar… (outra pessoa)
+                        {t("pl.inv.selectOther")}
                       </option>
                       {targetPool
                         .filter((c) => c.id !== characterId)
@@ -360,14 +362,14 @@ export default function PlayerInventory({ items, characterId, roster, targets }:
                       onClick={() => void tradeItem(itemKey, targetChoice)}
                       className="text-[11px] px-2 py-1 rounded-md bg-blue-600/70 hover:bg-blue-600 text-blue-100 disabled:opacity-40 transition-colors"
                     >
-                      Doar
+                      {t("pl.inv.donate")}
                     </button>
                     <button
                       type="button"
                       onClick={() => setTradingFor(null)}
                       className="text-[11px] px-2 py-1 rounded-md bg-zinc-700/60 hover:bg-zinc-600/60 text-zinc-200 transition-colors"
                     >
-                      Cancelar
+                      {t("pl.cancel")}
                     </button>
                   </div>
                 ) : null}
@@ -375,7 +377,7 @@ export default function PlayerInventory({ items, characterId, roster, targets }:
                 {sellingFor === itemKey ? (
                   <div className="mt-2 space-y-2 pl-5">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">Vender para</span>
+                      <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">{t("pl.inv.sellTo")}</span>
                       <select
                         value={sellBuyer}
                         onChange={(e) => {
@@ -387,7 +389,7 @@ export default function PlayerInventory({ items, characterId, roster, targets }:
                         className="bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-2 py-1.5 text-sm text-zinc-100 focus:outline-none focus:border-blue-600/70"
                       >
                         <option value="" className="bg-zinc-800">
-                          Selecionar… (um personagem)
+                          {t("pl.inv.selectCharacter")}
                         </option>
                         {targetPool
                           .filter((c) => c.id !== characterId)
@@ -401,15 +403,15 @@ export default function PlayerInventory({ items, characterId, roster, targets }:
 
                     {sellBuyer ? (
                       buyerLoading ? (
-                        <p className="text-[11px] text-zinc-500 italic">Lendo o inventário dele(a)…</p>
+                        <p className="text-[11px] text-zinc-500 italic">{t("pl.inv.reading")}</p>
                       ) : buyerItems.length === 0 ? (
                         <p className="text-[11px] text-zinc-500 italic">
-                          Ele(a) não carrega nada que sirva como pagamento.
+                          {t("pl.inv.noPayment")}
                         </p>
                       ) : (
                         <>
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">Receber</span>
+                            <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">{t("pl.inv.receive")}</span>
                             <select
                               value={priceItem}
                               onChange={(e) => {
@@ -419,13 +421,13 @@ export default function PlayerInventory({ items, characterId, roster, targets }:
                               className="bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-2 py-1.5 text-sm text-zinc-100 focus:outline-none focus:border-blue-600/70"
                             >
                               <option value="" className="bg-zinc-800">
-                                Selecionar… (item de pagamento)
+                                {t("pl.inv.selectPayment")}
                               </option>
                               {buyerItems.map((bi) => {
                                 const bQty = bi.equipment_quantity ?? bi.quantity ?? 1;
                                 return (
                                   <option key={keyOf(bi)} value={keyOf(bi)} className="bg-zinc-800">
-                                    {bi.name || "Sem nome"} × {bQty}
+                                    {bi.name || t("pl.res.unnamed")} × {bQty}
                                   </option>
                                 );
                               })}
@@ -439,7 +441,7 @@ export default function PlayerInventory({ items, characterId, roster, targets }:
                               className="w-20 bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-2 py-1.5 text-sm text-zinc-100 focus:outline-none focus:border-blue-600/70"
                             />
                             {maxPriceQty > 1 ? (
-                              <span className="text-[10px] text-zinc-500">máx {maxPriceQty}</span>
+                              <span className="text-[10px] text-zinc-500">{interpolate(t("pl.inv.max"), { n: maxPriceQty })}</span>
                             ) : null}
                           </div>
                           <div className="flex items-center gap-2 flex-wrap">
@@ -449,14 +451,14 @@ export default function PlayerInventory({ items, characterId, roster, targets }:
                               onClick={() => void sellItem(itemKey)}
                               className="text-[11px] px-2 py-1 rounded-md bg-amber-600/70 hover:bg-amber-600 text-amber-100 disabled:opacity-40 transition-colors"
                             >
-                              Concluir venda
+                              {t("pl.inv.finishSale")}
                             </button>
                             <button
                               type="button"
                               onClick={() => openSell(itemKey)}
                               className="text-[11px] px-2 py-1 rounded-md bg-zinc-700/60 hover:bg-zinc-600/60 text-zinc-200 transition-colors"
                             >
-                              Cancelar
+                              {t("pl.cancel")}
                             </button>
                           </div>
                         </>

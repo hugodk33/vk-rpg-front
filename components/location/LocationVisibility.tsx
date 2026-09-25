@@ -11,6 +11,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
+import { useTranslation } from "@/lib/i18n";
 import type {
   GameTableCharacters,
   GameTableScenes,
@@ -24,22 +25,23 @@ import DiscoveryContext, {
 
 type VisStatus = "unknown" | "known" | "specialist";
 
-const STATUS_META: Record<VisStatus, { label: string; active: string }> = {
+const STATUS_META: Record<VisStatus, { key: string; active: string }> = {
   unknown: {
-    label: "?",
+    key: "lc.vis.status.unknown",
     active: "text-zinc-200 border-zinc-500/70 bg-zinc-600/40",
   },
   known: {
-    label: "Apelido",
+    key: "lc.vis.status.known",
     active: "text-emerald-300 border-emerald-500/40 bg-emerald-500/10",
   },
   specialist: {
-    label: "Levante",
+    key: "lc.vis.status.specialist",
     active: "text-violet-300 border-violet-500/40 bg-violet-500/10",
   },
 };
 
-const charName = (c: TableCharacter) => c.sheet?.name || c.name || "Sem nome";
+const charName = (c: TableCharacter, t: (key: string) => string) =>
+  c.sheet?.name || c.name || t("lc.common.noName");
 
 const statusOf = (rule?: VisibilityRule): VisStatus =>
   (rule?.status as VisStatus) ?? "unknown";
@@ -58,6 +60,7 @@ export default function LocationVisibility({
   const [error, setError] = useState<string | null>(null);
   const [rowDiscovery, setRowDiscovery] = useState<Record<string, DiscoverySelection>>({});
   const [rowMomentOpen, setRowMomentOpen] = useState<Record<string, boolean>>({});
+  const { t } = useTranslation();
 
   const observers = useMemo(
     () => (characters ?? []).filter((c) => !c.isNpc && c.user?.id),
@@ -128,7 +131,7 @@ export default function LocationVisibility({
       }
       sync(observerId);
     } catch {
-      setError("Falha ao salvar a regra de visibilidade deste local.");
+      setError(t("lc.vis.error"));
     } finally {
       setSavingKey(null);
     }
@@ -140,11 +143,11 @@ export default function LocationVisibility({
     <div>
       <div className="flex items-center gap-2.5 pb-1.5 mb-1 border-b border-zinc-700/60">
         <span aria-hidden className="font-mono text-base leading-none text-teal-300">◍</span>
-        <span className="font-mono text-[13px] font-bold uppercase tracking-wider text-zinc-300">Conhecimento</span>
+        <span className="font-mono text-[13px] font-bold uppercase tracking-wider text-zinc-300">{t("lc.vis.title")}</span>
         <span className="flex-1 h-px" style={{ background: "linear-gradient(90deg, #2dd4bf55, transparent)" }} />
       </div>
       <p className="text-[11px] text-zinc-500 mb-3">
-        Quem conhece este lugar — ? desconhecido, Apelido esconde o nome, Levante mostra os dados reais.
+        {t("lc.vis.desc")}
       </p>
 
       {error ? <p className="text-[11px] text-red-400/80 mb-2">{error}</p> : null}
@@ -158,13 +161,13 @@ export default function LocationVisibility({
             <li key={o.id} className="flex flex-col gap-1 py-1">
               <div className="flex items-start gap-3">
                 <span className="min-w-0 flex-1 pt-1">
-                  <span className="block text-sm text-zinc-200 truncate">{charName(o)}</span>
+                  <span className="block text-sm text-zinc-200 truncate">{charName(o, t)}</span>
                   <span className="font-mono text-[9px] uppercase tracking-widest text-zinc-600">
                     {status === "specialist"
-                      ? "levantamento completo"
+                      ? t("lc.vis.stateSpecialist")
                       : status === "known"
-                      ? "mascarado como apelido"
-                      : "ainda não conhecido"}
+                      ? t("lc.vis.stateKnown")
+                      : t("lc.vis.stateUnknown")}
                   </span>
                 </span>
                 <div className="flex items-center gap-1 shrink-0">
@@ -179,7 +182,7 @@ export default function LocationVisibility({
                         status === s ? STATUS_META[s].active : "text-zinc-600 border-zinc-800 hover:text-zinc-300 hover:border-zinc-600"
                       }`}
                     >
-                      {STATUS_META[s].label}
+                      {t(STATUS_META[s].key)}
                     </button>
                   ))}
                 </div>
@@ -189,14 +192,14 @@ export default function LocationVisibility({
                   <input
                     type="text"
                     defaultValue={rule?.value ?? ""}
-                    placeholder="Nome mascarado (o que o jogador verá)"
+                    placeholder={t("lc.vis.aliasPh")}
                     onBlur={(e) => {
                       const v = e.target.value;
                       if (v !== (rule?.value ?? "")) persist(o.id, status, v);
                     }}
                     className="flex-1 bg-zinc-950 border border-zinc-800 rounded px-2 py-1 text-xs text-zinc-300 placeholder-zinc-600 focus:outline-none focus:border-teal-700/60"
                   />
-                  <span className="text-[10px] font-mono text-zinc-600 uppercase shrink-0">apelido</span>
+                  <span className="text-[10px] font-mono text-zinc-600 uppercase shrink-0">{t("lc.vis.aliasTag")}</span>
                 </div>
               ) : null}
               {(() => {
@@ -215,7 +218,7 @@ export default function LocationVisibility({
                           setRowMomentOpen((p) => ({ ...p, [o.id]: !p[o.id] }))
                         }
                         aria-expanded={open}
-                        title="Anexar / editar quando este lugar ficou conhecido"
+                        title={t("lc.vis.momentTitle")}
                         className={`inline-flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-wider rounded-full px-2 py-0.5 border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600/60 ${
                           attached
                             ? "text-teal-300 border-teal-700/50 bg-teal-500/5"
@@ -230,7 +233,7 @@ export default function LocationVisibility({
                             d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"
                           />
                         </svg>
-                        {attached ? "momento anexado" : "momento"}
+                        {attached ? t("lc.vis.momentAttached") : t("lc.vis.moment")}
                         {fromRule && fromRule.moment != null ? (
                           <span className="text-[9px] text-zinc-500">· {fromRule.moment}</span>
                         ) : null}

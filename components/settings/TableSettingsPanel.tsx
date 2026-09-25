@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { ReactNode } from "react";
 import { api } from "@/lib/api";
+import { useTranslation } from "@/lib/i18n";
 import type { Item, TableSettings } from "@/lib/types";
 
 /* ============================================================
@@ -82,6 +83,7 @@ export default function TableSettingsPanel({
   initialSettings,
   items,
 }: TableSettingsPanelProps) {
+  const { t } = useTranslation();
   const s = initialSettings ?? {
     table_id: tableId,
     turn_end_mode: "after_test" as const,
@@ -131,77 +133,77 @@ export default function TableSettingsPanel({
     <div className="space-y-4">
       <Section
         index="01"
-        title="Encerramento do turno"
-        hint="Quando o personagem que está na vez termina a sua rodada."
+        title={t("vs.sp.s1Title")}
+        hint={t("vs.sp.s1Hint")}
       >
         <div className="flex flex-col sm:flex-row gap-2">
           <Choice
             active={turnEndMode === "after_test"}
             onClick={() => setTurnEndMode("after_test")}
-            tag="Após um teste"
-            title="Depois de um teste"
-            body="O turno encerra quando o personagem resolve um teste (rolagem contra atributo ou perícia)."
+            tag={t("vs.sp.s1TagA")}
+            title={t("vs.sp.s1TitleA")}
+            body={t("vs.sp.s1BodyA")}
           />
           <Choice
             active={turnEndMode === "after_move"}
             onClick={() => setTurnEndMode("after_move")}
-            tag="Após mover"
-            title="Depois de mover + virar-se"
-            body="O turno encerra quando o personagem se desloca no mapa e define a direção em que fica apontando."
+            tag={t("vs.sp.s1TagB")}
+            title={t("vs.sp.s1TitleB")}
+            body={t("vs.sp.s1BodyB")}
           />
         </div>
       </Section>
 
       <Section
         index="02"
-        title="Itens dos personagens"
-        hint="Como um personagem recebe novos itens — com recurso próprio ou pelo mestre."
+        title={t("vs.sp.s2Title")}
+        hint={t("vs.sp.s2Hint")}
       >
         <div className="flex flex-col sm:flex-row gap-2">
           <Choice
             active={itemMode === "points"}
             onClick={() => setItemMode("points")}
-            tag="Com pontos"
-            title="Gastar pontos da ficha"
-            body="O personagem gasta pontos de ficha para adicionar o item ao seu inventário."
+            tag={t("vs.sp.tagPoints")}
+            title={t("vs.sp.s2TitleA")}
+            body={t("vs.sp.s2BodyA")}
           />
           <Choice
             active={itemMode === "gm"}
             onClick={() => setItemMode("gm")}
-            tag="Pelo mestre"
-            title="O mestre concede"
-            body="O mestre adiciona os itens de acordo com a ficha do personagem (riqueza inicial etc.)."
+            tag={t("vs.sp.tagGm")}
+            title={t("vs.sp.s2TitleB")}
+            body={t("vs.sp.s2BodyB")}
           />
         </div>
       </Section>
 
       <Section
         index="03"
-        title="Teste de reação"
-        hint="Como a reação de um NPC a uma abordagem é determinada."
+        title={t("vs.sp.s3Title")}
+        hint={t("vs.sp.s3Hint")}
       >
         <div className="flex flex-col sm:flex-row gap-2">
           <Choice
             active={reactionMode === "points"}
             onClick={() => setReactionMode("points")}
-            tag="Com pontos"
-            title="Com pontos"
-            body="O jogador gasta pontos da ficha para tentar influenciar a reação."
+            tag={t("vs.sp.tagPoints")}
+            title={t("vs.sp.s3TitleA")}
+            body={t("vs.sp.s3BodyA")}
           />
           <Choice
             active={reactionMode === "gm"}
             onClick={() => setReactionMode("gm")}
-            tag="Pelo mestre"
-            title="O mestre resolve"
-            body="O mestre define a reação do NPC diretamente, sem rolagem."
+            tag={t("vs.sp.tagGm")}
+            title={t("vs.sp.s3TitleB")}
+            body={t("vs.sp.s3BodyB")}
           />
         </div>
       </Section>
 
       <Section
         index="04"
-        title="Mestre & loja inicial"
-        hint="Perdões do mestre concede itens e a moeda de uma loja inicial."
+        title={t("vs.sp.s4Title")}
+        hint={t("vs.sp.s4Hint")}
       >
         <div className="space-y-4">
           <label className="flex items-start gap-3 cursor-pointer select-none">
@@ -212,22 +214,22 @@ export default function TableSettingsPanel({
               className="mt-0.5 w-4 h-4 accent-emerald-500"
             />
             <span>
-              <span className="block text-sm font-semibold text-zinc-100">O mestre pode adicionar o item diretamente</span>
+              <span className="block text-sm font-semibold text-zinc-100">{t("vs.sp.gmAddsTitle")}</span>
               <span className="block text-xs text-zinc-500 mt-0.5">
-                Mesmo quando a compra é por pontos, o mestre continua podendo entregar itens na mão.
+                {t("vs.sp.gmAddsBody")}
               </span>
             </span>
           </label>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <label className="block">
-              <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-500 block mb-1.5">Item de dinheiro (moeda da loja inicial)</span>
+              <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-500 block mb-1.5">{t("vs.sp.moneyItem")}</span>
               <select
                 value={moneyItemId}
                 onChange={(e) => setMoneyItemId(e.target.value)}
                 className="w-full bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-3 py-2 text-zinc-100 text-sm focus:outline-none focus:border-emerald-600/60"
               >
-                <option value="" className="bg-zinc-800">Nenhum — sem moeda</option>
+                <option value="" className="bg-zinc-800">{t("vs.sp.noCurrency")}</option>
                 {items.map((it) => (
                   <option key={it.id} value={it.id} className="bg-zinc-800">
                     {it.name}
@@ -245,9 +247,9 @@ export default function TableSettingsPanel({
                 className="mt-0.5 w-4 h-4 accent-emerald-500"
               />
               <span>
-                <span className="block text-sm font-semibold text-zinc-100">Loja inicial habilitada</span>
+                <span className="block text-sm font-semibold text-zinc-100">{t("vs.sp.shopTitle")}</span>
                 <span className="block text-xs text-zinc-500 mt-0.5">
-                  Os personagens começam com o item de dinheiro para comprar em uma loja inicial.
+                  {t("vs.sp.shopBody")}
                 </span>
               </span>
             </label>
@@ -257,8 +259,8 @@ export default function TableSettingsPanel({
 
       <Section
         index="05"
-        title="Pontos para a primeira ficha"
-        hint="O orçamento que cada jogador recebe para criar a primeira ficha."
+        title={t("vs.sp.s5Title")}
+        hint={t("vs.sp.s5Hint")}
       >
         <div className="space-y-4">
           <div className="flex flex-wrap gap-2">
@@ -279,7 +281,7 @@ export default function TableSettingsPanel({
           </div>
           <label className="block">
             <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-500 block mb-1.5">
-              Outro valor (pontos)
+              {t("vs.sp.customValue")}
             </span>
             <input
               type="number"
@@ -293,7 +295,7 @@ export default function TableSettingsPanel({
               className="w-full max-w-xs bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-3 py-2 text-zinc-100 text-sm focus:outline-none focus:border-emerald-600/60"
             />
             <span className="block text-xs text-zinc-500 mt-1.5">
-              O jogador usa essa quantidade para montar a ficha na rota de primeiro acesso.
+              {t("vs.sp.customValueBody")}
             </span>
           </label>
         </div>
@@ -305,7 +307,7 @@ export default function TableSettingsPanel({
           disabled={saving}
           className="font-mono text-[12px] font-semibold uppercase tracking-widest px-5 py-2.5 rounded-lg bg-emerald-700/80 text-white hover:bg-emerald-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         >
-          {saving ? "Salvando…" : "Salvar configurações"}
+          {saving ? t("vs.sp.saving") : t("vs.sp.save")}
         </button>
         {error ? <span className="text-xs text-red-400">{error}</span> : null}
       </div>

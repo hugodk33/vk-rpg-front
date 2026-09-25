@@ -6,6 +6,8 @@ import { api } from "@/lib/api";
 import { submitJson } from "./submit";
 import { cancelCls, inputCls, labelCls, submitCls } from "./formStyles";
 import { FIT_OPTIONS } from "@/lib/fit";
+import { DAMAGE_SOURCE_LABELS, DAMAGE_TYPES } from "@/lib/damage";
+import { useTranslation } from "@/lib/i18n";
 import type { ArmorData, GameTableLocations, Item, Weapon, WeaponAttack } from "@/lib/types";
 
 export interface ItemFormProps {
@@ -16,42 +18,28 @@ export interface ItemFormProps {
 }
 
 const KINDS: Array<{ value: string; label: string; desc: string }> = [
-  { value: "equipment", label: "Equipamento", desc: "Item genérico" },
-  { value: "weapon", label: "Arma", desc: "Arma (usos atacáveis)" },
-  { value: "shield", label: "Escudo", desc: "Escudo / defesa" },
-  { value: "armor", label: "Armadura", desc: "Proteção (DR, locais)" },
+  { value: "equipment", label: "fr.item.kind.equipment", desc: "fr.item.kindD.equipment" },
+  { value: "weapon", label: "fr.item.kind.weapon", desc: "fr.item.kindD.weapon" },
+  { value: "shield", label: "fr.item.kind.shield", desc: "fr.item.kindD.shield" },
+  { value: "armor", label: "fr.item.kind.armor", desc: "fr.item.kindD.armor" },
 ];
 
 const QUALITIES = ["", "ruim", "boa", "excelente", "master"];
-const QUALITY_LABEL: Record<string, string> = { master: "Mestre" };
 const CONDITIONS = ["", "danificado", "quebrado", "gasto"];
 const HANDEDNESS = [
-  { value: 1, label: "1 mão" },
-  { value: 2, label: "2 mãos" },
+  { value: 1, label: "it.hands.1" },
+  { value: 2, label: "it.hands.2" },
 ];
 const DEFAULT_RATING_ST = 10;
 
-const DAMAGE_SOURCE_LABELS: Record<string, string> = {
-  st_swing: "Balanço (ST)",
-  st_thrust: "Empuxo (ST)",
-  rated_st_swing: "Balanço (ST poderosa)",
-  rated_st_thrust: "Empuxo (ST poderosa)",
-  fixed: "Fixado (dados próprios)",
-};
+const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
-const DAMAGE_TYPES: Array<{ value: string; label: string }> = [
-  { value: "cut", label: "Corte" },
-  { value: "cr", label: "Esmagamento" },
-  { value: "imp", label: "Perfuração" },
-  { value: "pi", label: "Flecha" },
-  { value: "pi-", label: "Flecha pequena" },
-  { value: "pi+", label: "Flecha grande" },
-  { value: "pi++", label: "Flecha enorme" },
-  { value: "burn", label: "Queimadura" },
-  { value: "tox", label: "Veneno" },
-  { value: "cor", label: "Corrosão" },
-  { value: "fat", label: "Fadiga" },
-];
+/* Rótulos de fonte de dano vêm de lib/damage (já chaves); "fixed" é
+   completado aqui porque a nuance é só de formulário. */
+const DAMAGE_SOURCE_KEYS: Record<string, string> = {
+  ...DAMAGE_SOURCE_LABELS,
+  fixed: "fr.atk.dmgSourceFixed",
+};
 
 const isWeaponish = (kind: string) => kind === "weapon" || kind === "shield";
 const isArmorish = (kind: string) => kind === "armor" || kind === "shield";
@@ -74,6 +62,7 @@ function emptyAttack(): WeaponAttack {
 
 export default function ItemForm({ initial, tableId, tables, defaultLocationId }: ItemFormProps) {
   const router = useRouter();
+  const { t } = useTranslation();
   const isEdit = !!initial;
 
   const [currentTableId, setCurrentTableId] = useState(tableId ?? initial?.table_id ?? "");
@@ -145,7 +134,7 @@ export default function ItemForm({ initial, tableId, tables, defaultLocationId }
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!currentTableId) {
-      setError("Selecione a mesa.");
+      setError(t("fr.error.selectTable"));
       return;
     }
     setSaving(true);
@@ -238,7 +227,7 @@ export default function ItemForm({ initial, tableId, tables, defaultLocationId }
       router.push(`/table/${currentTableId}/items`);
       router.refresh();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Falha ao salvar o item.");
+      setError(err instanceof Error ? err.message : t("fr.err.item"));
       setSaving(false);
     }
   }
@@ -247,12 +236,12 @@ export default function ItemForm({ initial, tableId, tables, defaultLocationId }
     <div className="max-w-3xl mx-auto p-6">
       <div className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-6">
         <h1 className="text-2xl font-bold text-green-100 mb-6">
-          {isEdit ? "Editar Item" : "Novo Item"}
+          {isEdit ? t("fr.item.editTitle") : t("fr.item.newTitle")}
         </h1>
         <form onSubmit={handleSubmit} className="space-y-5">
           {!isEdit && !tableId ? (
             <div>
-              <label className={labelCls}>Mesa</label>
+              <label className={labelCls}>{t("fr.table")}</label>
               <select
                 value={currentTableId}
                 onChange={(e) => setCurrentTableId(e.target.value)}
@@ -260,7 +249,7 @@ export default function ItemForm({ initial, tableId, tables, defaultLocationId }
                 className={inputCls}
               >
                 <option value="" disabled>
-                  Selecione a mesa
+                  {t("fr.pickTable")}
                 </option>
                 {(tables ?? []).map((t) => (
                   <option key={t.id} value={t.id}>
@@ -273,39 +262,37 @@ export default function ItemForm({ initial, tableId, tables, defaultLocationId }
 
           {locationOptions.length > 0 ? (
             <div>
-              <label className={labelCls}>Local (opcional)</label>
+              <label className={labelCls}>{t("fr.loc.link")}</label>
               <select value={locationId} onChange={(e) => setLocationId(e.target.value)} className={inputCls}>
-                <option value="">— Nenhum local —</option>
+                <option value="">{t("fr.loc.noLink")}</option>
                 {locationOptions.map((l) => (
                   <option key={l.id} value={l.id}>
                     {l.name}
                   </option>
                 ))}
               </select>
-              <p className="text-[11px] text-zinc-600 mt-1">
-                Vincula o item a um local — ex: uma loja exibe na aba “Loja” tudo o que aponta pra ela.
-              </p>
+              <p className="text-[11px] text-zinc-600 mt-1">{t("fr.loc.linkHintItem")}</p>
             </div>
           ) : null}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className={labelCls}>Nome</label>
+              <label className={labelCls}>{t("fr.name")}</label>
               <input value={name} onChange={(e) => setName(e.target.value)} required className={inputCls} />
             </div>
             <div>
-              <label className={labelCls}>Categoria</label>
+              <label className={labelCls}>{t("fr.category")}</label>
               <input
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
                 className={inputCls}
-                placeholder="ex: Arma, Armadura, Poção"
+                placeholder={t("fr.item.categoryPh")}
               />
             </div>
           </div>
 
           <div>
-            <label className={labelCls}>Tipo de item</label>
+            <label className={labelCls}>{t("fr.item.kindLabel")}</label>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
               {KINDS.map((k) => (
                 <button
@@ -317,8 +304,8 @@ export default function ItemForm({ initial, tableId, tables, defaultLocationId }
                     : "border-zinc-700/50 bg-zinc-800/40 hover:border-zinc-600"}
                   `}
                 >
-                  <span className="block text-sm font-medium text-zinc-200">{k.label}</span>
-                  <span className="block text-[10px] text-zinc-500 mt-0.5">{k.desc}</span>
+                  <span className="block text-sm font-medium text-zinc-200">{t(k.label)}</span>
+                  <span className="block text-[10px] text-zinc-500 mt-0.5">{t(k.desc)}</span>
                 </button>
               ))}
             </div>
@@ -326,24 +313,24 @@ export default function ItemForm({ initial, tableId, tables, defaultLocationId }
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div>
-              <label className={labelCls}>Peso (lb)</label>
+              <label className={labelCls}>{t("fr.item.weightLb")}</label>
               <input type="number" step="0.1" value={weight} onChange={(e) => setWeight(e.target.value)} className={inputCls} />
             </div>
             <div>
-              <label className={labelCls}>Custo ($)</label>
+              <label className={labelCls}>{t("fr.item.costDollar")}</label>
               <input type="number" step="0.01" value={cost} onChange={(e) => setCost(e.target.value)} className={inputCls} />
             </div>
             <div>
-              <label className={labelCls}>Dimensões</label>
-              <input value={dimensions} onChange={(e) => setDimensions(e.target.value)} className={inputCls} placeholder="ex: 30x5cm" />
+              <label className={labelCls}>{t("fr.item.dimensions")}</label>
+              <input value={dimensions} onChange={(e) => setDimensions(e.target.value)} className={inputCls} placeholder={t("fr.item.dimensionsPh")} />
             </div>
             <div>
-              <label className={labelCls}>Qualidade</label>
+              <label className={labelCls}>{t("fr.quality")}</label>
               <select value={quality} onChange={(e) => setQuality(e.target.value)} className={inputCls}>
-                <option value="">Comum</option>
+                <option value="">{t("fr.quality.common")}</option>
                 {QUALITIES.slice(1).map((q) => (
                   <option key={q} value={q}>
-                    {QUALITY_LABEL[q] ?? q.charAt(0).toUpperCase() + q.slice(1)}
+                    {cap(t(`fr.quality.${q}`))}
                   </option>
                 ))}
               </select>
@@ -352,12 +339,12 @@ export default function ItemForm({ initial, tableId, tables, defaultLocationId }
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className={labelCls}>Condição</label>
+              <label className={labelCls}>{t("fr.condition")}</label>
               <select value={condition} onChange={(e) => setCondition(e.target.value)} className={inputCls}>
-                <option value="">Intacto</option>
+                <option value="">{t("fr.condition.intact")}</option>
                 {CONDITIONS.slice(1).map((c) => (
                   <option key={c} value={c}>
-                    {c.charAt(0).toUpperCase() + c.slice(1)}
+                    {cap(t(`fr.condition.${c}`))}
                   </option>
                 ))}
               </select>
@@ -366,26 +353,26 @@ export default function ItemForm({ initial, tableId, tables, defaultLocationId }
 
           {isWeaponish(kind) ? (
             <div className="space-y-4 border border-zinc-700/40 rounded-xl p-4 bg-zinc-800/30">
-              <h3 className="text-sm font-semibold text-zinc-300 uppercase tracking-wider">Arma / Escudo</h3>
+              <h3 className="text-sm font-semibold text-zinc-300 uppercase tracking-wider">{t("fr.item.weaponShield")}</h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
-                  <label className={labelCls}>Habilidade</label>
-                  <input value={weaponSkill} onChange={(e) => setWeaponSkill(e.target.value)} className={inputCls} placeholder="ex: Sword" />
+                  <label className={labelCls}>{t("fr.item.skill")}</label>
+                  <input value={weaponSkill} onChange={(e) => setWeaponSkill(e.target.value)} className={inputCls} placeholder={t("fr.item.skillPh")} />
                 </div>
                 <div>
-                  <label className={labelCls}>ST mín.</label>
+                  <label className={labelCls}>{t("fr.item.minSt")}</label>
                   <input type="number" value={minSt} onChange={(e) => setMinSt(e.target.value)} className={inputCls} />
                 </div>
                 <div>
-                  <label className={labelCls}>ST poderosa</label>
+                  <label className={labelCls}>{t("fr.item.ratedSt")}</label>
                   <input type="number" value={ratedSt} onChange={(e) => setRatedSt(e.target.value)} className={inputCls} />
                 </div>
                 <div>
-                  <label className={labelCls}>Empunhadura</label>
+                  <label className={labelCls}>{t("fr.item.grip")}</label>
                   <select value={handedness} onChange={(e) => setHandedness(Number(e.target.value))} className={inputCls}>
                     {HANDEDNESS.map((h) => (
                       <option key={h.value} value={h.value}>
-                        {h.label}
+                        {t(h.label)}
                       </option>
                     ))}
                   </select>
@@ -393,22 +380,22 @@ export default function ItemForm({ initial, tableId, tables, defaultLocationId }
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
-                  <label className={labelCls}>Alcance</label>
-                  <input value={reach} onChange={(e) => setReach(e.target.value)} className={inputCls} placeholder="C, 1, 2" />
+                  <label className={labelCls}>{t("fr.reach")}</label>
+                  <input value={reach} onChange={(e) => setReach(e.target.value)} className={inputCls} placeholder={t("fr.reachPh")} />
                 </div>
                 <div>
-                  <label className={labelCls}>Parry</label>
-                  <input value={parry} onChange={(e) => setParry(e.target.value)} className={inputCls} placeholder="ex: 9U" />
+                  <label className={labelCls}>{t("fr.item.parry")}</label>
+                  <input value={parry} onChange={(e) => setParry(e.target.value)} className={inputCls} placeholder={t("fr.item.parryPh")} />
                 </div>
                 <div>
-                  <label className={labelCls}>Block</label>
-                  <input value={block} onChange={(e) => setBlock(e.target.value)} className={inputCls} placeholder="ex: 9" />
+                  <label className={labelCls}>{t("fr.item.block")}</label>
+                  <input value={block} onChange={(e) => setBlock(e.target.value)} className={inputCls} placeholder={t("fr.item.blockPh")} />
                 </div>
                 <div>
-                  <label className={labelCls}>Ajuste</label>
+                  <label className={labelCls}>{t("fr.fit")}</label>
                   <select value={weaponFit} onChange={(e) => setWeaponFit(e.target.value)} className={inputCls}>
                     {FIT_OPTIONS.map((o) => (
-                      <option key={o.value} value={o.value}>{o.label}</option>
+                      <option key={o.value} value={o.value}>{t(o.label)}</option>
                     ))}
                   </select>
                 </div>
@@ -416,39 +403,39 @@ export default function ItemForm({ initial, tableId, tables, defaultLocationId }
 
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <label className={labelCls}>Ataques</label>
+                  <label className={labelCls}>{t("fr.attacks")}</label>
                   <button type="button" onClick={addAttack} className="bg-green-900/60 hover:bg-green-800 text-white text-sm font-medium px-3 py-1.5 rounded-lg transition-colors">
-                    + Ataque
+                    {t("fr.addAttack")}
                   </button>
                 </div>
                 {attacks.map((atk, index) => (
                   <div key={index} className="border border-zinc-700/40 rounded-lg p-3 mb-3 bg-zinc-800/40">
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                       <div>
-                        <label className="text-[10px] text-zinc-500 uppercase block mb-0.5">Nome</label>
+                        <label className="text-[10px] text-zinc-500 uppercase block mb-0.5">{t("fr.name")}</label>
                         <input value={atk.name || ""} onChange={(e) => setAttackField(index, { name: e.target.value })} className={inputCls} />
                       </div>
                       <div>
-                        <label className="text-[10px] text-zinc-500 uppercase block mb-0.5">Uso</label>
-                        <input value={atk.usage || ""} onChange={(e) => setAttackField(index, { usage: e.target.value })} className={inputCls} placeholder="ex: Bash" />
+                        <label className="text-[10px] text-zinc-500 uppercase block mb-0.5">{t("fr.atk.usage")}</label>
+                        <input value={atk.usage || ""} onChange={(e) => setAttackField(index, { usage: e.target.value })} className={inputCls} placeholder={t("fr.atk.usagePh")} />
                       </div>
                       <div>
-                        <label className="text-[10px] text-zinc-500 uppercase block mb-0.5">Fonte de dano</label>
+                        <label className="text-[10px] text-zinc-500 uppercase block mb-0.5">{t("fr.atk.dmgSource")}</label>
                         <select
                           value={atk.damage_source}
                           onChange={(e) => setAttackField(index, { damage_source: e.target.value as WeaponAttack["damage_source"] })}
                           className={inputCls}
                         >
-                          {Object.entries(DAMAGE_SOURCE_LABELS).map(([v, l]) => (
-                            <option key={v} value={v}>{l}</option>
+                          {Object.entries(DAMAGE_SOURCE_KEYS).map(([v, l]) => (
+                            <option key={v} value={v}>{t(l)}</option>
                           ))}
                         </select>
                       </div>
                       <div>
-                        <label className="text-[10px] text-zinc-500 uppercase block mb-0.5">Tipo</label>
+                        <label className="text-[10px] text-zinc-500 uppercase block mb-0.5">{t("fr.type")}</label>
                         <select value={atk.damage_type} onChange={(e) => setAttackField(index, { damage_type: e.target.value as WeaponAttack["damage_type"] })} className={inputCls}>
-                          {DAMAGE_TYPES.map((t) => (
-                            <option key={t.value} value={t.value}>{t.label}</option>
+                          {Object.entries(DAMAGE_TYPES).map(([v, l]) => (
+                            <option key={v} value={v}>{t(l)}</option>
                           ))}
                         </select>
                       </div>
@@ -456,29 +443,29 @@ export default function ItemForm({ initial, tableId, tables, defaultLocationId }
 
                     <div className="grid grid-cols-2 md:grid-cols-6 gap-3 mt-3">
                       <div>
-                        <label className="text-[10px] text-zinc-500 uppercase block mb-0.5">Modificador</label>
+                        <label className="text-[10px] text-zinc-500 uppercase block mb-0.5">{t("fr.atk.modifier")}</label>
                         <input type="number" value={atk.damage_modifier ?? 0} onChange={(e) => setAttackField(index, { damage_modifier: Number(e.target.value) })} className={inputCls} />
                       </div>
                       {atk.damage_source === "fixed" ? (
                         <div className="md:col-span-2">
-                          <label className="text-[10px] text-zinc-500 uppercase block mb-0.5">Dados fixos</label>
-                          <input value={atk.damage_dice || ""} onChange={(e) => setAttackField(index, { damage_dice: e.target.value })} className={inputCls} placeholder="ex: 2d+1" />
+                          <label className="text-[10px] text-zinc-500 uppercase block mb-0.5">{t("fr.atk.fixedDice")}</label>
+                          <input value={atk.damage_dice || ""} onChange={(e) => setAttackField(index, { damage_dice: e.target.value })} className={inputCls} placeholder={t("fr.atk.fixedDicePh")} />
                         </div>
                       ) : null}
                       <div>
-                        <label className="text-[10px] text-zinc-500 uppercase block mb-0.5">Pene. (AP)</label>
+                        <label className="text-[10px] text-zinc-500 uppercase block mb-0.5">{t("fr.atk.ap")}</label>
                         <input type="number" value={atk.armor_penetration ?? 0} onChange={(e) => setAttackField(index, { armor_penetration: Number(e.target.value) })} className={inputCls} />
                       </div>
                       <div>
-                        <label className="text-[10px] text-zinc-500 uppercase block mb-0.5">Acerto (Acc)</label>
+                        <label className="text-[10px] text-zinc-500 uppercase block mb-0.5">{t("fr.atk.acc")}</label>
                         <input type="number" value={atk.accuracy ?? ""} onChange={(e) => setAttackField(index, { accuracy: e.target.value === "" ? null : Number(e.target.value) })} className={inputCls} />
                       </div>
                       <div>
-                        <label className="text-[10px] text-zinc-500 uppercase block mb-0.5">Alcance</label>
-                        <input value={atk.range || ""} onChange={(e) => setAttackField(index, { range: e.target.value })} className={inputCls} placeholder="C, 1, 10/20" />
+                        <label className="text-[10px] text-zinc-500 uppercase block mb-0.5">{t("fr.reach")}</label>
+                        <input value={atk.range || ""} onChange={(e) => setAttackField(index, { range: e.target.value })} className={inputCls} placeholder={t("fr.reachPhFar")} />
                       </div>
                       <div>
-                        <label className="text-[10px] text-zinc-500 uppercase block mb-0.5">Tiros (Rcl)</label>
+                        <label className="text-[10px] text-zinc-500 uppercase block mb-0.5">{t("fr.atk.shots")}</label>
                         <input type="number" value={atk.recoil ?? ""} onChange={(e) => setAttackField(index, { recoil: e.target.value === "" ? null : Number(e.target.value) })} className={inputCls} />
                       </div>
                     </div>
@@ -490,29 +477,29 @@ export default function ItemForm({ initial, tableId, tables, defaultLocationId }
 
           {isArmorish(kind) ? (
             <div className="space-y-4 border border-zinc-700/40 rounded-xl p-4 bg-zinc-800/30">
-              <h3 className="text-sm font-semibold text-zinc-300 uppercase tracking-wider">Armadura</h3>
+              <h3 className="text-sm font-semibold text-zinc-300 uppercase tracking-wider">{t("fr.item.armor")}</h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
                   <label className={labelCls}>DR</label>
-                  <input type="number" value={dr} onChange={(e) => setDr(e.target.value)} className={inputCls} placeholder="ex: 4" />
+                  <input type="number" value={dr} onChange={(e) => setDr(e.target.value)} className={inputCls} placeholder={t("fr.item.drPh")} />
                 </div>
                 <div>
-                  <label className={labelCls}>Flexível</label>
+                  <label className={labelCls}>{t("fr.flexible")}</label>
                   <select value={flex ? "1" : "0"} onChange={(e) => setFlex(e.target.value === "1")} className={inputCls}>
-                    <option value="1">Sim</option>
-                    <option value="0">Não</option>
+                    <option value="1">{t("fr.yes")}</option>
+                    <option value="0">{t("fr.no")}</option>
                   </select>
                 </div>
                 <div>
-                  <label className={labelCls}>Locais</label>
+                  <label className={labelCls}>{t("fr.locations")}</label>
                   <input value={locations} onChange={(e) => setLocations(e.target.value)} className={inputCls} placeholder="torso" />
                 </div>
                 <div>
-                  <label className={labelCls}>Ajuste</label>
+                  <label className={labelCls}>{t("fr.fit")}</label>
                   <select value={armorFit} onChange={(e) => setArmorFit(e.target.value)} className={inputCls}>
-                    <option value="normal">Normal</option>
-                    <option value="tight">Justa</option>
-                    <option value="loose">Folgada</option>
+                    <option value="normal">{t("fit.normal")}</option>
+                    <option value="tight">{t("fr.armorFit.tight")}</option>
+                    <option value="loose">{t("fit.loose")}</option>
                   </select>
                 </div>
               </div>
@@ -520,7 +507,7 @@ export default function ItemForm({ initial, tableId, tables, defaultLocationId }
           ) : null}
 
           <div>
-            <label className={labelCls}>Descrição</label>
+            <label className={labelCls}>{t("fr.description")}</label>
             <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} className={inputCls} />
           </div>
 
@@ -528,10 +515,10 @@ export default function ItemForm({ initial, tableId, tables, defaultLocationId }
 
           <div className="flex items-center gap-3 pt-2">
             <button type="submit" disabled={saving} className={`${submitCls} disabled:opacity-50`}>
-              {saving ? "Salvando..." : isEdit ? "Salvar Alterações" : "Criar Item"}
+              {saving ? t("fr.saving") : isEdit ? t("fr.saveChanges") : t("fr.item.create")}
             </button>
             <a href={currentTableId ? `/table/${currentTableId}/items` : "/narrator"} className={cancelCls}>
-              Cancelar
+              {t("fr.cancel")}
             </a>
           </div>
         </form>

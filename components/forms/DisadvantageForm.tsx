@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { submitJson } from "./submit";
 import { cancelCls, inputCls, labelCls, submitCls } from "./formStyles";
+import { useTranslation } from "@/lib/i18n";
 import type { Disadvantage } from "@/lib/types";
 
 export interface DisadvantageFormProps {
@@ -14,6 +15,7 @@ export interface DisadvantageFormProps {
 
 export default function DisadvantageForm({ tableId, tables, initial }: DisadvantageFormProps) {
   const router = useRouter();
+  const { t } = useTranslation();
   const isEdit = !!initial;
 
   const [currentTableId, setCurrentTableId] = useState(tableId ?? initial?.table_id ?? "");
@@ -30,7 +32,7 @@ export default function DisadvantageForm({ tableId, tables, initial }: Disadvant
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!currentTableId) {
-      setError("Selecione a mesa.");
+      setError(t("fr.error.selectTable"));
       return;
     }
     setSaving(true);
@@ -56,7 +58,7 @@ export default function DisadvantageForm({ tableId, tables, initial }: Disadvant
       router.push(`/table/${currentTableId}/disadvantages`);
       router.refresh();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Falha ao salvar a desvantagem.");
+      setError(err instanceof Error ? err.message : t("fr.err.disadvantage"));
       setSaving(false);
     }
   }
@@ -65,13 +67,13 @@ export default function DisadvantageForm({ tableId, tables, initial }: Disadvant
     <div className="max-w-2xl mx-auto p-6">
       <div className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-6">
         <h1 className="text-2xl font-bold text-green-100 mb-6">
-          {isEdit ? "Editar Desvantagem" : "Nova Desvantagem"}
+          {isEdit ? t("fr.dis.editTitle") : t("fr.dis.newTitle")}
         </h1>
 
         <form onSubmit={handleSubmit} className="space-y-5">
           {!isEdit && !tableId ? (
             <div>
-              <label className={labelCls}>Mesa</label>
+              <label className={labelCls}>{t("fr.table")}</label>
               <select
                 value={currentTableId}
                 onChange={(e) => setCurrentTableId(e.target.value)}
@@ -79,7 +81,7 @@ export default function DisadvantageForm({ tableId, tables, initial }: Disadvant
                 className={inputCls}
               >
                 <option value="" disabled>
-                  Selecione a mesa
+                  {t("fr.pickTable")}
                 </option>
                 {(tables ?? []).map((t) => (
                   <option key={t.id} value={t.id}>
@@ -92,11 +94,11 @@ export default function DisadvantageForm({ tableId, tables, initial }: Disadvant
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className={labelCls}>Nome</label>
+              <label className={labelCls}>{t("fr.name")}</label>
               <input value={name} onChange={(e) => setName(e.target.value)} required className={inputCls} />
             </div>
             <div>
-              <label className={labelCls}>Custo (pontos)</label>
+              <label className={labelCls}>{t("fr.costPoints")}</label>
               <input
                 type="number"
                 value={costPoints}
@@ -108,37 +110,37 @@ export default function DisadvantageForm({ tableId, tables, initial }: Disadvant
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className={labelCls}>Categoria</label>
+              <label className={labelCls}>{t("fr.category")}</label>
               <input
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                placeholder="ex: Física, Mental, Social"
+                placeholder={t("fr.dis.categoryPh")}
                 className={inputCls}
               />
             </div>
             <div>
-              <label className={labelCls}>Subcategoria</label>
+              <label className={labelCls}>{t("fr.subcategory")}</label>
               <input
                 value={subcategory}
                 onChange={(e) => setSubcategory(e.target.value)}
-                placeholder="ex: Autocontrole"
+                placeholder={t("fr.dis.subcategoryPh")}
                 className={inputCls}
               />
             </div>
           </div>
 
           <div>
-            <label className={labelCls}>Efeito</label>
+            <label className={labelCls}>{t("fr.effect")}</label>
             <input
               value={effect}
               onChange={(e) => setEffect(e.target.value)}
-              placeholder="ex: -2 em testes de Vontade"
+              placeholder={t("fr.dis.effectPh")}
               className={inputCls}
             />
           </div>
 
           <div>
-            <label className={labelCls}>Descrição</label>
+            <label className={labelCls}>{t("fr.description")}</label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -151,10 +153,10 @@ export default function DisadvantageForm({ tableId, tables, initial }: Disadvant
 
           <div className="flex items-center gap-3 pt-2">
             <button type="submit" disabled={saving} className={`${submitCls} disabled:opacity-50`}>
-              {saving ? "Salvando..." : isEdit ? "Salvar Alterações" : "Criar Desvantagem"}
+              {saving ? t("fr.saving") : isEdit ? t("fr.saveChanges") : t("fr.dis.create")}
             </button>
             <a href={currentTableId ? `/table/${currentTableId}/disadvantages` : "/narrator"} className={cancelCls}>
-              Cancelar
+              {t("fr.cancel")}
             </a>
           </div>
         </form>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { interpolate, useTranslation } from "@/lib/i18n";
 
 const TARGET = 12;
 
@@ -10,16 +11,19 @@ type Judgment = {
   text: string;
 };
 
-function judge(sum: number): Judgment {
-  if (sum <= 4) return { crit: true, success: true, text: "Sucesso crítico!" };
-  if (sum >= 18) return { crit: true, success: false, text: "Falha crítica." };
+type TFn = (key: string) => string;
+
+function judge(sum: number, t: TFn): Judgment {
+  if (sum <= 4) return { crit: true, success: true, text: t("ss.judge.critSuccessEx") };
+  if (sum >= 18) return { crit: true, success: false, text: t("ss.judge.critFailDot") };
   const margin = TARGET - sum;
   return margin >= 0
-    ? { crit: false, success: true, text: `Sucesso por ${margin}.` }
-    : { crit: false, success: false, text: `Falha por ${-margin}.` };
+    ? { crit: false, success: true, text: interpolate(t("ss.judge.successByDot"), { n: margin }) }
+    : { crit: false, success: false, text: interpolate(t("ss.judge.failByDot"), { n: -margin }) };
 }
 
 export default function DiceRoller() {
+  const { t } = useTranslation();
   const [dice, setDice] = useState<[number, number, number] | null>(null);
   const [sum, setSum] = useState<number | null>(null);
   const [judgment, setJudgment] = useState<Judgment | null>(null);
@@ -35,7 +39,7 @@ export default function DiceRoller() {
     const total = d[0] + d[1] + d[2];
     setDice(d);
     setSum(total);
-    setJudgment(judge(total));
+    setJudgment(judge(total, t));
     setRollId((id) => id + 1);
     setHistory((h) => [...h, total]);
   }
@@ -56,10 +60,10 @@ export default function DiceRoller() {
     <div className="flex h-full flex-col border-2 border-ink/80 bg-paper-dim/50 p-5">
       <div className="flex items-baseline justify-between gap-3">
         <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-pencil">
-          Teste contra {TARGET}-
+          {interpolate(t("ss.roller.title"), { n: TARGET })}
         </p>
         <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-pencil">
-          role baixo
+          {t("ss.roller.lowRoll")}
         </p>
       </div>
 
@@ -90,7 +94,7 @@ export default function DiceRoller() {
               <span className="uppercase">{judgment.text}</span>
             </>
           ) : (
-            <span className="text-pencil">role 3d6 e obtenha {TARGET} ou menos</span>
+            <span className="text-pencil">{interpolate(t("ss.roller.hint"), { n: TARGET })}</span>
           )}
         </p>
       </div>
@@ -100,8 +104,8 @@ export default function DiceRoller() {
         role="img"
         aria-label={
           history.length > 0
-            ? `Distribuição de ${history.length} rolagens, de 3 a 18`
-            : "Distribuição vazia de rolagens"
+            ? interpolate(t("ss.roller.ariaFilled"), { n: history.length })
+            : t("ss.roller.ariaEmpty")
         }
       >
         {Array.from({ length: 16 }, (_, i) => {
@@ -126,7 +130,11 @@ export default function DiceRoller() {
       </div>
       <div className="mt-1.5 flex justify-between font-mono text-[10px] uppercase tracking-[0.18em] text-pencil">
         <span>3</span>
-        <span>{history.length === 0 ? "a curva aparece à medida que você rola" : `${history.length} rolagens`}</span>
+        <span>
+          {history.length === 0
+            ? t("ss.roller.curveHint")
+            : interpolate(t("ss.roller.rollsCount"), { n: history.length })}
+        </span>
         <span>18</span>
       </div>
 
@@ -136,7 +144,7 @@ export default function DiceRoller() {
           onClick={roll}
           className="stretch-form bg-ink px-6 py-2.5 text-sm font-bold uppercase tracking-wide text-paper transition-colors hover:bg-stamp"
         >
-          Rolar 3d6
+          {t("ss.roll3d6")}
         </button>
         {history.length > 0 && (
           <button
@@ -144,7 +152,7 @@ export default function DiceRoller() {
             onClick={reset}
             className="font-mono text-xs uppercase tracking-[0.14em] text-pencil underline underline-offset-4 hover:text-stamp"
           >
-            Limpar
+            {t("ss.roller.clear")}
           </button>
         )}
       </div>

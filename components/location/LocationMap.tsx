@@ -22,6 +22,7 @@ import {
   type GridSpec,
 } from "@/lib/canvasgrid";
 import ZoomControls from "@/components/map/ZoomControls";
+import { interpolate, useTranslation } from "@/lib/i18n";
 import type { DrawShape, HexTile } from "@/lib/types";
 
 interface MapHex {
@@ -49,6 +50,7 @@ export default function LocationMap({
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [zoom, setZoom] = useState(1);
+  const { t } = useTranslation();
 
   const plate: CanvasPlate = useMemo(() => plateCanvas(hex ?? {}, 26, 34, 320, 240), [hex]);
   const spec: GridSpec = useMemo(() => ({ ...plate.spec, rotationDeg: hex?.rotationDeg ?? 0 }), [plate, hex]);
@@ -81,7 +83,7 @@ export default function LocationMap({
     <div>
       <div className="flex items-center gap-2.5 pb-1.5 mb-4 border-b border-zinc-700/60">
         <span aria-hidden className="font-mono text-base leading-none" style={{ color: accent }}>▦</span>
-        <span className="font-mono text-[13px] font-bold uppercase tracking-wider text-zinc-300">Mapa do local</span>
+        <span className="font-mono text-[13px] font-bold uppercase tracking-wider text-zinc-300">{t("lc.lmap.title")}</span>
         <span className="flex-1 h-px" style={{ background: `linear-gradient(90deg, ${accent}55, transparent)` }} />
       </div>
 
@@ -92,7 +94,7 @@ export default function LocationMap({
           height={H}
           className="block mx-auto"
           role="img"
-          aria-label="Grade tática do local"
+          aria-label={t("lc.lmap.aria")}
           style={{
             width: `${Math.round(W * zoom)}px`,
             height: `${Math.round(H * zoom)}px`,
@@ -104,29 +106,29 @@ export default function LocationMap({
       <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-2 font-mono text-[10px] uppercase tracking-widest text-zinc-500">
         {footprint ? (
           <span className="flex items-center justify-between gap-2 border border-zinc-700/40 rounded px-2 py-1.5">
-            <span>Área</span>
+            <span>{t("lc.common.area")}</span>
             <b className="font-semibold text-zinc-300">{footprint}</b>
           </span>
         ) : null}
         <span className="flex items-center justify-between gap-2 border border-zinc-700/40 rounded px-2 py-1.5">
-          <span>Escala</span>
+          <span>{t("lc.common.scale")}</span>
           <b className="font-semibold text-zinc-300">{formatHexScale(hex?.sizeM)}</b>
         </span>
         <span className="flex items-center justify-between gap-2 border border-zinc-700/40 rounded px-2 py-1.5">
-          <span>Grade</span>
+          <span>{t("lc.common.grid")}</span>
           <b className="font-semibold text-zinc-300">{spec.orientation}</b>
         </span>
         <span className="flex items-center justify-between gap-2 border border-zinc-700/40 rounded px-2 py-1.5">
-          <span>Rotação</span>
+          <span>{t("lc.common.rotation")}</span>
           <b className="font-semibold text-zinc-300">{spec.rotationDeg}°</b>
         </span>
       </div>
 
       {drawing.length > 0 || tiles.length > 0 ? (
         <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[10px] uppercase tracking-widest text-zinc-600">
-          <span>{drawing.length} traço{drawing.length === 1 ? "" : "s"}</span>
+          <span>{interpolate(t(drawing.length === 1 ? "lc.lmap.strokes1" : "lc.lmap.strokesN"), { n: drawing.length })}</span>
           <span aria-hidden>·</span>
-          <span>{tiles.length} célula{tiles.length === 1 ? " pintada" : "s pintadas"}</span>
+          <span>{interpolate(t(tiles.length === 1 ? "lc.lmap.tiles1" : "lc.lmap.tilesN"), { n: tiles.length })}</span>
         </div>
       ) : null}
     </div>

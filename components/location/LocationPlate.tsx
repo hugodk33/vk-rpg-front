@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { absoluteHex } from "@/lib/location";
+import { interpolate, useTranslation } from "@/lib/i18n";
 import type { DrawShape, HexTile } from "@/lib/types";
 import { submitJson } from "@/components/forms/submit";
 import LocationVisibility from "@/components/location/LocationVisibility";
@@ -72,11 +73,11 @@ interface Loc {
    the location justifies them: Map (a local tactical grid) and Shop
    (a named place of commerce, with its staff and stock). */
 const PLATE_TABS = [
-  { key: "survey", label: "Levantamento" },
-  { key: "knowledge", label: "Conhecimento" },
-  { key: "conditions", label: "Condições de campo" },
-  { key: "map", label: "Mapa" },
-  { key: "shop", label: "Loja" },
+  { key: "survey", label: "lc.lp.tabSurvey" },
+  { key: "knowledge", label: "lc.lp.tabKnowledge" },
+  { key: "conditions", label: "lc.lp.tabConditions" },
+  { key: "map", label: "lc.lmap.title" },
+  { key: "shop", label: "lc.shop.title" },
 ] as const;
 
 type PlateView = (typeof PLATE_TABS)[number]["key"];
@@ -126,13 +127,11 @@ const INDOOR = {
   hex: "#f59e0b",
   sky: ["#241d17", "#17130f"],
   line: "#fbbf24",
-  label: "Interior",
 };
 const EXTERIOR = {
   hex: "#38bdf8",
   sky: ["#0c1220", "#1e293b"],
   line: "#7dd3fc",
-  label: "Exterior",
 };
 /* Narrator trail glows green (the GM palette used across the master
    flow); the player trail keeps the surveyor amber/sky chroma. */
@@ -140,13 +139,11 @@ const NARR_INDOOR = {
   hex: "#4ade80",
   sky: ["#131a10", "#0d120c"],
   line: "#86efac",
-  label: "Interior",
 };
 const NARR_EXTERIOR = {
   hex: "#4ade80",
   sky: ["#0b1511", "#101f18"],
   line: "#86efac",
-  label: "Exterior",
 };
 
 function SiteCrest({ indoor, hex, line }: { indoor: boolean; hex: string; line: string }) {
@@ -201,13 +198,14 @@ function SurveyRow({ label, value, emphasize, hex }: { label: string; value?: st
 }
 
 function TerritoryCrumbs({ chain, accent, mode, hoverCls }: { chain: Loc[]; accent: string; mode: "narrator" | "player"; hoverCls: string }) {
+  const { t } = useTranslation();
   if (chain.length <= 1) return null;
   const hrefOf = (id?: string) => (mode === "player" ? `/player` : `/location/${id}`);
   return (
-    <nav aria-label="Cadeia de território" className="exhibit-reveal flex items-center flex-wrap gap-1.5">
+    <nav aria-label={t("lc.lp.ariaChain")} className="exhibit-reveal flex items-center flex-wrap gap-1.5">
       {chain.map((loc, i) => {
         const isSelf = i === chain.length - 1;
-        const label = KIND_LABELS[loc.kind ?? "site"] ?? loc.kind ?? "Local";
+        const label = KIND_LABELS[loc.kind ?? "site"] ?? loc.kind ?? t("lc.editor.localWord");
         return (
           <span key={loc.id ?? i} className="flex items-center gap-1.5">
             {isSelf ? (
@@ -235,6 +233,7 @@ function TerritoryCrumbs({ chain, accent, mode, hoverCls }: { chain: Loc[]; acce
 }
 
 export default function LocationPlate({ location, tableId, mode = "narrator" }: { location: Loc; tableId?: string; mode?: "narrator" | "player" }) {
+  const { t } = useTranslation();
   const router = useRouter();
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -245,6 +244,7 @@ export default function LocationPlate({ location, tableId, mode = "narrator" }: 
     ? indoor ? INDOOR : EXTERIOR
     : indoor ? NARR_INDOOR : NARR_EXTERIOR;
   const accent = env.hex;
+  const envLabel = indoor ? t("lc.lp.indoor") : t("lc.lp.exterior");
   const chromeHover = isPlayer ? "hover:text-amber-400" : "hover:text-green-400";
   const titleCls = isPlayer ? "text-amber-100" : "text-green-100";
   const hex = location.hex;
@@ -257,13 +257,14 @@ export default function LocationPlate({ location, tableId, mode = "narrator" }: 
   const baseTableId = tableId ?? location.tableId ?? location.table_id;
   const isShop = !!(location.shopName ?? location.shop_name);
   const showSurvey = view === "survey";
-  const tabs = PLATE_TABS.filter((t) => {
-    if (t.key === "survey") return true;
-    if (t.key === "knowledge" || t.key === "conditions") return !isPlayer;
-    if (t.key === "map") return isBattlemap;
-    if (t.key === "shop") return isShop;
+  const tabs = PLATE_TABS.filter((tab) => {
+    if (tab.key === "survey") return true;
+    if (tab.key === "knowledge" || tab.key === "conditions") return !isPlayer;
+    if (tab.key === "map") return isBattlemap;
+    if (tab.key === "shop") return isShop;
     return false;
   });
+  const activeTabLabel = tabs.find((tab) => tab.key === view)?.label ?? "lc.lp.tabSurvey";
   const locationHref = (id: string) => (isPlayer ? `/player` : `/location/${id}`);
   const backHref = isPlayer
     ? `/player`
@@ -279,7 +280,7 @@ export default function LocationPlate({ location, tableId, mode = "narrator" }: 
               href={backHref}
               className={`inline-flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-widest text-zinc-500 ${chromeHover} transition-colors`}
             >
-              <span aria-hidden>←</span> Voltar aos locais
+              <span aria-hidden>←</span> {t("lc.lp.backToLocations")}
             </Link>
           ) : (
             <span />
@@ -287,26 +288,26 @@ export default function LocationPlate({ location, tableId, mode = "narrator" }: 
           <div className="flex items-center gap-3 text-[10px] font-mono uppercase tracking-widest text-zinc-500">
             {location.table_title ? <span className="hidden sm:inline">{location.table_title}</span> : null}
             <span className="hidden sm:inline text-zinc-700">/</span>
-            <span>{tabs.find((t) => t.key === view)?.label ?? "Levantamento"}</span>
+            <span>{t(activeTabLabel)}</span>
           </div>
         </div>
 
         {/* in-plate views */}
         {tabs.length > 1 ? (
-          <div role="tablist" aria-label="Visões do levante" className="mt-4 flex items-center gap-1 border-b border-zinc-700/40 px-6 lg:px-8">
-            {tabs.map((t) => (
+          <div role="tablist" aria-label={t("lc.lp.ariaViews")} className="mt-4 flex items-center gap-1 border-b border-zinc-700/40 px-6 lg:px-8">
+            {tabs.map((tab) => (
               <button
-                key={t.key}
+                key={tab.key}
                 role="tab"
                 type="button"
-                aria-selected={view === t.key}
-                onClick={() => setView(t.key)}
+                aria-selected={view === tab.key}
+                onClick={() => setView(tab.key)}
                 className={`relative px-3 py-2 font-mono text-[10px] uppercase tracking-widest transition-colors focus:outline-none focus-visible:ring-2 rounded-md ${isPlayer ? "focus-visible:ring-amber-800/60" : "focus-visible:ring-green-800/60"} ${
-                  view === t.key ? "text-zinc-100" : "text-zinc-500 hover:text-zinc-300"
+                  view === tab.key ? "text-zinc-100" : "text-zinc-500 hover:text-zinc-300"
                 }`}
               >
-                {t.label}
-                {view === t.key ? (
+                {t(tab.label)}
+                {view === tab.key ? (
                   <span aria-hidden className="absolute inset-x-2 bottom-0 h-0.5 rounded-full" style={{ background: accent }} />
                 ) : null}
               </button>
@@ -326,7 +327,7 @@ export default function LocationPlate({ location, tableId, mode = "narrator" }: 
                   href={`/location/${location.id}/edit`}
                   className={`font-mono text-[10px] tracking-widest uppercase text-zinc-500 ${chromeHover} transition-colors`}
                 >
-                  Editar
+                  {t("lc.common.edit")}
                 </Link>
               ) : null}
               {baseTableId && location.id && !isPlayer ? (
@@ -334,23 +335,23 @@ export default function LocationPlate({ location, tableId, mode = "narrator" }: 
                   href={`/table/${baseTableId}/locations/new?parent_id=${location.id}`}
                   className={`font-mono text-[10px] tracking-widest uppercase ${isPlayer ? "text-amber-500/80 hover:text-amber-400" : "text-green-400/80 hover:text-green-300"} transition-colors`}
                 >
-                  ✦ Subdivisão
+                  {t("lc.lp.subdivision")}
                 </Link>
               ) : null}
               {location.id && !isPlayer ? (
                 children.length > 0 ? (
                   <span
-                    title="Esta divisão contém subdivisões — remova-as primeiro."
+                    title={t("lc.lp.hasSubdivisions")}
                     className="font-mono text-[10px] tracking-widest uppercase text-zinc-700 cursor-not-allowed"
                   >
-                    ✕ Remover
+                    {t("lc.lp.remove")}
                   </span>
                 ) : (
                   <button
                     type="button"
                     disabled={deleting}
                     onClick={async () => {
-                      if (!window.confirm(`Remover "${location.name}" do território?`)) return;
+                      if (!window.confirm(interpolate(t("lc.lp.confirmRemove"), { name: location.name ?? "" }))) return;
                       setDeleting(true);
                       setDeleteError(null);
                       try {
@@ -358,13 +359,13 @@ export default function LocationPlate({ location, tableId, mode = "narrator" }: 
                         router.push(baseTableId ? `/table/${baseTableId}/locations` : "/narrator");
                         router.refresh();
                       } catch (err: unknown) {
-                        setDeleteError(err instanceof Error ? err.message : "Falha ao remover.");
+                        setDeleteError(err instanceof Error ? err.message : t("lc.lp.errRemove"));
                         setDeleting(false);
                       }
                     }}
                     className="font-mono text-[10px] tracking-widest uppercase text-red-400/70 hover:text-red-400 disabled:opacity-50 transition-colors"
                   >
-                    ✕ Remover
+                    {t("lc.lp.remove")}
                   </button>
                 )
               ) : null}
@@ -399,11 +400,11 @@ export default function LocationPlate({ location, tableId, mode = "narrator" }: 
               <div className="inline-flex items-center gap-2 rounded-full px-2.5 py-1 border bg-black/30"
                 style={{ borderColor: `${accent}55` }}>
                 <span className="w-1.5 h-1.5 rounded-full" style={{ background: accent, boxShadow: `0 0 6px ${accent}` }} />
-                <span className="font-mono text-[10px] tracking-widest uppercase" style={{ color: accent }}>{env.label}</span>
+                <span className="font-mono text-[10px] tracking-widest uppercase" style={{ color: accent }}>{envLabel}</span>
               </div>
               <div className="mt-3">
-                <span className="font-mono text-[11px] tracking-widest uppercase text-zinc-400 block">Condições de campo</span>
-                <span className="text-[15px] text-zinc-200">{indoor ? "Fogo aceso · sombra quente" : "Céu aberto · à mercê do clima"}</span>
+                <span className="font-mono text-[11px] tracking-widest uppercase text-zinc-400 block">{t("lc.lp.conditions")}</span>
+                <span className="text-[15px] text-zinc-200">{indoor ? t("lc.lp.conditionIndoor") : t("lc.lp.conditionOutdoor")}</span>
               </div>
             </div>
             <SiteCrest indoor={indoor} hex={accent} line={accent} />
@@ -417,7 +418,7 @@ export default function LocationPlate({ location, tableId, mode = "narrator" }: 
               <div className="flex items-start gap-4 flex-wrap">
                 <div className="min-w-0 flex-1">
                   <h1 className={`text-[clamp(26px,5vw,40px)] leading-none font-bold tracking-tight ${titleCls}`}>
-                    {location.name || "Local não mapeado"}
+                    {location.name || t("lc.lp.unmappedName")}
                   </h1>
                   <div className="mt-2 flex items-center gap-2 flex-wrap">
                     <span className="font-mono text-[11px] tracking-widest uppercase text-zinc-500">
@@ -441,7 +442,7 @@ export default function LocationPlate({ location, tableId, mode = "narrator" }: 
                       className="font-mono text-[10px] tracking-widest uppercase rounded px-2 py-1 border"
                       style={{ color: accent, borderColor: `${accent}55`, background: `${accent}0d` }}
                     >
-                      Mapa de batalha
+                      {t("lc.lp.battlemap")}
                     </span>
                   ) : null}
                 </div>
@@ -450,12 +451,12 @@ export default function LocationPlate({ location, tableId, mode = "narrator" }: 
 
             {location.description ? (
               <Panel>
-                <SectionTitle icon="✎" tint={accent} label="Relato de campo" />
+                <SectionTitle icon="✎" tint={accent} label={t("lc.lp.fieldReport")} />
                 <div className="bg-zinc-800/40 rounded-lg border border-zinc-700/50 p-4">
                   <p className="text-[15px] leading-relaxed text-zinc-300 italic">{location.description}</p>
                   <div className="mt-3 flex items-center gap-2 font-mono text-[10px] text-zinc-600 uppercase tracking-widest">
                     <span className="w-1.5 h-1.5 rounded-full" style={{ background: accent }} />
-                    Registro de reconhecimento
+                    {t("lc.lp.reconLog")}
                   </div>
                 </div>
               </Panel>
@@ -463,14 +464,14 @@ export default function LocationPlate({ location, tableId, mode = "narrator" }: 
 
             {location.other ? (
               <Panel>
-                <SectionTitle icon="◐" tint={accent} label="Notas" />
+                <SectionTitle icon="◐" tint={accent} label={t("lc.lp.notes")} />
                 <p className="text-[15px] leading-relaxed text-zinc-400">{location.other}</p>
               </Panel>
             ) : null}
 
             {/* -------- TERRITORY (subdivisions as an SVG chart) -------- */}
             <Panel>
-              <SectionTitle icon="◫" tint={accent} label="Território" />
+              <SectionTitle icon="◫" tint={accent} label={t("lc.lp.territory")} />
               <RegionMap regions={children} accent={accent} hrefOf={locationHref} />
             </Panel>
           </div>
@@ -481,22 +482,22 @@ export default function LocationPlate({ location, tableId, mode = "narrator" }: 
               <Panel>
                 <div className="bg-zinc-800/40 rounded-lg border border-zinc-700/50 px-4 py-2.5">
                   <div className="flex items-center gap-2 border-b border-zinc-700/50 pb-2.5 mb-1">
-                    <span className="font-mono text-[10px] tracking-widest uppercase" style={{ color: accent }}>Levantamento</span>
+                    <span className="font-mono text-[10px] tracking-widest uppercase" style={{ color: accent }}>{t("lc.lp.tabSurvey")}</span>
                     <span aria-hidden className="flex-1 h-px" style={{ background: `linear-gradient(90deg, ${accent}44, transparent)` }} />
                   </div>
                     <div className="pt-1">
-                      <SurveyRow label="Tipo" value={kindLabel} hex={accent} />
-                      <SurveyRow label="Escala" value={formatScale(hex?.sizeM)} emphasize hex={accent} />
-                      <SurveyRow label="Área" value={hex?.width != null && hex?.height != null ? `${hex.width}×${hex.height} hex` : null} hex={accent} />
-                      <SurveyRow label="Q / R" value={hex?.centerQ != null && hex?.centerR != null ? `${hex.centerQ}, ${hex.centerR}` : null} hex={accent} />
+                      <SurveyRow label={t("lc.lp.kind")} value={kindLabel} hex={accent} />
+                      <SurveyRow label={t("lc.common.scale")} value={formatScale(hex?.sizeM)} emphasize hex={accent} />
+                      <SurveyRow label={t("lc.common.area")} value={hex?.width != null && hex?.height != null ? `${hex.width}×${hex.height} hex` : null} hex={accent} />
+                      <SurveyRow label={t("lc.lp.qr")} value={hex?.centerQ != null && hex?.centerR != null ? `${hex.centerQ}, ${hex.centerR}` : null} hex={accent} />
                       {chain.length > 1 ? (
-                        <SurveyRow label="Q/R absoluto" value={`${abs.q}, ${abs.r}`} hex={accent} />
+                        <SurveyRow label={t("lc.lp.qrAbs")} value={`${abs.q}, ${abs.r}`} hex={accent} />
                       ) : null}
-                      <SurveyRow label="Grade" value={hex?.orientation ?? "flat"} hex={accent} />
-                      <SurveyRow label="Região" value={location.region ?? location.subRegion} hex={accent} />
-                      <SurveyRow label="Tamanho" value={location.area} hex={accent} />
-                      <SurveyRow label="Dimensões" value={location.dimensions} hex={accent} />
-                      {location.address ? <SurveyRow label="Endereço" value={location.address} hex={accent} /> : null}
+                      <SurveyRow label={t("lc.common.grid")} value={hex?.orientation ?? "flat"} hex={accent} />
+                      <SurveyRow label={t("lc.lp.region")} value={location.region ?? location.subRegion} hex={accent} />
+                      <SurveyRow label={t("lc.lp.size")} value={location.area} hex={accent} />
+                      <SurveyRow label={t("lc.lp.dimensions")} value={location.dimensions} hex={accent} />
+                      {location.address ? <SurveyRow label={t("lc.lp.address")} value={location.address} hex={accent} /> : null}
                     </div>
                 </div>
               </Panel>
@@ -522,9 +523,9 @@ export default function LocationPlate({ location, tableId, mode = "narrator" }: 
           <div className="px-6 py-8 lg:px-8" role="tabpanel">
             <div className="flex items-center justify-between gap-3 mb-4">
               <div>
-                <h2 className="font-mono text-[13px] font-bold uppercase tracking-wider text-zinc-200">Placa tática</h2>
+                <h2 className="font-mono text-[13px] font-bold uppercase tracking-wider text-zinc-200">{t("lc.lp.tacticalPlate")}</h2>
                 <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-600 mt-0.5">
-                  {location.tiles?.length || 0} célula{location.tiles?.length === 1 ? " pintada" : "s pintadas"} · {location.drawing?.length || 0} traço{location.drawing?.length === 1 ? "" : "s"}
+                  {location.tiles?.length || 0} {(location.tiles?.length || 0) === 1 ? t("lc.lp.cellsOne") : t("lc.lp.cellsMany")} · {location.drawing?.length || 0} {(location.drawing?.length || 0) === 1 ? t("lc.lp.strokesOne") : t("lc.lp.strokesMany")}
                 </p>
               </div>
               {!isPlayer && location.id ? (
@@ -532,7 +533,7 @@ export default function LocationPlate({ location, tableId, mode = "narrator" }: 
                   href={`/location/${location.id}/edit?tab=map`}
                   className="inline-flex items-center gap-1.5 rounded-lg border border-green-600/60 bg-green-600/10 px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest text-green-300 transition-colors hover:bg-green-600/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-green-600/60"
                 >
-                  Editar mapa
+                  {t("lc.lp.editMap")}
                 </Link>
               ) : null}
             </div>

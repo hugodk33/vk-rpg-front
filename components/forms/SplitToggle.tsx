@@ -1,6 +1,9 @@
 "use client";
 
+import { useTranslation } from "@/lib/i18n";
+
 export default function SplitToggle({ active, onToggle }: { active: boolean; onToggle: () => void }) {
+  const { t } = useTranslation();
   return (
     <button
       type="button"
@@ -14,7 +17,7 @@ export default function SplitToggle({ active, onToggle }: { active: boolean; onT
       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
       </svg>
-      Dividir
+      {t("fr.split")}
     </button>
   );
 }

@@ -7,6 +7,7 @@ import type { GameTable, Location, Modifier, Narration, NarrationAction, Scene, 
 import { maskedLocationName, maskedTargetName } from "@/lib/visibility";
 import { narrationBoard } from "@/lib/board";
 import { useTableLive } from "@/lib/useTableLive";
+import { interpolate, useTranslation } from "@/lib/i18n";
 import TacticalPlate from "@/components/tactical/TacticalPlate";
 
 /* ============================================================
@@ -82,10 +83,11 @@ function locationPin(loc: Location | null, shownName?: string | null) {
 }
 
 function CastChips({ chars, npcs, moment, mask, viewerId }: { chars: { id: string; name: string }[]; npcs: { characterId: string; name: string; status: string }[]; moment?: number; mask: (id: string, real: string) => string; viewerId?: string }) {
+  const { t } = useTranslation();
   const players = chars.map((c) => ({
     id: c.id,
-    name: viewerId && c.id === viewerId ? c.name : mask(c.id, c.name || "Jogador"),
-    sub: "Jogador",
+    name: viewerId && c.id === viewerId ? c.name : mask(c.id, c.name || t("vs.tl.castPlayer")),
+    sub: t("vs.tl.castPlayer"),
     color: "#60a5fa",
   }));
   const npcList = npcs.map((n) => ({
@@ -117,7 +119,7 @@ function CastChips({ chars, npcs, moment, mask, viewerId }: { chars: { id: strin
 
 type StatChip = { label: string; hex: string; val: string };
 
-function modifierChips(m: Modifier | null): StatChip[] {
+function modifierChips(m: Modifier | null, t: (key: string) => string): StatChip[] {
   if (!m) return [];
   const chips: StatChip[] = [];
   const signed = (v: number) => `${v >= 0 ? "+" : ""}${v}`;
@@ -127,11 +129,11 @@ function modifierChips(m: Modifier | null): StatChip[] {
   if (m.mod_iq != null) chips.push({ label: "IQ", hex: "#60a5fa", val: signed(m.mod_iq) });
   if (m.mod_ht != null) chips.push({ label: "HT", hex: "#a78bfa", val: signed(m.mod_ht) });
   if (m.mod_fatigue != null) chips.push({ label: "FP", hex: "#38bdf8", val: signed(m.mod_fatigue) });
-  if (m.hp != null) chips.push({ label: "PV→", hex: "#f87171", val: String(m.hp) });
-  if (m.damage_value != null) chips.push({ label: "dano", hex: "#f87171", val: m.damage_value });
-  if (m.skill_value != null) chips.push({ label: "perícia", hex: "#fbbf24", val: m.skill_value });
-  if (m.item_quantity != null) chips.push({ label: "qtd", hex: "#fbbf24", val: String(m.item_quantity) });
-  if (m.item_weight != null) chips.push({ label: "peso", hex: "#fbbf24", val: String(m.item_weight) });
+  if (m.hp != null) chips.push({ label: t("vs.tl.chipHpTo"), hex: "#f87171", val: String(m.hp) });
+  if (m.damage_value != null) chips.push({ label: t("vs.tl.chipDamage"), hex: "#f87171", val: m.damage_value });
+  if (m.skill_value != null) chips.push({ label: t("vs.tl.chipSkill"), hex: "#fbbf24", val: m.skill_value });
+  if (m.item_quantity != null) chips.push({ label: t("vs.tl.chipQty"), hex: "#fbbf24", val: String(m.item_quantity) });
+  if (m.item_weight != null) chips.push({ label: t("vs.tl.chipWeight"), hex: "#fbbf24", val: String(m.item_weight) });
   return chips;
 }
 
@@ -139,30 +141,31 @@ function modifierChips(m: Modifier | null): StatChip[] {
 
 /* Roll tone heuristic: with no target in the payload, we classify
    by presence of damage/degradation as "damage", otherwise "free". */
-function rollTone(a: NarrationAction): { hex: string; tag: string } {
+function rollTone(a: NarrationAction, t: (key: string) => string): { hex: string; tag: string } {
   const m = a.modifier;
   const isDamage = m?.damage_value != null || m?.mod_hp != null || m?.mod_st != null;
   const roll = (a.dice_roll ?? "").toLowerCase();
   const isCrit = /crit|crítico|decisivo|por pouco|critical|decisive/i.test(a.description ?? "") || /=\s*18\b/.test(a.result ?? "");
-  if (isDamage) return { hex: "#f87171", tag: "dano" };
-  if (isCrit) return { hex: "#fbbf24", tag: "crítico" };
-  if (roll.includes("d")) return { hex: "#60a5fa", tag: "teste" };
-  return { hex: "#a1a1aa", tag: "registro" };
+  if (isDamage) return { hex: "#f87171", tag: t("vs.tl.toneDamage") };
+  if (isCrit) return { hex: "#fbbf24", tag: t("vs.tl.toneCrit") };
+  if (roll.includes("d")) return { hex: "#60a5fa", tag: t("vs.tl.toneTest") };
+  return { hex: "#a1a1aa", tag: t("vs.tl.toneRecord") };
 }
 
 function RollSlip({ a, moment, mask, viewerId }: { a: NarrationAction; moment?: number; mask: (id: string, real: string) => string; viewerId?: string }) {
+  const { t } = useTranslation();
   const char = a.character;
   const shownName =
     char && viewerId && char.id === viewerId
-      ? char?.name || char?.username || "Alguém"
+      ? char?.name || char?.username || t("vs.tl.someone")
       : char
-      ? mask(char.id, char?.name || char?.username || "Alguém")
-      : "Alguém";
+      ? mask(char.id, char?.name || char?.username || t("vs.tl.someone"))
+      : t("vs.tl.someone");
   const charName = shownName;
   const charId = char?.id ?? "";
   const charUrl = charId ? `/character/${charId}${moment != null ? `?moment=${moment}` : ""}` : "";
-  const tone = rollTone(a);
-  const chips = modifierChips(a.modifier);
+  const tone = rollTone(a, t);
+  const chips = modifierChips(a.modifier, t);
 
   return (
     <div className="mt-2.5 flex items-stretch gap-0">
@@ -209,7 +212,7 @@ function RollSlip({ a, moment, mask, viewerId }: { a: NarrationAction; moment?: 
         {a.modifier?.name || a.modifier?.effect ? (
           <div className="mt-2 flex items-start gap-2 border-t border-dashed border-zinc-700/50 pt-2">
             <span className="font-mono text-[9px] uppercase tracking-widest text-amber-300/80 shrink-0 mt-px">
-              consequência
+              {t("vs.tl.consequence")}
             </span>
             <div className="min-w-0">
               {a.modifier.name ? (
@@ -233,6 +236,7 @@ function RollSlip({ a, moment, mask, viewerId }: { a: NarrationAction; moment?: 
 /* ---------- beat (narration) ---------- */
 
 function Beat({ n, viewerId, mask, rules }: { n: { narration: string; title?: string; moment?: number; location: Location | null; characters: { id: string; name: string; conscious?: boolean; q?: number | null; r?: number | null; facing?: number | null }[]; npcs: { characterId: string; name: string; status: string; q?: number | null; r?: number | null; facing?: number | null }[]; actions: NarrationAction[] }; viewerId?: string; mask: (id: string, real: string) => string; rules?: VisibilityRule[] }) {
+  const { t } = useTranslation();
   const you = viewerId ? n.characters.find((c) => c.id === viewerId) : undefined;
   const wasElsewhere = !!viewerId && !you;
   const wasUnconscious = !!you && you.conscious === false;
@@ -252,14 +256,14 @@ function Beat({ n, viewerId, mask, rules }: { n: { narration: string; title?: st
             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            você estava aqui, inconsciente
+            {t("vs.tl.unconscious")}
           </div>
         ) : wasElsewhere ? (
           <div className="mb-2 inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-zinc-600 border border-zinc-700/50 rounded-full pl-2 pr-3 py-1">
             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1" />
             </svg>
-            você estava em outro lugar
+            {t("vs.tl.elsewhere")}
           </div>
         ) : null}
 
@@ -296,6 +300,7 @@ function Beat({ n, viewerId, mask, rules }: { n: { narration: string; title?: st
 /* ---------- scene ---------- */
 
 function SceneCard({ scene, showEdit, badgeCls, viewerId, mask, rules }: { scene: Scene; showEdit: boolean; badgeCls: string; viewerId?: string; mask: (id: string, real: string) => string; rules?: VisibilityRule[] }) {
+  const { t } = useTranslation();
   const sceneNum = scene.moment != null ? scene.moment + 1 : "—";
   return (
     <div className="mb-8">
@@ -303,16 +308,16 @@ function SceneCard({ scene, showEdit, badgeCls, viewerId, mask, rules }: { scene
         <h3 className="text-lg font-semibold text-zinc-100">
           {scene.title}
           <span className={`ml-3 font-mono text-[11px] tracking-widest uppercase rounded px-2 py-0.5 ${badgeCls}`}>
-            momento {sceneNum}
+            {interpolate(t("vs.tl.moment"), { n: sceneNum })}
           </span>
         </h3>
         {showEdit ? (
-          <span className="ml-auto font-mono text-[10px] text-zinc-600 uppercase tracking-widest hidden sm:inline">abrir</span>
+          <span className="ml-auto font-mono text-[10px] text-zinc-600 uppercase tracking-widest hidden sm:inline">{t("vs.tl.open")}</span>
         ) : null}
       </div>
       <div className="pl-[18px] border-l border-zinc-700/40">
         {scene.narrations.length === 0 ? (
-          <p className="text-sm text-zinc-600 italic font-mono">Nenhum registro nesta cena.</p>
+          <p className="text-sm text-zinc-600 italic font-mono">{t("vs.tl.noRecords")}</p>
         ) : (
           <div className="space-y-5">
             {scene.narrations.map((n) => (
@@ -340,6 +345,7 @@ interface SceneTimelineProps {
 
 export default function SceneTimeline({ table, scenes, showEditButtons = true, role = "narrator", viewerId, visibility }: SceneTimelineProps) {
   const router = useRouter();
+  const { t } = useTranslation();
   const isPlayer = role === "player";
   const titleCls = isPlayer ? "text-blue-100" : "text-green-100";
   const badgeCls = isPlayer ? "text-blue-300 border border-blue-700/40" : "text-green-600/90 border border-green-900/40";
@@ -363,15 +369,15 @@ export default function SceneTimeline({ table, scenes, showEditButtons = true, r
       {/* canopy */}
       <Panel>
         <h1 className={`text-[clamp(30px,6vw,52px)] leading-[0.95] font-bold tracking-tight mt-3 ${titleCls}`}>
-          {table?.title || "A Crônica"}
+          {table?.title || t("vs.tl.chronicle")}
         </h1>
         {table?.intro ? (
           <p className="text-zinc-400 mt-4 max-w-2xl leading-relaxed border-l-2 border-zinc-700 pl-4">{table.intro}</p>
         ) : null}
         <div className="mt-6 flex items-center gap-2 font-mono text-[11px] text-zinc-500">
-          <span className="w-1.5 h-1.5 rounded-full bg-blue-400" /> {chapters.size} {chapters.size !== 1 ? "capítulos" : "capítulo"}
-          <span className="text-zinc-700">·</span> {scenes.length} {scenes.length !== 1 ? "cenas" : "cena"}
-          <span className="text-zinc-700">·</span> {scenes.reduce((a, s) => a + s.narrations.length, 0)} registro(s)
+          <span className="w-1.5 h-1.5 rounded-full bg-blue-400" /> {chapters.size} {chapters.size !== 1 ? t("vs.tl.chapterMany") : t("vs.tl.chapterOne")}
+          <span className="text-zinc-700">·</span> {scenes.length} {scenes.length !== 1 ? t("vs.tl.sceneMany") : t("vs.tl.sceneOne")}
+          <span className="text-zinc-700">·</span> {scenes.reduce((a, s) => a + s.narrations.length, 0)} {t("vs.tl.records")}
         </div>
       </Panel>
 
@@ -380,18 +386,18 @@ export default function SceneTimeline({ table, scenes, showEditButtons = true, r
           <svg className="w-10 h-10 text-zinc-700 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
           </svg>
-          <p className="text-zinc-500 text-sm">Nenhuma cena registrada ainda — a crônica começa em branco.</p>
+          <p className="text-zinc-500 text-sm">{t("vs.tl.empty")}</p>
         </div>
       ) : (
         chapterEntries.map(([chapter, chapterScenes]) => (
           <Panel key={chapter} className="mt-12">
             <div className="flex items-center gap-4 mb-8">
               <div className="min-w-0">
-                <div className="font-mono text-[15px] tracking-[0.3em] uppercase text-zinc-500">Capítulo</div>
+                <div className="font-mono text-[15px] tracking-[0.3em] uppercase text-zinc-500">{t("vs.tl.chapter")}</div>
               </div>
               <span className="select-none font-bold leading-none text-[24px] text-zinc-800 font-mono">{roman(chapter)}</span>
               <div className="flex-1 h-px bg-zinc-700/50" />
-              <span className="font-mono text-[11px] text-zinc-500">{chapterScenes.length} {chapterScenes.length !== 1 ? "cenas" : "cena"}</span>
+              <span className="font-mono text-[11px] text-zinc-500">{chapterScenes.length} {chapterScenes.length !== 1 ? t("vs.tl.sceneMany") : t("vs.tl.sceneOne")}</span>
             </div>
 
             {chapterScenes.map((scene) => (

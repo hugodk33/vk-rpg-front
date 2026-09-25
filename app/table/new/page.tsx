@@ -1,10 +1,12 @@
 import { api } from "@/lib/api";
+import { getLang, makeT } from "@/lib/i18n-server";
 import type { ContentCatalog, GameTable, PublicUser } from "@/lib/types";
 import TableWizard from "@/components/table/TableWizard";
 
 export const dynamic = "force-dynamic";
 
 export default async function NewTablePage() {
+  const t = makeT(await getLang());
   let tables: GameTable[] = [];
   let catalog: ContentCatalog | null = null;
   try {
@@ -32,7 +34,7 @@ export default async function NewTablePage() {
       const users = await api<PublicUser[]>("/users");
       narratorOptions = users.map((u) => ({
         id: u.id,
-        name: u.username || u.email || "Narrador",
+        name: u.username || u.email || t("f.narrator"),
       }));
     } catch {
       narratorOptions = [];

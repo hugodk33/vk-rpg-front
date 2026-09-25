@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import type { GameTable, GameTableCharacters, TableCharacter } from "@/lib/types";
 import { readSeat } from "@/lib/seat";
+import { useTranslation } from "@/lib/i18n";
 
 /* ============================================================
    /player/character — no character id on the path.
@@ -16,6 +17,7 @@ import { readSeat } from "@/lib/seat";
 
 export default function PlayerCharacterIndex() {
   const router = useRouter();
+  const { t } = useTranslation();
 
   useEffect(() => {
     let alive = true;
@@ -59,7 +61,7 @@ export default function PlayerCharacterIndex() {
       <div className="text-center space-y-3">
         <div className="w-2.5 h-2.5 rounded-full bg-blue-400 beacon mx-auto" />
         <p className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">
-          Encontrando seu assento…
+          {t("pg.player.findingSeat")}
         </p>
       </div>
     </div>

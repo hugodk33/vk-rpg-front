@@ -11,6 +11,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
+import { interpolate, useTranslation } from "@/lib/i18n";
 import type {
   GameTableModifiers,
   GameTableScenes,
@@ -47,10 +48,10 @@ const num = (v: string): number | undefined => {
   return Number.isFinite(n) ? n : undefined;
 };
 
-const effectChips = (m: Modifier): { label: string; value: string }[] => {
-  const out: { label: string; value: string }[] = [];
-  if (m.cost_points != null) out.push({ label: "Pts", value: `=${m.cost_points}` });
-  if (m.effect) out.push({ label: "Efeito", value: m.effect });
+const effectChips = (m: Modifier): { labelKey: string; value: string }[] => {
+  const out: { labelKey: string; value: string }[] = [];
+  if (m.cost_points != null) out.push({ labelKey: "lc.mod.chipPts", value: `=${m.cost_points}` });
+  if (m.effect) out.push({ labelKey: "lc.mod.chipEffect", value: m.effect });
   return out;
 };
 
@@ -70,6 +71,7 @@ export default function LocationModifiers({
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { t } = useTranslation();
 
   useEffect(() => {
     if (!tableId) return;
@@ -123,14 +125,14 @@ export default function LocationModifiers({
     setModifiers(res.modifiers ?? []);
   };
 
-  const sceneName = (scene?: Scene) => scene?.title || "Cena sem título";
+  const sceneName = (scene?: Scene) => scene?.title || t("lc.mod.sceneUntitled");
 
   const coordsOf = (m: Modifier): string | null => {
     const scene = (scenes?.scenes ?? []).find((s) => s.id === m.scene_id);
     if (!scene) return null;
     const narration = scene.narrations?.find((n) => n.id === m.narration_id);
     return [
-      scene.chapter != null ? `Cap.${scene.chapter}` : null,
+      scene.chapter != null ? interpolate(t("lc.mod.chapterShort"), { n: scene.chapter }) : null,
       sceneName(scene),
       narration?.title ? ` / ${narration.title}` : null,
     ].filter(Boolean).join(" · ");
@@ -174,7 +176,7 @@ export default function LocationModifiers({
       setShowForm(false);
       await refetch();
     } catch {
-      setError("Falha ao salvar a condição.");
+      setError(t("lc.mod.error"));
     } finally {
       setSaving(false);
     }
@@ -184,7 +186,7 @@ export default function LocationModifiers({
     <div>
       <div className="mb-3 flex items-center gap-2.5 pb-1.5 border-b border-zinc-700/60">
         <span aria-hidden className="font-mono text-base leading-none text-teal-300">◐</span>
-        <span className="font-mono text-[13px] font-bold uppercase tracking-wider text-zinc-300">Condições de campo</span>
+        <span className="font-mono text-[13px] font-bold uppercase tracking-wider text-zinc-300">{t("lc.mod.title")}</span>
         <span className="flex-1 h-px" style={{ background: "linear-gradient(90deg, #2dd4bf55, transparent)" }} />
         <button
           type="button"
@@ -195,7 +197,7 @@ export default function LocationModifiers({
           }}
           className="font-mono text-[10px] uppercase tracking-widest text-teal-300/90 hover:text-teal-200 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600/60 rounded-sm"
         >
-          {showForm && !form.id ? "Fechar" : "+ Condição"}
+          {showForm && !form.id ? t("lc.mod.close") : t("lc.mod.add")}
         </button>
       </div>
 
@@ -203,7 +205,7 @@ export default function LocationModifiers({
 
       {local.length === 0 && !showForm ? (
         <p className="text-xs text-zinc-500">
-          Nenhuma condição registrada neste lugar. Adicione uma quando algo mudar o campo.
+          {t("lc.mod.empty")}
         </p>
       ) : null}
 
@@ -211,37 +213,37 @@ export default function LocationModifiers({
         <div className="space-y-3 mb-4">
           <div className="grid gap-2 sm:grid-cols-2">
             <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-zinc-500">
-              Nome
+              {t("lc.mod.name")}
               <input type="text" value={form.name} onChange={(e) => set("name", e.target.value)}
-                placeholder="ex.: A ponte caiu" className={fieldCls} />
+                placeholder={t("lc.mod.namePh")} className={fieldCls} />
             </label>
             <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-zinc-500">
-              Pontos de custo
+              {t("lc.mod.cost")}
               <input type="number" value={form.cost_points} onChange={(e) => set("cost_points", e.target.value)} className={fieldCls} />
             </label>
           </div>
           <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-zinc-500">
-            Efeito
+            {t("lc.mod.effect")}
             <input type="text" value={form.effect} onChange={(e) => set("effect", e.target.value)}
-              placeholder="ex.: −2 nos testes de Travessia" className={fieldCls} />
+              placeholder={t("lc.mod.effectPh")} className={fieldCls} />
           </label>
           <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-zinc-500">
-            Descrição
+            {t("lc.mod.desc")}
             <textarea value={form.description} onChange={(e) => set("description", e.target.value)}
-              rows={2} placeholder="O que mudou neste lugar" className={fieldCls} />
+              rows={2} placeholder={t("lc.mod.descPh")} className={fieldCls} />
           </label>
           <div className="grid gap-2 sm:grid-cols-3">
             <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-zinc-500">
-              Capítulo
+              {t("lc.mod.chapter")}
               <select value={form.chapter} onChange={(e) => { set("chapter", e.target.value); set("scene_id", ""); set("narration_id", ""); }} className={fieldCls}>
-                <option value="">Qualquer</option>
+                <option value="">{t("lc.mod.anyChapter")}</option>
                 {chapters.map((ch) => (
-                  <option key={ch} value={ch}>Capítulo {ch}</option>
+                  <option key={ch} value={ch}>{interpolate(t("lc.mod.chapterN"), { n: ch })}</option>
                 ))}
               </select>
             </label>
             <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-zinc-500">
-              Cena
+              {t("lc.mod.scene")}
               <select value={form.scene_id} onChange={(e) => { set("scene_id", e.target.value); set("narration_id", ""); }} disabled={visibleScenes.length === 0} className={fieldCls}>
                 <option value="">—</option>
                 {visibleScenes.map((s) => (
@@ -250,11 +252,11 @@ export default function LocationModifiers({
               </select>
             </label>
             <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-zinc-500">
-              Narração
+              {t("lc.mod.narration")}
               <select value={form.narration_id} onChange={(e) => set("narration_id", e.target.value)} disabled={visibleNarrations.length === 0} className={fieldCls}>
                 <option value="">—</option>
                 {visibleNarrations.map((n) => (
-                  <option key={n.id} value={n.id}>{n.title || "Narração"}</option>
+                  <option key={n.id} value={n.id}>{n.title || t("lc.mod.narration")}</option>
                 ))}
               </select>
             </label>
@@ -266,12 +268,12 @@ export default function LocationModifiers({
               onClick={save}
               className="inline-flex items-center gap-2 bg-teal-700 hover:bg-teal-600 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600/60"
             >
-              {saving ? "Salvando…" : form.id ? "Salvar alterações" : "Adicionar condição"}
+              {saving ? t("lc.common.saving") : form.id ? t("lc.mod.save") : t("lc.mod.create")}
             </button>
             {form.id ? (
               <button type="button" onClick={() => { setForm(emptyForm()); setShowForm(false); setError(null); }}
                 className="text-sm text-zinc-500 hover:text-zinc-200 transition-colors">
-                Cancelar
+                {t("lc.common.cancel")}
               </button>
             ) : null}
           </div>
@@ -286,13 +288,13 @@ export default function LocationModifiers({
             return (
               <li key={m.id} className="border-b border-zinc-700/40 py-3 last:border-b-0">
                 <div className="flex items-start justify-between gap-2">
-                  <p className="text-sm font-semibold text-zinc-100 truncate min-w-0">{m.name || "Condição"}</p>
+                  <p className="text-sm font-semibold text-zinc-100 truncate min-w-0">{m.name || t("lc.mod.untitled")}</p>
                   <button
                     type="button"
                     onClick={() => startEdit(m)}
                     className="shrink-0 font-mono text-[10px] uppercase tracking-widest text-zinc-400 border border-zinc-700/60 rounded-md px-2 py-1 hover:text-zinc-100 hover:border-zinc-500 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600/60"
                   >
-                    Editar
+                    {t("lc.common.edit")}
                   </button>
                 </div>
                 {m.description ? (
@@ -301,13 +303,13 @@ export default function LocationModifiers({
                 {coords ? (
                   <p className="font-mono text-[9px] uppercase tracking-widest text-zinc-500 mt-1.5">{coords}</p>
                 ) : (
-                  <p className="font-mono text-[9px] uppercase tracking-widest text-zinc-600 mt-1.5">Este local, sem momento na história</p>
+                  <p className="font-mono text-[9px] uppercase tracking-widest text-zinc-600 mt-1.5">{t("lc.mod.noMoment")}</p>
                 )}
                 {chips.length > 0 ? (
                   <div className="flex flex-wrap gap-1 mt-2">
                     {chips.map((c) => (
-                      <span key={`${m.id}-${c.label}-${c.value}`} className="font-mono text-[9px] uppercase tracking-widest text-zinc-300 bg-zinc-800/80 border border-zinc-700/50 rounded px-1.5 py-0.5">
-                        {c.label} {c.value}
+                      <span key={`${m.id}-${c.labelKey}-${c.value}`} className="font-mono text-[9px] uppercase tracking-widest text-zinc-300 bg-zinc-800/80 border border-zinc-700/50 rounded px-1.5 py-0.5">
+                        {t(c.labelKey)} {c.value}
                       </span>
                     ))}
                   </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { interpolate, useTranslation } from "@/lib/i18n";
 import DiceMystery from "@/components/session/DiceMystery";
 
 type Judgment = {
@@ -9,18 +10,21 @@ type Judgment = {
   text: string;
 };
 
-function judge(sum: number, target: number): Judgment {
-  if (sum <= 4) return { crit: true, success: true, text: "Sucesso crítico!" };
+type TFn = (key: string) => string;
+
+function judge(sum: number, target: number, t: TFn): Judgment {
+  if (sum <= 4) return { crit: true, success: true, text: t("ss.judge.critSuccessEx") };
   if (sum >= 18 || (sum === 17 && target <= 15)) {
-    return { crit: true, success: false, text: "Falha crítica." };
+    return { crit: true, success: false, text: t("ss.judge.critFailDot") };
   }
   const margin = target - sum;
   return margin >= 0
-    ? { crit: false, success: true, text: `Sucesso por ${margin}` }
-    : { crit: false, success: false, text: `Falha por ${-margin}` };
+    ? { crit: false, success: true, text: interpolate(t("ss.judge.successBy"), { n: margin }) }
+    : { crit: false, success: false, text: interpolate(t("ss.judge.failBy"), { n: -margin }) };
 }
 
 export default function GmDiceRoller() {
+  const { t } = useTranslation();
   const [target, setTarget] = useState(12);
   const [dice, setDice] = useState<[number, number, number] | null>(null);
   const [sum, setSum] = useState<number | null>(null);
@@ -38,7 +42,7 @@ export default function GmDiceRoller() {
     const total = d[0] + d[1] + d[2];
     setDice(d);
     setSum(total);
-    setJudgment(judge(total, target));
+    setJudgment(judge(total, target, t));
     setRevealed(false);
     setRollId((id) => id + 1);
     setHistory((h) => [...h, total]);
@@ -61,15 +65,15 @@ export default function GmDiceRoller() {
     <div className="bg-zinc-900/90 border border-zinc-700/50 shadow-2xl rounded-xl p-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <span className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
-          Rolar contra o alvo
+          {t("ss.gm.title")}
         </span>
         <div className="flex items-center gap-2">
-          <span className="text-xs uppercase tracking-wider text-zinc-500">Alvo</span>
+          <span className="text-xs uppercase tracking-wider text-zinc-500">{t("ss.target")}</span>
           <button
             type="button"
             onClick={() => setTarget((t) => Math.max(3, t - 1))}
             disabled={target <= 3}
-            aria-label="Diminuir alvo"
+            aria-label={t("ss.gm.decreaseTarget")}
             className="w-8 h-8 rounded-lg border border-zinc-700 text-zinc-300 hover:border-green-800 hover:text-green-400 transition-colors disabled:opacity-40 disabled:hover:border-zinc-700 disabled:hover:text-zinc-300"
           >
             −
@@ -81,7 +85,7 @@ export default function GmDiceRoller() {
             type="button"
             onClick={() => setTarget((t) => Math.min(18, t + 1))}
             disabled={target >= 18}
-            aria-label="Aumentar alvo"
+            aria-label={t("ss.gm.increaseTarget")}
             className="w-8 h-8 rounded-lg border border-zinc-700 text-zinc-300 hover:border-green-800 hover:text-green-400 transition-colors disabled:opacity-40 disabled:hover:border-zinc-700 disabled:hover:text-zinc-300"
           >
             +
@@ -134,8 +138,10 @@ export default function GmDiceRoller() {
             </>
           ) : (
             <>
-              <span className="block text-base">{rollId === 0 ? "Defina um alvo e role." : "Os dados ainda estão no ar…"}</span>
-              <span className="text-zinc-600 uppercase text-[11px] tracking-wider">{rollId === 0 ? "" : `3d6 contra o alvo ${target}`}</span>
+              <span className="block text-base">{rollId === 0 ? t("ss.gm.waitFirst") : t("ss.diceInAir")}</span>
+              <span className="text-zinc-600 uppercase text-[11px] tracking-wider">
+                {rollId === 0 ? "" : interpolate(t("ss.gm.againstTarget"), { n: target })}
+              </span>
             </>
           )}
         </p>
@@ -146,8 +152,8 @@ export default function GmDiceRoller() {
         role="img"
         aria-label={
           history.length > 0
-            ? `Distribuição de ${history.length} rolagens, de 3 a 18`
-            : "Distribuição vazia de rolagens"
+            ? interpolate(t("ss.roller.ariaFilled"), { n: history.length })
+            : t("ss.roller.ariaEmpty")
         }
       >
         {Array.from({ length: 16 }, (_, i) => {
@@ -168,7 +174,11 @@ export default function GmDiceRoller() {
       </div>
       <div className="mt-1.5 flex justify-between text-[10px] uppercase tracking-wider text-zinc-500">
         <span>3</span>
-        <span>{history.length === 0 ? "a curva aparece à medida que você rola" : `${history.length} rolagens`}</span>
+        <span>
+          {history.length === 0
+            ? t("ss.roller.curveHint")
+            : interpolate(t("ss.roller.rollsCount"), { n: history.length })}
+        </span>
         <span>18</span>
       </div>
 
@@ -179,7 +189,7 @@ export default function GmDiceRoller() {
           disabled={rollId > 0 && !revealed}
           className="bg-green-900/60 hover:bg-green-800 text-white text-sm font-medium px-6 py-2.5 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {rollId > 0 && !revealed ? "Rolando…" : "Rolar 3d6"}
+          {rollId > 0 && !revealed ? t("ss.rolling") : t("ss.roll3d6")}
         </button>
         {history.length > 0 ? (
           <button
@@ -187,7 +197,7 @@ export default function GmDiceRoller() {
             onClick={reset}
             className="text-sm text-zinc-500 hover:text-zinc-300 underline underline-offset-4 transition-colors"
           >
-            Limpar
+            {t("ss.roller.clear")}
           </button>
         ) : null}
       </div>

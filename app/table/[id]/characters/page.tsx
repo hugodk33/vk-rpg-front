@@ -8,9 +8,11 @@ import RadarChart from "@/components/RadarChart";
 import RowActions from "@/components/table/RowActions";
 import { api } from "@/lib/api";
 import { submitJson } from "@/components/forms/submit";
+import { interpolate, useTranslation } from "@/lib/i18n";
 
 export default function TableCharactersPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  const { t } = useTranslation();
   const [data, setData] = useState<GameTableCharacters | null>(null);
   const [npcs, setNpcs] = useState<GameTableNpcs | null>(null);
   const [search, setSearch] = useState("");
@@ -43,19 +45,19 @@ export default function TableCharactersPage({ params }: { params: Promise<{ id: 
       <TableTabs tableId={id} />
 
       <div className="flex items-baseline gap-3 mb-1">
-        <h1 className="text-2xl font-bold text-zinc-100">Personagens</h1>
+        <h1 className="text-2xl font-bold text-zinc-100">{t("nav.characters")}</h1>
         <span className="text-sm text-zinc-500">{data?.table?.title}</span>
       </div>
 
       <div className="flex items-center justify-between gap-6 mb-6">
         <div className="flex items-center gap-3 text-xs text-zinc-500">
-          <span>{characters.length} {characters.length !== 1 ? "personagens" : "personagem"}</span>
+          <span>{interpolate(t(characters.length !== 1 ? "tp.count.charactersMany" : "tp.count.charactersOne"), { n: characters.length })}</span>
         </div>
         <Link
           href={`/character/new?table_id=${id}`}
           className="bg-green-800/70 hover:bg-green-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors"
         >
-          + Novo personagem
+          + {t("tp.add.character")}
         </Link>
       </div>
 
@@ -68,13 +70,13 @@ export default function TableCharactersPage({ params }: { params: Promise<{ id: 
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Filtrar personagens..."
+            placeholder={t("tp.characters.searchPh")}
             className="w-full bg-zinc-800/60 border border-zinc-700/50 rounded-lg pl-9 pr-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-violet-700/60"
           />
         </div>
         {search ? (
           <button type="button" onClick={() => setSearch("")} className="bg-zinc-800/60 hover:bg-zinc-700/60 text-zinc-400 text-sm px-3 py-2 rounded-lg transition-colors border border-zinc-700/50">
-            Limpar
+            {t("s2.clearAll")}
           </button>
         ) : null}
       </div>
@@ -84,7 +86,7 @@ export default function TableCharactersPage({ params }: { params: Promise<{ id: 
           <svg className="w-10 h-10 text-zinc-700 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
           </svg>
-          <p className="text-zinc-500 text-sm">{search ? "Nenhum personagem corresponde ao seu filtro." : "Nenhum personagem nesta mesa ainda."}</p>
+          <p className="text-zinc-500 text-sm">{search ? t("tp.characters.emptySearch") : t("tp.characters.empty")}</p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -106,20 +108,20 @@ export default function TableCharactersPage({ params }: { params: Promise<{ id: 
                       </svg>
                       <div className="min-w-0">
                         <span className="text-sm font-medium text-zinc-200 group-hover:text-zinc-100 truncate block">
-                          {s?.name || ch.name || "Sem nome"}
+                          {s?.name || ch.name || t("it.unnamed")}
                         </span>
                         <span className="text-[11px] text-zinc-500">NPC</span>
                       </div>
                       {ch.is_active === false ? (
                         <span className="shrink-0 inline-block font-mono text-[9px] uppercase tracking-widest text-red-300/90 border border-red-500/40 rounded px-1.5 py-0.5">
-                          Desativado
+                          {t("tp.characters.inactive")}
                         </span>
                       ) : null}
                       <span
                         className="shrink-0 font-mono text-[9px] uppercase tracking-widest text-zinc-900 bg-zinc-200 rounded px-1.5 py-0.5"
                         style={{ background: ally ? "#34d399" : "#f87171", color: "#18181b" }}
                       >
-                        {ally ? "Aliado" : "Inimigo"}
+                        {ally ? t("tp.characters.ally") : t("tp.characters.enemy")}
                       </span>
                     </div>
                     {s ? (
@@ -133,7 +135,7 @@ export default function TableCharactersPage({ params }: { params: Promise<{ id: 
                         <RadarChart st={s.st} dx={s.dx} iq={s.iq} ht={s.ht} size={48} />
                       </div>
                     ) : (
-                      <span className="text-[11px] text-zinc-600 italic shrink-0">Sem ficha</span>
+                      <span className="text-[11px] text-zinc-600 italic shrink-0">{t("tp.characters.noSheet")}</span>
                     )}
                     <RowActions
                       editHref={`/npc/${npcIdByCharacter.get(ch.id) ?? ""}/edit`}
@@ -156,14 +158,14 @@ export default function TableCharactersPage({ params }: { params: Promise<{ id: 
                     </svg>
                     <div className="min-w-0">
                       <span className="text-sm font-medium text-zinc-200 group-hover:text-zinc-100 truncate block">
-                        {s?.name || ch.name || "Sem nome"}
+                        {s?.name || ch.name || t("it.unnamed")}
                       </span>
                       {ch.user?.username ? (
                         <span className="text-[11px] text-zinc-500">{ch.user.username}</span>
                       ) : null}
                       {ch.is_active === false ? (
                         <span className="inline-block font-mono text-[9px] uppercase tracking-widest text-red-300/90 border border-red-500/40 rounded px-1.5 py-0.5 mt-0.5">
-                          Desativado
+                          {t("tp.characters.inactive")}
                         </span>
                       ) : null}
                     </div>
@@ -179,7 +181,7 @@ export default function TableCharactersPage({ params }: { params: Promise<{ id: 
                       <RadarChart st={s.st} dx={s.dx} iq={s.iq} ht={s.ht} size={48} />
                     </div>
                   ) : (
-                    <span className="text-[11px] text-zinc-600 italic shrink-0">Sem ficha</span>
+                    <span className="text-[11px] text-zinc-600 italic shrink-0">{t("tp.characters.noSheet")}</span>
                   )}
                   <RowActions
                     editHref={`/character/${ch.id}/edit?table_id=${id}`}

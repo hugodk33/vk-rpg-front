@@ -27,6 +27,7 @@ import PlayerInventory from "@/components/player/PlayerInventory";
 import { getSessionState } from "@/lib/session";
 import { useTableLive } from "@/lib/useTableLive";
 import { useRouter } from "next/navigation";
+import { useTranslation } from "@/lib/i18n";
 
 /* ============================================================
    Player Console — one panel per character.
@@ -98,14 +99,14 @@ const RESOURCE_ICONS: Record<ResourceTab, string> = {
 const MAP_ICON = "M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7";
 const CHRONICLE_ICON = "M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253";
 
-const TABS: Array<{ key: PlayerTab; label: string; icon: string }> = [
-  { key: "turn", label: "Sessão", icon: "M4 5a2 2 0 012-2h12a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm0 8a2 2 0 012-2h12a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm0 8a2 2 0 012-2h6a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2z" },
-  { key: "journey", label: "Jornada", icon: "M3 3v18h18M7 14l4-5 3 3 5-8" },
-  { key: "chronicle", label: "Crônica", icon: "M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" },
-  { key: "map", label: "Mapa", icon: "M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" },
-  ...RESOURCE_TABS.map((r) => ({ key: r.key as PlayerTab, label: r.label, icon: RESOURCE_ICONS[r.key] })),
-  { key: "gear", label: "Equipamento", icon: "M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" },
-  { key: "sheet", label: "Ficha", icon: "M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 16a3.001 3.001 0 00-2.83-2M15 11a2 2 0 11-4 0 2 2 0 014 0z" },
+const TABS: Array<{ key: PlayerTab; labelKey: string; icon: string }> = [
+  { key: "turn", labelKey: "pl.tab.session", icon: "M4 5a2 2 0 012-2h12a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm0 8a2 2 0 012-2h12a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm0 8a2 2 0 012-2h6a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2z" },
+  { key: "journey", labelKey: "pl.tab.journey", icon: "M3 3v18h18M7 14l4-5 3 3 5-8" },
+  { key: "chronicle", labelKey: "pl.tab.chronicle", icon: "M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" },
+  { key: "map", labelKey: "pl.tab.map", icon: "M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" },
+  ...RESOURCE_TABS.map((r) => ({ key: r.key as PlayerTab, labelKey: r.labelKey, icon: RESOURCE_ICONS[r.key] })),
+  { key: "gear", labelKey: "pl.tab.gear", icon: "M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" },
+  { key: "sheet", labelKey: "pl.tab.sheet", icon: "M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 16a3.001 3.001 0 00-2.83-2M15 11a2 2 0 11-4 0 2 2 0 014 0z" },
 ];
 
 export default function PlayerConsole({
@@ -133,12 +134,13 @@ export default function PlayerConsole({
   initialTab = "sheet",
 }: PlayerConsoleProps) {
   const [tab, setTab] = useState<PlayerTab>(initialTab);
+  const { t } = useTranslation();
   const [tableOpen, setTableOpen] = useState(false);
   const tableRef = useRef<HTMLDivElement>(null);
   const [chronOpen, setChronOpen] = useState(false);
   const chronRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
-  const name = character?.sheet?.name || character?.name || "Your character";
+  const name = character?.sheet?.name || character?.name || t("pl.console.yourCharacter");
 
   /* tempo real: a mesa muda (narração/fila/mapa) sem recarregar a página */
   useTableLive(tableId, () => router.refresh());
@@ -206,7 +208,7 @@ export default function PlayerConsole({
       {/* heading */}
       <div className="flex flex-wrap items-end justify-between gap-4 mb-5">
         <div>
-          <p className="font-mono text-[10px] tracking-widest uppercase text-blue-300/90">Seu assento na mesa</p>
+          <p className="font-mono text-[10px] tracking-widest uppercase text-blue-300/90">{t("pl.console.seatEyebrow")}</p>
           <h1 className="text-2xl md:text-3xl font-bold text-zinc-100 mt-1">{name}</h1>
           {table?.title ? (
             <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500 mt-0.5">{table.title}</p>
@@ -216,23 +218,23 @@ export default function PlayerConsole({
           href="/player"
           className="inline-flex items-center gap-1 text-sm text-zinc-500 hover:text-blue-300 transition-colors"
         >
-          {icon("M15 19l-7-7 7-7", "w-4 h-4")} Sua companhia
+          {icon("M15 19l-7-7 7-7", "w-4 h-4")} {t("pl.console.yourParty")}
         </Link>
       </div>
 
       {/* unified tab bar */}
-      <div role="tablist" aria-label="Console do jogador" className="inline-flex bg-zinc-800/50 border border-zinc-700/40 rounded-lg p-0.5 mb-6">
-        {TABS.filter((t) => ["turn", "journey"].includes(t.key)).map((t) => (
+      <div role="tablist" aria-label={t("pl.console.tablist")} className="inline-flex bg-zinc-800/50 border border-zinc-700/40 rounded-lg p-0.5 mb-6">
+        {TABS.filter((r) => ["turn", "journey"].includes(r.key)).map((r) => (
           <button
-            key={t.key}
+            key={r.key}
             role="tab"
-            aria-selected={tab === t.key}
-            onClick={() => setTab(t.key)}
+            aria-selected={tab === r.key}
+            onClick={() => setTab(r.key)}
             className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-md font-mono text-[12px] uppercase tracking-[0.12em] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 ${
-              tab === t.key ? "bg-zinc-700 text-blue-300" : "text-zinc-500 hover:text-zinc-200"
+              tab === r.key ? "bg-zinc-700 text-blue-300" : "text-zinc-500 hover:text-zinc-200"
             }`}
           >
-            {icon(t.icon, "w-3.5 h-3.5")} {t.label}
+            {icon(r.icon, "w-3.5 h-3.5")} {t(r.labelKey)}
           </button>
         ))}
 
@@ -248,7 +250,7 @@ export default function PlayerConsole({
               chronActive ? "bg-zinc-700 text-blue-300" : "text-zinc-500 hover:text-zinc-200"
             }`}
           >
-            {icon(CHRONICLE_ICON, "w-3.5 h-3.5")} Chronicle
+            {icon(CHRONICLE_ICON, "w-3.5 h-3.5")} {t("pl.console.chronicle")}
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={chronOpen ? "M5 15l7-7 7 7" : "M19 9l-7 7-7-7"} />
             </svg>
@@ -257,7 +259,7 @@ export default function PlayerConsole({
           {chronOpen ? (
             <div
               role="menu"
-              aria-label="Vistas da crônica"
+              aria-label={t("pl.console.chronicleViews")}
               className="absolute left-0 top-full mt-1 z-20 min-w-[12rem] rounded-lg border border-zinc-700/50 bg-zinc-900 p-1 shadow-xl shadow-black/40"
             >
               <button
@@ -271,7 +273,7 @@ export default function PlayerConsole({
                   tab === "map" ? "bg-zinc-800 text-blue-300" : "text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/60"
                 }`}
               >
-                {icon(MAP_ICON, "w-3.5 h-3.5")} Mapa
+                {icon(MAP_ICON, "w-3.5 h-3.5")} {t("pl.console.map")}
               </button>
               <button
                 role="menuitemradio"
@@ -284,7 +286,7 @@ export default function PlayerConsole({
                   tab === "chronicle" ? "bg-zinc-800 text-blue-300" : "text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/60"
                 }`}
               >
-                {icon(CHRONICLE_ICON, "w-3.5 h-3.5")} Linha do tempo
+                {icon(CHRONICLE_ICON, "w-3.5 h-3.5")} {t("pl.console.timeline")}
               </button>
             </div>
           ) : null}
@@ -302,7 +304,7 @@ export default function PlayerConsole({
               resourceActive ? "bg-zinc-700 text-blue-300" : "text-zinc-500 hover:text-zinc-200"
             }`}
           >
-            {icon(RESOURCE_ICONS.characters, "w-3.5 h-3.5")} Mesa
+            {icon(RESOURCE_ICONS.characters, "w-3.5 h-3.5")} {t("pl.console.table")}
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={tableOpen ? "M5 15l7-7 7 7" : "M19 9l-7 7-7-7"} />
             </svg>
@@ -311,7 +313,7 @@ export default function PlayerConsole({
           {tableOpen ? (
             <div
               role="menu"
-              aria-label="Recursos da mesa"
+              aria-label={t("pl.console.tableResources")}
               className="absolute left-0 top-full mt-1 z-20 min-w-[13rem] rounded-lg border border-zinc-700/50 bg-zinc-900 p-1 shadow-xl shadow-black/40"
             >
               {RESOURCE_TABS.map((r) => (
@@ -327,24 +329,24 @@ export default function PlayerConsole({
                     tab === r.key ? "bg-zinc-800 text-blue-300" : "text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/60"
                   }`}
                 >
-                  {icon(RESOURCE_ICONS[r.key], "w-3.5 h-3.5")} {r.label}
+                  {icon(RESOURCE_ICONS[r.key], "w-3.5 h-3.5")} {t(r.labelKey)}
                 </button>
               ))}
             </div>
           ) : null}
         </div>
 
-        {TABS.filter((t) => ["gear", "sheet"].includes(t.key)).map((t) => (
+        {TABS.filter((r) => ["gear", "sheet"].includes(r.key)).map((r) => (
           <button
-            key={t.key}
+            key={r.key}
             role="tab"
-            aria-selected={tab === t.key}
-            onClick={() => setTab(t.key)}
+            aria-selected={tab === r.key}
+            onClick={() => setTab(r.key)}
             className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-md font-mono text-[12px] uppercase tracking-[0.12em] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 ${
-              tab === t.key ? "bg-zinc-700 text-blue-300" : "text-zinc-500 hover:text-zinc-200"
+              tab === r.key ? "bg-zinc-700 text-blue-300" : "text-zinc-500 hover:text-zinc-200"
             }`}
           >
-            {icon(t.icon, "w-3.5 h-3.5")} {t.label}
+            {icon(r.icon, "w-3.5 h-3.5")} {t(r.labelKey)}
           </button>
         ))}
       </div>
@@ -389,11 +391,10 @@ export default function PlayerConsole({
       {tab === "journey" ? (
         <div className="rounded-2xl border border-zinc-700/50 bg-zinc-900/40 overflow-hidden">
           <div className="px-5 py-6">
-            <p className="font-mono text-[10px] tracking-widest uppercase text-blue-300/90">Sua jornada</p>
-            <h2 className="text-lg font-bold text-zinc-100 mt-1">Evolução</h2>
+            <p className="font-mono text-[10px] tracking-widest uppercase text-blue-300/90">{t("pl.console.journeyEyebrow")}</p>
+            <h2 className="text-lg font-bold text-zinc-100 mt-1">{t("pl.console.evolution")}</h2>
             <p className="text-sm text-zinc-400 mt-1.5 max-w-xl mb-5">
-              Cada marca é um momento em que os dados ou a história o moveram — PV, PE e atributos
-              medidos antes e depois, capítulo a capítulo.
+              {t("pl.console.journeyDesc")}
             </p>
             <CharacterJourney characterId={character?.id ?? ""} selectedMoment={null} viewerId={character?.id ?? undefined} />
           </div>
@@ -403,13 +404,12 @@ export default function PlayerConsole({
       {RESOURCE_TABS.some((r) => r.key === tab) && tableId ? (
         <div className="rounded-2xl border border-zinc-700/50 bg-zinc-900/40 overflow-hidden">
           <div className="px-5 py-6">
-            <p className="font-mono text-[10px] tracking-widest uppercase text-blue-300/90">A mesa</p>
+            <p className="font-mono text-[10px] tracking-widest uppercase text-blue-300/90">{t("pl.res.eyebrow")}</p>
             <h2 className="text-lg font-bold text-zinc-100 mt-1">
-              {RESOURCE_TABS.find((r) => r.key === tab)?.label ?? "Recursos da mesa"}
+              {t(RESOURCE_TABS.find((r) => r.key === tab)?.labelKey ?? "pl.res.title")}
             </h2>
             <p className="text-sm text-zinc-400 mt-1.5 max-w-xl mb-5">
-              Tudo o que a mesa compartilha com seu assento: personagens, itens, perícias e as
-              vantagens e desvantagens da companhia — somente leitura, pelos seus próprios olhos.
+              {t("pl.res.desc")}
             </p>
             <TableResources
               roster={roster}
@@ -429,10 +429,10 @@ export default function PlayerConsole({
       {tab === "gear" && character?.id ? (
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-1">
-            <p className="font-mono text-[10px] tracking-widest uppercase text-blue-300/90">Seu equipamento</p>
-            <h2 className="text-lg font-bold text-zinc-100">Inventário</h2>
+            <p className="font-mono text-[10px] tracking-widest uppercase text-blue-300/90">{t("pl.console.gearEyebrow")}</p>
+            <h2 className="text-lg font-bold text-zinc-100">{t("pl.console.gearTitle")}</h2>
             <p className="text-sm text-zinc-400 max-w-xl">
-              Equipe, guarde, descarte, venda ou troque os itens que seu personagem carrega.
+              {t("pl.console.gearDesc")}
             </p>
           </div>
           <PlayerInventory items={character.items ?? []} characterId={character.id} roster={roster} targets={presentTargets} />

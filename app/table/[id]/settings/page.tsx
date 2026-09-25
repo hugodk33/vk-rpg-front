@@ -1,4 +1,5 @@
 import { api } from "@/lib/api";
+import { getLang, makeT } from "@/lib/i18n-server";
 import type { GameTableItems, TableSettings } from "@/lib/types";
 import TableTabs from "@/components/TableTabs";
 import TableSettingsPanel from "@/components/settings/TableSettingsPanel";
@@ -11,6 +12,7 @@ export default async function TableSettingsPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const t = makeT(await getLang());
 
   const [settings, items] = await Promise.all([
     api<TableSettings>(`/game-table-settings/${id}`).catch(() => null),
@@ -25,11 +27,8 @@ export default async function TableSettingsPage({
       <TableTabs tableId={id} role="narrator" active="settings" />
 
       <div className="mb-6">
-        <h1 className="text-2xl font-bold tracking-tight">Configurações</h1>
-        <p className="text-sm text-zinc-500 mt-1">
-          Regras da casa apenas desta mesa — como os turnos fecham, como itens e
-          reações são resolvidos e se uma loja inicial está em jogo.
-        </p>
+        <h1 className="text-2xl font-bold tracking-tight">{t("nav.settings")}</h1>
+        <p className="text-sm text-zinc-500 mt-1">{t("tp.settings.subtitle")}</p>
       </div>
 
       <TableSettingsPanel tableId={id} initialSettings={settings} items={items?.items ?? []} />

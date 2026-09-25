@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { submitJson } from "./submit";
 import { cancelCls, inputCls, labelCls, submitCls } from "./formStyles";
+import { useTranslation } from "@/lib/i18n";
 
 export interface TableFormProps {
   initial?: { id: string; title: string; system: string; intro: string };
@@ -13,6 +14,7 @@ export interface TableFormProps {
 
 export default function TableForm({ initial, narratorOptions, defaultNarratorId }: TableFormProps) {
   const router = useRouter();
+  const { t } = useTranslation();
   const isEdit = !!initial;
   const [title, setTitle] = useState(initial?.title ?? "");
   const [system, setSystem] = useState(initial?.system ?? "");
@@ -41,7 +43,7 @@ export default function TableForm({ initial, narratorOptions, defaultNarratorId 
         router.refresh();
       }
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Falha ao salvar a mesa.");
+      setError(err instanceof Error ? err.message : t("fr.err.table"));
       setSaving(false);
     }
   }
@@ -50,12 +52,12 @@ export default function TableForm({ initial, narratorOptions, defaultNarratorId 
     <div className="max-w-2xl mx-auto p-6">
       <div className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-6">
         <h1 className="text-2xl font-bold text-green-100 mb-6">
-          {isEdit ? "Editar Mesa" : "Nova Mesa"}
+          {isEdit ? t("fr.table.editTitle") : t("fr.table.newTitle")}
         </h1>
         <form onSubmit={handleSubmit} className="space-y-5">
           {!isEdit && (
             <div>
-              <label className={labelCls}>Narrador</label>
+              <label className={labelCls}>{t("fr.narrator")}</label>
               <select
                 value={narratorId}
                 onChange={(e) => setNarratorId(e.target.value)}
@@ -63,7 +65,7 @@ export default function TableForm({ initial, narratorOptions, defaultNarratorId 
                 className={inputCls}
               >
                 <option value="" disabled>
-                  Selecione um narrador
+                  {t("fr.pickNarrator")}
                 </option>
                 {narratorOptions.map((n) => (
                   <option key={n.id} value={n.id}>
@@ -75,7 +77,7 @@ export default function TableForm({ initial, narratorOptions, defaultNarratorId 
           )}
 
           <div>
-            <label className={labelCls}>Título</label>
+            <label className={labelCls}>{t("fr.campaignTitle")}</label>
             <input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
@@ -85,17 +87,17 @@ export default function TableForm({ initial, narratorOptions, defaultNarratorId 
           </div>
 
           <div>
-            <label className={labelCls}>Sistema</label>
+            <label className={labelCls}>{t("fr.system")}</label>
             <input
               value={system}
               onChange={(e) => setSystem(e.target.value)}
               className={inputCls}
-              placeholder="ex: GURPS"
+              placeholder={t("fr.systemPh")}
             />
           </div>
 
           <div>
-            <label className={labelCls}>Introdução</label>
+            <label className={labelCls}>{t("fr.intro")}</label>
             <textarea
               value={intro}
               onChange={(e) => setIntro(e.target.value)}
@@ -108,10 +110,10 @@ export default function TableForm({ initial, narratorOptions, defaultNarratorId 
 
           <div className="flex items-center gap-3 pt-2">
             <button type="submit" disabled={saving} className={`${submitCls} disabled:opacity-50`}>
-              {saving ? "Salvando..." : isEdit ? "Salvar Alterações" : "Criar Mesa"}
+              {saving ? t("fr.saving") : isEdit ? t("fr.saveChanges") : t("fr.table.create")}
             </button>
             <a href="/narrator" className={cancelCls}>
-              Cancel
+              {t("fr.cancel")}
             </a>
           </div>
         </form>

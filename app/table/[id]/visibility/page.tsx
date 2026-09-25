@@ -1,4 +1,5 @@
 import { api } from "@/lib/api";
+import { getLang, makeT } from "@/lib/i18n-server";
 import type {
   GameTableAdvantages,
   GameTableCharacters,
@@ -19,6 +20,7 @@ export default async function TableVisibilityPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const t = makeT(await getLang());
   const [chars, items, skills, advantages, disadvantages, locations, scenes] =
     await Promise.all([
       api<GameTableCharacters>(`/game-table-characters/${id}`),
@@ -35,11 +37,8 @@ export default async function TableVisibilityPage({
       <TableTabs tableId={id} role="narrator" active="visibility" />
 
       <div className="mb-6">
-        <h1 className="text-2xl font-bold tracking-tight">Visibilidade</h1>
-        <p className="text-sm text-zinc-500 mt-1">
-          Decida o quanto cada personagem observador consegue ver dos outros.
-          Você enxerga tudo; os jogadores veem apenas o que as regras abaixo permitem.
-        </p>
+        <h1 className="text-2xl font-bold tracking-tight">{t("nav.visibility")}</h1>
+        <p className="text-sm text-zinc-500 mt-1">{t("tp.visibility.subtitle")}</p>
       </div>
 
       <VisibilityPanel

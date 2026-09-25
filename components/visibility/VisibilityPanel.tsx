@@ -29,6 +29,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
+import { interpolate, useTranslation } from "@/lib/i18n";
 import type {
   Advantage,
   Disadvantage,
@@ -48,24 +49,24 @@ export type VisStatus = "unknown" | "known" | "specialist";
 
 const STATUS_META: Record<
   VisStatus,
-  { label: string; buttonCls: string; dot: string; textCls: string }
+  { labelKey: string; buttonCls: string; dot: string; textCls: string }
 > = {
   unknown: {
-    label: "Desconhecido",
+    labelKey: "vs.vis.statusUnknown",
     buttonCls:
       "text-zinc-300 border-zinc-700/70 bg-zinc-800/50 hover:border-zinc-500 hover:bg-zinc-700/40",
     dot: "bg-zinc-500",
     textCls: "text-zinc-400",
   },
   known: {
-    label: "Conhecido",
+    labelKey: "vs.vis.statusKnown",
     buttonCls:
       "text-emerald-300 border-emerald-500/40 bg-emerald-500/10 hover:border-emerald-400 hover:bg-emerald-500/20",
     dot: "bg-emerald-400",
     textCls: "text-emerald-300",
   },
   specialist: {
-    label: "Especialista",
+    labelKey: "vs.vis.statusSpecialist",
     buttonCls:
       "text-violet-300 border-violet-500/40 bg-violet-500/10 hover:border-violet-400 hover:bg-violet-500/20",
     dot: "bg-violet-400",
@@ -132,38 +133,39 @@ const entityField = (t: RowTarget): Record<string, string> => {
   }
 };
 
-const ATTRS: { key: string; label: string }[] = [
-  { key: "name", label: "Nome" },
-  { key: "bio", label: "Biografia" },
-  { key: "backstory", label: "Antecedentes" },
+const ATTRS: { key: string; label: string; labelKey?: string }[] = [
+  { key: "name", label: "Nome", labelKey: "vs.vis.attr.name" },
+  { key: "bio", label: "Biografia", labelKey: "vs.vis.attr.bio" },
+  { key: "backstory", label: "Antecedentes", labelKey: "vs.vis.attr.backstory" },
   { key: "st", label: "ST" },
   { key: "dx", label: "DX" },
   { key: "iq", label: "IQ" },
   { key: "ht", label: "HT" },
   { key: "hp", label: "HP" },
   { key: "fatigue", label: "FP" },
-  { key: "points", label: "Pontos" },
-  { key: "basic_speed", label: "Velocidade" },
-  { key: "move", label: "Movimento" },
-  { key: "encumbrance", label: "Carga" },
-  { key: "parry", label: "Aparar" },
-  { key: "block", label: "Bloquear" },
-  { key: "dodge", label: "Esquiva" },
+  { key: "points", label: "Pontos", labelKey: "vs.vis.attr.points" },
+  { key: "basic_speed", label: "Velocidade", labelKey: "vs.vis.attr.basicSpeed" },
+  { key: "move", label: "Movimento", labelKey: "vs.vis.attr.move" },
+  { key: "encumbrance", label: "Carga", labelKey: "vs.vis.attr.encumbrance" },
+  { key: "parry", label: "Aparar", labelKey: "vs.vis.attr.parry" },
+  { key: "block", label: "Bloquear", labelKey: "vs.vis.attr.block" },
+  { key: "dodge", label: "Esquiva", labelKey: "vs.vis.attr.dodge" },
 ];
 
-const charName = (c: TableCharacter) => c.sheet?.name || c.name || "Sem nome";
+const charName = (c: TableCharacter, t: (key: string) => string) =>
+  c.sheet?.name || c.name || t("vs.common.noName");
 
 type Perspective = "players" | "world";
 
 type WorldTab = "npcs" | "items" | "locations" | "skills" | "advantages" | "disadvantages";
 
-const WORLD_TABS: { key: WorldTab; label: string }[] = [
-  { key: "npcs", label: "NPCs" },
-  { key: "items", label: "Itens" },
-  { key: "locations", label: "Locais" },
-  { key: "skills", label: "Perícias" },
-  { key: "advantages", label: "Vantagens" },
-  { key: "disadvantages", label: "Desvantagens" },
+const WORLD_TABS: { key: WorldTab; labelKey: string }[] = [
+  { key: "npcs", labelKey: "vs.vis.groupNpcs" },
+  { key: "items", labelKey: "vs.vis.groupItems" },
+  { key: "locations", labelKey: "vs.vis.groupLocations" },
+  { key: "skills", labelKey: "vs.vis.groupSkills" },
+  { key: "advantages", labelKey: "vs.vis.groupAdvantages" },
+  { key: "disadvantages", labelKey: "vs.vis.groupDisadvantages" },
 ];
 
 interface VisibilityPanelProps {
@@ -191,6 +193,7 @@ export default function VisibilityPanel({
   targetId,
   perspective: lockedPerspective,
 }: VisibilityPanelProps) {
+  const { t } = useTranslation();
   const observers = useMemo(
     () => characters.filter((c) => !c.isNpc && c.user?.id),
     [characters]
@@ -303,14 +306,14 @@ export default function VisibilityPanel({
   const groups: PanelTarget[] = useMemo(() => {
     const attrRows: PanelRow[] = ATTRS.map((a) => ({
       target: { type: "attr", id: a.key },
-      label: a.label,
+      label: a.labelKey ? t(a.labelKey) : a.label,
       aliasing: true,
     }));
     const npcRows: PanelRow[] = (characters ?? [])
       .filter((c) => c.isNpc)
       .map((c) => ({
         target: { type: "npc", id: c.id },
-        label: charName(c),
+        label: charName(c, t),
         aliasing: true,
       }));
     const itemRows: PanelRow[] = (items ?? []).map((it) => ({
@@ -340,17 +343,17 @@ export default function VisibilityPanel({
     }));
 
     if (perspective === "players") {
-      return [{ key: "identity", label: "Identidade e Atributos", rows: attrRows }];
+      return [{ key: "identity", label: t("vs.vis.groupIdentity"), rows: attrRows }];
     }
     return [
-      { key: "npcs", label: "NPCs", rows: npcRows },
-      { key: "items", label: "Itens", rows: itemRows },
-      { key: "locations", label: "Locais", rows: locRows },
-      { key: "skills", label: "Perícias", rows: skillRows },
-      { key: "advantages", label: "Vantagens", rows: advRows },
-      { key: "disadvantages", label: "Desvantagens", rows: disRows },
+      { key: "npcs", label: t("vs.vis.groupNpcs"), rows: npcRows },
+      { key: "items", label: t("vs.vis.groupItems"), rows: itemRows },
+      { key: "locations", label: t("vs.vis.groupLocations"), rows: locRows },
+      { key: "skills", label: t("vs.vis.groupSkills"), rows: skillRows },
+      { key: "advantages", label: t("vs.vis.groupAdvantages"), rows: advRows },
+      { key: "disadvantages", label: t("vs.vis.groupDisadvantages"), rows: disRows },
     ];
-  }, [characters, items, locations, skills, advantages, disadvantages, perspective]);
+  }, [characters, items, locations, skills, advantages, disadvantages, perspective, t]);
 
   const activeGroup: PanelTarget | null = useMemo(() => {
     if (perspective === "players") {
@@ -423,7 +426,7 @@ export default function VisibilityPanel({
       await saveRule(row, status, value);
       await refetch(curObserver);
     } catch {
-      setError("Falha ao salvar a regra de visibilidade.");
+      setError(t("vs.vis.errSave"));
     } finally {
       setSaving(false);
     }
@@ -438,7 +441,7 @@ export default function VisibilityPanel({
       await Promise.all(group.rows.map((r) => saveRule(r, status, valueOf(r))));
       await refetch(curObserver);
     } catch {
-      setError(`Falha ao liberar ${group.label} de uma vez.`);
+      setError(interpolate(t("vs.vis.errRevealAll"), { group: group.label }));
     } finally {
       setBulkApplying(null);
     }
@@ -475,9 +478,9 @@ export default function VisibilityPanel({
         <div className="flex flex-wrap gap-1 mb-4">
           {(
             [
-              { key: "players", label: "Jogador → Jogador" },
-              { key: "world", label: "Jogador → Mesa" },
-            ] as { key: Perspective; label: string }[]
+              { key: "players", labelKey: "vs.vis.perspPlayers" },
+              { key: "world", labelKey: "vs.vis.perspWorld" },
+            ] as { key: Perspective; labelKey: string }[]
           ).map((p) => (
             <button
               key={p.key}
@@ -489,7 +492,7 @@ export default function VisibilityPanel({
                   : "bg-zinc-900 border border-zinc-800 text-zinc-500 hover:text-zinc-300 hover:border-zinc-600"
               }`}
             >
-              {p.label}
+              {t(p.labelKey)}
             </button>
           ))}
         </div>
@@ -498,18 +501,18 @@ export default function VisibilityPanel({
       {/* Controls */}
       <div className="flex flex-wrap items-center gap-3 mb-4">
         <label className="flex flex-col gap-1 text-xs uppercase tracking-wider text-zinc-500 font-mono">
-          Visto por
+          {t("vs.vis.seenBy")}
           <select
             value={curObserver ?? ""}
             onChange={(e) => setObserverId(e.target.value || null)}
             className="bg-zinc-900 border border-zinc-700 rounded-md px-2 py-1.5 text-sm text-zinc-100 font-medium uppercase-none normal-case"
           >
             {observers.length === 0 ? (
-              <option value="">Nenhum personagem de jogador</option>
+              <option value="">{t("vs.vis.noPlayerChars")}</option>
             ) : null}
             {observers.map((c) => (
               <option key={c.id} value={c.id}>
-                {charName(c)}
+                {charName(c, t)}
               </option>
             ))}
           </select>
@@ -517,18 +520,18 @@ export default function VisibilityPanel({
 
         {perspective === "players" ? (
           <label className="flex flex-col gap-1 text-xs uppercase tracking-wider text-zinc-500 font-mono">
-            Alvo
+            {t("vs.vis.target")}
             <select
               value={curTarget ?? ""}
               onChange={(e) => setTarget(e.target.value || null)}
               className="bg-zinc-900 border border-zinc-700 rounded-md px-2 py-1.5 text-sm text-zinc-100 font-medium uppercase-none normal-case"
             >
               {targetOptions.length === 0 ? (
-                <option value="">Nenhum outro personagem</option>
+                <option value="">{t("vs.vis.noOtherChar")}</option>
               ) : null}
               {targetOptions.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {charName(c)}
+                  {charName(c, t)}
                 </option>
               ))}
             </select>
@@ -537,45 +540,45 @@ export default function VisibilityPanel({
 
         {saving ? (
           <span className="text-xs text-zinc-500 font-mono animate-pulse">
-            salvando…
+            {t("vs.vis.saving")}
           </span>
         ) : null}
         {error ? <span className="text-xs text-red-400">{error}</span> : null}
       </div>
 
       <p className="text-xs text-zinc-500 mb-4">
-        Três níveis por entidade —{" "}
-        <span className="text-zinc-300">Desconhecido</span> mantém oculto
-        (o nome aparece como “???”),{" "}
-        <span className="text-emerald-300">Conhecido</span> mostra o{" "}
-        <span className="font-mono text-zinc-400">valor mascarado</span>{" "}
-        que você digita (você conhece a pessoa <em>por aquele nome</em> —
-        ou o item aparece como “não identificado”), e{" "}
-        <span className="text-violet-300">Especialista</span> revela o{" "}
-        <em>valor real</em> por completo. Tudo que nunca foi tocado
-        permanece Desconhecido. O interruptor no cabeçalho de cada grupo
-        libera ou oculta o grupo inteiro de uma vez; o interruptor em cada
-        linha faz o mesmo para uma única entidade.
+        {t("vs.vis.ex.lead")}{" "}
+        <span className="text-zinc-300">{t("vs.vis.ex.unknown")}</span>{" "}
+        {t("vs.vis.ex.afterUnknown")}{" "}
+        <span className="text-emerald-300">{t("vs.vis.ex.known")}</span>{" "}
+        {t("vs.vis.ex.afterKnown")}{" "}
+        <span className="font-mono text-zinc-400">{t("vs.vis.ex.masked")}</span>{" "}
+        {t("vs.vis.ex.afterMasked")}{" "}
+        <em>{t("vs.vis.ex.byThatName")}</em>{" "}
+        {t("vs.vis.ex.afterThat")}{" "}
+        <span className="text-violet-300">{t("vs.vis.ex.specialist")}</span>{" "}
+        {t("vs.vis.ex.afterSpecialist")} <em>{t("vs.vis.ex.realValue")}</em>{" "}
+        {t("vs.vis.ex.tail")}
       </p>
 
       {/* World tab bar */}
       {perspective === "world" ? (
         <div className="flex flex-wrap gap-1 mb-4 border-b border-zinc-800">
-          {WORLD_TABS.map((t) => {
+          {WORLD_TABS.map((tab) => {
             const count =
-              groups.find((g) => g.key === t.key)?.rows.length ?? 0;
+              groups.find((g) => g.key === tab.key)?.rows.length ?? 0;
             return (
               <button
-                key={t.key}
+                key={tab.key}
                 type="button"
-                onClick={() => setWorldTab(t.key)}
+                onClick={() => setWorldTab(tab.key)}
                 className={`px-3 py-2 text-xs font-mono uppercase tracking-wide border-b-2 -mb-px transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-green-800/60 ${
-                  worldTab === t.key
+                  worldTab === tab.key
                     ? "border-green-700 text-green-400"
                     : "border-transparent text-zinc-500 hover:text-zinc-300"
                 }`}
               >
-                {t.label}
+                {t(tab.labelKey)}
                 <span className="ml-1.5 text-[10px] text-zinc-600">{count}</span>
               </button>
             );
@@ -596,7 +599,7 @@ export default function VisibilityPanel({
               <div className="ml-auto flex items-center gap-2">
                 {bulkApplying === g.key ? (
                   <span className="text-[10px] font-mono text-zinc-500 uppercase animate-pulse">
-                    aplicar tudo…
+                    {t("vs.vis.applyAll")}
                   </span>
                 ) : (
                   <>
@@ -611,8 +614,8 @@ export default function VisibilityPanel({
                       disabled={g.rows.length === 0}
                       title={
                         groupStateOf(g) === "on"
-                          ? "Ocultar o grupo inteiro"
-                          : "Liberar o grupo inteiro"
+                          ? t("vs.vis.hideGroup")
+                          : t("vs.vis.revealGroup")
                       }
                       className={`relative inline-flex h-4 w-8 shrink-0 items-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-green-800/60 disabled:opacity-40 disabled:cursor-not-allowed ${
                         groupStateOf(g) === "on"
@@ -632,10 +635,10 @@ export default function VisibilityPanel({
                     </button>
                     <span className="text-[10px] font-mono uppercase text-zinc-500 w-20 text-left">
                       {groupStateOf(g) === "on"
-                        ? "tudo revelado"
+                        ? t("vs.vis.allRevealed")
                         : groupStateOf(g) === "mixed"
-                        ? "misto"
-                        : "tudo oculto"}
+                        ? t("vs.vis.mixed")
+                        : t("vs.vis.allHidden")}
                     </span>
                   </>
                 )}
@@ -657,7 +660,7 @@ export default function VisibilityPanel({
                           persist(row, revealed ? "unknown" : "known", valueOf(row))
                         }
                         aria-pressed={revealed}
-                        title={revealed ? "Ocultar este" : "Liberar (revelar agora)"}
+                        title={revealed ? t("vs.vis.hideThis") : t("vs.vis.revealNow")}
                         className={`relative inline-flex h-4 w-8 shrink-0 items-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-green-800/60 ${
                           revealed ? "bg-emerald-500/60" : "bg-zinc-700"
                         }`}
@@ -687,7 +690,7 @@ export default function VisibilityPanel({
                             }`}
                             aria-pressed={status === s}
                           >
-                            {STATUS_META[s].label}
+                            {t(STATUS_META[s].labelKey)}
                           </button>
                         ))}
                       </div>
@@ -697,7 +700,7 @@ export default function VisibilityPanel({
                         <input
                           type="text"
                           defaultValue={valueOf(row)}
-                          placeholder="Valor mascarado (mostrado em Conhecido/Desconhecido)"
+                          placeholder={t("vs.vis.aliasPh")}
                           onBlur={(e) => {
                             const v = e.target.value;
                             if (v !== valueOf(row))
@@ -706,7 +709,7 @@ export default function VisibilityPanel({
                           className="flex-1 bg-zinc-950 border border-zinc-800 rounded px-2 py-1 text-xs text-zinc-300 placeholder-zinc-600 focus:outline-none focus:border-zinc-600"
                         />
                         <span className="text-[10px] font-mono text-zinc-600 uppercase">
-                          apelido
+                          {t("vs.vis.alias")}
                         </span>
                       </div>
                     ) : null}
@@ -731,7 +734,7 @@ export default function VisibilityPanel({
                                 }))
                               }
                               aria-expanded={open}
-                              title="Anexar/editar o momento desta descoberta"
+                              title={t("vs.vis.attachMoment")}
                               className={`inline-flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-wider rounded-full px-2 py-0.5 border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-green-800/60 ${
                                 attached
                                   ? "text-green-400 border-green-700/50 bg-green-500/5"
@@ -751,7 +754,7 @@ export default function VisibilityPanel({
                                   d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"
                                 />
                               </svg>
-                              {attached ? "momento anexado" : "momento"}
+                              {attached ? t("vs.vis.momentAttached") : t("vs.vis.moment")}
                               {fromRule ? (
                                 <span className="text-[9px] text-zinc-500">· {fromRule.moment ?? "?"}</span>
                               ) : null}

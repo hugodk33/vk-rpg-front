@@ -1,5 +1,8 @@
+"use client";
+
 import type { Item } from "@/lib/types";
 import ItemIcon from "@/components/items/ItemIcon";
+import { useTranslation } from "@/lib/i18n";
 import { classify, GROUP_UI, conditionLedger, itemParticulars, qualityStyle } from "./itemIdentity";
 
 /* ============================================================
@@ -22,11 +25,12 @@ function SpecChip({ label, value, tint }: { label: string; value: string; tint?:
 }
 
 export default function ItemListCard({ item }: { item: Item }) {
+  const { lang, t } = useTranslation();
   const group = classify(item);
   const tint = GROUP_UI[group].hex;
-  const cs = conditionLedger(item.condition);
-  const qs = qualityStyle(item.quality);
-  const particulars = itemParticulars(item);
+  const cs = conditionLedger(item.condition, lang);
+  const qs = qualityStyle(item.quality, lang);
+  const particulars = itemParticulars(item, lang);
 
   return (
     <div className="bg-zinc-800/40 hover:bg-zinc-800/70 border border-zinc-700/40 hover:border-zinc-600/60 rounded-lg p-3.5 transition-all group">
@@ -42,7 +46,7 @@ export default function ItemListCard({ item }: { item: Item }) {
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline justify-between gap-2">
             <span className="text-sm font-medium text-zinc-200 group-hover:text-zinc-100 truncate">
-              {item.name || "Sem nome"}
+              {item.name || t("it.unnamed")}
             </span>
             <span className="font-mono text-[10px] text-zinc-500 shrink-0">
               {item.weight_lb != null ? `${item.weight_lb} lb` : ""}
@@ -51,7 +55,7 @@ export default function ItemListCard({ item }: { item: Item }) {
 
           <div className="flex items-center gap-2 mt-0.5 flex-wrap">
             <span className="font-mono text-[10px] tracking-widest uppercase" style={{ color: tint }}>
-              {GROUP_UI[group].label}
+              {t(GROUP_UI[group].label)}
             </span>
             {item.category ? <span className="text-[11px] text-zinc-500">{item.category}</span> : null}
             {/* quality */}

@@ -9,6 +9,7 @@ import { floorPlanGroup } from "@/lib/location";
 import { maskedLocationName, maskedTargetName } from "@/lib/visibility";
 import TacticalPlate from "@/components/tactical/TacticalPlate";
 import QueueProcession from "@/components/session/QueueProcession";
+import { interpolate, useTranslation } from "@/lib/i18n";
 
 /* ============================================================
    Turn — the player's active scene console.
@@ -40,8 +41,8 @@ const queuePos = (e: QueueEntry): number => {
   return Number.isFinite(n) ? n : Number.MAX_SAFE_INTEGER;
 };
 
-const hexLbl = (hex: { q: number; r: number } | null): string => {
-  if (!hex) return "off";
+const hexLbl = (hex: { q: number; r: number } | null, off: string): string => {
+  if (!hex) return off;
   const col = hex.q >= 0 ? String.fromCharCode(65 + (hex.q % 26)) : "?";
   return `${col}${hex.r + 1}`;
 };
@@ -60,14 +61,14 @@ const attrMeta: Record<string, { label: string; hex: string }> = {
 };
 
 type Judgment = { crit: boolean; ok: boolean; text: string };
-function judgeRoll(total: number, target: number): Judgment {
-  if (total <= 4) return { crit: true, ok: true, text: "Sucesso crítico" };
+function judgeRoll(total: number, target: number, t: (key: string) => string): Judgment {
+  if (total <= 4) return { crit: true, ok: true, text: t("pl.roll.critSuccess") };
   if (total >= 18 || (total === 17 && target <= 15))
-    return { crit: true, ok: false, text: "Falha crítica" };
+    return { crit: true, ok: false, text: t("pl.roll.critFail") };
   const m = target - total;
   return m >= 0
-    ? { crit: false, ok: true, text: `Sucesso por ${m}` }
-    : { crit: false, ok: false, text: `Falha por ${-m}` };
+    ? { crit: false, ok: true, text: interpolate(t("pl.roll.successBy"), { n: m }) }
+    : { crit: false, ok: false, text: interpolate(t("pl.roll.failBy"), { n: -m }) };
 }
 
 function rollDice(count: number, die: number, mod: number): { r: number[]; tot: number } {
@@ -98,6 +99,7 @@ export default function TurnPanel({
   latestBeat = null,
   visibility = null,
 }: TurnPanelProps) {
+  const { t } = useTranslation();
   const pendingQueue = [...queue]
     .filter((e) => (e.status ?? "pending") !== "done")
     .sort((a, b) => queuePos(a) - queuePos(b));
@@ -107,7 +109,7 @@ export default function TurnPanel({
   const notInQueue = myIndex === -1;
 
   const charName = (id?: string | null): string => {
-    if (!id) return "Someone";
+    if (!id) return t("pl.session.someone");
     const c = roster.find((x) => x.id === id);
     return c?.sheet?.name || c?.name || c?.user?.username || id;
   };
@@ -195,7 +197,7 @@ export default function TurnPanel({
     const die = parseInt(testDie, 10);
     if (rollDisabled()) return { r: [], tot: 0 };
     const { r, tot } = rollDice(testCount, die, modValue);
-    const j = judgeRoll(tot, target);
+    const j = judgeRoll(tot, target, t);
     setRolls(r);
     setTotal(tot);
     setJudgment(j);
@@ -239,7 +241,7 @@ export default function TurnPanel({
         }),
       });
       const j = await res.json();
-      if (!j.success) throw new Error(j.error || "Falha ao registrar sua ação");
+      if (!j.success) throw new Error(j.error || t("pl.session.err.action"));
       setCommitted(true);
       setActDesc("");
       setActTarget("");
@@ -260,7 +262,11 @@ export default function TurnPanel({
       });
       const j = await res.json();
       if (j.success && Array.isArray(j.applied) && j.applied.length) {
-        setEffectNote(`Effect applied: ${j.applied.map((a: { name?: string }) => a.name || "Effect").join(", ")}`);
+        setEffectNote(
+          interpolate(t("ss.effectApplied"), {
+            list: j.applied.map((a: { name?: string }) => a.name || t("ss.effect")).join(", "),
+          })
+        );
       } else {
         setEffectNote(null);
       }
@@ -322,7 +328,7 @@ export default function TurnPanel({
      pelo narrador podem estar entre eles). */
   const rosterTokens: BoardToken[] = roster.map((c) => ({
     id: c.id,
-    name: c.sheet?.name || c.name || c.user?.username || "Unknown",
+    name: c.sheet?.name || c.name || c.user?.username || t("ss.unknown"),
     isPlayer: true,
     unconscious: false,
   }));
@@ -360,6 +366,13 @@ export default function TurnPanel({
   const fatigued = s?.fatigue_state !== "active";
   const myMove = fatigued ? (s?.effective_move ?? s?.move) : s?.move;
 
+  const tooFar = (d: number): string =>
+    interpolate(t("pl.session.err.tooFar"), {
+      cap: myMove ?? 0,
+      dist: d,
+      hex: myMove === 1 ? t("pl.session.hexOne") : t("pl.session.hexMany"),
+    });
+
   /* ---- the play map ----: while it's my turn the picked hex is drawn as a
      preview (arrow + destination ghost); the token itself only strides when
      the move is committed and the fresh board comes back. */
@@ -396,7 +409,7 @@ export default function TurnPanel({
     if (myMove != null && from) {
       const d = hexDist(from, target);
       if (d > myMove) {
-        setMoveWarn(`Move is ${myMove} hex${myMove === 1 ? "" : "es"} — ${d} is too far.`);
+        setMoveWarn(tooFar(d));
         return;
       }
     }
@@ -421,14 +434,14 @@ export default function TurnPanel({
       if (myMove != null && from) {
         const d = hexDist(from, target);
         if (d > myMove) {
-          setMoveWarn(`Move is ${myMove} hex${myMove === 1 ? "" : "es"} — ${d} is too far.`);
+          setMoveWarn(tooFar(d));
           return;
         }
       }
       q = target.q;
       r = target.r;
     } else if (q == null || r == null) {
-      setMoveWarn("You're not placed on the map yet — pick a destination hex first.");
+      setMoveWarn(t("pl.session.err.notPlaced"));
       return;
     }
     const description = target
@@ -460,7 +473,7 @@ export default function TurnPanel({
         }),
       });
       const j = await res.json();
-      if (!j.success) throw new Error(j.error || "Falha ao terminar seu turno");
+      if (!j.success) throw new Error(j.error || t("pl.session.err.endTurn"));
       setCommitted(true);
       setMoveTarget(null);
       setFacingChoice("auto");
@@ -480,12 +493,12 @@ export default function TurnPanel({
         <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5">
           <div className="flex items-center gap-4 flex-wrap">
             <div className="flex items-baseline gap-1.5">
-              <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">Capítulo</span>
+              <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">{t("ss.chapter")}</span>
               <span className="font-mono text-xl font-bold text-blue-300 tabular-nums">{chapter}</span>
             </div>
             <span className="w-px h-6 bg-zinc-700/60" aria-hidden />
             <div className="flex items-baseline gap-1.5">
-              <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">Parte</span>
+              <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">{t("ss.part")}</span>
               <span className="font-mono text-xl font-bold text-blue-300 tabular-nums">{part}</span>
             </div>
             {latestTitle ? (
@@ -502,7 +515,7 @@ export default function TurnPanel({
           >
             <span className={`w-2 h-2 rounded-full ${isMyTurn ? "bg-blue-400 beacon" : "bg-zinc-600"}`}
               style={isMyTurn ? { boxShadow: "0 0 8px rgba(59,130,246,.7)" } : undefined} />
-            {isMyTurn ? "Seu turno" : notInQueue ? "Fora da fila" : "Aguardando"}
+            {isMyTurn ? t("pl.seat.yourTurn") : notInQueue ? t("pl.seat.outOfQueue") : t("pl.seat.waiting")}
           </span>
         </div>
         {latestNarration ? (
@@ -516,37 +529,37 @@ export default function TurnPanel({
         roster={roster}
         tone="blue"
         myId={myId}
-        emptyText="A fila está vazia — a cena ainda não abriu."
+        emptyText={t("pl.queue.emptyScene")}
       />
 
       {/* floor plan + action — the map, your move and the dice stay in one card */}
-      <section aria-label="Planta" className="bg-zinc-900/80 border border-zinc-700/40 rounded-xl overflow-hidden">
+      <section aria-label={t("ss.floorPlan")} className="bg-zinc-900/80 border border-zinc-700/40 rounded-xl overflow-hidden">
         <div className="p-5">
         <div className="flex flex-wrap items-center gap-3 mb-4">
           <span
             className={`w-2.5 h-2.5 rounded-full ${isMyTurn ? "bg-blue-400 beacon" : "bg-zinc-600"}`}
             style={isMyTurn ? { boxShadow: "0 0 10px rgba(96,165,250,.7)" } : undefined}
           />
-          <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">Planta</span>
+          <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">{t("ss.floorPlan")}</span>
           {mapGroup.length > 1 ? (
             <select
               value={mapLocation?.id ?? ""}
               onChange={(e) => { setLocSel(e.target.value); setMoveTarget(null); setMoveWarn(null); }}
-              aria-label="Onde você está"
+              aria-label={t("pl.session.aria.whereYouAre")}
               className="max-w-xs bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-3 py-2 text-zinc-100 text-sm focus:outline-none focus:border-blue-600/70 transition-colors"
             >
               {mapGroup.map((l) => (
                 <option key={l.id} value={l.id} className="bg-zinc-800">
-                  {maskedLocationName(visibility, l.id, l.name || "Sem nome")}
+                  {maskedLocationName(visibility, l.id, l.name || t("ss.unnamed"))}
                 </option>
               ))}
             </select>
           ) : mapLocation ? (
             <span className="text-sm font-semibold text-zinc-100">
-              {maskedLocationName(visibility, mapLocation.id, mapLocation.name || "Sem nome")}
+              {maskedLocationName(visibility, mapLocation.id, mapLocation.name || t("ss.unnamed"))}
             </span>
           ) : (
-            <span className="text-sm text-zinc-500 italic">Nenhuma planta nesta mesa ainda.</span>
+            <span className="text-sm text-zinc-500 italic">{t("ss.noFloorPlanYet")}</span>
           )}
           {mapLocation?.hex?.width != null ? (
             <span className="ml-auto font-mono text-[10px] text-zinc-500 uppercase tracking-widest">
@@ -568,7 +581,7 @@ export default function TurnPanel({
           />
         ) : (
           <p className="text-sm text-zinc-600 font-mono italic">
-            A cena abre uma planta aqui quando o narrador a desenhar.
+            {t("pl.session.sceneNoFloorPlan")}
           </p>
         )}
 
@@ -580,7 +593,7 @@ export default function TurnPanel({
                 type="button"
                 onClick={() => setReplayOpen((o) => !o)}
                 aria-expanded={replayOpen}
-                aria-label="Alternar reprodução de movimento"
+                aria-label={t("ss.aria.toggleMoveReplay")}
                 className="inline-flex items-center gap-1.5 font-mono text-[10px] tracking-widest uppercase text-zinc-500 hover:text-zinc-300 transition-colors"
               >
                 <span
@@ -590,10 +603,13 @@ export default function TurnPanel({
                 >
                   {icon("M9 18l6-6-6-6", "w-3.5 h-3.5")}
                 </span>
-                Reproduzir movimento
+                {t("ss.replayMoves")}
               </button>
               <span className="font-mono text-[10px] text-zinc-600">
-                ({boardMoves.length} move{boardMoves.length !== 1 ? "s" : ""})
+                {interpolate(
+                  boardMoves.length === 1 ? t("ss.movesOne") : t("ss.movesMany"),
+                  { n: boardMoves.length }
+                )}
               </span>
               {replayOpen ? (
                 <div className="ml-auto flex gap-1">
@@ -607,19 +623,19 @@ export default function TurnPanel({
                     }
                     className="px-2 py-0.5 rounded-md text-[10px] font-mono uppercase tracking-wider text-blue-300 hover:text-blue-100 bg-blue-500/10 border border-blue-500/40"
                   >
-                    Última
+                    {t("ss.last")}
                   </button>
                   <button
                     onClick={() => setShownMoves(boardMoves.map((m) => m.actionId).filter((x): x is string => !!x))}
                     className="px-2 py-0.5 rounded-md text-[10px] font-mono uppercase tracking-wider text-zinc-400 hover:text-zinc-100 bg-zinc-800/60 border border-zinc-700/40"
                   >
-                    Todas
+                    {t("ss.all")}
                   </button>
                   <button
                     onClick={() => setShownMoves([])}
                     className="px-2 py-0.5 rounded-md text-[10px] font-mono uppercase tracking-wider text-zinc-400 hover:text-zinc-100 bg-zinc-800/60 border border-zinc-700/40"
                   >
-                    Nenhuma
+                    {t("ss.none")}
                   </button>
                 </div>
               ) : null}
@@ -641,7 +657,7 @@ export default function TurnPanel({
                       }`}
                     >
                       {nm}
-                      <span className="opacity-60"> {hexLbl(m.from)} → {hexLbl(m.to)}</span>
+                      <span className="opacity-60"> {hexLbl(m.from, "—")} → {hexLbl(m.to, "—")}</span>
                     </button>
                   );
                 })}
@@ -653,51 +669,53 @@ export default function TurnPanel({
       </section>
 
       {/* action zone: movement + dice — fora da caixa da planta */}
-      <section aria-label="Ações" className="relative bg-zinc-900/80 border border-zinc-700/40 rounded-xl overflow-hidden">
+      <section aria-label={t("pl.session.aria.actions")} className="relative bg-zinc-900/80 border border-zinc-700/40 rounded-xl overflow-hidden">
           <div className="p-5 space-y-4">
             <div className="flex flex-wrap items-center gap-3 pb-4 border-b border-zinc-700/40">
               <span className={`w-2.5 h-2.5 rounded-full ${isMyTurn ? "bg-blue-400 beacon" : "bg-zinc-600"}`}
                 style={isMyTurn ? { boxShadow: "0 0 10px rgba(251,191,36,.7)" } : undefined} />
-              <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">Agindo agora</span>
+              <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">{t("ss.actingNow")}</span>
               <span className="text-sm font-semibold text-zinc-100">
-                {pendingQueue[0] ? charName(pendingQueue[0].character_id) : "fila vazia"}
+                {pendingQueue[0] ? charName(pendingQueue[0].character_id) : t("ss.emptyQueue")}
               </span>
               <span className="ml-auto font-mono text-[10px] text-zinc-500 uppercase tracking-widest">
-                alvo: <span style={{ color: attrHex }}>{target}</span> ({skillMode ? (skillData ? skillLabel(skillData, myChar?.sheet ?? null) : "—") : attrMeta[actAttr]?.label})
+                {t("ss.targetPrefix")}: <span style={{ color: attrHex }}>{target}</span> ({skillMode ? (skillData ? skillLabel(skillData, myChar?.sheet ?? null) : "—") : attrMeta[actAttr]?.label})
               </span>
             </div>
 
             {/* movement | dice test — two columns side by side */}
             <div className="grid gap-5 lg:grid-cols-2">
-              <div className="rounded-xl border border-zinc-700/40 p-4">
-                <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-3">Movimento</span>
+              <div className="">
+                <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-3">{t("cs.movement")}</span>
                 {isMyTurn ? (
           <div className="space-y-3">
             {/* move column: value + where you stand, label at the bottom */}
             <div className="flex flex-col items-center gap-1.5">
               <div className="flex flex-wrap items-baseline gap-1.5">
                 <span className="font-mono text-lg font-bold text-blue-300 tabular-nums">{myMove ?? "—"}</span>
-                <span className="text-[11px] text-zinc-500">{myMove === 1 ? "hexágono" : "hexágonos"}</span>
+                <span className="text-[11px] text-zinc-500">{myMove === 1 ? t("pl.session.hexOne") : t("pl.session.hexMany")}</span>
                 <span className="text-sm text-zinc-500 flex-1 min-w-0">
                   {from ? (
                     <span className="font-mono text-[12px] text-zinc-400">
-                      você está no hexágono {from.q},{from.r}
-                      {me?.facing != null && me?.facing >= 0 ? ` · orientação ${FACING_DIRS[me.facing]?.label ?? me.facing}` : ""}
+                      {interpolate(t("pl.session.atHex"), { q: from.q, r: from.r })}
+                      {me?.facing != null && me?.facing >= 0
+                        ? interpolate(t("pl.session.facingOf"), { dir: FACING_DIRS[me.facing]?.label ?? me.facing })
+                        : ""}
                     </span>
                   ) : (
-                    <span className="text-zinc-600 italic">você ainda não está posicionado</span>
+                    <span className="text-zinc-600 italic">{t("pl.session.notPlacedYet")}</span>
                   )}
                   {moveTarget ? (
                     <span className="font-mono text-[12px] text-emerald-300 ml-2">→ {moveTarget.q},{moveTarget.r}</span>
                   ) : null}
                 </span>
               </div>
-              <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">Movimento</p>
+              <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">{t("cs.movement")}</p>
             </div>
 
             {moveTarget ? (
               <p className="font-mono text-[10px] uppercase tracking-widest text-emerald-300/80">
-                prévia — o token só se move quando você confirma o movimento
+                {t("pl.session.movePreview")}
               </p>
             ) : null}
 
@@ -750,7 +768,7 @@ export default function TurnPanel({
                       })
                     )}
                   </div>
-                <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">Orientação</p>
+                <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">{t("ss.facing")}</p>
               </div>
 
               <div className="flex flex-col items-center gap-1.5">
@@ -761,35 +779,42 @@ export default function TurnPanel({
                 >
                   <span className="block">
                     {moving
-                      ? "Registrando…"
+                      ? t("pl.session.logging")
                       : moveTarget
                         ? tableSettings?.turn_end_mode === "after_move"
-                          ? "Mover e terminar turno"
-                          : "Registrar movimento"
+                          ? t("pl.session.moveAndEndTurn")
+                          : t("pl.session.logMove")
                         : facingChoice !== "auto"
                           ? tableSettings?.turn_end_mode === "after_move"
-                            ? "Virar e terminar turno"
-                            : "Virar no lugar"
-                          : "Registrar movimento"}
+                            ? t("pl.session.faceAndEndTurn")
+                            : t("pl.session.faceInPlace")
+                          : t("pl.session.logMove")}
                   </span>
                   <span className="block text-[10px] font-mono font-medium opacity-80 mt-0.5">
                     {moving
-                      ? "aguarde…"
+                      ? t("pl.session.waitHint")
                       : moveTarget
                         ? `→ ${moveTarget.q},${moveTarget.r}`
                         : facingChoice !== "auto"
-                          ? "no lugar"
-                          : "clique em um hexágono"}
+                          ? t("pl.session.inPlace")
+                          : t("pl.session.pickHexHint")}
                   </span>
                 </button>
-                <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">Registrar movimento</p>
+                <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">{t("pl.session.logMove")}</p>
               </div>
             </div>
           </div>
         ) : (
           <p className="mt-3 font-mono text-[10px] text-zinc-600 uppercase tracking-widest">
-            o mapa abre para movimento no seu turno ·{" "}
-            {myMove != null ? `você pode percorrer ${myMove} hexágono${myMove === 1 ? "" : "s"}` : "sua ficha não tem Movimento"}
+            {interpolate(t("pl.session.mapOpensOnTurn"), {
+              detail:
+                myMove != null
+                  ? interpolate(
+                      myMove === 1 ? t("pl.session.moveRangeOne") : t("pl.session.moveRangeMany"),
+                      { n: myMove }
+                    )
+                  : t("pl.session.noMove"),
+            })}
           </p>
         )}
 
@@ -797,8 +822,8 @@ export default function TurnPanel({
               {moveError ? <p className="mt-2 font-mono text-[11px] text-red-400">{moveError}</p> : null}
               </div>
 
-              <div className="rounded-xl border border-zinc-700/40 p-4">
-                <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-3">Teste de dados</span>
+              <div className="">
+                <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-3">{t("pl.session.diceTest")}</span>
                 <div className="grid grid-cols-1 gap-5">
               <div className="flex flex-col items-center gap-5">
                 {/* line 1 — choose the test basis */}
@@ -816,11 +841,11 @@ export default function TurnPanel({
                             : "border-zinc-700/50 text-zinc-500 hover:text-zinc-300"
                         }`}
                       >
-                        {b === "attr" ? "Atributo" : "Perícia"}
+                        {b === "attr" ? t("ss.attribute") : t("ss.skill")}
                       </button>
                     ))}
                   </div>
-                  <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">Base do teste</p>
+                  <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">{t("ss.testBase")}</p>
                 </div>
 
                 {/* line 2 — the selector */}
@@ -832,7 +857,7 @@ export default function TurnPanel({
                       disabled={committed}
                       className="w-48 bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-3 py-2 text-zinc-100 text-sm focus:outline-none focus:border-blue-600/70 transition-colors disabled:opacity-50"
                     >
-                      <option value="" className="bg-zinc-800">Selecionar…</option>
+                      <option value="" className="bg-zinc-800">{t("ss.select")}…</option>
                       {mySkills.map((sk) => (
                         <option key={sk.id} value={sk.skill_id || sk.id} className="bg-zinc-800">
                           {skillLabel(sk, myChar?.sheet ?? null)}
@@ -852,7 +877,7 @@ export default function TurnPanel({
                     </select>
                   )}
                   <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">
-                    {basis === "skill" ? "Perícia" : "Atributo"}
+                    {basis === "skill" ? t("ss.skill") : t("ss.attribute")}
                   </p>
                 </div>
 
@@ -860,11 +885,11 @@ export default function TurnPanel({
                 <div className="flex flex-wrap items-start justify-center gap-x-8 gap-y-4">
                   <div className="flex flex-col items-center gap-1.5">
                     <span className="inline-flex items-center justify-center min-w-[3.5rem] h-10 bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-3 text-zinc-100 text-sm font-mono">d{testDie}</span>
-                    <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">Dado</p>
+                    <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">{t("ss.die")}</p>
                   </div>
                   <div className="flex flex-col items-center gap-1.5">
                     <span className="inline-flex items-center justify-center min-w-[3.5rem] h-10 bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-3 text-zinc-100 text-sm font-mono">{testCount}</span>
-                    <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">Quantidade</p>
+                    <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">{t("ss.quantity")}</p>
                   </div>
                   <div className="flex flex-col items-center gap-1.5">
                     <span className="inline-flex items-center justify-center min-w-[3.5rem] h-10 bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-3 text-zinc-100 text-sm font-mono">{testMod >= 0 ? `+${testMod}` : testMod}</span>
@@ -875,8 +900,10 @@ export default function TurnPanel({
                 {/* status */}
                 <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-600 text-center">
                   {testSet
-                    ? `Teste do assento travado (${testCount}d${testDie}${testMod >= 0 ? `+${testMod}` : testMod}) — os dados vêm do narrador; escolha um atributo ou perícia para rolar.`
-                    : "Nenhum teste de assento definido ainda — dados padrão até o narrador ajustar. Você escolhe o atributo ou a perícia."}
+                    ? interpolate(t("pl.seat.testLocked"), {
+                        dice: `${testCount}d${testDie}${testMod >= 0 ? `+${testMod}` : testMod}`,
+                      })
+                    : t("pl.seat.testNone")}
                 </p>
 
                 {/* line 4 — alvo (quem você mira/afeta na ação) */}
@@ -896,7 +923,7 @@ export default function TurnPanel({
                         </option>
                       ))}
                   </select>
-                  <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">Alvo</p>
+                  <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">{t("ss.target")}</p>
                 </div>
               </div>
 
@@ -904,7 +931,7 @@ export default function TurnPanel({
                 {rolls.length === 0 ? (
                   <div className="flex items-center gap-2 text-sm text-zinc-500">
                     {icon("M12 3l1.5 6.5L20 11l-6.5 1.5L12 19l-1.5-6.5L4 11l6.5-1.5L12 3z", "w-7 h-7 text-zinc-600")}
-                    {isMyTurn ? "É seu turno — role para agir." : "Os dados liberam no seu turno."}
+                    {isMyTurn ? t("pl.session.yourTurnRoll") : t("pl.seat.diceLocked")}
                   </div>
                 ) : (
                   rolls.map((r, i) => (
@@ -928,7 +955,7 @@ export default function TurnPanel({
                   </div>
                 ) : (
                   <span className="text-sm text-zinc-600">
-                    Clique em <span className={isMyTurn ? "text-blue-400 font-semibold" : "text-zinc-500"}>Rolar</span> para testar.
+                    {t("ss.clickRollBefore")}<span className={isMyTurn ? "text-blue-400 font-semibold" : "text-zinc-500"}>{t("ss.rollShort")}</span>{t("ss.clickRollAfter")}
                   </span>
                 )}
                 <button
@@ -940,7 +967,7 @@ export default function TurnPanel({
                       : "bg-zinc-800 text-zinc-500 cursor-not-allowed"
                   } text-sm font-bold px-6 py-2.5 rounded-lg transition-colors`}
                 >
-                  {icon("M12 3l1.5 6.5L20 11l-6.5 1.5L12 19l-1.5-6.5L4 11l6.5-1.5L12 3z", "w-4 h-4 inline mr-1")}Rolar {testCount}d{testDie}
+                  {icon("M12 3l1.5 6.5L20 11l-6.5 1.5L12 19l-1.5-6.5L4 11l6.5-1.5L12 3z", "w-4 h-4 inline mr-1")}{interpolate(t("ss.rollNdM"), { n: testCount, d: testDie })}
                 </button>
               </div>
 
@@ -948,11 +975,11 @@ export default function TurnPanel({
                 <div className="mt-5 rounded-xl border border-blue-500/30 bg-blue-500/[0.05] p-4">
                   <div className="flex items-center gap-2 mb-3">
                     <span className="w-2.5 h-2.5 rounded-full bg-blue-400 shrink-0" />
-                    <span className="font-mono text-[10px] tracking-widest uppercase text-blue-300/90">Termine seu turno</span>
+                    <span className="font-mono text-[10px] tracking-widest uppercase text-blue-300/90">{t("ss.queue.endTurn")}</span>
                     <span aria-hidden className="flex-1 h-px" style={{ background: "linear-gradient(90deg, rgba(96,165,250,.3), transparent)" }} />
                   </div>
                   <p className="text-[12px] text-zinc-400 mb-3">
-                    Descreva o que fez e passe o holofote ao próximo aventureiro.
+                    {t("pl.session.endTurnHint")}
                   </p>
                   <input
                     type="text"
@@ -964,7 +991,7 @@ export default function TurnPanel({
                         void commitAction();
                       }
                     }}
-                    placeholder="O que você fez? (opcional)"
+                    placeholder={t("pl.session.descPh")}
                     className="w-full bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-blue-600/70 transition-colors"
                   />
                   <div className="mt-3 flex items-center gap-3 flex-wrap">
@@ -974,7 +1001,7 @@ export default function TurnPanel({
                       className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-blue-950 text-sm font-bold px-5 py-2.5 rounded-lg transition-colors shadow-lg shadow-blue-900/20 disabled:opacity-60 disabled:cursor-not-allowed"
                     >
                       {icon("M5 13l4 4L19 7", "w-4 h-4")}
-                      {submitting ? "Registrando…" : "Registrar ação e terminar turno"}
+                      {submitting ? t("pl.session.logging") : t("pl.session.registerEndTurn")}
                     </button>
                     <span className="text-[10px] font-mono uppercase tracking-widest text-zinc-600">
                       {skillMode && skillData
@@ -993,9 +1020,9 @@ export default function TurnPanel({
                 <div className="mt-5 rounded-xl border border-emerald-500/30 bg-emerald-500/[0.05] p-4 flex items-center gap-3">
                   {icon("M5 13l4 4L19 7", "w-5 h-5 text-emerald-400")}
                   <div>
-                    <p className="text-sm font-medium text-emerald-300">Turno registrado — você saiu da fila.</p>
+                    <p className="text-sm font-medium text-emerald-300">{t("pl.session.turnLogged")}</p>
                     <p className="text-[11px] text-zinc-500 mt-0.5">
-                      A rolagem está na crônica. O narrador te chamará de volta no próximo turno.
+                      {t("pl.session.turnLoggedHint")}
                     </p>
                   </div>
                 </div>
@@ -1018,12 +1045,12 @@ export default function TurnPanel({
                   {icon(notInQueue ? "M12 8v8m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" : "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z", "w-6 h-6")}
                 </div>
                 <p className="font-mono text-[11px] uppercase tracking-widest text-zinc-500">
-                  {notInQueue ? "Fora da fila" : `Aguardando — ${myIndex} ${myIndex === 1 ? "assento" : "assentos"} à frente`}
+                  {notInQueue
+                    ? t("pl.seat.outOfQueue")
+                    : interpolate(myIndex === 1 ? t("pl.seat.aheadOne") : t("pl.seat.aheadMany"), { n: myIndex })}
                 </p>
                 <p className="text-[13px] text-zinc-500 mt-1 max-w-xs mx-auto">
-                  {notInQueue
-                    ? "Os dados ficam lacrados até o narrador abrir a cena para você."
-                    : "Os dados ficam lacrados enquanto outro aventureiro age."}
+                  {notInQueue ? t("pl.seat.sealedScene") : t("pl.seat.sealedOther")}
                 </p>
               </div>
             </div>
@@ -1032,16 +1059,16 @@ export default function TurnPanel({
 
       {/* recent rolls */}
       {sortedActions.length ? (
-        <section aria-label="Rolagens recentes">
+        <section aria-label={t("pl.session.recentRolls")}>
           <div className="flex items-center gap-3 mb-2">
-            <span className="font-mono text-[11px] tracking-widest uppercase text-zinc-400">Rolagens recentes</span>
+            <span className="font-mono text-[11px] tracking-widest uppercase text-zinc-400">{t("pl.session.recentRolls")}</span>
             <span className="flex-1 h-px bg-zinc-700/40" />
           </div>
           <div className="space-y-1.5">
             {sortedActions.slice(-4).reverse().map((a) => (
               <div key={a.id} className="flex items-center gap-2 text-sm text-zinc-400 border border-zinc-700/40 bg-zinc-900/50 rounded-lg px-3 py-2">
                 <span className="font-mono text-xs font-semibold text-zinc-200">
-                  {a.character?.name || a.character?.username || "Alguém"}
+                  {a.character?.name || a.character?.username || t("ss.someone")}
                 </span>
                 <span className="font-mono text-xs text-zinc-600">{a.dice_roll}</span>
                 <span className="text-zinc-500 truncate flex-1 min-w-0">{a.description}</span>

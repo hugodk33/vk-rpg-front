@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { submitJson } from "./submit";
 import { cancelCls, inputCls, labelCls, submitCls } from "./formStyles";
+import { useTranslation } from "@/lib/i18n";
 import type { GameTableLocations, NpcViewer } from "@/lib/types";
 
 export interface NpcFormProps {
@@ -15,10 +16,10 @@ export interface NpcFormProps {
 }
 
 const STATUSES = [
-  { value: "ally", label: "Aliado" },
-  { value: "neutral", label: "Neutro" },
-  { value: "enemy", label: "Inimigo" },
-  { value: "boss", label: "Chefe" },
+  { value: "ally", label: "fr.status.ally" },
+  { value: "neutral", label: "fr.status.neutral" },
+  { value: "enemy", label: "fr.status.enemy" },
+  { value: "boss", label: "fr.status.boss" },
 ];
 
 const ATTRS: Array<{ key: "st" | "dx" | "iq" | "ht"; label: string }> = [
@@ -30,6 +31,7 @@ const ATTRS: Array<{ key: "st" | "dx" | "iq" | "ht"; label: string }> = [
 
 export default function NpcForm({ tableId, tables, initial, defaultLocationId }: NpcFormProps) {
   const router = useRouter();
+  const { t } = useTranslation();
   const isEdit = !!initial;
   const sheet = initial?.character?.sheet;
 
@@ -68,7 +70,7 @@ export default function NpcForm({ tableId, tables, initial, defaultLocationId }:
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!currentTableId) {
-      setError("Selecione a mesa.");
+      setError(t("fr.error.selectTable"));
       return;
     }
     setSaving(true);
@@ -107,7 +109,7 @@ export default function NpcForm({ tableId, tables, initial, defaultLocationId }:
       router.push(`/table/${currentTableId}/scenes`);
       router.refresh();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Falha ao salvar o NPC.");
+      setError(err instanceof Error ? err.message : t("fr.err.npc"));
       setSaving(false);
     }
   }
@@ -116,19 +118,17 @@ export default function NpcForm({ tableId, tables, initial, defaultLocationId }:
     <div className="max-w-3xl mx-auto p-6">
       <div className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-6">
         <h1 className="text-2xl font-bold text-green-100 mb-6">
-          {isEdit ? "Editar NPC" : "Novo NPC"}
+          {isEdit ? t("fr.npc.editTitle") : t("fr.npc.newTitle")}
         </h1>
 
         {isEdit ? (
-          <p className="text-[11px] text-zinc-500 mb-4">
-            A edição atual permite alterar Status e Local. Para mudar ficha/atributos, exclua e recrie o NPC.
-          </p>
+          <p className="text-[11px] text-zinc-500 mb-4">{t("fr.npc.editHint")}</p>
         ) : null}
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {!isEdit && !tableId ? (
             <div>
-              <label className={labelCls}>Mesa</label>
+              <label className={labelCls}>{t("fr.table")}</label>
               <select
                 value={currentTableId}
                 onChange={(e) => setCurrentTableId(e.target.value)}
@@ -136,7 +136,7 @@ export default function NpcForm({ tableId, tables, initial, defaultLocationId }:
                 className={inputCls}
               >
                 <option value="" disabled>
-                  Selecione a mesa
+                  {t("fr.pickTable")}
                 </option>
                 {(tables ?? []).map((t) => (
                   <option key={t.id} value={t.id}>
@@ -148,14 +148,14 @@ export default function NpcForm({ tableId, tables, initial, defaultLocationId }:
           ) : null}
 
           <div className="border-b border-zinc-700/40 pb-4">
-            <h2 className="text-lg font-semibold text-zinc-300 mb-4">Identidade</h2>
+            <h2 className="text-lg font-semibold text-zinc-300 mb-4">{t("fr.identity")}</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className={labelCls}>Nome</label>
+                <label className={labelCls}>{t("fr.name")}</label>
                 <input value={name} onChange={(e) => setName(e.target.value)} required disabled={isEdit} className={inputCls} />
               </div>
               <div>
-                <label className={labelCls}>Pontos</label>
+                <label className={labelCls}>{t("fr.points")}</label>
                 <input
                   type="number"
                   value={points}
@@ -166,35 +166,33 @@ export default function NpcForm({ tableId, tables, initial, defaultLocationId }:
               </div>
             </div>
             <div className="mt-4">
-              <label className={labelCls}>Status</label>
+              <label className={labelCls}>{t("fr.status")}</label>
               <select value={status} onChange={(e) => setStatus(e.target.value)} className={inputCls}>
                 {STATUSES.map((s) => (
                   <option key={s.value} value={s.value}>
-                    {s.label}
+                    {t(s.label)}
                   </option>
                 ))}
               </select>
             </div>
             {locationOptions.length > 0 ? (
               <div className="mt-4">
-                <label className={labelCls}>Local (opcional)</label>
+                <label className={labelCls}>{t("fr.loc.link")}</label>
                 <select value={locationId} onChange={(e) => setLocationId(e.target.value)} className={inputCls}>
-                  <option value="">— Nenhum local —</option>
+                  <option value="">{t("fr.loc.noLink")}</option>
                   {locationOptions.map((l) => (
                     <option key={l.id} value={l.id}>
                       {l.name}
                     </option>
                   ))}
                 </select>
-                <p className="text-[11px] text-zinc-600 mt-1">
-                  Vincula o NPC a um local — ex: a equipe de uma loja aparece na aba “Loja”.
-                </p>
+                <p className="text-[11px] text-zinc-600 mt-1">{t("fr.loc.linkHintNpc")}</p>
               </div>
             ) : null}
           </div>
 
           <div>
-            <h2 className="text-lg font-semibold text-zinc-300 mb-4">Atributos</h2>
+            <h2 className="text-lg font-semibold text-zinc-300 mb-4">{t("fr.attributes")}</h2>
             <div className="grid grid-cols-4 gap-3">
               {ATTRS.map(({ key, label }) => {
                 const value = { st, dx, iq, ht }[key];
@@ -222,11 +220,11 @@ export default function NpcForm({ tableId, tables, initial, defaultLocationId }:
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className={labelCls}>HP</label>
+              <label className={labelCls}>{t("fr.hp")}</label>
               <input type="number" value={hp} onChange={(e) => setHp(e.target.value)} disabled={isEdit} className={inputCls} />
             </div>
             <div>
-              <label className={labelCls}>FP</label>
+              <label className={labelCls}>{t("fr.fp")}</label>
               <input
                 type="number"
                 value={fatigue}
@@ -241,10 +239,10 @@ export default function NpcForm({ tableId, tables, initial, defaultLocationId }:
 
           <div className="flex items-center gap-3 pt-2">
             <button type="submit" disabled={saving} className={`${submitCls} disabled:opacity-50`}>
-              {saving ? "Salvando..." : isEdit ? "Salvar Alterações" : "Criar NPC"}
+              {saving ? t("fr.saving") : isEdit ? t("fr.saveChanges") : t("fr.npc.create")}
             </button>
             <a href={currentTableId ? `/table/${currentTableId}/scenes` : "/narrator"} className={cancelCls}>
-              Cancelar
+              {t("fr.cancel")}
             </a>
           </div>
         </form>

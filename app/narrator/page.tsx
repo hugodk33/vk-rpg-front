@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { api } from "@/lib/api";
 import type { GameTable } from "@/lib/types";
+import { getLang, makeT, type ServerT } from "@/lib/i18n-server";
 export const dynamic = "force-dynamic";
 
 /* ---------- campaign sigil ---------- */
@@ -69,6 +70,7 @@ function RosterChip({
   hasSheet,
   mods,
   modNames,
+  t,
 }: {
   name: string;
   points?: number;
@@ -77,6 +79,7 @@ function RosterChip({
   hasSheet?: boolean;
   mods?: number;
   modNames?: string;
+  t: ServerT;
 }) {
   const hue = hueFor(name);
   const maxHp = baseHp ?? hp ?? 0;
@@ -89,7 +92,9 @@ function RosterChip({
         <div className="flex items-center gap-1.5 mt-0.5">
           {hasSheet ? (
             <>
-              <span className="font-mono text-[9px] uppercase text-green-500/80">PTS {points ?? "–"}</span>
+              <span className="font-mono text-[9px] uppercase text-green-500/80">
+                {t("pg.narrator.pts").replace("{n}", String(points ?? "–"))}
+              </span>
               {maxHp ? (
                 <span className="flex items-center gap-1">
                   <span className="w-8 h-1 rounded-full bg-zinc-700/70 overflow-hidden">
@@ -103,12 +108,12 @@ function RosterChip({
                   title={modNames}
                   className="font-mono text-[9px] uppercase tracking-widest text-green-500/70"
                 >
-                  {mods} efeito{mods === 1 ? "" : "s"}
+                  {(mods === 1 ? t("pg.narrator.effectOne") : t("pg.narrator.effectMany")).replace("{n}", String(mods))}
                 </span>
               ) : null}
             </>
           ) : (
-            <span className="font-mono text-[9px] uppercase tracking-widest text-zinc-500">Sem ficha ainda</span>
+            <span className="font-mono text-[9px] uppercase tracking-widest text-zinc-500">{t("pg.narrator.noSheet")}</span>
           )}
         </div>
       </div>
@@ -116,18 +121,20 @@ function RosterChip({
   );
 }
 
-function EmptyPlayers() {
+function EmptyPlayers({ t }: { t: ServerT }) {
   return (
     <div className="flex items-center gap-2 text-zinc-600 text-xs font-mono italic">
       <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="1.5">
         <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
       </svg>
-      Nenhum jogador ainda — convide jogadores para a mesa.
+      {t("pg.narrator.noPlayers")}
     </div>
   );
 }
 
 export default async function NarratorDashboard() {
+  const t = makeT(await getLang());
+
   let tables: GameTable[] = [];
   try {
     tables = await api<GameTable[]>("/game-tables");
@@ -135,7 +142,7 @@ export default async function NarratorDashboard() {
     tables = [];
   }
 
-  const narratorName = tables.find((t) => t.narrator)?.narrator?.username || "o Narrador";
+  const narratorName = tables.find((t) => t.narrator)?.narrator?.username || t("pg.narrator.theNarrator");
   const withPlayers = tables.filter((t) => (t.players ?? []).length > 0).length;
   const totalPlayers = tables.reduce((acc, t) => acc + (t.players ?? []).length, 0);
   const sealer = tables.find((t) => t.narrator)?.narrator;
@@ -152,23 +159,23 @@ export default async function NarratorDashboard() {
 
         <div className="flex flex-wrap items-start justify-between gap-4 relative">
           <div>
-            <p className="font-mono text-[10px] tracking-widest uppercase text-green-500/90">Mesa do Narrador</p>
-            <h1 className="text-2xl md:text-3xl font-bold text-zinc-100 mt-1">Central de Comando</h1>
-            <p className="text-stone-400 text-sm mt-1.5">Bem-vindo, {narratorName}. A mesa aguarda seu contador de histórias.</p>
+            <p className="font-mono text-[10px] tracking-widest uppercase text-green-500/90">{t("pg.narrator.eyebrow")}</p>
+            <h1 className="text-2xl md:text-3xl font-bold text-zinc-100 mt-1">{t("pg.narrator.title")}</h1>
+            <p className="text-stone-400 text-sm mt-1.5">{t("pg.narrator.welcome").replace("{n}", narratorName)}</p>
           </div>
           <Link
             href="/table/new"
             className="bg-green-800 hover:bg-green-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors shadow-lg shadow-green-900/30"
           >
-            + Nova Mesa
+            + {t("pg.newTable")}
           </Link>
         </div>
 
         <div className="grid grid-cols-3 gap-3 mt-6 relative">
           {[
-            { label: "Campanhas", value: tables.length },
-            { label: "Mesas com jogadores", value: withPlayers },
-            { label: "Jogadores", value: totalPlayers },
+            { label: t("pg.narrator.statCampaigns"), value: tables.length },
+            { label: t("pg.narrator.statWithPlayers"), value: withPlayers },
+            { label: t("pg.narrator.statPlayers"), value: totalPlayers },
           ].map((s) => (
             <div key={s.label} className="rounded-lg border border-zinc-700/40 bg-zinc-900/60 px-4 py-3">
               <div className="font-mono text-2xl font-bold text-green-400 leading-none">{s.value}</div>
@@ -181,44 +188,44 @@ export default async function NarratorDashboard() {
       {/* ---- campaign dossiers ---- */}
       {tables.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-zinc-700/60 text-center py-20">
-          <div className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">Nenhuma campanha ainda</div>
-          <p className="text-zinc-300 text-lg mt-2">Crie sua primeira mesa e comece uma campanha.</p>
+          <div className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">{t("pg.narrator.emptyEyebrow")}</div>
+          <p className="text-zinc-300 text-lg mt-2">{t("pg.narrator.emptyText")}</p>
           <Link
             href="/table/new"
             className="inline-block mt-5 bg-green-800 hover:bg-green-700 text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors"
           >
-            + Criar Mesa
+            + {t("pg.createTable")}
           </Link>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          {tables.map((t) => {
-            const { count, totalPoints, withSheets } = playerStats(t);
-            const players = t.players ?? [];
+          {tables.map((table) => {
+            const { count, totalPoints, withSheets } = playerStats(table);
+            const players = table.players ?? [];
             return (
               <div
-                key={t.id}
+                key={table.id}
                 className="group bg-zinc-900/70 border border-zinc-700/50 rounded-2xl overflow-hidden hover:border-green-900/50 transition-colors flex flex-col"
               >
                 <div className="p-5 flex items-start gap-4 border-b border-zinc-700/40">
-                  <Sigil title={t.title} name={sealer?.name || "GM"} />
+                  <Sigil title={table.title} name={sealer?.name || "GM"} />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <h2 className="text-lg font-bold text-zinc-100 leading-tight">{t.title || "Sem título"}</h2>
+                      <h2 className="text-lg font-bold text-zinc-100 leading-tight">{table.title || t("pg.noTitle")}</h2>
                     </div>
                     <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                       <span className="inline-flex items-center font-mono text-[10px] uppercase tracking-widest px-1.5 py-0.5 rounded bg-green-700/10 text-green-400 border border-green-700/20">
-                        {t.system || "Sistema"}
+                        {table.system || t("f.system")}
                       </span>
                       <span className="text-zinc-700">·</span>
                       <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">
-                        {count} {count === 1 ? "jogador" : "jogadores"}
+                        {(count === 1 ? t("pg.narrator.playerOne") : t("pg.narrator.playerMany")).replace("{n}", String(count))}
                       </span>
                       {withSheets ? (
                         <>
                           <span className="text-zinc-700">·</span>
                           <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">
-                            {totalPoints} pts
+                            {totalPoints} {t("rail.points")}
                           </span>
                         </>
                       ) : null}
@@ -226,8 +233,8 @@ export default async function NarratorDashboard() {
                   </div>
                 </div>
 
-                {t.intro ? (
-                  <p className="px-5 pt-3 text-sm text-stone-400 leading-relaxed line-clamp-2">{t.intro}</p>
+                {table.intro ? (
+                  <p className="px-5 pt-3 text-sm text-stone-400 leading-relaxed line-clamp-2">{table.intro}</p>
                 ) : null}
 
                 <div className="px-5 py-4 flex-1">
@@ -235,7 +242,7 @@ export default async function NarratorDashboard() {
                     <div className="flex flex-wrap gap-2">
                       {players.map((p, idx) => {
                         const c = p.character;
-                        const name = c?.name || p.username || "Jogador sem nome";
+                        const name = c?.name || p.username || t("pg.narrator.unnamedPlayer");
                         return (
                           <RosterChip
                             key={p.userId ?? c?.id ?? idx}
@@ -246,21 +253,22 @@ export default async function NarratorDashboard() {
                             hasSheet={!!c?.sheet}
                             mods={c?.sheet?.modifiers?.length}
                             modNames={c?.sheet?.modifiers?.map((m) => m.name).join(", ")}
+                            t={t}
                           />
                         );
                       })}
                     </div>
                   ) : (
-                    <EmptyPlayers />
+                    <EmptyPlayers t={t} />
                   )}
                 </div>
 
                 <div className="px-5 pb-5">
                   <Link
-                    href={`/table/${t.id}`}
+                    href={`/table/${table.id}`}
                     className="block w-full text-center bg-green-900/60 group-hover:bg-green-800 text-white text-sm font-semibold px-3 py-2.5 rounded-lg transition-colors"
                   >
-                    Abrir Mesa
+                    {t("pg.openTable")}
                   </Link>
                 </div>
               </div>
@@ -271,7 +279,7 @@ export default async function NarratorDashboard() {
 
       <div className="mt-8 text-center">
         <Link href="/" className="text-zinc-500 hover:text-zinc-300 text-sm transition-colors">
-          &larr; Voltar ao início
+          {t("pg.backHome")}
         </Link>
       </div>
     </div>

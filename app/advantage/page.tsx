@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import type { Advantage, GameTableAdvantages } from "@/lib/types";
 import { api } from "@/lib/api";
+import { interpolate, useTranslation } from "@/lib/i18n";
 
 interface CatalogEntry extends Advantage {
   tableTitle?: string;
@@ -25,6 +26,7 @@ const TYPE_CONFIG: Record<string, { color: string; active: string }> = {
 };
 
 export default function AdvantagesPage() {
+  const { t } = useTranslation();
   const [entries, setEntries] = useState<CatalogEntry[] | null>(null);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<string>("All");
@@ -94,14 +96,20 @@ export default function AdvantagesPage() {
   return (
     <div className="max-w-5xl mx-auto p-6">
       <div className="flex items-baseline gap-3 mb-1">
-        <h1 className="text-2xl font-bold text-zinc-100">Vantagens</h1>
-        <span className="text-sm text-zinc-500">todas as mesas</span>
+        <h1 className="text-2xl font-bold text-zinc-100">{t("nav.advantages")}</h1>
+        <span className="text-sm text-zinc-500">{t("pg.adv.allTables")}</span>
       </div>
 
       <div className="flex items-center gap-3 mb-6 text-xs text-zinc-500">
         <span>
-          {filtered.length} {filtered.length !== 1 ? "vantagens" : "vantagem"}
-          {entries ? ` de ${entries.length}` : ""}
+          {entries
+            ? interpolate(filtered.length === 1 ? t("pg.adv.countOne") : t("pg.adv.countMany"), {
+                n: filtered.length,
+                total: entries.length,
+              })
+            : interpolate(filtered.length === 1 ? t("pg.adv.bareOne") : t("pg.adv.bareMany"), {
+                n: filtered.length,
+              })}
         </span>
       </div>
 
@@ -114,7 +122,7 @@ export default function AdvantagesPage() {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Filtrar vantagens..."
+            placeholder={t("pg.adv.searchPh")}
             className="w-full bg-zinc-800/60 border border-zinc-700/50 rounded-lg pl-9 pr-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-emerald-700/60"
           />
         </div>
@@ -124,7 +132,7 @@ export default function AdvantagesPage() {
             onClick={() => setSearch("")}
             className="bg-zinc-800/60 hover:bg-zinc-700/60 text-zinc-400 text-sm px-3 py-2 rounded-lg transition-colors border border-zinc-700/50"
           >
-            Limpar
+            {t("s2.clearAll")}
           </button>
         ) : null}
       </div>
@@ -142,7 +150,7 @@ export default function AdvantagesPage() {
               : "bg-zinc-800/60 border-zinc-700/50 text-zinc-400 hover:text-zinc-200 hover:border-zinc-600/60";
             return (
               <button key={cat} type="button" onClick={() => setCategory(cat)} className={`${base} ${classes}`}>
-                {cat === "All" ? "Todas" : cat}
+                {cat === "All" ? t("pg.adv.allCategories") : cat}
               </button>
             );
           })}
@@ -151,7 +159,7 @@ export default function AdvantagesPage() {
 
       {entries === null ? (
         <div className="text-center py-16">
-          <p className="text-zinc-600 text-sm">Carregando vantagens...</p>
+          <p className="text-zinc-600 text-sm">{t("pg.adv.loading")}</p>
         </div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-16">
@@ -159,9 +167,7 @@ export default function AdvantagesPage() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M5 13l4 4L19 7" />
           </svg>
           <p className="text-zinc-500 text-sm">
-            {search || category !== "All"
-              ? "Nenhuma vantagem corresponde ao seu filtro."
-              : "Nenhuma vantagem registrada em nenhuma mesa ainda."}
+            {search || category !== "All" ? t("pg.adv.emptyFilter") : t("pg.adv.emptyNone")}
           </p>
         </div>
       ) : (
@@ -180,7 +186,7 @@ export default function AdvantagesPage() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                     </svg>
                     <span className="text-sm font-medium text-zinc-200 group-hover:text-zinc-100 truncate">
-                      {entry.name || "Sem nome"}
+                      {entry.name || t("it.unnamed")}
                     </span>
                   </div>
                   {entry.cost_points != null ? (

@@ -12,6 +12,7 @@ import type {
   TableNpc,
 } from "@/lib/types";
 import ItemIcon from "@/components/items/ItemIcon";
+import { interpolate, useTranslation } from "@/lib/i18n";
 
 /* ============================================================
    Table Resources — the table's shared encyclopedia, inline in
@@ -37,13 +38,13 @@ interface TableResourcesProps {
   onTabChange?: (tab: ResourceTab) => void;
 }
 
-export const RESOURCE_TABS: Array<{ key: ResourceTab; label: string }> = [
-  { key: "characters", label: "Personagens" },
-  { key: "items", label: "Itens" },
-  { key: "skills", label: "Perícias" },
-  { key: "advantages", label: "Vantagens" },
-  { key: "disadvantages", label: "Desvantagens" },
-  { key: "locations", label: "Locais" },
+export const RESOURCE_TABS: Array<{ key: ResourceTab; labelKey: string }> = [
+  { key: "characters", labelKey: "pl.res.characters" },
+  { key: "items", labelKey: "pl.res.items" },
+  { key: "skills", labelKey: "pl.res.skills" },
+  { key: "advantages", labelKey: "pl.res.advantages" },
+  { key: "disadvantages", labelKey: "pl.res.disadvantages" },
+  { key: "locations", labelKey: "pl.res.locations" },
 ];
 
 export default function TableResources({
@@ -58,6 +59,7 @@ export default function TableResources({
   tab: controlledTab,
   onTabChange,
 }: TableResourcesProps) {
+  const { t } = useTranslation();
   const [internalTab, setInternalTab] = useState<ResourceTab>("characters");
   const tab = controlledTab ?? internalTab;
   const setTab = (next: ResourceTab) => {
@@ -69,19 +71,19 @@ export default function TableResources({
   return (
     <div className="space-y-5">
       {controlledTab == null ? (
-      <div role="tablist" aria-label="Recursos da mesa" className="flex items-center gap-1 border-b border-zinc-700/40 flex-wrap">
-        {RESOURCE_TABS.map((t) => (
+      <div role="tablist" aria-label={t("pl.res.title")} className="flex items-center gap-1 border-b border-zinc-700/40 flex-wrap">
+        {RESOURCE_TABS.map((r) => (
           <button
-            key={t.key}
+            key={r.key}
             role="tab"
-            aria-selected={tab === t.key}
-            onClick={() => setTab(t.key)}
+            aria-selected={tab === r.key}
+            onClick={() => setTab(r.key)}
             className={`relative px-3 py-2 font-mono text-[10px] uppercase tracking-widest transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 rounded-md ${
-              tab === t.key ? "text-blue-300" : "text-zinc-500 hover:text-zinc-300"
+              tab === r.key ? "text-blue-300" : "text-zinc-500 hover:text-zinc-300"
             }`}
           >
-            {t.label}
-            {tab === t.key ? (
+            {t(r.labelKey)}
+            {tab === r.key ? (
               <span aria-hidden className="absolute inset-x-2 bottom-0 h-0.5 rounded-full bg-blue-600" />
             ) : null}
           </button>
@@ -92,12 +94,12 @@ export default function TableResources({
       {/* ---- characters ---- */}
       {tab === "characters" ? (
         roster.length === 0 ? (
-          <Empty label="Nenhum personagem visto nesta mesa ainda." />
+          <Empty label={t("pl.res.empty.characters")} />
         ) : (
           <div className="space-y-2">
             {roster.map((c) => {
               const s = c.sheet;
-              const name = s?.name || c.name || c.user?.username || "Sem nome";
+              const name = s?.name || c.name || c.user?.username || t("pl.res.unnamed");
               const attrs = [
                 { label: "ST", value: s?.st ?? s?.base_st, hex: "#f87171" },
                 { label: "DX", value: s?.dx ?? s?.base_dx, hex: "#34d399" },
@@ -117,7 +119,7 @@ export default function TableResources({
                     <div className="text-sm font-semibold text-zinc-100 truncate">
                       {name}
                       {c.id === myId ? (
-                        <span className="ml-2 font-mono text-[9px] uppercase tracking-widest text-blue-400">você</span>
+                        <span className="ml-2 font-mono text-[9px] uppercase tracking-widest text-blue-400">{t("pl.res.you")}</span>
                       ) : null}
                       {npcIds.has(c.id) ? (
                         <span className="ml-2 font-mono text-[9px] uppercase tracking-widest text-amber-300">NPC</span>
@@ -135,7 +137,7 @@ export default function TableResources({
                       ) : null}
                     </div>
                   </div>
-                  <GoButton href={`/character/${c.id}`} label="Ficha" />
+                  <GoButton href={`/character/${c.id}`} label={t("pl.res.sheet")} />
                 </div>
               );
             })}
@@ -146,7 +148,7 @@ export default function TableResources({
       {/* ---- items ---- */}
       {tab === "items" ? (
         items.length === 0 ? (
-          <Empty label="Nenhum item registrado para esta mesa." />
+          <Empty label={t("pl.res.empty.items")} />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {items.map((i) => (
@@ -154,7 +156,7 @@ export default function TableResources({
                 <div className="flex justify-between items-start mb-1 gap-2">
                   <span className="flex items-center gap-2 text-zinc-200 font-medium min-w-0">
                     <ItemIcon item={i} className="w-4 h-4 shrink-0" imgClassName="w-4 h-4 object-cover rounded" />
-                    <span className="truncate">{i.name || "Sem nome"}</span>
+                    <span className="truncate">{i.name || t("pl.res.unnamed")}</span>
                   </span>
                   {i.weight_lb != null ? <span className="text-zinc-500 text-xs shrink-0">{i.weight_lb} lb</span> : null}
                 </div>
@@ -169,9 +171,9 @@ export default function TableResources({
                 {i.weapon?.attacks?.length ? (
                   <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
                     <span className="inline-flex items-center gap-1 bg-red-900/40 border border-red-700/50 text-red-300 px-2 py-0.5 rounded">
-                      {i.weapon.attacks.length} ataque{i.weapon.attacks.length !== 1 ? "s" : ""}
+                      {interpolate(t("pl.res.attackCount"), { n: i.weapon.attacks.length })}
                     </span>
-                    {i.weapon.reach ? <span className="text-zinc-500">Alcance {i.weapon.reach}</span> : null}
+                    {i.weapon.reach ? <span className="text-zinc-500">{interpolate(t("pl.res.reach"), { reach: i.weapon.reach })}</span> : null}
                   </div>
                 ) : null}
                 {i.armor ? (
@@ -183,7 +185,7 @@ export default function TableResources({
                   </div>
                 ) : null}
                 <div className="mt-3 text-right">
-                  <GoButton href={`/item/${i.id}`} label="Abrir" />
+                  <GoButton href={`/item/${i.id}`} label={t("pl.open")} />
                 </div>
               </div>
             ))}
@@ -194,7 +196,7 @@ export default function TableResources({
       {/* ---- skills ---- */}
       {tab === "skills" ? (
         skills.length === 0 ? (
-          <Empty label="Nenhuma perícia registrada para esta mesa." />
+          <Empty label={t("pl.res.empty.skills")} />
         ) : (
           <div className="space-y-2">
             {skills.map((sk) => (
@@ -209,7 +211,7 @@ export default function TableResources({
                 {sk.effect ? <p className="text-zinc-400 text-xs mt-1">{sk.effect}</p> : null}
                 {sk.description ? <p className="text-zinc-500 text-xs mt-0.5">{sk.description}</p> : null}
                 <div className="mt-3 text-right">
-                  <GoButton href={`/skill/${sk.id}`} label="Abrir" />
+                  <GoButton href={`/skill/${sk.id}`} label={t("pl.open")} />
                 </div>
               </div>
             ))}
@@ -220,7 +222,7 @@ export default function TableResources({
       {/* ---- advantages ---- */}
       {tab === "advantages" ? (
         advantages.length === 0 ? (
-          <Empty label="Nenhuma vantagem registrada para esta mesa." />
+          <Empty label={t("pl.res.empty.advantages")} />
         ) : (
           <div className="space-y-2">
             {advantages.map((a) => (
@@ -234,7 +236,7 @@ export default function TableResources({
                 {a.category ? <p className="text-xs text-zinc-500 mt-0.5">{a.category}</p> : null}
                 {a.description ? <p className="text-zinc-400 text-xs mt-1">{a.description}</p> : null}
                 <div className="mt-3 text-right">
-                  <GoButton href={`/advantage/${a.id}`} label="Abrir" />
+                  <GoButton href={`/advantage/${a.id}`} label={t("pl.open")} />
                 </div>
               </div>
             ))}
@@ -245,7 +247,7 @@ export default function TableResources({
       {/* ---- disadvantages ---- */}
       {tab === "disadvantages" ? (
         disadvantages.length === 0 ? (
-          <Empty label="Nenhuma desvantagem registrada para esta mesa." />
+          <Empty label={t("pl.res.empty.disadvantages")} />
         ) : (
           <div className="space-y-2">
             {disadvantages.map((d) => (
@@ -260,7 +262,7 @@ export default function TableResources({
                 {d.effect ? <p className="text-zinc-400 text-xs mt-1">{d.effect}</p> : null}
                 {d.description ? <p className="text-zinc-500 text-xs mt-0.5">{d.description}</p> : null}
                 <div className="mt-3 text-right">
-                  <GoButton href={`/disadvantage/${d.id}`} label="Abrir" />
+                  <GoButton href={`/disadvantage/${d.id}`} label={t("pl.open")} />
                 </div>
               </div>
             ))}
@@ -271,12 +273,12 @@ export default function TableResources({
       {/* ---- locations ---- */}
       {tab === "locations" ? (
         locations.length === 0 ? (
-          <Empty label="Nenhum local visto neste mapa ainda." />
+          <Empty label={t("pl.res.empty.locations")} />
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {locations.map((loc) => (
               <div key={loc.id} className="rounded-xl border border-zinc-700/40 bg-zinc-900/50 px-4 py-3">
-                <div className="text-sm font-semibold text-zinc-100">{loc.name || "Sem nome"}</div>
+                <div className="text-sm font-semibold text-zinc-100">{loc.name || t("pl.res.unnamed")}</div>
                 {loc.kind || loc.path ? (
                   <p className="text-xs text-zinc-500 mt-0.5">
                     {[loc.kind, loc.path].filter(Boolean).join(" · ")}
@@ -284,7 +286,7 @@ export default function TableResources({
                 ) : null}
                 {loc.description ? <p className="text-zinc-500 text-xs mt-1">{loc.description}</p> : null}
                 <div className="mt-3 text-right">
-                  <GoButton href={`/location/${loc.id}`} label="Abrir" />
+                  <GoButton href={`/location/${loc.id}`} label={t("pl.open")} />
                 </div>
               </div>
             ))}

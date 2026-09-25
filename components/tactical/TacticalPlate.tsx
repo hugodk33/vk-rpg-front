@@ -25,6 +25,7 @@ import {
   type GridSpec,
 } from "@/lib/canvasgrid";
 import ZoomControls from "@/components/map/ZoomControls";
+import { useTranslation } from "@/lib/i18n";
 import type { BoardToken, BoardTrail } from "@/lib/board";
 import type { Location } from "@/lib/types";
 
@@ -111,6 +112,7 @@ export default function TacticalPlate({
   M = 12,
   fill = false,
 }: TacticalPlateProps) {
+  const { t } = useTranslation();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const scrollerRef = useRef<HTMLDivElement | null>(null);
   const [zoom, setZoom] = useState(1);
@@ -271,7 +273,7 @@ export default function TacticalPlate({
           height={H}
           className="block mx-auto"
           role="img"
-          aria-label="Planta baixa"
+          aria-label={t("vs.tp.floorPlan")}
           style={{
             width: `${Math.round(boxW)}px`,
             height: `${Math.round(boxH)}px`,

@@ -19,6 +19,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
+import { interpolate, useTranslation } from "@/lib/i18n";
 import type { TableSettings } from "@/lib/types";
 
 export interface QuickTarget {
@@ -37,9 +38,9 @@ export interface QuickItem {
 }
 
 const EQUIP_STATUS: { value: string; label: string }[] = [
-  { value: "in_inventory", label: "No inventário" },
-  { value: "equipped", label: "Equipado" },
-  { value: "wielded", label: "Empunhado" },
+  { value: "in_inventory", label: "qa.equip.in_inventory" },
+  { value: "equipped", label: "qa.equip.equipped" },
+  { value: "wielded", label: "qa.equip.wielded" },
 ];
 
 const fieldCls =
@@ -68,6 +69,7 @@ export default function TableQuickActions({
   items: QuickItem[];
 }) {
   const router = useRouter();
+  const { t } = useTranslation();
 
   const [tableSettings, setTableSettings] = useState<TableSettings | null>(null);
   useEffect(() => {
@@ -120,7 +122,7 @@ export default function TableQuickActions({
     const modHp = num(hpDelta);
     const modFp = num(fpDelta);
     if (modHp == null && modFp == null) {
-      setError("Digite um Δ de PV e/ou PE.");
+      setError(t("qa.err.hpFp"));
       throw new Error(VALIDATION);
     }
     const chips = [
@@ -146,27 +148,28 @@ export default function TableQuickActions({
   const applyItem = async (): Promise<string> => {
     const q = num(qty);
     if (q == null || q < 1 || Math.round(q) !== q) {
-      setError("A quantidade do item deve ser um número inteiro ≥ 1.");
+      setError(t("qa.err.qty"));
       throw new Error(VALIDATION);
     }
     if (!itemName) {
-      setError("Escolha um item para conceder.");
+      setError(t("qa.err.item"));
       throw new Error(VALIDATION);
     }
     const unitCost = items.find((i) => i.id === itemId)?.cost;
     const totalCost = pointsMode ? (unitCost ?? 0) * q : 0;
     if (pointsMode) {
       if (unitCost == null) {
-        setError("Esta mesa cobra pontos por itens — defina um custo de pontos no item primeiro.");
+        setError(t("qa.err.points"));
         throw new Error(VALIDATION);
       }
       const have = target?.points ?? 0;
       if (have < totalCost) {
-        setError(`${target?.name ?? "O personagem"} tem ${have} pts — ${q}× ${itemName} custa ${totalCost} pts.`);
+        setError(interpolate(t("qa.err.notEnough"), { target: target?.name ?? "?", have, q, name: itemName, total: totalCost }));
         throw new Error(VALIDATION);
       }
     }
-    const summary = `+${q}× ${itemName}${pointsMode ? ` · −${totalCost} pts` : ""} · ${EQUIP_STATUS.find((s) => s.value === eqStatus)?.label ?? eqStatus}`;
+    const statusLabel = EQUIP_STATUS.find((s) => s.value === eqStatus)?.label ?? eqStatus;
+    const summary = `+${q}× ${itemName}${pointsMode ? ` · −${totalCost} pts` : ""} · ${t(statusLabel)}`;
     await api("/game-table-item/grant", {
       method: "POST",
       body: JSON.stringify({
@@ -196,7 +199,7 @@ export default function TableQuickActions({
   const applyXp = async (): Promise<string> => {
     const delta = num(xpDelta);
     if (delta == null || delta === 0) {
-      setError("Digite um Δ de pontos com sinal (ex.: 10 ou -5).");
+      setError(t("qa.err.pointsSigned"));
       throw new Error(VALIDATION);
     }
     const summary = `${delta > 0 ? "+" : ""}${delta} points${note.trim() ? ` · ${note.trim()}` : ""}`;
@@ -214,7 +217,7 @@ export default function TableQuickActions({
 
   const run = async () => {
     if (!target) {
-      setError("Escolha um personagem-alvo primeiro.");
+      setError(t("qa.err.target"));
       return;
     }
     setBusy(true);
@@ -229,7 +232,7 @@ export default function TableQuickActions({
       router.refresh();
     } catch (e) {
       if (e instanceof Error && e.message !== VALIDATION) {
-        setError("Falha ao aplicar. Verifique se a API da mesa está acessível.");
+        setError(t("qa.err.api"));
       }
     } finally {
       setBusy(false);
@@ -244,12 +247,12 @@ export default function TableQuickActions({
 
       <div className="p-4">
         <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-zinc-500 mb-3">
-          Alvo
+          {t("qa.target")}
           <select value={targetId} onChange={(e) => setTargetId(e.target.value)} className={fieldCls} disabled={targets.length === 0}>
-            <option value="">{targets.length === 0 ? "Nenhum personagem com ficha ainda" : "Escolher um personagem…"}</option>
-            {targets.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name} · {(t.baseHp ?? 0) > 0 ? `${t.hp ?? t.baseHp}/${t.baseHp} PV` : ""} · {(t.points != null ? t.points : "")} pts
+            <option value="">{targets.length === 0 ? t("qa.noTargets") : t("qa.chooseTarget")}</option>
+            {targets.map((tr) => (
+              <option key={tr.id} value={tr.id}>
+                {tr.name} · {(tr.baseHp ?? 0) > 0 ? interpolate(t("qa.hpVal"), { cur: tr.hp ?? tr.baseHp ?? 0, max: tr.baseHp ?? 0 }) : ""} · {(tr.points != null ? tr.points : "")} pts
               </option>
             ))}
           </select>
@@ -257,9 +260,9 @@ export default function TableQuickActions({
 
         <div className="grid gap-3 md:grid-cols-[9rem_1fr]">
           <div className="flex flex-col gap-1">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-500">Ação</span>
+            <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-500">{t("qa.action")}</span>
             <div className="flex flex-col gap-1">
-              {([["status", "Status"], ["item", "Item"], ["xp", "Exp."]] as const).map(([key, label]) => (
+              {([["status", "qa.status"], ["item", "qa.item"], ["xp", "qa.xp"]] as const).map(([key, labelKey]) => (
                 <button
                   key={key}
                   type="button"
@@ -270,7 +273,7 @@ export default function TableQuickActions({
                       : "border-zinc-800 text-zinc-500 hover:text-zinc-200 hover:border-zinc-700"
                   }`}
                 >
-                  {label}
+                  {t(labelKey)}
                 </button>
               ))}
             </div>
@@ -281,17 +284,17 @@ export default function TableQuickActions({
               <div className="space-y-3">
                 <div className="grid grid-cols-2 gap-3">
                   <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-zinc-500">
-                    Δ HP
-                    <input type="number" value={hpDelta} onChange={(e) => setHpDelta(e.target.value)} placeholder={`alvo com ${target?.hp ?? "?"} PV`} className={fieldCls} />
+                    {t("qa.hp")}
+                    <input type="number" value={hpDelta} onChange={(e) => setHpDelta(e.target.value)} placeholder={interpolate(t("qa.hpPh"), { hp: target?.hp ?? "?" })} className={fieldCls} />
                   </label>
                   <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-zinc-500">
-                    Δ PE
-                    <input type="number" value={fpDelta} onChange={(e) => setFpDelta(e.target.value)} placeholder="−2, +1…" className={fieldCls} />
+                    {t("qa.fp")}
+                    <input type="number" value={fpDelta} onChange={(e) => setFpDelta(e.target.value)} placeholder={t("qa.fpPh")} className={fieldCls} />
                   </label>
                 </div>
                 <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-zinc-500">
-                  Nota (por quê)
-                  <input type="text" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Lâmina de goblin, primeiros socorros…" className={fieldCls} />
+                  {t("qa.note")}
+                  <input type="text" value={note} onChange={(e) => setNote(e.target.value)} placeholder={t("qa.noteHpPh")} className={fieldCls} />
                 </label>
               </div>
             ) : null}
@@ -299,38 +302,38 @@ export default function TableQuickActions({
             {mode === "item" ? (
               <div className="space-y-3">
                 <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-zinc-500">
-                  Item
+                  {t("qa.item")}
                   <select value={itemId} onChange={(e) => setItemId(e.target.value)} className={fieldCls} disabled={items.length === 0}>
-                    <option value="">{items.length === 0 ? "Nenhum item no arquivo" : "Escolher um item…"}</option>
+                    <option value="">{items.length === 0 ? t("qa.noItems") : t("qa.chooseItem")}</option>
                     {items.map((i) => (
                       <option key={i.id} value={i.id}>
                         {i.name}
-                        {pointsMode ? (i.cost != null ? ` · ${i.cost} pts cada` : " · sem custo definido") : ""}
+                        {pointsMode ? (i.cost != null ? ` · ${interpolate(t("qa.ptsEach"), { n: i.cost })}` : ` · ${t("qa.noCost")}`) : ""}
                       </option>
                     ))}
                   </select>
                 </label>
                 <div className="grid grid-cols-2 gap-3">
                   <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-zinc-500">
-                    Quantidade
+                    {t("qa.quantity")}
                     <input type="number" value={qty} onChange={(e) => setQty(e.target.value)} className={fieldCls} />
                   </label>
                   <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-zinc-500">
-                    Estado
+                    {t("qa.state")}
                     <select value={eqStatus} onChange={(e) => setEqStatus(e.target.value)} className={fieldCls}>
                       {EQUIP_STATUS.map((s) => (
-                        <option key={s.value} value={s.value}>{s.label}</option>
+                        <option key={s.value} value={s.value}>{t(s.label)}</option>
                       ))}
                     </select>
                   </label>
                 </div>
                 <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-zinc-500">
-                  Nota (por quê)
-                  <input type="text" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Espólio da emboscada…" className={fieldCls} />
+                  {t("qa.note")}
+                  <input type="text" value={note} onChange={(e) => setNote(e.target.value)} placeholder={t("qa.noteItemPh")} className={fieldCls} />
                 </label>
                 {pointsMode ? (
                   <p className="text-[11px] text-amber-300/90">
-                    Esta mesa cobra pontos de ficha por itens — o custo é descontado do {target?.name ?? "alvo"}. (~{target?.points ?? 0} pts disponíveis)
+                    {interpolate(t("qa.itemPointsWarn"), { name: target?.name ?? "?", pts: target?.points ?? 0 })}
                   </p>
                 ) : null}
               </div>
@@ -339,12 +342,12 @@ export default function TableQuickActions({
             {mode === "xp" ? (
               <div className="space-y-3">
                 <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-zinc-500">
-                  Pontos (com sinal)
-                  <input type="number" value={xpDelta} onChange={(e) => setXpDelta(e.target.value)} placeholder="10, −5…" className={fieldCls} />
+                  {t("qa.pointsSigned")}
+                  <input type="number" value={xpDelta} onChange={(e) => setXpDelta(e.target.value)} placeholder={t("qa.ptsPh")} className={fieldCls} />
                 </label>
                 <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-zinc-500">
-                  Nota (por quê)
-                  <input type="text" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Sobreviveu ao ritual…" className={fieldCls} />
+                  {t("qa.note")}
+                  <input type="text" value={note} onChange={(e) => setNote(e.target.value)} placeholder={t("qa.noteXpPh")} className={fieldCls} />
                 </label>
               </div>
             ) : null}
@@ -356,10 +359,10 @@ export default function TableQuickActions({
                 onClick={run}
                 className="inline-flex items-center gap-2 bg-teal-700 hover:bg-teal-600 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600/60"
               >
-                {busy ? "Aplicando…" : "Aplicar"}
+                {busy ? t("qa.applying") : t("qa.apply")}
               </button>
               <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-600">
-                {mode === "status" ? "registra um modificador aditivo" : mode === "item" ? "concede + registra o item" : "soma pontos da ficha + registra"}
+                {mode === "status" ? t("qa.hint.status") : mode === "item" ? t("qa.hint.item") : t("qa.hint.xp")}
               </span>
             </div>
           </div>

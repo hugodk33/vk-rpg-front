@@ -11,22 +11,23 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
+import { useTranslation } from "@/lib/i18n";
 import type { GameTableItems, GameTableNpcs, Item, TableNpc } from "@/lib/types";
 import ItemIcon from "@/components/items/ItemIcon";
 
-const STATUS_META: Record<string, { label: string; cls: string }> = {
-  enemy: { label: "Inimigo", cls: "text-red-300 border-red-500/40 bg-red-500/10" },
-  ally: { label: "Aliado", cls: "text-teal-300 border-teal-500/40 bg-teal-500/10" },
-  neutral: { label: "Neutro", cls: "text-zinc-300 border-zinc-600/60 bg-zinc-600/10" },
-  boss: { label: "Chefe", cls: "text-amber-300 border-amber-500/40 bg-amber-500/10" },
-  active: { label: "Ativo", cls: "text-teal-300 border-teal-500/40 bg-teal-500/10" },
+const STATUS_META: Record<string, { key: string; cls: string }> = {
+  enemy: { key: "lc.shop.status.enemy", cls: "text-red-300 border-red-500/40 bg-red-500/10" },
+  ally: { key: "lc.shop.status.ally", cls: "text-teal-300 border-teal-500/40 bg-teal-500/10" },
+  neutral: { key: "lc.shop.status.neutral", cls: "text-zinc-300 border-zinc-600/60 bg-zinc-600/10" },
+  boss: { key: "lc.shop.status.boss", cls: "text-amber-300 border-amber-500/40 bg-amber-500/10" },
+  active: { key: "lc.shop.status.active", cls: "text-teal-300 border-teal-500/40 bg-teal-500/10" },
 };
 
-const KIND_LABELS: Record<string, string> = {
-  weapon: "Arma",
-  armor: "Armadura",
-  shield: "Escudo",
-  equipment: "Equipamento",
+const KIND_META: Record<string, string> = {
+  weapon: "lc.shop.kind.weapon",
+  armor: "lc.shop.kind.armor",
+  shield: "lc.shop.kind.shield",
+  equipment: "lc.shop.kind.equipment",
 };
 
 const money = (n?: number): string => (n == null ? "—" : `$${n}`);
@@ -45,6 +46,7 @@ export default function LocationShop({
   const [npcs, setNpcs] = useState<TableNpc[]>([]);
   const [items, setItems] = useState<Item[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const { t } = useTranslation();
 
   useEffect(() => {
     if (!tableId) return;
@@ -67,26 +69,26 @@ export default function LocationShop({
       })
       .catch(() => {
         if (cancel) return;
-        setError("Falha ao carregar os registros da loja.");
+        setError(t("lc.shop.error"));
       });
     return () => {
       cancel = true;
     };
-  }, [tableId, locationId]);
+  }, [tableId, locationId, t]);
 
   return (
     <div>
       <div className="flex items-center gap-2.5 pb-1.5 mb-1 border-b border-zinc-700/60">
         <span aria-hidden className="font-mono text-base leading-none" style={{ color: accent }}>◉</span>
         <span className="font-mono text-[13px] font-bold uppercase tracking-wider text-zinc-300">
-          Loja
+          {t("lc.shop.title")}
           {shopName ? <span className="text-zinc-500"> · </span> : null}
           {shopName ? <span className="text-zinc-400">{shopName}</span> : null}
         </span>
         <span className="flex-1 h-px" style={{ background: `linear-gradient(90deg, ${accent}55, transparent)` }} />
       </div>
       <p className="text-[11px] text-zinc-500 mb-4">
-        Quem trabalha aqui e o que está nas prateleiras — vinculados a este local pelos formulários de NPC e Item.
+        {t("lc.shop.desc")}
       </p>
 
       {error ? <p className="text-[11px] text-red-400/80 mb-2">{error}</p> : null}
@@ -95,25 +97,25 @@ export default function LocationShop({
         {/* -------- STAFF -------- */}
         <section>
           <div className="flex items-center justify-between mb-2">
-            <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">Equipe</span>
+            <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">{t("lc.shop.staff")}</span>
             <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-600">{npcs.length}</span>
           </div>
           {npcs.length === 0 ? (
             <p className="text-xs text-zinc-600 italic">
-              Ninguém está alocado nesta loja ainda. Registre um NPC e vincule-o aqui.
+              {t("lc.shop.staffEmpty")}
             </p>
           ) : (
             <ul>
               {npcs.map((n) => (
                 <li key={n.id} className="flex items-center justify-between gap-3 border-b border-zinc-700/40 py-2.5 last:border-b-0">
-                  <span className="min-w-0 truncate text-sm text-zinc-200">{n.name || "Sem nome"}</span>
+                  <span className="min-w-0 truncate text-sm text-zinc-200">{n.name || t("lc.common.noName")}</span>
                   {n.status ? (
                     <span
                       className={`shrink-0 font-mono text-[9px] uppercase tracking-widest border rounded px-1.5 py-0.5 ${
                         STATUS_META[n.status]?.cls ?? "text-zinc-500 border-zinc-700/60 bg-zinc-800/40"
                       }`}
                     >
-                      {STATUS_META[n.status]?.label ?? n.status}
+                      {STATUS_META[n.status] ? t(STATUS_META[n.status].key) : n.status}
                     </span>
                   ) : null}
                 </li>
@@ -125,7 +127,7 @@ export default function LocationShop({
               href={`/npc/new?table=${tableId}&location=${locationId}`}
               className="mt-3 inline-block font-mono text-[10px] uppercase tracking-widest text-amber-400/80 hover:text-amber-300 transition-colors"
             >
-              + Equipe
+              {t("lc.shop.addStaff")}
             </Link>
           ) : null}
         </section>
@@ -133,12 +135,12 @@ export default function LocationShop({
         {/* -------- STOCK -------- */}
         <section>
           <div className="flex items-center justify-between mb-2">
-            <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">Estoque</span>
+            <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">{t("lc.shop.stock")}</span>
             <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-600">{items.length}</span>
           </div>
           {items.length === 0 ? (
             <p className="text-xs text-zinc-600 italic">
-              As prateleiras estão vazias. Vincule um item a este local para colocá-lo à venda.
+              {t("lc.shop.stockEmpty")}
             </p>
           ) : (
             <ul>
@@ -147,10 +149,10 @@ export default function LocationShop({
                   <div className="flex items-center gap-2.5 min-w-0">
                     <ItemIcon item={it} className="w-4 h-4 shrink-0" imgClassName="w-4 h-4 object-cover rounded" />
                     <div className="min-w-0">
-                      <span className="block truncate text-sm text-zinc-200">{it.name || "Sem nome"}</span>
+                      <span className="block truncate text-sm text-zinc-200">{it.name || t("lc.common.noName")}</span>
                       {it.kind ? (
                         <span className="font-mono text-[9px] uppercase tracking-widest text-zinc-600">
-                          {KIND_LABELS[it.kind] ?? it.kind}
+                          {KIND_META[it.kind] ? t(KIND_META[it.kind]) : it.kind}
                           {it.category ? ` · ${it.category}` : ""}
                         </span>
                       ) : null}
@@ -166,7 +168,7 @@ export default function LocationShop({
               href={`/item/new?table=${tableId}&location=${locationId}`}
               className="mt-3 inline-block font-mono text-[10px] uppercase tracking-widest text-amber-400/80 hover:text-amber-300 transition-colors"
             >
-              + Item
+              {t("lc.shop.addItem")}
             </Link>
           ) : null}
         </section>

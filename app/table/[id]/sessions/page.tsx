@@ -1,4 +1,5 @@
 import { api } from "@/lib/api";
+import { getLang, makeT } from "@/lib/i18n-server";
 import type { GameTableCharacters, GameTableLocations, GameTableNpcs, GameTableScenes, QueueEntry } from "@/lib/types";
 import { getSessionState } from "@/lib/session";
 import TableTabs from "@/components/TableTabs";
@@ -8,6 +9,7 @@ export const dynamic = "force-dynamic";
 
 export default async function TableSessionPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  const t = makeT(await getLang());
   const [scenesData, charsData, npcsData, queue, locationsData] = await Promise.all([
     api<GameTableScenes>(`/game-table-scenes/${id}`),
     api<GameTableCharacters>(`/game-table-characters/${id}`),
@@ -26,7 +28,7 @@ export default async function TableSessionPage({ params }: { params: Promise<{ i
       <div className="max-w-5xl mx-auto p-6 pb-0">
         <TableTabs tableId={id} active="sessions" />
         <h1 className="text-2xl font-bold text-green-100 mt-3 mb-4">
-          {scenesData.table?.title || "Sessão"}
+          {scenesData.table?.title || t("nav.sessions")}
         </h1>
         <SessionClient
           tableId={id}

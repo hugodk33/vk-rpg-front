@@ -8,25 +8,25 @@ import type { DamageEntry, DamageSource, WeaponAttack } from "./types";
    ===================================================================== */
 
 export const DAMAGE_SOURCE_LABELS: Record<string, string> = {
-  st_swing: "Balanço (ST)",
-  st_thrust: "Empuxo (ST)",
-  rated_st_swing: "Balanço (ST poderosa)",
-  rated_st_thrust: "Empuxo (ST poderosa)",
-  fixed: "Fixado",
+  st_swing: "dmg.src.swing",
+  st_thrust: "dmg.src.thrust",
+  rated_st_swing: "dmg.src.swingP",
+  rated_st_thrust: "dmg.src.thrustP",
+  fixed: "dmg.src.fixed",
 };
 
 export const DAMAGE_TYPES: Record<string, string> = {
-  cut: "Corte",
-  cr: "Esmagamento",
-  imp: "Perfuração",
-  pi: "Flecha",
-  "pi-": "Flecha pequena",
-  "pi+": "Flecha grande",
-  "pi++": "Flecha enorme",
-  burn: "Queimadura",
-  tox: "Veneno",
-  cor: "Corrosão",
-  fat: "Fadiga",
+  cut: "dmg.cut",
+  cr: "dmg.cr",
+  imp: "dmg.imp",
+  pi: "dmg.pi",
+  "pi-": "dmg.pi-",
+  "pi+": "dmg.pi+",
+  "pi++": "dmg.pi++",
+  burn: "dmg.burn",
+  tox: "dmg.tox",
+  cor: "dmg.cor",
+  fat: "dmg.fat",
 };
 
 /* Tabela ST -> THR/SW (GURPS 4e Basic Set). Fonte: seed gurps_damage_table. */

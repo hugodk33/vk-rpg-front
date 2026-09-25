@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { LANGS, useTranslation } from "@/lib/i18n";
 
 /* ============================================================
@@ -9,12 +10,19 @@ import { LANGS, useTranslation } from "@/lib/i18n";
    ============================================================ */
 
 export default function LanguageSwitch() {
-  const { lang, setLang } = useTranslation();
+  const { lang, setLang, t } = useTranslation();
+  const router = useRouter();
+
+  const change = (next: "pt" | "en") => {
+    setLang(next);
+    /* componentes de servidor (títulos, breadcrumbs) re-leem o cookie */
+    router.refresh();
+  };
 
   return (
     <div
       role="group"
-      aria-label="Idioma"
+      aria-label={t("lang.label")}
       className="inline-flex items-center rounded-full border border-zinc-700/60 bg-zinc-900/80 p-0.5"
     >
       {LANGS.map((l) => {
@@ -23,7 +31,7 @@ export default function LanguageSwitch() {
           <button
             key={l.id}
             type="button"
-            onClick={() => setLang(l.id)}
+            onClick={() => change(l.id)}
             aria-pressed={active}
             title={l.id === "en" ? "English" : "Português (Brasil)"}
             className={`font-mono text-[10px] font-bold tracking-widest px-2 py-0.5 rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/60 ${

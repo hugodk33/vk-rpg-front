@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getLang, makeT } from "@/lib/i18n-server";
 import CharacterJourney from "@/components/character/CharacterJourney";
 import {
   characterTabHref,
@@ -19,20 +20,21 @@ interface CharacterJourneyViewProps {
   tab: SheetTab;
 }
 
-export default function CharacterJourneyView({
+export default async function CharacterJourneyView({
   characterId,
   basePath,
   moments,
   selectedMoment,
   tab,
 }: CharacterJourneyViewProps) {
+  const t = makeT(await getLang());
   return (
     <div className="flex flex-col gap-5">
       {moments.length > 0 ? (
         <div>
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-xs font-semibold uppercase tracking-wider text-zinc-500 mr-1">
-              História
+              {t("cs.history")}
             </span>
             <Link
               href={characterTabHref(basePath, tab, null)}
@@ -42,10 +44,10 @@ export default function CharacterJourneyView({
                   : "bg-zinc-800/60 text-zinc-400 border border-zinc-700/50 hover:text-zinc-200"
               }`}
             >
-              Presente
+              {t("cs.present")}
             </Link>
             {[...moments].reverse().map((m, i, arr) => {
-              const label = i === arr.length - 1 ? "Início" : `${m}`;
+              const label = i === arr.length - 1 ? t("cs.start") : `${m}`;
               const isSel = selectedMoment === m;
               return (
                 <Link
@@ -64,8 +66,10 @@ export default function CharacterJourneyView({
           </div>
           {selectedMoment != null ? (
             <p className="text-xs text-zinc-500 mt-2">
-              Vendo o estado do personagem em{" "}
-              <span className="text-green-500 font-medium">Momento {selectedMoment}</span>
+              {t("cs.viewingAt")}{" "}
+              <span className="text-green-500 font-medium">
+                {t("cs.moment").replace("{n}", String(selectedMoment))}
+              </span>
             </p>
           ) : null}
         </div>

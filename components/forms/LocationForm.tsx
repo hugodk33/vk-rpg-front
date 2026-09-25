@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { submitJson } from "./submit";
 import { cancelCls, inputCls, labelCls, submitCls } from "./formStyles";
 import { LOCATION_KINDS, absoluteHex, formatHexScale } from "@/lib/location";
+import { useTranslation } from "@/lib/i18n";
 import type { Location } from "@/lib/types";
 
 export interface LocationFormProps {
@@ -16,9 +17,9 @@ export interface LocationFormProps {
 }
 
 const IS_BATTLE: Array<{ value: string; label: string }> = [
-  { value: "flat", label: "Borda plana" },
-  { value: "pointy", label: "Vértice em cima" },
-  { value: "square", label: "Grade quadrada" },
+  { value: "flat", label: "fr.loc.orientation.flat" },
+  { value: "pointy", label: "fr.loc.orientation.pointy" },
+  { value: "square", label: "fr.loc.orientation.square" },
 ];
 
 function rankOf(kind?: string): number {
@@ -34,6 +35,7 @@ export default function LocationForm({
   defaultKind,
 }: LocationFormProps) {
   const router = useRouter();
+  const { t } = useTranslation();
   const isEdit = !!initial;
   const locId = initial?.id ?? "";
   const h = initial?.hex;
@@ -103,11 +105,11 @@ export default function LocationForm({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!currentTableId) {
-      setError("Selecione a mesa.");
+      setError(t("fr.error.selectTable"));
       return;
     }
     if (!name.trim()) {
-      setError("Dê um nome a esta divisão de território.");
+      setError(t("fr.err.locationName"));
       return;
     }
     setSaving(true);
@@ -150,7 +152,7 @@ export default function LocationForm({
       }
       router.refresh();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Falha ao salvar o local.");
+      setError(err instanceof Error ? err.message : t("fr.err.location"));
       setSaving(false);
     }
   }
@@ -159,21 +161,19 @@ export default function LocationForm({
     <div className="max-w-3xl mx-auto p-6">
       <div className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-6">
         <h1 className="text-2xl font-bold text-green-100 mb-1">
-          {isEdit ? "Editar Local" : "Novo Local"}
+          {isEdit ? t("fr.loc.editTitle") : t("fr.loc.newTitle")}
         </h1>
-        <p className="text-sm text-zinc-500 mb-6">
-          Uma divisão de território numa cadeia de escala hexagonal: world → … → site → battlemap.
-        </p>
+        <p className="text-sm text-zinc-500 mb-6">{t("fr.loc.subtitle")}</p>
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className={labelCls}>Nome</label>
-              <input value={name} onChange={(e) => setName(e.target.value)} required className={inputCls} placeholder="ex: Valorholm" />
+              <label className={labelCls}>{t("fr.name")}</label>
+              <input value={name} onChange={(e) => setName(e.target.value)} required className={inputCls} placeholder={t("fr.loc.namePh")} />
             </div>
             <div>
-              <label className={labelCls}>Contém em (pai)</label>
+              <label className={labelCls}>{t("fr.loc.parent")}</label>
               <select value={parentId} onChange={(e) => handleParentChange(e.target.value)} className={inputCls}>
-                <option value="">— Sem pai (mundo) —</option>
+                <option value="">{t("fr.loc.noParent")}</option>
                 {parentOptions.map((l) => (
                   <option key={l.id} value={l.id}>
                     {"· ".repeat(Math.max(0, l.level ?? 0))}
@@ -186,7 +186,7 @@ export default function LocationForm({
           </div>
 
           <div>
-            <label className={labelCls}>Tipo de território</label>
+            <label className={labelCls}>{t("fr.loc.territoryType")}</label>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
               {LOCATION_KINDS.map((k) => (
                 <button
@@ -201,121 +201,118 @@ export default function LocationForm({
                     : "border-zinc-700/50 bg-zinc-800/40 hover:border-zinc-600"
                   }`}
                 >
-                  <span className="block text-sm font-medium text-zinc-200">{k.label}</span>
-                  <span className="block text-[10px] text-zinc-500 mt-0.5">{k.desc}</span>
+                  <span className="block text-sm font-medium text-zinc-200">{t(`fr.loc.kind.${k.value}`)}</span>
+                  <span className="block text-[10px] text-zinc-500 mt-0.5">{t(`fr.loc.kindD.${k.value}`)}</span>
                 </button>
               ))}
             </div>
           </div>
 
           <div className="space-y-4 border border-zinc-700/40 rounded-xl p-4 bg-zinc-800/30">
-            <h3 className="text-sm font-semibold text-zinc-300 uppercase tracking-wider">Grade hexagonal</h3>
+            <h3 className="text-sm font-semibold text-zinc-300 uppercase tracking-wider">{t("fr.loc.hexGrid")}</h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div>
-                <label className={labelCls}>Hex (m)</label>
-                <input type="number" step="0.1" min="0" value={sizeM} onChange={(e) => setSizeM(e.target.value)} className={inputCls} placeholder="ex: 500000" />
+                <label className={labelCls}>{t("fr.loc.hex")}</label>
+                <input type="number" step="0.1" min="0" value={sizeM} onChange={(e) => setSizeM(e.target.value)} className={inputCls} placeholder={t("fr.loc.hexPh")} />
               </div>
               <div>
-                <label className={labelCls}>Largura (hex)</label>
+                <label className={labelCls}>{t("fr.loc.width")}</label>
                 <input type="number" step="1" min="0" value={width} onChange={(e) => setWidth(e.target.value)} className={inputCls} />
               </div>
               <div>
-                <label className={labelCls}>Altura (hex)</label>
+                <label className={labelCls}>{t("fr.loc.height")}</label>
                 <input type="number" step="1" min="0" value={height} onChange={(e) => setHeight(e.target.value)} className={inputCls} />
               </div>
               <div>
-                <label className={labelCls}>Orientação</label>
+                <label className={labelCls}>{t("fr.loc.orientation")}</label>
                 <select value={orientation} onChange={(e) => setOrientation(e.target.value as "flat" | "pointy" | "square")} className={inputCls}>
                   {IS_BATTLE.map((o) => (
-                    <option key={o.value} value={o.value}>{o.label}</option>
+                    <option key={o.value} value={o.value}>{t(o.label)}</option>
                   ))}
                 </select>
               </div>
               <div>
-                <label className={labelCls}>Centro Q</label>
+                <label className={labelCls}>{t("fr.loc.centerQ")}</label>
                 <input type="number" value={centerQ} onChange={(e) => setCenterQ(e.target.value)} className={inputCls} />
               </div>
               <div>
-                <label className={labelCls}>Centro R</label>
+                <label className={labelCls}>{t("fr.loc.centerR")}</label>
                 <input type="number" value={centerR} onChange={(e) => setCenterR(e.target.value)} className={inputCls} />
               </div>
               <div>
-                <label className={labelCls}>Rotação (°)</label>
-                <input type="number" step="15" value={rotationDeg} onChange={(e) => setRotationDeg(e.target.value)} className={inputCls} placeholder="0, 15, 30…" />
+                <label className={labelCls}>{t("fr.loc.rotation")}</label>
+                <input type="number" step="15" value={rotationDeg} onChange={(e) => setRotationDeg(e.target.value)} className={inputCls} placeholder={t("fr.loc.rotationPh")} />
               </div>
               <div className="flex items-end">
                 <label className={`${inputCls} flex items-center gap-2 cursor-pointer py-2.5`}>
                   <input type="checkbox" checked={indoor} onChange={(e) => setIndoor(e.target.checked)} className="accent-amber-500" />
-                  <span className="text-sm text-zinc-300 font-medium">Interior</span>
+                  <span className="text-sm text-zinc-300 font-medium">{t("fr.loc.indoor")}</span>
                 </label>
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-3 text-[11px] text-zinc-500">
-              <span>Escala: <span className="text-zinc-300 font-semibold">{formatHexScale(sizeNum)}</span></span>
+              <span>{t("fr.loc.scale")} <span className="text-zinc-300 font-semibold">{formatHexScale(sizeNum)}</span></span>
               <span aria-hidden>·</span>
               <span>
-                Abs Q/R: <span className="font-mono text-zinc-300">q{preview.q}·r{preview.r}</span>{" "}
-                <span className="text-zinc-600">(reduzido à escala deste hex)</span>
+                {t("fr.loc.absQr")} <span className="font-mono text-zinc-300">q{preview.q}·r{preview.r}</span>{" "}
+                <span className="text-zinc-600">{t("fr.loc.reduced")}</span>
               </span>
               {sizeNum != null && sizeNum <= 2 ? (
                 <span className="px-2 py-0.5 rounded-full bg-amber-400/10 text-amber-400 uppercase tracking-widest font-semibold">
-                  Mapa de batalha
+                  {t("fr.loc.battlemap")}
                 </span>
               ) : null}
             </div>
           </div>
 
           <div className="space-y-4 border border-zinc-700/40 rounded-xl p-4 bg-zinc-800/30">
-            <h3 className="text-sm font-semibold text-zinc-300 uppercase tracking-wider">Recadastro de terreno</h3>
+            <h3 className="text-sm font-semibold text-zinc-300 uppercase tracking-wider">{t("fr.loc.survey")}</h3>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               <div>
-                <label className={labelCls}>Região</label>
+                <label className={labelCls}>{t("fr.loc.region")}</label>
                 <input value={region} onChange={(e) => setRegion(e.target.value)} className={inputCls} />
               </div>
               <div>
-                <label className={labelCls}>Sub-região</label>
+                <label className={labelCls}>{t("fr.loc.subRegion")}</label>
                 <input value={subRegion} onChange={(e) => setSubRegion(e.target.value)} className={inputCls} />
               </div>
               <div>
-                <label className={labelCls}>Endereço</label>
+                <label className={labelCls}>{t("fr.loc.address")}</label>
                 <input value={address} onChange={(e) => setAddress(e.target.value)} className={inputCls} />
               </div>
               <div>
-                <label className={labelCls}>País</label>
+                <label className={labelCls}>{t("fr.loc.country")}</label>
                 <input value={country} onChange={(e) => setCountry(e.target.value)} className={inputCls} />
               </div>
               <div>
-                <label className={labelCls}>Área</label>
+                <label className={labelCls}>{t("fr.loc.area")}</label>
                 <input value={area} onChange={(e) => setArea(e.target.value)} className={inputCls} />
               </div>
               <div>
-                <label className={labelCls}>Dimensões</label>
+                <label className={labelCls}>{t("fr.loc.dimensions")}</label>
                 <input value={dimensions} onChange={(e) => setDimensions(e.target.value)} className={inputCls} />
               </div>
             </div>
           </div>
 
           <div className="space-y-3 border border-zinc-700/40 rounded-xl p-4 bg-zinc-800/30">
-            <h3 className="text-sm font-semibold text-zinc-300 uppercase tracking-wider">Loja (opcional)</h3>
-            <p className="text-[11px] text-zinc-600">
-              Se preenchido, o local vira uma loja e a ficha ganha a aba “Loja”, com os NPCs da
-              equipe e o estoque de itens vinculados a ele.
-            </p>
+            <h3 className="text-sm font-semibold text-zinc-300 uppercase tracking-wider">{t("fr.loc.shop")}</h3>
+            <p className="text-[11px] text-zinc-600">{t("fr.loc.shopHint")}</p>
             <input
               value={shopName}
               onChange={(e) => setShopName(e.target.value)}
               className={inputCls}
-              placeholder="ex: A Flecha de Bronze"
+              placeholder={t("fr.loc.shopPh")}
             />
           </div>
 
           <div className="space-y-4">
             <div>
-              <label className={labelCls}>Descrição</label>
+              <label className={labelCls}>{t("fr.description")}</label>
               <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} className={inputCls} />
             </div>
             <div>
-              <label className={labelCls}>Notas (outros)</label>
+              <label className={labelCls}>{t("fr.loc.notes")}</label>
               <textarea value={other} onChange={(e) => setOther(e.target.value)} rows={2} className={inputCls} />
             </div>
           </div>
@@ -324,13 +321,13 @@ export default function LocationForm({
 
           <div className="flex items-center gap-3 pt-2">
             <button type="submit" disabled={saving} className={`${submitCls} disabled:opacity-50`}>
-              {saving ? "Salvando..." : isEdit ? "Salvar Alterações" : "Criar Local"}
+              {saving ? t("fr.saving") : isEdit ? t("fr.saveChanges") : t("fr.loc.create")}
             </button>
             <a
               href={isEdit ? `/location/${locId}` : currentTableId ? `/table/${currentTableId}/locations` : "/narrator"}
               className={cancelCls}
             >
-              Cancelar
+              {t("fr.cancel")}
             </a>
           </div>
         </form>

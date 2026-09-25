@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { submitJson } from "./submit";
 import { cancelCls, inputCls, labelCls, submitCls } from "./formStyles";
+import { useTranslation } from "@/lib/i18n";
 import type { SkillItem } from "@/lib/types";
 
 export interface SkillFormProps {
@@ -13,20 +14,21 @@ export interface SkillFormProps {
 }
 
 const TYPES: Array<{ value: string; label: string; hint: string }> = [
-  { value: "Physical", label: "Física", hint: "Testes contra Destreza (DX)" },
-  { value: "Mental", label: "Mental", hint: "Testes contra Inteligência (IQ)" },
-  { value: "Social", label: "Social", hint: "Testes contra Vontade" },
+  { value: "Physical", label: "fr.sk.typePhysical", hint: "fr.sk.hintPhysical" },
+  { value: "Mental", label: "fr.sk.typeMental", hint: "fr.sk.hintMental" },
+  { value: "Social", label: "fr.sk.typeSocial", hint: "fr.sk.hintSocial" },
 ];
 
 const DIFFICULTIES: Array<{ value: string; label: string }> = [
-  { value: "Easy", label: "Fácil" },
-  { value: "Average", label: "Média" },
-  { value: "Hard", label: "Difícil" },
-  { value: "Very Hard", label: "Muito difícil" },
+  { value: "Easy", label: "fr.diff.easy" },
+  { value: "Average", label: "fr.diff.average" },
+  { value: "Hard", label: "fr.diff.hard" },
+  { value: "Very Hard", label: "fr.diff.veryHard" },
 ];
 
 export default function SkillForm({ tableId, tables, initial }: SkillFormProps) {
   const router = useRouter();
+  const { t } = useTranslation();
   const isEdit = !!initial;
 
   const [currentTableId, setCurrentTableId] = useState(tableId ?? initial?.table_id ?? "");
@@ -43,7 +45,7 @@ export default function SkillForm({ tableId, tables, initial }: SkillFormProps) 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!currentTableId) {
-      setError("Selecione a mesa.");
+      setError(t("fr.error.selectTable"));
       return;
     }
     setSaving(true);
@@ -70,7 +72,7 @@ export default function SkillForm({ tableId, tables, initial }: SkillFormProps) 
       router.push(`/table/${currentTableId}/skills`);
       router.refresh();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Falha ao salvar a perícia.");
+      setError(err instanceof Error ? err.message : t("fr.err.skill"));
       setSaving(false);
     }
   }
@@ -79,12 +81,12 @@ export default function SkillForm({ tableId, tables, initial }: SkillFormProps) 
     <div className="max-w-2xl mx-auto p-6">
       <div className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-6">
         <h1 className="text-2xl font-bold text-green-100 mb-6">
-          {isEdit ? "Editar Perícia" : "Nova Perícia"}
+          {isEdit ? t("fr.sk.editTitle") : t("fr.sk.newTitle")}
         </h1>
         <form onSubmit={handleSubmit} className="space-y-5">
           {!isEdit && !tableId ? (
             <div>
-              <label className={labelCls}>Mesa</label>
+              <label className={labelCls}>{t("fr.table")}</label>
               <select
                 value={currentTableId}
                 onChange={(e) => setCurrentTableId(e.target.value)}
@@ -92,7 +94,7 @@ export default function SkillForm({ tableId, tables, initial }: SkillFormProps) 
                 className={inputCls}
               >
                 <option value="" disabled>
-                  Selecione a mesa
+                  {t("fr.pickTable")}
                 </option>
                 {(tables ?? []).map((t) => (
                   <option key={t.id} value={t.id}>
@@ -104,28 +106,28 @@ export default function SkillForm({ tableId, tables, initial }: SkillFormProps) 
           ) : null}
 
           <div>
-            <label className={labelCls}>Nome</label>
+            <label className={labelCls}>{t("fr.name")}</label>
             <input value={name} onChange={(e) => setName(e.target.value)} required className={inputCls} />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className={labelCls}>Tipo</label>
+              <label className={labelCls}>{t("fr.type")}</label>
               <select value={type} onChange={(e) => setType(e.target.value)} className={inputCls}>
-                {TYPES.map((t) => (
-                  <option key={t.value} value={t.value}>
-                    {t.label}
+                {TYPES.map((t2) => (
+                  <option key={t2.value} value={t2.value}>
+                    {t(t2.label)}
                   </option>
                 ))}
               </select>
-              <p className="text-[11px] text-zinc-600 mt-1">{TYPES.find((t) => t.value === type)?.hint}</p>
+              <p className="text-[11px] text-zinc-600 mt-1">{t(TYPES.find((t2) => t2.value === type)?.hint ?? "fr.sk.hintPhysical")}</p>
             </div>
             <div>
-              <label className={labelCls}>Dificuldade</label>
+              <label className={labelCls}>{t("fr.difficulty")}</label>
               <select value={difficulty} onChange={(e) => setDifficulty(e.target.value)} className={inputCls}>
                 {DIFFICULTIES.map((d) => (
                   <option key={d.value} value={d.value}>
-                    {d.label}
+                    {t(d.label)}
                   </option>
                 ))}
               </select>
@@ -134,17 +136,17 @@ export default function SkillForm({ tableId, tables, initial }: SkillFormProps) 
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className={labelCls}>Categoria</label>
-              <input value={category} onChange={(e) => setCategory(e.target.value)} className={inputCls} placeholder="ex: Combate, Magia, Conhecimento" />
+              <label className={labelCls}>{t("fr.category")}</label>
+              <input value={category} onChange={(e) => setCategory(e.target.value)} className={inputCls} placeholder={t("fr.sk.categoryPh")} />
             </div>
             <div>
-              <label className={labelCls}>Subcategoria</label>
-              <input value={subcategory} onChange={(e) => setSubcategory(e.target.value)} className={inputCls} placeholder="ex: Espada, Fogo, Erudição" />
+              <label className={labelCls}>{t("fr.subcategory")}</label>
+              <input value={subcategory} onChange={(e) => setSubcategory(e.target.value)} className={inputCls} placeholder={t("fr.sk.subcategoryPh")} />
             </div>
           </div>
 
           <div>
-            <label className={labelCls}>Descrição</label>
+            <label className={labelCls}>{t("fr.description")}</label>
             <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={4} className={inputCls} />
           </div>
 
@@ -152,10 +154,10 @@ export default function SkillForm({ tableId, tables, initial }: SkillFormProps) 
 
           <div className="flex items-center gap-3 pt-2">
             <button type="submit" disabled={saving} className={`${submitCls} disabled:opacity-50`}>
-              {saving ? "Salvando..." : isEdit ? "Salvar Alterações" : "Criar Perícia"}
+              {saving ? t("fr.saving") : isEdit ? t("fr.saveChanges") : t("fr.sk.create")}
             </button>
             <a href={currentTableId ? `/table/${currentTableId}/skills` : "/narrator"} className={cancelCls}>
-              Cancelar
+              {t("fr.cancel")}
             </a>
           </div>
         </form>

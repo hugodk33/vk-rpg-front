@@ -2,6 +2,7 @@ import Link from "next/link";
 import { api } from "@/lib/api";
 import type { GameTable, GameTableCharacters, GameTableNpcs, Sheet, TableCharacter, TableNpc } from "@/lib/types";
 import SeatPicker, { type SeatOption } from "@/components/player/SeatPicker";
+import { getLang, makeT } from "@/lib/i18n-server";
 
 export const dynamic = "force-dynamic";
 
@@ -142,6 +143,7 @@ export default async function PlayerDashboard({
   searchParams: Promise<{ seat?: string }>;
 }) {
   const { seat } = await searchParams;
+  const t = makeT(await getLang());
   const entries = await loadPlayerEntries();
   const seatOptions = seatOptionsFrom(entries);
 
@@ -172,14 +174,17 @@ export default async function PlayerDashboard({
           <div className="absolute top-4 -left-6 w-56 h-56 rounded-full border border-blue-500" />
         </div>
         <div className="relative">
-          <p className="font-mono text-[10px] tracking-widest uppercase text-blue-300/90">Na mesa</p>
+          <p className="font-mono text-[10px] tracking-widest uppercase text-blue-300/90">{t("pg.player.eyebrow")}</p>
           <div className="flex flex-wrap items-end justify-between gap-4 mt-1">
             <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-zinc-100">Sua Companhia</h1>
+              <h1 className="text-2xl md:text-3xl font-bold text-zinc-100">{t("pg.player.company")}</h1>
               <p className="text-stone-400 text-sm mt-1.5">
                 {shown.length === 0
-                  ? "Nenhum aventureiro ainda — assuma um assento em uma campanha."
-                  : `${shown.length} ${shown.length === 1 ? "aventureiro" : "aventureiros"} sob sua bandeira.`}
+                  ? t("pg.player.noneYet")
+                  : (shown.length === 1 ? t("pg.player.adventurerOne") : t("pg.player.adventurerMany")).replace(
+                      "{n}",
+                      String(shown.length),
+                    )}
               </p>
             </div>
             {seatOptions.length > 0 ? <SeatPicker options={seatOptions} /> : null}
@@ -190,18 +195,16 @@ export default async function PlayerDashboard({
       {/* ---- company (characters only) ---- */}
       {shown.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-blue-700/40 text-center py-20 bg-zinc-900/40">
-          <div className="font-mono text-[10px] tracking-widest uppercase text-blue-400/60">Nenhum aventureiro</div>
+          <div className="font-mono text-[10px] tracking-widest uppercase text-blue-400/60">{t("pg.player.emptyEyebrow")}</div>
           <p className="text-zinc-300 mt-2 max-w-sm mx-auto text-sm">
-            {seat
-              ? "Este usuário ainda não tem personagens — escolha outro usuário acima."
-              : "Quando um narrador te adiciona a uma campanha e você assume um personagem, ele aparecerá aqui."}
+            {seat ? t("pg.player.emptySeat") : t("pg.player.emptyGeneral")}
           </p>
         </div>
       ) : (
         <div className="space-y-3">
           {shown.map(({ table, ch, npcStatus }) => {
             const s = ch.sheet ?? ({} as Sheet);
-            const name = s.name || ch.name || "Aventureiro sem nome";
+            const name = s.name || ch.name || t("pg.player.adventurerUnnamed");
             const hue = hueFor(name);
             const hp = hpBar(s);
             const attrs = statRow(s);
@@ -249,28 +252,28 @@ export default async function PlayerDashboard({
                           <h2 className="text-lg font-bold text-zinc-100 leading-tight truncate">{name}</h2>
                           {isNpc ? (
                             <span className="font-mono text-[9px] uppercase tracking-widest text-amber-300/80 border border-amber-500/30 rounded px-1.5 py-0.5">
-                              NPC Aliado
+                              {t("pg.player.allyNpc")}
                             </span>
                           ) : seat ? (
                             isMine ? (
                               <span className="font-mono text-[9px] uppercase tracking-widest text-blue-300/80 border border-blue-500/30 rounded px-1.5 py-0.5">
-                                Você
+                                {t("pg.player.you")}
                               </span>
                             ) : (
                               <span className="font-mono text-[9px] uppercase tracking-widest text-zinc-500 border border-zinc-700/50 rounded px-1.5 py-0.5">
-                                Companheiro
+                                {t("pg.player.companion")}
                               </span>
                             )
                           ) : null}
                         </div>
                         <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500 mt-0.5">
-                          {table ? table.title : "Mesa desconhecida"}
+                          {table ? table.title : t("pg.player.unknownTable")}
                           {isNpc ? "" : ownerName ? ` · ${ownerName}` : ""}
                         </p>
                       </div>
                       {hp.max ? (
                         <div className="text-right shrink-0">
-                          <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-500 block">HP</span>
+                          <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-500 block">{t("p.hp")}</span>
                           <span className="font-mono text-sm font-bold text-red-300">{hp.cur}<span className="text-zinc-600">/</span>{hp.max}</span>
                         </div>
                       ) : null}
@@ -298,7 +301,7 @@ export default async function PlayerDashboard({
                               className="inline-flex items-center gap-1.5 bg-zinc-800/50 border border-zinc-700/40 rounded-md px-2 py-1"
                             >
                               <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dot}`} />
-                              <span className="text-zinc-300 text-xs font-medium">{m.name || "Efeito"}</span>
+                              <span className="text-zinc-300 text-xs font-medium">{m.name || t("pg.effect")}</span>
                               {deltas.length > 0 ? (
                                 <span className="flex items-center gap-1.5">
                                   {deltas.map((d) => (
@@ -324,12 +327,11 @@ export default async function PlayerDashboard({
                         href={viewUrl}
                         className="w-full text-center bg-blue-600 hover:bg-blue-500 text-blue-950 text-sm font-semibold px-4 py-2 rounded-lg transition-colors shadow-lg shadow-blue-900/20"
                       >
-                        Ver ficha
+                        {t("pg.player.viewSheet")}
                       </Link>
                       {observerId ? (
                         <p className="text-[11px] leading-snug text-zinc-500 text-center sm:text-right">
-                          Como você os vê — só o que seu personagem
-                          descobriu em jogo aparece aqui.
+                          {t("pg.player.seenAs")}
                         </p>
                       ) : null}
                     </>
@@ -339,17 +341,17 @@ export default async function PlayerDashboard({
                         href={sessionUrl}
                         className="w-full text-center bg-blue-600 hover:bg-blue-500 text-blue-950 text-sm font-semibold px-4 py-2 rounded-lg transition-colors shadow-lg shadow-blue-900/20"
                       >
-                        Entrar na Sessão
+                        {t("pg.player.enterSession")}
                       </Link>
                       <div className="flex items-center justify-center gap-4 sm:flex-col sm:gap-1.5 font-mono text-[11px] uppercase tracking-widest">
                         <Link
                           href={`/player/character/${ch.id}?tab=table`}
                           className="text-zinc-500 hover:text-blue-300 transition-colors"
                         >
-                          Mesa
+                          {t("nav.table")}
                         </Link>
                         <Link href={sheetUrl} className="text-zinc-500 hover:text-blue-300 transition-colors">
-                          Ficha
+                          {t("pg.sheet")}
                         </Link>
                       </div>
                     </>
@@ -359,11 +361,10 @@ export default async function PlayerDashboard({
                         href={viewUrl}
                         className="w-full text-center bg-blue-600 hover:bg-blue-500 text-blue-950 text-sm font-semibold px-4 py-2 rounded-lg transition-colors shadow-lg shadow-blue-900/20"
                       >
-                        Ver ficha
+                        {t("pg.player.viewSheet")}
                       </Link>
                       <p className="text-[11px] leading-snug text-zinc-500 text-center sm:text-right">
-                        Como você os vê — só o que seu personagem
-                        descobriu em jogo aparece aqui.
+                        {t("pg.player.seenAs")}
                       </p>
                     </>
                   )}
@@ -376,7 +377,7 @@ export default async function PlayerDashboard({
 
       <div className="mt-10 text-center">
         <Link href="/" className="text-zinc-500 hover:text-blue-300 text-sm transition-colors">
-          &larr; Voltar ao início
+          {t("pg.backHome")}
         </Link>
       </div>
     </div>

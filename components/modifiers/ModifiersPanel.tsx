@@ -15,6 +15,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
+import { interpolate, useTranslation } from "@/lib/i18n";
 import type {
   GameTableModifiers,
   GameTableScenes,
@@ -25,7 +26,8 @@ import type {
   TableCharacter,
 } from "@/lib/types";
 
-const charName = (c: TableCharacter) => c.sheet?.name || c.name || "Sem nome";
+const charName = (c: TableCharacter, t: (key: string) => string) =>
+  c.sheet?.name || c.name || t("vs.common.noName");
 const num = (v: string): number | undefined => {
   if (v.trim() === "") return undefined;
   const n = Number(v);
@@ -36,40 +38,50 @@ const txt = (v: string): string | undefined =>
 
 /* ---------- form fields ---------- */
 
-const SET_FIELDS: { key: string; label: string; numeric?: boolean }[] = [
+interface FieldDef {
+  key: string;
+  label?: string;
+  labelKey?: string;
+  numeric?: boolean;
+}
+
+const fieldLabel = (f: FieldDef, t: (key: string) => string) =>
+  f.labelKey ? t(f.labelKey) : (f.label ?? "");
+
+const SET_FIELDS: FieldDef[] = [
   { key: "hp", label: "HP", numeric: true },
   { key: "st", label: "ST", numeric: true },
   { key: "dx", label: "DX", numeric: true },
   { key: "iq", label: "IQ", numeric: true },
   { key: "ht", label: "HT", numeric: true },
   { key: "fatigue", label: "FP", numeric: true },
-  { key: "encumbrance", label: "Carga" },
+  { key: "encumbrance", labelKey: "vs.mp.f.encumbrance" },
 ];
 
-const DELTA_FIELDS: { key: string; label: string; numeric?: boolean }[] = [
+const DELTA_FIELDS: FieldDef[] = [
   { key: "mod_hp", label: "Δ HP", numeric: true },
   { key: "mod_st", label: "Δ ST", numeric: true },
   { key: "mod_dx", label: "Δ DX", numeric: true },
   { key: "mod_iq", label: "Δ IQ", numeric: true },
   { key: "mod_ht", label: "Δ HT", numeric: true },
   { key: "mod_fatigue", label: "Δ FP", numeric: true },
-  { key: "mod_encumbrance", label: "Δ Carga" },
+  { key: "mod_encumbrance", labelKey: "vs.mp.f.dEncumbrance" },
 ];
 
-const ITEM_FIELDS: { key: string; label: string; numeric?: boolean }[] = [
-  { key: "damage_value", label: "Dano" },
-  { key: "skill_value", label: "Valor de perícia" },
-  { key: "armor_value", label: "Valor de armadura" },
-  { key: "advantage_value", label: "Valor de vantagem" },
-  { key: "disadvantage_value", label: "Valor de desvantagem" },
-  { key: "item_quantity", label: "Quantidade do item", numeric: true },
-  { key: "item_weight", label: "Peso do item", numeric: true },
-  { key: "item_dimension", label: "Dimensão do item" },
-  { key: "item_range", label: "Alcance do item" },
-  { key: "item_status", label: "Estado do item" },
+const ITEM_FIELDS: FieldDef[] = [
+  { key: "damage_value", labelKey: "vs.mp.f.damage" },
+  { key: "skill_value", labelKey: "vs.mp.f.skillValue" },
+  { key: "armor_value", labelKey: "vs.mp.f.armorValue" },
+  { key: "advantage_value", labelKey: "vs.mp.f.advantageValue" },
+  { key: "disadvantage_value", labelKey: "vs.mp.f.disadvantageValue" },
+  { key: "item_quantity", labelKey: "vs.mp.f.itemQuantity", numeric: true },
+  { key: "item_weight", labelKey: "vs.mp.f.itemWeight", numeric: true },
+  { key: "item_dimension", labelKey: "vs.mp.f.itemDimension" },
+  { key: "item_range", labelKey: "vs.mp.f.itemRange" },
+  { key: "item_status", labelKey: "vs.mp.f.itemStatus" },
 ];
 
-const effectChips = (m: Modifier): { label: string; value: string }[] => {
+const effectChips = (m: Modifier, t: (key: string) => string): { label: string; value: string }[] => {
   const out: { label: string; value: string }[] = [];
   const deltas = [
     ["HP", m.mod_hp],
@@ -94,15 +106,15 @@ const effectChips = (m: Modifier): { label: string; value: string }[] => {
   for (const [label, v] of sets) {
     if (v != null) out.push({ label, value: `=${v}` });
   }
-  if (m.encumbrance) out.push({ label: "CAR", value: m.encumbrance });
-  if (m.mod_encumbrance) out.push({ label: "CAR", value: m.mod_encumbrance });
-  if (m.damage_value) out.push({ label: "Dano", value: m.damage_value });
-  if (m.skill_value) out.push({ label: "Per.", value: m.skill_value });
+  if (m.encumbrance) out.push({ label: t("vs.mp.c.enc"), value: m.encumbrance });
+  if (m.mod_encumbrance) out.push({ label: t("vs.mp.c.enc"), value: m.mod_encumbrance });
+  if (m.damage_value) out.push({ label: t("vs.mp.c.damage"), value: m.damage_value });
+  if (m.skill_value) out.push({ label: t("vs.mp.c.skill"), value: m.skill_value });
   if (m.armor_value) out.push({ label: "DR", value: m.armor_value });
-  if (m.advantage_value) out.push({ label: "Vant", value: m.advantage_value });
-  if (m.disadvantage_value) out.push({ label: "Desv", value: m.disadvantage_value });
-  if (m.item_quantity) out.push({ label: "Qtd", value: `=${m.item_quantity}` });
-  if (m.item_weight != null) out.push({ label: "Peso", value: `${m.item_weight} lb` });
+  if (m.advantage_value) out.push({ label: t("vs.mp.c.adv"), value: m.advantage_value });
+  if (m.disadvantage_value) out.push({ label: t("vs.mp.c.dis"), value: m.disadvantage_value });
+  if (m.item_quantity) out.push({ label: t("vs.mp.c.qty"), value: `=${m.item_quantity}` });
+  if (m.item_weight != null) out.push({ label: t("vs.mp.c.weight"), value: `${m.item_weight} lb` });
   return out;
 };
 
@@ -248,6 +260,7 @@ export default function ModifiersPanel({
   scenes,
   locations,
 }: ModifiersPanelProps) {
+  const { t } = useTranslation();
   const [modifiers, setModifiers] = useState<Modifier[]>(initialModifiers);
   const [form, setForm] = useState<FormState>(emptyForm);
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -255,11 +268,16 @@ export default function ModifiersPanel({
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<"list" | "form">("list");
 
-  const locationNameOf = useMemo(() => {
+  const locationNames = useMemo(() => {
     const m = new Map<string, string>();
-    for (const l of locations ?? []) if (l.id) m.set(String(l.id), l.name || "Sem nome");
-    return (id?: string | null) => (id ? m.get(String(id)) ?? null : null);
+    for (const l of locations ?? []) if (l.id) m.set(String(l.id), l.name);
+    return m;
   }, [locations]);
+
+  const locationNameOf = (id?: string | null) => {
+    if (!id) return null;
+    return locationNames.get(String(id)) || t("vs.common.noName");
+  };
 
   const [skills, setSkills] = useState<SkillItem[]>([]);
   useEffect(() => {
@@ -329,7 +347,7 @@ export default function ModifiersPanel({
 
   const save = async () => {
     if (!form.character_id && !form.location_id) {
-      setError("Escolha um personagem ou um local para receber o modificador.");
+      setError(t("vs.mp.errTarget"));
       return;
     }
     setSaving(true);
@@ -389,7 +407,7 @@ export default function ModifiersPanel({
       setTab("list");
       await refetch();
     } catch {
-      setError("Falha ao salvar o modificador.");
+      setError(t("vs.mp.errSave"));
     } finally {
       setSaving(false);
     }
@@ -416,7 +434,7 @@ export default function ModifiersPanel({
               : "text-zinc-500 border-transparent hover:text-zinc-300"
           }`}
         >
-          No registro
+          {t("vs.mp.tabList")}
           <span className="ml-2 text-zinc-600">{modifiers.length}</span>
         </button>
         <button
@@ -432,7 +450,7 @@ export default function ModifiersPanel({
               : "text-zinc-500 border-transparent hover:text-zinc-300"
           }`}
         >
-          {form.id ? "Editando modificador" : "Novo modificador"}
+          {form.id ? t("vs.mp.tabEdit") : t("vs.mp.tabNew")}
         </button>
       </div>
 
@@ -442,11 +460,10 @@ export default function ModifiersPanel({
           {modifiers.length === 0 ? (
             <div className="rounded-xl border border-dashed border-zinc-700/60 px-4 py-10 text-center">
               <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">
-                Nenhum modificador ainda
+                {t("vs.mp.emptyTitle")}
               </p>
               <p className="text-sm text-zinc-400 mt-2">
-                Todo efeito pode ser reproduzido a partir do momento da
-                história a que pertence. Crie um na aba Novo modificador.
+                {t("vs.mp.emptyBody")}
               </p>
             </div>
           ) : (
@@ -459,7 +476,7 @@ export default function ModifiersPanel({
                   (n) => n.id === m.narration_id
                 );
                 const actionRef = actionOf(m.action_id);
-                const chips = effectChips(m);
+                const chips = effectChips(m, t);
                 return (
                   <li
                     key={m.id}
@@ -468,10 +485,10 @@ export default function ModifiersPanel({
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
                         <p className="text-sm font-semibold text-zinc-100 truncate">
-                          {m.name || "Modificador sem nome"}
+                          {m.name || t("vs.mp.unnamed")}
                         </p>
                         <p className="font-mono text-[9px] uppercase tracking-widest text-zinc-500 mt-0.5">
-                          {char ? charName(char) : "—"}
+                          {char ? charName(char, t) : "—"}
                         </p>
                       </div>
                       <button
@@ -483,7 +500,7 @@ export default function ModifiersPanel({
                         }}
                         className="shrink-0 font-mono text-[10px] uppercase tracking-widest text-zinc-400 border border-zinc-700/60 rounded-md px-2 py-1 hover:text-zinc-100 hover:border-zinc-500 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-green-800/60"
                       >
-                        Editar
+                        {t("vs.mp.tabEdit")}
                       </button>
                     </div>
 
@@ -495,33 +512,35 @@ export default function ModifiersPanel({
 
                     {locName ? (
                       <p className="font-mono text-[9px] uppercase tracking-widest text-teal-300/80 mt-1.5">
-                        ◍ Em {locName}
+                        {interpolate(t("vs.mp.atLocation"), { name: locName })}
                       </p>
                     ) : null}
 
                     {scene ? (
                       <p className="font-mono text-[9px] uppercase tracking-widest text-zinc-500 mt-1.5">
-                        {scene.chapter != null ? `Cap.${scene.chapter}` : "Qualquer"}
+                        {scene.chapter != null
+                          ? interpolate(t("vs.dc.chapterShort"), { n: scene.chapter })
+                          : t("vs.mp.any")}
                         {scene.title ? ` · ${scene.title}` : ""}
                         {narration?.title
                           ? ` / ${narration.title}`
                           : narration?.id === m.narration_id
-                          ? " / esta narração"
+                          ? ` / ${t("vs.mp.thisNarration")}`
                           : ""}
                       </p>
                     ) : locName ? (
                       <p className="font-mono text-[9px] uppercase tracking-widest text-zinc-600 mt-1.5">
-                        Este local, sem momento na história
+                        {t("vs.mp.locNoMoment")}
                       </p>
                     ) : (
                       <p className="font-mono text-[9px] uppercase tracking-widest text-zinc-600 mt-1.5">
-                        Persistente (sem momento na história)
+                        {t("vs.mp.persistent")}
                       </p>
                     )}
 
                     {actionRef ? (
                       <p className="font-mono text-[9px] uppercase tracking-widest text-amber-300/80 mt-1">
-                        ⤷ após a ação{" "}
+                        {t("vs.mp.afterAction")}{" "}
                         {actionRef.action.queue != null
                           ? `${actionRef.action.queue}.`
                           : ""}{" "}
@@ -533,7 +552,7 @@ export default function ModifiersPanel({
 
                     {m.apply_on_roll === 1 ? (
                       <p className="font-mono text-[9px] uppercase tracking-widest text-green-400/90 mt-1">
-                        ⚡ aplica quando o teste desta perícia tem sucesso
+                        {t("vs.mp.onRollSuccess")}
                       </p>
                     ) : null}
 
@@ -558,13 +577,13 @@ export default function ModifiersPanel({
       ) : (
         <section>
           <h3 className="font-mono text-xs uppercase tracking-[0.15em] text-green-500/80 mb-3">
-            {form.id ? "Editando modificador" : "Novo modificador"}
+            {form.id ? t("vs.mp.formEdit") : t("vs.mp.formNew")}
           </h3>
 
           <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-4 space-y-4">
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-zinc-500">
-                Character (player or NPC)
+                {t("vs.mp.f.character")}
                 <select
                   value={form.character_id}
                   onChange={(e) => set("character_id", e.target.value)}
@@ -573,19 +592,19 @@ export default function ModifiersPanel({
                   <option value="">—</option>
                   {characters.map((c) => (
                     <option key={c.id} value={c.id}>
-                      {charName(c)}
+                      {charName(c, t)}
                       {c.isNpc ? " (NPC)" : ""}
                     </option>
                   ))}
                 </select>
               </label>
               <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-zinc-500">
-                Nome
+                {t("vs.mp.f.name")}
                 <input
                   type="text"
                   value={form.name}
                   onChange={(e) => set("name", e.target.value)}
-                  placeholder="ex.: Surto de truque"
+                  placeholder={t("vs.mp.f.namePh")}
                   className={fieldCls}
                 />
               </label>
@@ -593,7 +612,7 @@ export default function ModifiersPanel({
 
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-zinc-500">
-                Capítulo
+                {t("vs.tl.chapter")}
                 <select
                   value={form.chapter}
                   onChange={(e) => {
@@ -604,16 +623,16 @@ export default function ModifiersPanel({
                   }}
                   className={fieldCls}
                 >
-                  <option value="">Qualquer</option>
+                  <option value="">{t("vs.mp.any")}</option>
                   {chapters.map((ch) => (
                     <option key={ch} value={ch}>
-                      Capítulo {ch}
+                      {interpolate(t("vs.sr.chapterTitle"), { n: ch })}
                     </option>
                   ))}
                 </select>
               </label>
               <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-zinc-500">
-                Cena
+                {t("vs.dc.scene")}
                 <select
                   value={form.scene_id}
                   onChange={(e) => {
@@ -627,13 +646,13 @@ export default function ModifiersPanel({
                   <option value="">—</option>
                   {visibleScenes.map((s: { id: string; title: string }) => (
                     <option key={s.id} value={s.id}>
-                      {s.title || "Cena sem título"}
+                      {s.title || t("vs.dc.untitledScene")}
                     </option>
                   ))}
                 </select>
               </label>
               <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-zinc-500">
-                Narração
+                {t("vs.dc.narration")}
                 <select
                   value={form.narration_id}
                   onChange={(e) => {
@@ -646,13 +665,13 @@ export default function ModifiersPanel({
                   <option value="">—</option>
                   {visibleNarrations.map((n) => (
                     <option key={n.id} value={n.id}>
-                      {n.title || "Narração"}
+                      {n.title || t("vs.dc.narration")}
                     </option>
                   ))}
                 </select>
               </label>
               <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-amber-300/70">
-                Ação (após)
+                {t("vs.mp.f.actionAfter")}
                 <select
                   value={form.action_id}
                   onChange={(e) => set("action_id", e.target.value)}
@@ -663,7 +682,7 @@ export default function ModifiersPanel({
                   {visibleActions.map((a) => (
                     <option key={a.id} value={a.id}>
                       {a.queue != null ? `${a.queue}. ` : ""}
-                      {a.description || "Ação"}
+                      {a.description || t("vs.mp.f.action")}
                       {a.result ? ` → ${a.result}` : ""}
                     </option>
                   ))}
@@ -673,9 +692,9 @@ export default function ModifiersPanel({
 
             <div className="grid gap-3 sm:grid-cols-2 border-t border-zinc-800 pt-4">
               <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-zinc-500">
-                Perícia de consequência
+                {t("vs.mp.f.consequenceSkill")}
                 <span className="normal-case text-zinc-600 font-sans text-[10px]">
-                  Trava numa perícia — os deltas se aplicam quando o teste dela passa.
+                  {t("vs.mp.f.consequenceHint")}
                 </span>
                 <select
                   value={form.skill_id}
@@ -695,7 +714,7 @@ export default function ModifiersPanel({
               </label>
               <div className="flex flex-col justify-center gap-1">
                 <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-500">
-                  Aplicar no sucesso do teste
+                  {t("vs.mp.f.applyOnSuccess")}
                 </span>
                 <button
                   type="button"
@@ -722,34 +741,33 @@ export default function ModifiersPanel({
 
             {form.apply_on_roll === 1 && form.skill_id ? (
               <p className="text-[10px] text-amber-300/70 -mt-2">
-                Num teste bem-sucedido desta perícia, os deltas acima são materializados como um
-                efeito ativo no personagem. O dano permanece aplicado; o HP/FP máximo nunca muda.
+                {t("vs.mp.f.applyOnSuccessNote")}
               </p>
             ) : null}
 
             <div className="grid gap-3">
               <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-zinc-500">
-                Descrição
+                {t("vs.mp.f.description")}
                 <textarea
                   value={form.description}
                   onChange={(e) => set("description", e.target.value)}
                   rows={2}
-                  placeholder="O que aconteceu com o personagem"
+                  placeholder={t("vs.mp.f.descriptionPh")}
                   className={fieldCls}
                 />
               </label>
               <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-zinc-500">
-                Efeito
+                {t("vs.mp.f.effect")}
                 <input
                   type="text"
                   value={form.effect}
                   onChange={(e) => set("effect", e.target.value)}
-                  placeholder="ex.: +1 FP"
+                  placeholder={t("vs.mp.f.effectPh")}
                   className={fieldCls}
                 />
               </label>
               <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-zinc-500">
-                Pontos de custo
+                {t("vs.mp.f.costPoints")}
                 <input
                   type="number"
                   value={form.cost_points}
@@ -761,7 +779,7 @@ export default function ModifiersPanel({
 
             <div>
               <p className="text-[10px] font-mono uppercase tracking-wider text-zinc-500 mb-2">
-                Definir valores <span className="text-zinc-600 normal-case">(absoluto)</span>
+                {t("vs.mp.f.setValues")} <span className="text-zinc-600 normal-case">({t("vs.mp.f.absolute")})</span>
               </p>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {SET_FIELDS.map((f) => (
@@ -769,7 +787,7 @@ export default function ModifiersPanel({
                     key={f.key}
                     className="flex flex-col gap-1 text-[9px] font-mono uppercase tracking-wider text-zinc-500"
                   >
-                    {f.label}
+                    {fieldLabel(f, t)}
                     <input
                       type={f.numeric ? "number" : "text"}
                       value={form[f.key as keyof FormState] as string}
@@ -785,7 +803,7 @@ export default function ModifiersPanel({
 
             <div>
               <p className="text-[10px] font-mono uppercase tracking-wider text-zinc-500 mb-2">
-                Deltas <span className="text-zinc-600 normal-case">(aditivo)</span>
+                {t("vs.mp.f.deltas")} <span className="text-zinc-600 normal-case">({t("vs.mp.f.additive")})</span>
               </p>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {DELTA_FIELDS.map((f) => (
@@ -793,7 +811,7 @@ export default function ModifiersPanel({
                     key={f.key}
                     className="flex flex-col gap-1 text-[9px] font-mono uppercase tracking-wider text-zinc-500"
                   >
-                    {f.label}
+                    {fieldLabel(f, t)}
                     <input
                       type={f.numeric ? "number" : "text"}
                       value={form[f.key as keyof FormState] as string}
@@ -813,7 +831,7 @@ export default function ModifiersPanel({
                 onClick={() => setShowAdvanced((v) => !v)}
                 className="w-full flex items-center justify-between px-3 py-2 text-[10px] font-mono uppercase tracking-wider text-zinc-400 hover:text-zinc-200 transition-colors"
               >
-                Campos de item e diversos
+                {t("vs.mp.f.itemAdvanced")}
                 <svg
                   className={`w-3.5 h-3.5 transition-transform ${showAdvanced ? "rotate-180" : ""}`}
                   fill="none"
@@ -830,7 +848,7 @@ export default function ModifiersPanel({
                       key={f.key}
                       className="flex flex-col gap-1 text-[9px] font-mono uppercase tracking-wider text-zinc-500"
                     >
-                      {f.label}
+                      {fieldLabel(f, t)}
                       <input
                         type={f.numeric ? "number" : "text"}
                         value={form[f.key as keyof FormState] as string}
@@ -853,10 +871,10 @@ export default function ModifiersPanel({
                 className="inline-flex items-center gap-2 bg-green-800 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-green-800/60"
               >
                 {saving
-                  ? "Salvando…"
+                  ? t("vs.sp.saving")
                   : form.id
-                  ? "Salvar alterações"
-                  : "Adicionar modificador"}
+                  ? t("vs.mp.saveChanges")
+                  : t("vs.mp.addModifier")}
               </button>
               {form.id ? (
                 <button
@@ -868,7 +886,7 @@ export default function ModifiersPanel({
                   }}
                   className="text-sm text-zinc-500 hover:text-zinc-200 transition-colors"
                 >
-                  Cancelar
+                  {t("vs.mp.cancel")}
                 </button>
               ) : null}
             </div>

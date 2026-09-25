@@ -7,6 +7,7 @@
    ============================================================ */
 
 import { Hand, Minus, Plus } from "lucide-react";
+import { useTranslation } from "@/lib/i18n";
 
 interface ZoomControlsProps {
   zoom: number;
@@ -21,6 +22,7 @@ interface ZoomControlsProps {
 
 export default function ZoomControls({ zoom, onZoom, min = 0.5, max = 3.5, step = 0.3, hand = false, onToggleHand }: ZoomControlsProps) {
   const clamp = (v: number) => Math.round(Math.min(max, Math.max(min, v)) * 100) / 100;
+  const { t } = useTranslation();
   return (
     <div className="absolute top-2 right-2 z-10 flex items-center gap-0.5 rounded-md border border-zinc-700/70 bg-zinc-950/85 backdrop-blur px-1 py-0.5 shadow-lg">
       {onToggleHand ? (
@@ -29,8 +31,8 @@ export default function ZoomControls({ zoom, onZoom, min = 0.5, max = 3.5, step 
             type="button"
             onClick={onToggleHand}
             aria-pressed={hand}
-            aria-label="Mover o mapa (H)"
-            title="Mover o mapa (H)"
+            aria-label={t("lc.zoom.hand")}
+            title={t("lc.zoom.hand")}
             className={`flex h-6 w-6 items-center justify-center rounded transition-colors ${
               hand ? "bg-sky-500/20 text-sky-300 ring-1 ring-sky-500/50" : "text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800"
             }`}
@@ -44,8 +46,8 @@ export default function ZoomControls({ zoom, onZoom, min = 0.5, max = 3.5, step 
         type="button"
         onClick={() => onZoom(clamp(zoom - step))}
         disabled={zoom <= min}
-        aria-label="Diminuir zoom"
-        title="Diminuir zoom"
+        aria-label={t("lc.zoom.out")}
+        title={t("lc.zoom.out")}
         className="flex h-6 w-6 items-center justify-center rounded text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-colors disabled:opacity-35 disabled:hover:bg-transparent"
       >
         <Minus className="w-3.5 h-3.5" strokeWidth={2.25} />
@@ -54,8 +56,8 @@ export default function ZoomControls({ zoom, onZoom, min = 0.5, max = 3.5, step 
         type="button"
         onClick={() => onZoom(clamp(zoom + step))}
         disabled={zoom >= max}
-        aria-label="Aumentar zoom"
-        title="Aumentar zoom"
+        aria-label={t("lc.zoom.in")}
+        title={t("lc.zoom.in")}
         className="flex h-6 w-6 items-center justify-center rounded text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-colors disabled:opacity-35 disabled:hover:bg-transparent"
       >
         <Plus className="w-3.5 h-3.5" strokeWidth={2.25} />
@@ -64,8 +66,8 @@ export default function ZoomControls({ zoom, onZoom, min = 0.5, max = 3.5, step 
         type="button"
         onClick={() => onZoom(1)}
         disabled={zoom === 1}
-        aria-label="Redefinir zoom"
-        title="Redefinir para 100%"
+        aria-label={t("lc.zoom.reset")}
+        title={t("lc.zoom.resetTitle")}
         className="flex h-6 min-w-[2.9rem] items-center justify-center rounded font-mono text-[10px] tabular-nums text-zinc-300 hover:text-white hover:bg-zinc-800 transition-colors disabled:opacity-60 disabled:hover:bg-transparent"
       >
         {Math.round(zoom * 100)}%

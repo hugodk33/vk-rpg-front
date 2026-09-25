@@ -13,6 +13,7 @@
 
 import Link from "next/link";
 import { centerOf, cellHeight, cellWidth, polygonPath } from "@/lib/hexgrid";
+import { useTranslation } from "@/lib/i18n";
 import { KindGlyph, KIND_LABELS } from "@/lib/location-glyphs";
 
 const R = 20;
@@ -108,6 +109,12 @@ export default function RegionMap({
   accent?: string;
   hrefOf?: (id: string) => string;
 }) {
+  const { t } = useTranslation();
+  const kindLabel = (kind: string): string => {
+    const key = `lc.kind.${kind}`;
+    const label = t(key);
+    return label === key ? (KIND_LABELS[kind] ?? kind) : label;
+  };
   const childs = regions.filter((c) => c.id);
   if (childs.length === 0) {
     return (
@@ -120,10 +127,10 @@ export default function RegionMap({
         </span>
         <div>
           <p className="font-mono text-[11px] uppercase tracking-widest text-zinc-500">
-            No subdivisions mapped yet
+            {t("lc.region.emptyTitle")}
           </p>
           <p className="mt-1 max-w-xs text-sm text-zinc-600">
-            Add a subdivision from the top bar and give it q/r co-ordinates in its survey — it will land on this chart.
+            {t("lc.region.emptyDesc")}
           </p>
         </div>
       </div>
@@ -170,7 +177,7 @@ export default function RegionMap({
 
   return (
     <div className="relative overflow-hidden rounded-lg border border-zinc-700/40 bg-zinc-900/50">
-      <svg viewBox={`0 0 ${w} ${h}`} className="block w-full h-auto" role="group" aria-label="Mapa do território">
+      <svg viewBox={`0 0 ${w} ${h}`} className="block w-full h-auto" role="group" aria-label={t("lc.region.aria")}>
         <rect x="0" y="0" width={w} height={h} fill="#141414" />
         {grid}
 
@@ -190,7 +197,7 @@ export default function RegionMap({
           const cx = toX(cell.cxp);
           const cy = toY(cell.cyp);
           const glyph = cell.c.kind ?? "site";
-          const name = cell.c.name || "Sem nome";
+          const name = cell.c.name || t("lc.common.noName");
           const href = hrefOf ? hrefOf(id) : `/location/${id}`;
           return (
             <g key={id} className="location-region">
@@ -217,7 +224,7 @@ export default function RegionMap({
                   textAnchor="middle"
                   className="location-region-kind mono-label"
                 >
-                  {(KIND_LABELS[glyph] ?? glyph).toUpperCase()}
+                  {kindLabel(glyph).toUpperCase()}
                 </text>
 
                 {/* name */}

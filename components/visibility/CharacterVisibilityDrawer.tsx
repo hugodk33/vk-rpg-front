@@ -8,6 +8,7 @@
 
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
+import { useTranslation } from "@/lib/i18n";
 import type {
   Advantage,
   Disadvantage,
@@ -42,6 +43,7 @@ export default function CharacterVisibilityDrawer({
   tableId?: string;
   targetId: string;
 }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [data, setData] = useState<DrawerData | null>(null);
 
@@ -103,7 +105,7 @@ export default function CharacterVisibilityDrawer({
             d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7zM12 9a3 3 0 100 6 3 3 0 000-6z"
           />
         </svg>
-        Visibilidade
+        {t("vs.cvd.visibility")}
       </button>
 
       {open ? (
@@ -111,17 +113,16 @@ export default function CharacterVisibilityDrawer({
           <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-800">
             <div>
               <h2 className="font-mono text-xs uppercase tracking-[0.2em] text-green-500">
-                Visibilidade
+                {t("vs.cvd.visibility")}
               </h2>
               <p className="text-xs text-zinc-500 mt-0.5">
-                Quem vê o quê — perspectiva de jogadores para este
-                personagem, perspectiva de mesa (NPCs) para um NPC
+                {t("vs.cvd.subtitle")}
               </p>
             </div>
             <button
               onClick={() => setOpen(false)}
               className="p-1.5 rounded-md text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-green-800/60"
-              aria-label="Fechar gaveta de visibilidade"
+              aria-label={t("vs.cvd.close")}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
@@ -153,7 +154,7 @@ export default function CharacterVisibilityDrawer({
               />
             ) : (
               <p className="text-sm text-zinc-500 animate-pulse">
-                Carregando dados de visibilidade…
+                {t("vs.cvd.loading")}
               </p>
             )}
           </div>

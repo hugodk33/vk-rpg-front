@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { readSeat, writeSeat } from "@/lib/seat";
+import { useTranslation } from "@/lib/i18n";
 
 /* ============================================================
    SeatPicker — "who am I" for the player dashboard.
@@ -18,6 +19,7 @@ export interface SeatOption {
 export default function SeatPicker({ options }: { options: SeatOption[] }) {
   const router = useRouter();
   const params = useSearchParams();
+  const { t } = useTranslation();
   const urlSeat = params.get("seat");
   const [value, setValue] = useState(urlSeat ?? readSeat().userId ?? "");
 
@@ -37,13 +39,13 @@ export default function SeatPicker({ options }: { options: SeatOption[] }) {
 
   return (
     <label className="inline-flex items-center gap-2 text-sm text-zinc-400">
-      <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">Jogando como</span>
+      <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">{t("pl.seat.playingAs")}</span>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
         className="bg-zinc-800/80 border border-zinc-700/60 rounded-lg px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:border-blue-700/60"
       >
-        <option value="">— escolher usuário —</option>
+        <option value="">{t("pl.seat.chooseUser")}</option>
         {options.map((o) => (
           <option key={o.userId} value={o.userId}>
             {o.username}

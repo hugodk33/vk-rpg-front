@@ -10,6 +10,7 @@
    ============================================================ */
 
 import { useMemo } from "react";
+import { interpolate, useTranslation } from "@/lib/i18n";
 import type { GameTableScenes } from "@/lib/types";
 
 export interface DiscoverySelection {
@@ -44,6 +45,7 @@ export default function DiscoveryContext({
   onChange: (sel: DiscoverySelection) => void;
   allowClear?: boolean;
 }) {
+  const { t } = useTranslation();
   const sceneOptions = useMemo(() => scenes?.scenes ?? [], [scenes]);
   const narrationOptions = useMemo(() => {
     const scene = sceneOptions.find((s) => s.id === value.sceneId);
@@ -76,10 +78,10 @@ export default function DiscoveryContext({
         <span className="font-mono text-[10px] uppercase tracking-[0.15em] text-zinc-500">
           {attached ? (
             <span className="inline-flex items-center gap-1.5 text-green-400">
-              <span className="w-1.5 h-1.5 rounded-full bg-green-500" /> momento anexado
+              <span className="w-1.5 h-1.5 rounded-full bg-green-500" /> {t("vs.vis.momentAttached")}
             </span>
           ) : (
-            "Momento da descoberta"
+            t("vs.dc.title")
           )}
         </span>
         {attached && allowClear ? (
@@ -88,13 +90,13 @@ export default function DiscoveryContext({
             onClick={() => onChange({})}
             className="text-[10px] font-mono uppercase tracking-wider text-zinc-500 hover:text-zinc-200 transition-colors"
           >
-            limpar
+            {t("vs.dc.clear")}
           </button>
         ) : null}
       </div>
       <div className="grid gap-2 sm:grid-cols-2 mt-2">
         <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-zinc-500">
-          Cena
+          {t("vs.dc.scene")}
           <select
             value={value.sceneId ?? ""}
             onChange={(e) => setScene(e.target.value)}
@@ -103,14 +105,14 @@ export default function DiscoveryContext({
             <option value="">—</option>
             {sceneOptions.map((s) => (
               <option key={s.id} value={s.id}>
-                {s.chapter != null ? `Cap.${s.chapter} · ` : ""}
-                {s.title || "Cena sem título"}
+                {s.chapter != null ? interpolate(t("vs.dc.chapterShort"), { n: s.chapter }) : ""}
+                {s.title || t("vs.dc.untitledScene")}
               </option>
             ))}
           </select>
         </label>
         <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-zinc-500">
-          Narração
+          {t("vs.dc.narration")}
           <select
             value={value.narrationId ?? ""}
             onChange={(e) => setNarration(e.target.value)}
@@ -120,14 +122,14 @@ export default function DiscoveryContext({
             <option value="">—</option>
             {narrationOptions.map((n, i) => (
               <option key={n.id} value={n.id}>
-                {n.title || `Narração ${(n.moment ?? i) + 1}`}
+                {n.title || interpolate(t("vs.dc.narrationN"), { n: (n.moment ?? i) + 1 })}
               </option>
             ))}
           </select>
         </label>
         {value.moment != null ? (
           <p className="text-[10px] text-zinc-600 sm:col-span-2">
-            Momento na história: <span className="text-green-500">{value.moment}</span>
+            {t("vs.dc.momentInStory")} <span className="text-green-500">{value.moment}</span>
           </p>
         ) : null}
       </div>

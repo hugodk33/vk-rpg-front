@@ -13,12 +13,15 @@ import type {
   Sheet,
 } from "@/lib/types";
 import ItemIcon from "@/components/items/ItemIcon";
+import { interpolate, useTranslation } from "@/lib/i18n";
+
+type TFn = (key: string) => string;
 
 function signed(n: number): string {
   return `${n >= 0 ? "+" : ""}${n}`;
 }
 
-function eventChips(e: CharacterHistoryEvent): Array<{ key: string; label: string; value: string; cls: string }> {
+function eventChips(e: CharacterHistoryEvent, t: TFn): Array<{ key: string; label: string; value: string; cls: string }> {
   const chips: Array<{ key: string; label: string; value: string; cls: string }> = [];
   if (e.mod_hp != null) chips.push({ key: "hp", label: "HP", value: signed(e.mod_hp), cls: "text-red-400" });
   if (e.mod_st != null) chips.push({ key: "st", label: "ST", value: signed(e.mod_st), cls: "text-red-400" });
@@ -26,9 +29,9 @@ function eventChips(e: CharacterHistoryEvent): Array<{ key: string; label: strin
   if (e.mod_iq != null) chips.push({ key: "iq", label: "IQ", value: signed(e.mod_iq), cls: "text-blue-400" });
   if (e.mod_ht != null) chips.push({ key: "ht", label: "HT", value: signed(e.mod_ht), cls: "text-purple-400" });
   if (e.mod_fatigue != null) chips.push({ key: "fp", label: "FP", value: signed(e.mod_fatigue), cls: "text-blue-400" });
-  if (e.encumbrance != null) chips.push({ key: "enc", label: "CAR", value: e.encumbrance, cls: "text-zinc-400" });
-  if (e.damage_value != null) chips.push({ key: "dmg", label: "DANO", value: e.damage_value, cls: "text-amber-400/80" });
-  if (e.item_quantity != null) chips.push({ key: "qty", label: "QTD", value: String(e.item_quantity), cls: "text-zinc-400" });
+  if (e.encumbrance != null) chips.push({ key: "enc", label: t("cs.chip.enc"), value: e.encumbrance, cls: "text-zinc-400" });
+  if (e.damage_value != null) chips.push({ key: "dmg", label: t("cs.chip.dmg"), value: e.damage_value, cls: "text-amber-400/80" });
+  if (e.item_quantity != null) chips.push({ key: "qty", label: t("cs.chip.qty"), value: String(e.item_quantity), cls: "text-zinc-400" });
   return chips;
 }
 
@@ -143,6 +146,7 @@ function MomentFicha({
 }) {
   const before = ev.state_before ?? {};
   const after = ev.state_after ?? {};
+  const { t } = useTranslation();
   const maxHp = Math.max(1, baseline?.hp ?? 10);
   const fpMax = Math.max(1, (baseline?.fatigue ?? 0) > 0 ? baseline!.fatigue! : (baseline?.ht ?? 10));
   const hp = after.hp ?? maxHp;
@@ -156,7 +160,7 @@ function MomentFicha({
         <svg className="w-4 h-4 text-blue-300/80 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.7" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
         </svg>
-        <span className="font-mono text-[10px] tracking-widest uppercase text-blue-300/80">Ficha</span>
+        <span className="font-mono text-[10px] tracking-widest uppercase text-blue-300/80">{t("cs.sheet")}</span>
         <span aria-hidden className="flex-1 h-px" style={{ background: "linear-gradient(90deg, rgba(96,165,250,.3), transparent)" }} />
         {ev.narration_moment != null ? (
           <span className="font-mono text-[10px] text-amber-300/80 shrink-0">M.{ev.narration_moment}</span>
@@ -192,7 +196,7 @@ function MomentFicha({
                 <div className="flex items-baseline gap-1 mt-0.5">
                   <span className="text-[8px] font-semibold uppercase tracking-widest text-zinc-500">{label}</span>
                   {base !== value ? (
-                    <span className="font-mono text-[9px] text-zinc-600">base {base}</span>
+                    <span className="font-mono text-[9px] text-zinc-600">{t("cs.base")} {base}</span>
                   ) : null}
                 </div>
               </div>
@@ -221,13 +225,14 @@ function attrsSheet(ev: CharacterHistoryEvent | null | undefined, baseline?: Cha
 }
 
 function SkillsBlock({ skills, sheet, matchSheet }: { skills: CharacterSkill[]; sheet: Sheet; matchSheet: Sheet | null }) {
+  const { t } = useTranslation();
   if (!skills || skills.length === 0) return null;
   return (
     <div>
-      <p className="font-mono text-[9px] tracking-widest uppercase text-zinc-500 mb-1.5">Perícias</p>
+      <p className="font-mono text-[9px] tracking-widest uppercase text-zinc-500 mb-1.5">{t("cs.skills")}</p>
       <div className="flex flex-wrap gap-1">
         {skills.map((sk) => {
-          const name = sk.skill_name || sk.name || "Perícia";
+          const name = sk.skill_name || sk.name || t("cs.skill");
           const lv = skillLevel(sk, sheet);
           const lvM = matchSheet ? skillLevel(sk, matchSheet) : null;
           const changed = lv != null && lvM != null && lv !== lvM;
@@ -269,10 +274,11 @@ function TagChips({ title, items }: { title: string; items: Array<{ id: string; 
 }
 
 function GearBlock({ items }: { items: Array<{ id: string; name?: string; quantity?: number; equipment_status?: string; kind?: string }> }) {
+  const { t } = useTranslation();
   if (!items || items.length === 0) return null;
   return (
     <div>
-      <p className="font-mono text-[9px] tracking-widest uppercase text-zinc-500 mb-1.5">Equipamento</p>
+      <p className="font-mono text-[9px] tracking-widest uppercase text-zinc-500 mb-1.5">{t("cs.equipment")}</p>
       <ul className="space-y-1">
         {items.map((it) => (
           <li key={it.id} className="flex items-center gap-2 text-[11px] text-zinc-300">
@@ -314,6 +320,7 @@ function FullFicha({
   tag?: string;
 }) {
   const ch = profile?.character;
+  const { t } = useTranslation();
   const sheet = attrsSheet(ev, baseline);
   const matchSheet = match ? attrsSheet(match, baseline) : null;
   return (
@@ -324,7 +331,7 @@ function FullFicha({
             {tag}
           </span>
         ) : null}
-        <span className="text-sm font-medium text-zinc-100 truncate">{nodeTitle(ev)}</span>
+        <span className="text-sm font-medium text-zinc-100 truncate">{nodeTitle(ev, t)}</span>
         <span aria-hidden className="flex-1 h-px" style={{ background: "linear-gradient(90deg, rgba(255,255,255,.12), transparent)" }} />
         {ev.chapter != null ? <span className="font-mono text-[9px] text-zinc-500 shrink-0">C{ev.chapter}</span> : null}
         {ev.narration_moment != null ? (
@@ -337,12 +344,12 @@ function FullFicha({
       {ch ? (
         <>
           <SkillsBlock skills={ch.skills ?? []} sheet={sheet} matchSheet={matchSheet} />
-          <TagChips title="Vantagens" items={ch.advantages ?? []} />
-          <TagChips title="Desvantagens" items={ch.disadvantages ?? []} />
+          <TagChips title={t("cs.advantages")} items={ch.advantages ?? []} />
+          <TagChips title={t("cs.disadvantages")} items={ch.disadvantages ?? []} />
           <GearBlock items={ch.items ?? []} />
         </>
       ) : (
-        <p className="text-[10px] text-zinc-600 italic">Carregando a ficha completa…</p>
+        <p className="text-[10px] text-zinc-600 italic">{t("cs.loadingFull")}</p>
       )}
     </div>
   );
@@ -368,9 +375,9 @@ function momentLabel(ev: CharacterHistoryEvent): string {
   return ev.narration_moment != null ? `M.${ev.narration_moment}` : "—";
 }
 
-function nodeTitle(ev: CharacterHistoryEvent): string {
-  if (ev.kind === "test") return ev.test_skill_name ?? ev.test_skill ?? "Teste";
-  return ev.name || "Evento";
+function nodeTitle(ev: CharacterHistoryEvent, t: TFn): string {
+  if (ev.kind === "test") return ev.test_skill_name ?? ev.test_skill ?? t("cs.test");
+  return ev.name || t("cs.event");
 }
 
 const ATTR_STROKES: Array<{ key: "st" | "dx" | "iq" | "ht"; color: string; label: string }> = [
@@ -395,6 +402,7 @@ export default function CharacterJourney({
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [cmpA, setCmpA] = useState<string | null>(null);
   const [cmpB, setCmpB] = useState<string | null>(null);
+  const { t } = useTranslation();
 
   useEffect(() => {
     let alive = true;
@@ -419,15 +427,15 @@ export default function CharacterJourney({
   }, [characterId, viewerId]);
 
   if (error) {
-    return <p className="text-xs text-zinc-600 italic">A crônica está inacessível no momento.</p>;
+    return <p className="text-xs text-zinc-600 italic">{t("cs.err.chronicle")}</p>;
   }
   if (!data) {
-    return <p className="text-xs text-zinc-600 italic animate-pulse">Seguindo o rastro dos eventos…</p>;
+    return <p className="text-xs text-zinc-600 italic animate-pulse">{t("cs.loadingEvents")}</p>;
   }
   if (!data.events || data.events.length === 0) {
     return (
       <p className="text-zinc-600 text-sm italic">
-        Nenhum evento registrado ainda — a jornada começa quando os dados rolam.
+        {t("cs.emptyEvents")}
       </p>
     );
   }
@@ -506,9 +514,9 @@ export default function CharacterJourney({
   return (
     <div>
       <div className="flex items-center gap-2 mb-3">
-        <span className="text-xs font-semibold uppercase tracking-wider text-zinc-500 mr-1">Jornada</span>
+        <span className="text-xs font-semibold uppercase tracking-wider text-zinc-500 mr-1">{t("cs.journey")}</span>
         <span className="text-[10px] uppercase tracking-widest text-zinc-600">
-          {events.length} {events.length === 1 ? "evento" : "eventos"}
+          {interpolate(events.length === 1 ? t("cs.eventCount") : t("cs.eventsCount"), { n: events.length })}
         </span>
         <span aria-hidden className="flex-1 h-px" style={{ background: "linear-gradient(90deg, rgba(96,165,250,.35), transparent)" }} />
       </div>
@@ -541,9 +549,9 @@ export default function CharacterJourney({
             ))}
           </svg>
           <div className="absolute top-1.5 left-1.5 flex items-center gap-2 font-mono text-[9px] tracking-widest uppercase text-zinc-500">
-            <span className="text-amber-400/90">HP · base {maxHp}</span>
+            <span className="text-amber-400/90">{interpolate(t("cs.hpBase"), { v: maxHp })}</span>
             <span className="text-zinc-700">/</span>
-            <span className="text-sky-400/80">FP · base {fpMax}</span>
+            <span className="text-sky-400/80">{interpolate(t("cs.fpBase"), { v: fpMax })}</span>
           </div>
 
           {/* attributes strip */}
@@ -602,7 +610,7 @@ export default function CharacterJourney({
                 key={keyOf(ev, i)}
                 type="button"
                 onClick={() => setSelectedId(keyOf(ev, i))}
-                title={nodeTitle(ev)}
+                title={nodeTitle(ev, t)}
                 className={`absolute rounded-md px-1.5 pb-2 text-center transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/70 ${
                   isSelected ? "bg-blue-500/10" : "hover:bg-zinc-800/70"
                 } ${ringCls} ${dimmed(ev) ? "opacity-40" : ""}`}
@@ -616,10 +624,10 @@ export default function CharacterJourney({
                 <div className="absolute bottom-2 left-0 right-0 px-2">
                   <div className={`font-mono text-[10px] uppercase tracking-widest ${isTest ? "text-sky-300/80" : "text-amber-300/80"}`}>
                     {momentLabel(ev)}
-                    {isTest ? " · teste" : ""}
+                    {isTest ? t("cs.testSuffix") : ""}
                   </div>
                   <div className={`text-[12px] font-medium leading-tight truncate ${isSelected ? "text-blue-100" : "text-zinc-300"}`}>
-                    {nodeTitle(ev)}
+                    {nodeTitle(ev, t)}
                   </div>
                   <div className="font-mono text-[11px] tabular-nums text-zinc-500">
                     {hp}
@@ -640,10 +648,10 @@ export default function CharacterJourney({
               <div className="flex items-center gap-2">
                 {selected.kind === "test" ? (
                   <span className="text-[9px] font-mono uppercase tracking-widest text-sky-300/90 border border-sky-700/40 rounded px-1 py-0.5 shrink-0">
-                    Teste
+                    {t("cs.test")}
                   </span>
                 ) : null}
-                <span className="text-sm font-medium text-zinc-100">{nodeTitle(selected)}</span>
+                <span className="text-sm font-medium text-zinc-100">{nodeTitle(selected, t)}</span>
                 {selected.narration_moment != null ? (
                   <span className="text-[10px] uppercase tracking-widest text-amber-400/60 font-mono shrink-0">
                     M.{selected.narration_moment}
@@ -681,9 +689,9 @@ export default function CharacterJourney({
                 ) : null}
               </div>
             </div>
-            {eventChips(selected).length > 0 ? (
+            {eventChips(selected, t).length > 0 ? (
               <div className="flex flex-wrap gap-1 justify-end shrink-0">
-                {eventChips(selected).map((c) => (
+                {eventChips(selected, t).map((c) => (
                   <span
                     key={c.key}
                     className={`text-[10px] font-mono bg-zinc-900/70 border border-zinc-700/50 rounded px-1.5 py-0.5 ${c.cls}`}
@@ -712,14 +720,14 @@ export default function CharacterJourney({
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.7" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
             </svg>
             <span className="font-mono text-[10px] tracking-widest uppercase text-blue-300/80">
-              Ficha completa — comparar momentos
+              {t("cs.compareTitle")}
             </span>
             <span aria-hidden className="flex-1 h-px" style={{ background: "linear-gradient(90deg, rgba(96,165,250,.3), transparent)" }} />
           </div>
 
           <div className="mt-3 flex items-center gap-2 flex-wrap font-mono text-[11px]">
             <label className="flex items-center gap-1.5 text-zinc-500">
-              <span className="uppercase tracking-widest text-emerald-400/90">De</span>
+              <span className="uppercase tracking-widest text-emerald-400/90">{t("cs.from")}</span>
               <select
                 value={caKey}
                 onChange={(e) => setCmpA(e.target.value || null)}
@@ -727,14 +735,14 @@ export default function CharacterJourney({
               >
                 {events.map((ev, i) => (
                   <option key={keyOf(ev, i)} value={keyOf(ev, i)}>
-                    {momentLabel(ev)} · {nodeTitle(ev)}
+                    {momentLabel(ev)} · {nodeTitle(ev, t)}
                   </option>
                 ))}
               </select>
             </label>
             <span className="text-zinc-600" aria-hidden>→</span>
             <label className="flex items-center gap-1.5 text-zinc-500">
-              <span className="uppercase tracking-widest text-sky-400/90">Para</span>
+              <span className="uppercase tracking-widest text-sky-400/90">{t("cs.to")}</span>
               <select
                 value={cbKey}
                 onChange={(e) => setCmpB(e.target.value || null)}
@@ -742,18 +750,18 @@ export default function CharacterJourney({
               >
                 {events.map((ev, i) => (
                   <option key={keyOf(ev, i)} value={keyOf(ev, i)}>
-                    {momentLabel(ev)} · {nodeTitle(ev)}
+                    {momentLabel(ev)} · {nodeTitle(ev, t)}
                   </option>
                 ))}
               </select>
             </label>
             <span className="text-[10px] text-zinc-600 italic ml-auto hidden sm:block">
-              As perícias são recalculadas com os atributos de cada momento.
+              {t("cs.compareHint")}
             </span>
           </div>
 
           <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_auto_1fr] items-stretch">
-            <FullFicha ev={ca} profile={profile} match={cb} baseline={baseline} tag="De" />
+            <FullFicha ev={ca} profile={profile} match={cb} baseline={baseline} tag={t("cs.from")} />
 
             <div className="flex flex-row lg:flex-col items-center justify-center gap-1.5 lg:px-1.5">
               {compareRows.map((row) => {
@@ -771,11 +779,11 @@ export default function CharacterJourney({
               })}
             </div>
 
-            <FullFicha ev={cb} profile={profile} match={ca} baseline={baseline} tag="Para" />
+            <FullFicha ev={cb} profile={profile} match={ca} baseline={baseline} tag={t("cs.to")} />
           </div>
 
           <p className="mt-3 text-[10px] text-zinc-600 italic">
-            Perícias, vantagens e equipamento refletem o registro atual da mesa — os atributos centrais (HP/FP/ST/DX/IQ/HT) e os níveis derivados de perícia aparecem exatamente como estavam em cada momento selecionado.
+            {t("cs.compareFootnote")}
           </p>
         </div>
       ) : null}

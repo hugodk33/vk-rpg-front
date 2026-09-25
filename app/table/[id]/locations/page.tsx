@@ -6,7 +6,23 @@ import type { GameTableLocations, Location } from "@/lib/types";
 import TableTabs from "@/components/TableTabs";
 import { api } from "@/lib/api";
 import { submitJson } from "@/components/forms/submit";
-import { KindGlyph, KIND_LABELS, KIND_TINT } from "@/lib/location-glyphs";
+import { interpolate, useTranslation } from "@/lib/i18n";
+import { KindGlyph, KIND_TINT } from "@/lib/location-glyphs";
+
+const KNOWN_KINDS = new Set([
+  "world",
+  "continent",
+  "nation",
+  "region",
+  "biome",
+  "province",
+  "city",
+  "district",
+  "locale",
+  "site",
+  "battlemap",
+  "point",
+]);
 
 function formatScale(m?: number | null): string {
   if (m == null) return "—";
@@ -55,6 +71,7 @@ function indexTree(roots: Location[]): Map<string, IndexNode> {
 /* The ruler: segment width ∝ log scale so the bar visibly
    converges as the atlas zooms from world to battlemap. */
 function ZoomRuler({ chain, onJump }: { chain: Location[]; onJump: (id: string) => void }) {
+  const { lang, t } = useTranslation();
   if (chain.length < 2) return null;
   const raw = chain.map((n) => {
     const m = n.hex?.sizeM;
@@ -65,7 +82,7 @@ function ZoomRuler({ chain, onJump }: { chain: Location[]; onJump: (id: string) 
   const active = chain[chain.length - 1].id;
 
   return (
-    <nav aria-label="Trilha de zoom" className="rounded-xl border border-zinc-700/40 bg-zinc-800/30 px-4 py-3.5">
+    <nav aria-label={t("tp.loc.zoomTrail")} className="rounded-xl border border-zinc-700/40 bg-zinc-800/30 px-4 py-3.5">
       {/* rung names */}
       <div className="flex flex-wrap items-center gap-y-1.5">
         {chain.map((node, i) => {
@@ -85,7 +102,7 @@ function ZoomRuler({ chain, onJump }: { chain: Location[]; onJump: (id: string) 
                   type="button"
                   onClick={() => onJump(node.id)}
                   className="font-mono text-[11px] uppercase tracking-widest truncate text-zinc-500 hover:text-zinc-200 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600/60 rounded-sm"
-                  title={`Ir para ${node.name}`}
+                  title={t("tp.loc.goTo").replace("{name}", node.name)}
                 >
                   {node.name}
                 </button>
@@ -166,8 +183,11 @@ function Plate({
   isDefault?: boolean;
   busy?: boolean;
 }) {
+  const { lang, t } = useTranslation();
   const hasChildren = (node.children?.length ?? 0) > 0;
   const battle = !!node.isBattlemap;
+  const kindLabel =
+    node.kind && KNOWN_KINDS.has(node.kind) ? t(`tp.locKind.${node.kind}`) : t("tp.locKind.generic");
   return (
     <div className="group relative flex h-full gap-3 rounded-xl border border-zinc-700/40 bg-zinc-800/40 px-4 py-3.5 transition-all hover:bg-zinc-800/70 hover:border-zinc-600/60">
       {/* kind icon — the glyph alone, centered vertically in its column */}
@@ -184,7 +204,7 @@ function Plate({
             type="button"
             disabled={busy}
             onClick={() => onSetDefault(node.id)}
-            title={isDefault ? "Local padrão dos jogadores — clique para remover" : "Definir como local padrão dos jogadores"}
+            title={isDefault ? t("tp.loc.defaultOn") : t("tp.loc.defaultSet")}
             className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 font-mono text-[9px] tracking-widest uppercase transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-600/60 disabled:opacity-40 ${
               isDefault
                 ? "bg-amber-400/15 text-amber-300 hover:bg-amber-400/25"
@@ -194,11 +214,11 @@ function Plate({
             <svg className="w-3 h-3" viewBox="0 0 24 24" fill={isDefault ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
 <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
           </svg>
-          <span>Padrão</span>
+          <span>{t("tp.loc.default")}</span>
         </button>
           {battle ? (
             <span className="font-mono text-[9px] tracking-widest uppercase px-1.5 py-0.5 rounded-full bg-amber-400/10 text-amber-400">
-              Batalha
+              {t("tp.loc.battle")}
             </span>
           ) : null}
           {hasChildren ? (
@@ -208,9 +228,9 @@ function Plate({
           ) : null}
         </div>
 
-        <span className="block mt-2 text-sm font-medium text-zinc-200 truncate">{node.name || "Sem nome"}</span>
+        <span className="block mt-2 text-sm font-medium text-zinc-200 truncate">{node.name || t("it.unnamed")}</span>
         <p className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 mt-0.5 truncate">
-          {KIND_LABELS[node.kind ?? "site"] ?? node.kind ?? "Local"}
+          {kindLabel}
           {node.region ?? node.subRegion ? (
             <span className="text-zinc-600"> · {node.region ?? node.subRegion}</span>
           ) : null}
@@ -226,17 +246,17 @@ function Plate({
             type="button"
             onClick={() => onZoom(node.id)}
             disabled={!hasChildren}
-            title={hasChildren ? "Abrir subdivisões" : "Esta divisão não contém subdivisões"}
+            title={hasChildren ? t("tp.loc.openSubs") : t("tp.loc.noSubs")}
             className="flex-1 inline-flex items-center justify-center gap-1 rounded-md border border-teal-400/25 bg-teal-400/5 px-2 py-1.5 font-mono text-[10px] tracking-widest uppercase text-teal-300/90 transition-colors hover:bg-teal-400/10 hover:text-teal-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600/60 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-teal-400/5 disabled:hover:text-teal-300/90"
           >
-            ◱ Sublocais
+            ◱ {t("tp.loc.sublocations")}
           </button>
           <Link
             href={`/location/${node.id}`}
-            title={`Abrir ${node.name || "local"} em página própria`}
+            title={t("tp.loc.openOwn").replace("{name}", node.name || t("tp.locKind.generic"))}
             className="flex-1 inline-flex items-center justify-center gap-1 rounded-md border border-zinc-700/50 bg-zinc-800/60 px-2 py-1.5 font-mono text-[10px] tracking-widest uppercase text-zinc-300 transition-colors hover:border-amber-700/50 hover:text-amber-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600/60"
           >
-            Abrir →
+            {t("tp.open")} →
           </Link>
         </div>
       </div>
@@ -245,7 +265,11 @@ function Plate({
 }
 
 function CurrentMapStrip({ node, isDefault = false }: { node: Location; isDefault?: boolean }) {
+  const { lang, t } = useTranslation();
   const hex = node.hex;
+  const kindLabel =
+    node.kind && KNOWN_KINDS.has(node.kind) ? t(`tp.locKind.${node.kind}`) : t("tp.locKind.generic");
+  const childCount = node.children?.length ?? 0;
   return (
     <div className="flex items-center gap-3 rounded-xl border border-teal-400/20 bg-teal-400/[0.04] px-4 py-3">
       <span className="w-1.5 h-1.5 rounded-full bg-teal-300 shrink-0 shadow-[0_0_8px_rgba(94,234,212,0.6)]" aria-hidden />
@@ -253,14 +277,14 @@ function CurrentMapStrip({ node, isDefault = false }: { node: Location; isDefaul
         <div className="flex items-baseline gap-2 min-w-0">
           <span className="font-mono text-[12px] font-bold tracking-widest uppercase text-teal-100 truncate">{node.name}</span>
           <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 hidden sm:inline">
-            {KIND_LABELS[node.kind ?? "site"] ?? node.kind ?? "Local"} · {formatScale(hex?.sizeM)}
+            {kindLabel} · {formatScale(hex?.sizeM)}
           </span>
           {isDefault ? (
             <span className="inline-flex items-center gap-1 font-mono text-[9px] tracking-widest uppercase px-1.5 py-0.5 rounded-full bg-amber-400/15 text-amber-300 shrink-0">
               <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1.8">
                 <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
               </svg>
-              Padrão
+              {t("tp.default")}
             </span>
           ) : null}
         </div>
@@ -270,14 +294,14 @@ function CurrentMapStrip({ node, isDefault = false }: { node: Location; isDefaul
       </div>
       {(node.children?.length ?? 0) > 0 ? (
         <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 shrink-0">
-          {(node.children?.length ?? 0)} {(node.children?.length ?? 0) !== 1 ? "divisões" : "divisão"}
+          {interpolate(t(childCount !== 1 ? "tp.divisions" : "tp.division"), { n: childCount })}
         </span>
       ) : (
         <Link
           href={`/location/${node.id}`}
           className="font-mono text-[10px] tracking-widest uppercase text-teal-300/90 hover:text-teal-200 shrink-0 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600/60 rounded-sm"
         >
-          Abrir mapa →
+          {t("tp.openMap")}
         </Link>
       )}
     </div>
@@ -286,6 +310,7 @@ function CurrentMapStrip({ node, isDefault = false }: { node: Location; isDefaul
 
 export default function TableLocationsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  const { lang, t } = useTranslation();
   const [data, setData] = useState<GameTableLocations | null>(null);
   const [search, setSearch] = useState("");
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -347,19 +372,22 @@ export default function TableLocationsPage({ params }: { params: Promise<{ id: s
 
       <div className="flex items-center justify-between gap-3 mb-1">
         <div className="flex items-baseline gap-3 min-w-0">
-          <h1 className="text-2xl font-bold text-zinc-100">Locais</h1>
+          <h1 className="text-2xl font-bold text-zinc-100">{t("tp.title")}</h1>
           <span className="text-sm text-zinc-500">{data?.table?.title ?? ""}</span>
         </div>
         <Link
           href={`/table/${id}/locations/new${active ? `?parent_id=${active.node.id}` : ""}`}
           className="shrink-0 inline-flex items-center gap-1.5 bg-amber-600 hover:bg-amber-500 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/60"
         >
-          + Novo local
+          + <span>{t("tp.new")}</span>
         </Link>
       </div>
 
       <div className="flex items-center gap-3 mb-6 text-xs text-zinc-500">
-        <span>{flat.length} {flat.length !== 1 ? "locais" : "local"} · {data?.tree?.length ?? 0} {(data?.tree?.length ?? 0) !== 1 ? "raízes de território" : "raiz de território"}</span>
+        <span>
+          {interpolate(t(flat.length !== 1 ? "tp.count" : "tp.countOne"), { n: flat.length })} ·{" "}
+          {interpolate(t((data?.tree?.length ?? 0) !== 1 ? "tp.roots" : "tp.rootOne"), { n: data?.tree?.length ?? 0 })}
+        </span>
       </div>
 
       <div className="flex gap-2 mb-5">
@@ -371,23 +399,23 @@ export default function TableLocationsPage({ params }: { params: Promise<{ id: s
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Pesquisar o território…"
+            placeholder={t("tp.searchPh")}
             className="w-full bg-zinc-800/60 border border-zinc-700/50 rounded-lg pl-9 pr-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-teal-700/60"
           />
         </div>
         {search ? (
           <button type="button" onClick={() => setSearch("")} className="bg-zinc-800/60 hover:bg-zinc-700/60 text-zinc-400 text-sm px-3 py-2 rounded-lg transition-colors border border-zinc-700/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600/60">
-            Limpar
+            {t("tp.clear")}
           </button>
         ) : null}
       </div>
 
       {!data ? (
-        <div className="text-center py-16 text-zinc-600 text-sm">Carregando território…</div>
+        <div className="text-center py-16 text-zinc-600 text-sm">{t("tp.loading")}</div>
       ) : filtered !== null ? (
         filtered.length === 0 ? (
           <div className="text-center py-16">
-            <p className="text-zinc-500 text-sm">Nenhum local corresponde à sua pesquisa.</p>
+            <p className="text-zinc-500 text-sm">{t("tp.noResults")}</p>
           </div>
         ) : (
           <div ref={platesRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3" aria-live="polite">
@@ -406,12 +434,12 @@ export default function TableLocationsPage({ params }: { params: Promise<{ id: s
         )
       ) : flat.length === 0 ? (
         <div className="text-center py-16">
-          <p className="text-zinc-500 text-sm">Nenhum território mapeado ainda. Crie seu primeiro mundo.</p>
+          <p className="text-zinc-500 text-sm">{t("tp.empty")}</p>
         </div>
       ) : !active && (data.tree?.length ?? 0) > 1 ? (
         <div>
           <p className="mb-4 font-mono text-[11px] tracking-widest uppercase text-zinc-600">
-            Vários mundos — abra um para levantar
+            {t("tp.manyWorlds")}
           </p>
           <div ref={platesRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {plates.map((node) => (
@@ -425,7 +453,9 @@ export default function TableLocationsPage({ params }: { params: Promise<{ id: s
           {active ? <CurrentMapStrip node={active.node} isDefault={defaultId === active.node.id} /> : null}
           {plates.length === 0 ? (
             <div className="text-center py-12">
-              <p className="text-zinc-500 text-sm">Nenhuma divisão dentro de {active?.node.name ?? "este território"} ainda.</p>
+              <p className="text-zinc-500 text-sm">
+                {interpolate(t("tp.noDivisions"), { name: active?.node.name ?? t("tp.locKind.generic") })}
+              </p>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">

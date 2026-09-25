@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { submitJson } from "./submit";
 import { cancelCls, inputCls, labelCls, submitCls } from "./formStyles";
+import { useTranslation } from "@/lib/i18n";
 import type { Advantage } from "@/lib/types";
 
 export interface AdvantageFormProps {
@@ -14,6 +15,7 @@ export interface AdvantageFormProps {
 
 export default function AdvantageForm({ tableId, tables, initial }: AdvantageFormProps) {
   const router = useRouter();
+  const { t } = useTranslation();
   const isEdit = !!initial;
 
   const [currentTableId, setCurrentTableId] = useState(tableId ?? initial?.table_id ?? "");
@@ -29,7 +31,7 @@ export default function AdvantageForm({ tableId, tables, initial }: AdvantageFor
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!currentTableId) {
-      setError("Selecione a mesa.");
+      setError(t("fr.error.selectTable"));
       return;
     }
     setSaving(true);
@@ -54,7 +56,7 @@ export default function AdvantageForm({ tableId, tables, initial }: AdvantageFor
       router.push(`/table/${currentTableId}/advantages`);
       router.refresh();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Falha ao salvar a vantagem.");
+      setError(err instanceof Error ? err.message : t("fr.err.advantage"));
       setSaving(false);
     }
   }
@@ -63,13 +65,13 @@ export default function AdvantageForm({ tableId, tables, initial }: AdvantageFor
     <div className="max-w-2xl mx-auto p-6">
       <div className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-6">
         <h1 className="text-2xl font-bold text-green-100 mb-6">
-          {isEdit ? "Editar Vantagem" : "Nova Vantagem"}
+          {isEdit ? t("fr.adv.editTitle") : t("fr.adv.newTitle")}
         </h1>
 
         <form onSubmit={handleSubmit} className="space-y-5">
           {!isEdit && !tableId ? (
             <div>
-              <label className={labelCls}>Mesa</label>
+              <label className={labelCls}>{t("fr.table")}</label>
               <select
                 value={currentTableId}
                 onChange={(e) => setCurrentTableId(e.target.value)}
@@ -77,7 +79,7 @@ export default function AdvantageForm({ tableId, tables, initial }: AdvantageFor
                 className={inputCls}
               >
                 <option value="" disabled>
-                  Selecione a mesa
+                  {t("fr.pickTable")}
                 </option>
                 {(tables ?? []).map((t) => (
                   <option key={t.id} value={t.id}>
@@ -90,11 +92,11 @@ export default function AdvantageForm({ tableId, tables, initial }: AdvantageFor
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className={labelCls}>Nome</label>
+              <label className={labelCls}>{t("fr.name")}</label>
               <input value={name} onChange={(e) => setName(e.target.value)} required className={inputCls} />
             </div>
             <div>
-              <label className={labelCls}>Custo (pontos)</label>
+              <label className={labelCls}>{t("fr.costPoints")}</label>
               <input
                 type="number"
                 value={costPoints}
@@ -106,27 +108,27 @@ export default function AdvantageForm({ tableId, tables, initial }: AdvantageFor
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className={labelCls}>Categoria</label>
+              <label className={labelCls}>{t("fr.category")}</label>
               <input
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                placeholder="ex: Física, Mental, Social"
+                placeholder={t("fr.adv.categoryPh")}
                 className={inputCls}
               />
             </div>
             <div>
-              <label className={labelCls}>Subcategoria</label>
+              <label className={labelCls}>{t("fr.subcategory")}</label>
               <input
                 value={subcategory}
                 onChange={(e) => setSubcategory(e.target.value)}
-                placeholder="ex: Combate, Magia"
+                placeholder={t("fr.adv.subcategoryPh")}
                 className={inputCls}
               />
             </div>
           </div>
 
           <div>
-            <label className={labelCls}>Descrição</label>
+            <label className={labelCls}>{t("fr.description")}</label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -139,10 +141,10 @@ export default function AdvantageForm({ tableId, tables, initial }: AdvantageFor
 
           <div className="flex items-center gap-3 pt-2">
             <button type="submit" disabled={saving} className={`${submitCls} disabled:opacity-50`}>
-              {saving ? "Salvando..." : isEdit ? "Salvar Alterações" : "Criar Vantagem"}
+              {saving ? t("fr.saving") : isEdit ? t("fr.saveChanges") : t("fr.adv.create")}
             </button>
             <a href={currentTableId ? `/table/${currentTableId}/advantages` : "/narrator"} className={cancelCls}>
-              Cancelar
+              {t("fr.cancel")}
             </a>
           </div>
         </form>

@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { api } from "@/lib/api";
+import { getLang, makeT } from "@/lib/i18n-server";
 import type { PublicUser } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
 export default async function UserDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  const t = makeT(await getLang());
   let user: PublicUser | undefined;
   try {
     user = await api<PublicUser>(`/users/${id}`);
@@ -15,12 +17,12 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
   }
   if (!user) notFound();
 
-  const typeLabel = user.type === 2 ? "Administrador" : "Jogador";
+  const typeLabel = user.type === 2 ? t("en.user.typeAdmin") : t("en.user.typePlayer");
 
   return (
     <div className="max-w-5xl mx-auto p-6">
       <Link href="/" className="text-zinc-500 hover:text-zinc-300 text-sm mb-4 inline-block transition-colors">
-        &larr; Voltar ao início
+        &larr; {t("en.backHome")}
       </Link>
 
       <div className="bg-zinc-900/90 border border-zinc-700/50 shadow-2xl rounded-xl overflow-hidden">
@@ -32,7 +34,7 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
               </svg>
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-green-100">{user.username || "Usuário sem nome"}</h1>
+              <h1 className="text-2xl font-bold text-green-100">{user.username || t("en.user.unnamed")}</h1>
               <span className={`text-xs uppercase tracking-wider px-2 py-0.5 rounded ${user.type === 2 ? "bg-green-900/40 text-green-400" : "bg-emerald-900/40 text-emerald-300"}`}>
                 {typeLabel}
               </span>
@@ -44,13 +46,13 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {user.email ? (
               <div className="bg-zinc-800/40 rounded-lg px-4 py-3">
-                <span className="text-zinc-500 text-xs uppercase block mb-1">Email</span>
+                <span className="text-zinc-500 text-xs uppercase block mb-1">{t("en.user.email")}</span>
                 <span className="text-zinc-200 text-sm font-medium">{user.email}</span>
               </div>
             ) : null}
             {user.phone ? (
               <div className="bg-zinc-800/40 rounded-lg px-4 py-3">
-                <span className="text-zinc-500 text-xs uppercase block mb-1">Telefone</span>
+                <span className="text-zinc-500 text-xs uppercase block mb-1">{t("en.user.phone")}</span>
                 <span className="text-zinc-200 text-sm font-medium">{user.phone}</span>
               </div>
             ) : null}
