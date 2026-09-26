@@ -100,6 +100,8 @@ export default function TableAdvantagesPage({ params }: { params: Promise<{ id: 
                 <RowActions
                   editHref={`/advantage/${a.id}/edit?table_id=${id}`}
                   onDelete={() => submitJson(`/api/game-table-advantage/${a.id}`, "DELETE")}
+                  copyHref={`/api/game-table-advantage/${a.id}/copy`}
+                  tableId={id}
                 />
               </div>
               <div className="flex items-center gap-2 mt-1.5 ml-7">

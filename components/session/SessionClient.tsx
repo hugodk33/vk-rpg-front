@@ -576,6 +576,80 @@ export default function SessionClient({
 
   const sortedActions = [...actions].sort((a, b) => (a.queue ?? 0) - (b.queue ?? 0));
 
+  /* ---- ação de cena: editar / excluir / duplicar (narrator) ---- */
+  const [editingAction, setEditingAction] = useState<NarrationAction | null>(null);
+  const [editQueue, setEditQueue] = useState("");
+  const [editDesc, setEditDesc] = useState("");
+  const [editRoll, setEditRoll] = useState("");
+  const [editResult, setEditResult] = useState("");
+  const [editTarget, setEditTarget] = useState("");
+  const [editMulti, setEditMulti] = useState(false);
+
+  const openEditAction = (a: NarrationAction) => {
+    setEditingAction(a);
+    setEditQueue(String(a.queue ?? 0));
+    setEditDesc(a.description ?? "");
+    setEditRoll(a.dice_roll ?? "");
+    setEditResult(a.result ?? "");
+    setEditTarget(a.target ?? "");
+    setEditMulti(!!a.multitarget);
+  };
+
+  const deleteAction = async (a: NarrationAction) => {
+    if (!window.confirm(t("ra.confirm"))) return;
+    try {
+      const res = await fetch(`/api/game-table-action/${a.id}`, { method: "DELETE" });
+      const j = await res.json();
+      if (j.success) router.refresh();
+      else alert(interpolate(t("ss.err.prefix"), { msg: j.error || t("ss.unknown") }));
+    } catch (err: unknown) {
+      alert(interpolate(t("ss.err.network"), { msg: err instanceof Error ? err.message : t("ss.unknown") }));
+    }
+  };
+
+  const duplicateAction = async (a: NarrationAction) => {
+    try {
+      const res = await fetch(`/api/game-table-action/${a.id}/copy`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{}",
+      });
+      const j = await res.json();
+      if (j.success) router.refresh();
+      else alert(interpolate(t("ss.err.prefix"), { msg: j.error || t("ss.unknown") }));
+    } catch (err: unknown) {
+      alert(interpolate(t("ss.err.network"), { msg: err instanceof Error ? err.message : t("ss.unknown") }));
+    }
+  };
+
+  const submitEditAction = async () => {
+    if (!editingAction) return;
+    try {
+      const res = await fetch(`/api/game-table-action/${editingAction.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          queue: Number(editQueue) || 0,
+          description: editDesc,
+          dice_roll: editRoll || null,
+          result: editResult || null,
+          target: editTarget || null,
+          multitarget: editMulti,
+          q: editingAction.q,
+          r: editingAction.r,
+          facing: editingAction.facing ?? 0,
+        }),
+      });
+      const j = await res.json();
+      if (j.success) {
+        setEditingAction(null);
+        router.refresh();
+      } else alert(interpolate(t("ss.err.prefix"), { msg: j.error || t("ss.unknown") }));
+    } catch (err: unknown) {
+      alert(interpolate(t("ss.err.network"), { msg: err instanceof Error ? err.message : t("ss.unknown") }));
+    }
+  };
+
   /* ---- floor plan / map ---- */
   const defaultLocation =
     latestBeat?.location ??
@@ -1643,7 +1717,15 @@ export default function SessionClient({
             {sortedActions.length ? (
               <div className="space-y-2">
                 {sortedActions.map((a) => (
-                  <RollSlip key={a.id} a={a} linkHover={T.linkHover} />
+                  <RollSlip
+                    key={a.id}
+                    a={a}
+                    linkHover={T.linkHover}
+                    controls={!isPlayer}
+                    onEdit={openEditAction}
+                    onDelete={deleteAction}
+                    onCopy={duplicateAction}
+                  />
                 ))}
               </div>
             ) : (
@@ -1750,12 +1832,67 @@ export default function SessionClient({
           </div>
         </div>
       ) : null}
+
+      {/* ---- modal de edição de ação ---- */}
+      {editingAction ? (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={() => setEditingAction(null)}>
+          <div className="bg-zinc-900 border border-zinc-700/50 rounded-2xl p-6 w-full max-w-md mx-4" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-bold text-zinc-100 mb-4">{t("ss.modal.editAction")}</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">{t("ss.description")}</label>
+                <input type="text" value={editDesc} onChange={(e) => setEditDesc(e.target.value)} className={inputCls(T.inputBorder)} />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">{t("ss.edit.queue")}</label>
+                  <input type="number" value={editQueue} onChange={(e) => setEditQueue(e.target.value)} className={inputCls(T.inputBorder)} />
+                </div>
+                <div>
+                  <label className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">{t("ss.edit.roll")}</label>
+                  <input type="text" value={editRoll} onChange={(e) => setEditRoll(e.target.value)} placeholder={t("ss.dicePrefilled")} className={inputCls(T.inputBorder)} />
+                </div>
+              </div>
+              <div>
+                <label className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">{t("ss.edit.result")}</label>
+                <input type="text" value={editResult} onChange={(e) => setEditResult(e.target.value)} className={inputCls(T.inputBorder)} />
+              </div>
+              <div>
+                <label className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">{t("ss.target")}</label>
+                <input type="text" value={editTarget} onChange={(e) => setEditTarget(e.target.value)} className={inputCls(T.inputBorder)} />
+              </div>
+              <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
+                <input type="checkbox" checked={editMulti} onChange={(e) => setEditMulti(e.target.checked)} className={T.accent} />
+                <span className="text-zinc-300">{t("ss.edit.multitarget")}</span>
+              </label>
+            </div>
+            <div className="flex gap-3 justify-end mt-6">
+              <button type="button" onClick={() => setEditingAction(null)} className="bg-zinc-700 hover:bg-zinc-600 text-zinc-300 text-sm px-4 py-2 rounded-lg transition-colors cursor-pointer">{t("ra.cancel")}</button>
+              <button type="button" onClick={submitEditAction} className={`text-sm font-semibold px-4 py-2 rounded-lg transition-colors cursor-pointer ${T.btnFill}`}>{t("ss.edit.save")}</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </>
   );
 }
 
 /* ---- roll slip (journal) ---- */
-function RollSlip({ a, linkHover }: { a: NarrationAction; linkHover: string }) {
+function RollSlip({
+  a,
+  linkHover,
+  controls = false,
+  onEdit,
+  onDelete,
+  onCopy,
+}: {
+  a: NarrationAction;
+  linkHover: string;
+  controls?: boolean;
+  onEdit?: (a: NarrationAction) => void;
+  onDelete?: (a: NarrationAction) => void;
+  onCopy?: (a: NarrationAction) => void;
+}) {
   const { t } = useTranslation();
   const charId = a.character?.id || "";
   const charName = a.character?.name || a.character?.username || t("ss.unknown");
@@ -1784,6 +1921,34 @@ function RollSlip({ a, linkHover }: { a: NarrationAction; linkHover: string }) {
           </div>
         ) : null}
       </div>
+      {controls ? (
+        <div className="flex flex-col items-center justify-center gap-1 px-2 border-l border-zinc-700/40">
+          <button
+            type="button"
+            onClick={() => onEdit?.(a)}
+            title={t("ra.edit")}
+            className="font-mono text-[9px] uppercase tracking-widest text-zinc-500 hover:text-amber-300 transition-colors cursor-pointer"
+          >
+            {t("ra.edit")}
+          </button>
+          <button
+            type="button"
+            onClick={() => onCopy?.(a)}
+            title={t("ra.copyTitle")}
+            className="font-mono text-[9px] uppercase tracking-widest text-zinc-500 hover:text-sky-300 transition-colors cursor-pointer"
+          >
+            {t("ra.copy")}
+          </button>
+          <button
+            type="button"
+            onClick={() => onDelete?.(a)}
+            title={t("ra.delete")}
+            className="font-mono text-[9px] uppercase tracking-widest text-red-400/70 hover:text-red-300 transition-colors cursor-pointer"
+          >
+            {t("ra.delete")}
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }

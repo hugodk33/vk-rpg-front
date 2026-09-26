@@ -136,6 +136,8 @@ export default function TableSkillsPage({ params }: { params: Promise<{ id: stri
                     <RowActions
                       editHref={`/skill/${s.id}/edit?table_id=${id}`}
                       onDelete={() => submitJson(`/api/game-table-skill/${s.id}`, "DELETE")}
+                      copyHref={`/api/game-table-skill/${s.id}/copy`}
+                      tableId={id}
                     />
                   </div>
                 </div>

@@ -179,6 +179,13 @@ const ptBase: Record<string, string> = {
     "ra.delete": "Excluir",
     "ra.confirm": "Excluir? Esta ação não pode ser desfeita.",
     "ra.fail": "Falha ao excluir.",
+    "ra.copy": "Copiar",
+    "ra.copyTitle": "Duplicar este item (nesta ou em outra mesa)",
+    "ra.copyToTable": "Copiar para uma mesa",
+    "ra.copyToHint": "Escolha o destino — inclusive a própria mesa, para criar uma variação.",
+    "ra.thisTable": "esta mesa",
+    "ra.noTables": "Nenhuma outra mesa disponível.",
+    "ra.cancel": "Cancelar",
 
     /* ---------- Console rápido do mestre ---------- */
     "qa.equip.in_inventory": "No inventário",
@@ -525,6 +532,13 @@ const enBase: Record<string, string> = {
     "ra.delete": "Delete",
     "ra.confirm": "Delete? This cannot be undone.",
     "ra.fail": "Failed to delete.",
+    "ra.copy": "Copy",
+    "ra.copyTitle": "Duplicate this item (in this or another table)",
+    "ra.copyToTable": "Copy to a table",
+    "ra.copyToHint": "Pick the destination — including this very table, to make a variant.",
+    "ra.thisTable": "this table",
+    "ra.noTables": "No other tables available.",
+    "ra.cancel": "Cancel",
 
     "qa.equip.in_inventory": "In inventory",
     "qa.equip.equipped": "Equipped",

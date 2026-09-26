@@ -33,7 +33,7 @@ export default function ZoomControls({ zoom, onZoom, min = 0.5, max = 3.5, step 
             aria-pressed={hand}
             aria-label={t("lc.zoom.hand")}
             title={t("lc.zoom.hand")}
-            className={`flex h-6 w-6 items-center justify-center rounded transition-colors ${
+            className={`flex h-6 w-6 items-center justify-center rounded transition-colors cursor-pointer ${
               hand ? "bg-sky-500/20 text-sky-300 ring-1 ring-sky-500/50" : "text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800"
             }`}
           >
@@ -48,7 +48,7 @@ export default function ZoomControls({ zoom, onZoom, min = 0.5, max = 3.5, step 
         disabled={zoom <= min}
         aria-label={t("lc.zoom.out")}
         title={t("lc.zoom.out")}
-        className="flex h-6 w-6 items-center justify-center rounded text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-colors disabled:opacity-35 disabled:hover:bg-transparent"
+        className="flex h-6 w-6 items-center justify-center rounded text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-colors disabled:opacity-35 disabled:hover:bg-transparent cursor-pointer disabled:cursor-default"
       >
         <Minus className="w-3.5 h-3.5" strokeWidth={2.25} />
       </button>
@@ -58,7 +58,7 @@ export default function ZoomControls({ zoom, onZoom, min = 0.5, max = 3.5, step 
         disabled={zoom >= max}
         aria-label={t("lc.zoom.in")}
         title={t("lc.zoom.in")}
-        className="flex h-6 w-6 items-center justify-center rounded text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-colors disabled:opacity-35 disabled:hover:bg-transparent"
+        className="flex h-6 w-6 items-center justify-center rounded text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-colors disabled:opacity-35 disabled:hover:bg-transparent cursor-pointer disabled:cursor-default"
       >
         <Plus className="w-3.5 h-3.5" strokeWidth={2.25} />
       </button>
@@ -68,7 +68,7 @@ export default function ZoomControls({ zoom, onZoom, min = 0.5, max = 3.5, step 
         disabled={zoom === 1}
         aria-label={t("lc.zoom.reset")}
         title={t("lc.zoom.resetTitle")}
-        className="flex h-6 min-w-[2.9rem] items-center justify-center rounded font-mono text-[10px] tabular-nums text-zinc-300 hover:text-white hover:bg-zinc-800 transition-colors disabled:opacity-60 disabled:hover:bg-transparent"
+        className="flex h-6 min-w-[2.9rem] items-center justify-center rounded font-mono text-[10px] tabular-nums text-zinc-300 hover:text-white hover:bg-zinc-800 transition-colors disabled:opacity-60 disabled:hover:bg-transparent cursor-pointer disabled:cursor-default"
       >
         {Math.round(zoom * 100)}%
       </button>

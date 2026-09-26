@@ -168,6 +168,8 @@ export default function TableLocationsPage({ params }: { params: Promise<{ id: s
                 trail={chain.slice(0, -1)}
                 isDefault={defaultId === node.id}
                 busy={settingDefault}
+                copyHref={`/api/table-location/${node.id}/copy`}
+                tableId={id}
               />
             ))}
           </div>
@@ -179,7 +181,7 @@ export default function TableLocationsPage({ params }: { params: Promise<{ id: s
           </p>
           <div ref={platesRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {plates.map((node) => (
-              <LocationPlate key={node.id} node={node} onZoom={zoom} onSetDefault={toggleDefault} isDefault={defaultId === node.id} busy={settingDefault} />
+              <LocationPlate key={node.id} node={node} onZoom={zoom} onSetDefault={toggleDefault} isDefault={defaultId === node.id} busy={settingDefault} copyHref={`/api/table-location/${node.id}/copy`} tableId={id} />
             ))}
           </div>
         </div>
@@ -208,7 +210,7 @@ export default function TableLocationsPage({ params }: { params: Promise<{ id: s
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {plates.map((node) => (
-                <LocationPlate key={node.id} node={node} onZoom={zoom} onSetDefault={toggleDefault} isDefault={defaultId === node.id} busy={settingDefault} />
+                <LocationPlate key={node.id} node={node} onZoom={zoom} onSetDefault={toggleDefault} isDefault={defaultId === node.id} busy={settingDefault} copyHref={`/api/table-location/${node.id}/copy`} tableId={id} />
               ))}
             </div>
           )}

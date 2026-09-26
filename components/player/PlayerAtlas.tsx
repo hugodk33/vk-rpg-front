@@ -13,7 +13,9 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { interpolate, useTranslation } from "@/lib/i18n";
+import { absoluteHex } from "@/lib/location";
 import type { Location } from "@/lib/types";
+import LocationMap from "@/components/location/LocationMap";
 import {
   atlasStripGroup,
   CurrentMapStrip,
@@ -56,6 +58,27 @@ export default function PlayerAtlas({ tree, defaultLocationId = null, currentLoc
   const stripGroup = useMemo(() => atlasStripGroup(active?.node, flat.map((i) => i.node)), [active, flat]);
   const atFirst = !active || (firstId !== null && active.node.id === firstId);
   const inSub = !!active && !atFirst;
+
+  /* Alvo de mapa: battlemap (com tiles/traços dos personagens ou não).
+     Tiles/traços sempre chegam sem mascaramento; se um visitado ainda
+     não tiver nada pintado, o grid em branco ainda se mostra. */
+  const canShowMap =
+    !!active &&
+    (!!active.node.isBattlemap ||
+      (active.node.tiles?.length ?? 0) > 0 ||
+      (active.node.drawing?.length ?? 0) > 0);
+  const activeAbs = useMemo(
+    () =>
+      canShowMap
+        ? absoluteHex({
+            id: active.node.id,
+            name: active.node.name,
+            hex: active.node.hex,
+            ancestors: active.chain.slice(0, -1).map((n) => ({ id: n.id, name: n.name, hex: n.hex })),
+          })
+        : undefined,
+    [canShowMap, active],
+  );
 
   const filtered = search.trim()
     ? flat.filter(({ node }) => {
@@ -145,6 +168,15 @@ export default function PlayerAtlas({ tree, defaultLocationId = null, currentLoc
             />
           ) : null}
           {active ? <ZoomRuler chain={active.chain} onJump={zoom} player minZoomId={defaultLocationId} /> : null}
+          {canShowMap && activeAbs ? (
+            <LocationMap
+              hex={active.node.hex ?? null}
+              abs={activeAbs}
+              accent="#60a5fa"
+              tiles={active.node.tiles ?? []}
+              drawing={active.node.drawing ?? []}
+            />
+          ) : null}
           {plates.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-zinc-500 text-sm">

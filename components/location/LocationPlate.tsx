@@ -302,7 +302,7 @@ export default function LocationPlate({ location, tableId, mode = "narrator" }: 
                 type="button"
                 aria-selected={view === tab.key}
                 onClick={() => setView(tab.key)}
-                className={`relative px-3 py-2 font-mono text-[10px] uppercase tracking-widest transition-colors focus:outline-none focus-visible:ring-2 rounded-md ${isPlayer ? "focus-visible:ring-amber-800/60" : "focus-visible:ring-green-800/60"} ${
+                className={`relative px-3 py-2 font-mono text-[10px] uppercase tracking-widest transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 rounded-md ${isPlayer ? "focus-visible:ring-amber-800/60" : "focus-visible:ring-green-800/60"} ${
                   view === tab.key ? "text-zinc-100" : "text-zinc-500 hover:text-zinc-300"
                 }`}
               >
@@ -363,7 +363,7 @@ export default function LocationPlate({ location, tableId, mode = "narrator" }: 
                         setDeleting(false);
                       }
                     }}
-                    className="font-mono text-[10px] tracking-widest uppercase text-red-400/70 hover:text-red-400 disabled:opacity-50 transition-colors"
+                    className="font-mono text-[10px] tracking-widest uppercase text-red-400/70 hover:text-red-400 disabled:opacity-50 transition-colors cursor-pointer disabled:cursor-default"
                   >
                     {t("lc.lp.remove")}
                   </button>

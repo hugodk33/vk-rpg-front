@@ -4,15 +4,20 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useTranslation } from "@/lib/i18n";
+import CopyToTableButton from "./CopyToTableButton";
 
 export default function RowActions({
   editHref,
   onDelete,
   deleteLabel = "ra.delete",
+  copyHref,
+  tableId,
 }: {
   editHref: string;
   onDelete: () => Promise<unknown>;
   deleteLabel?: string;
+  copyHref?: string;
+  tableId?: string;
 }) {
   const router = useRouter();
   const { t } = useTranslation();
@@ -42,6 +47,7 @@ export default function RowActions({
       >
         {t("ra.edit")}
       </Link>
+      {copyHref ? <CopyToTableButton copyHref={copyHref} tableId={tableId} /> : null}
       <button
         type="button"
         onClick={handleDelete}

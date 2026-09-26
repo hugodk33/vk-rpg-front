@@ -429,6 +429,8 @@ export interface NarrationAction {
   result?: string
   description?: string
   dice_roll?: string
+  target?: string | null
+  multitarget?: boolean
   /** planta baixa onde a action aconteceu */
   locationId?: string | null
   /** hex de destino (movimento na malha hexagonal) */

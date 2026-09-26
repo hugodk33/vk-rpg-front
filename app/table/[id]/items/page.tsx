@@ -130,6 +130,8 @@ export default function TableItemsPage({ params }: { params: Promise<{ id: strin
                     <RowActions
                       editHref={`/item/${i.id}/edit?table_id=${id}`}
                       onDelete={() => submitJson(`/api/game-table-item/${i.id}`, "DELETE")}
+                      copyHref={`/api/game-table-item/${i.id}/copy`}
+                      tableId={id}
                     />
                   </div>
                 </div>

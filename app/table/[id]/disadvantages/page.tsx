@@ -134,6 +134,8 @@ export default function TableDisadvantagesPage({ params }: { params: Promise<{ i
                     <RowActions
                       editHref={`/disadvantage/${d.id}/edit?table_id=${id}`}
                       onDelete={() => submitJson(`/api/game-table-disadvantage/${d.id}`, "DELETE")}
+                      copyHref={`/api/game-table-disadvantage/${d.id}/copy`}
+                      tableId={id}
                     />
                   </div>
                 </div>

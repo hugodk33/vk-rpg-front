@@ -16,6 +16,7 @@ import type { Location } from "@/lib/types";
 import { interpolate, useTranslation } from "@/lib/i18n";
 import { floorPlanGroup } from "@/lib/location";
 import { KindGlyph, KIND_TINT } from "@/lib/location-glyphs";
+import CopyToTableButton from "@/components/table/CopyToTableButton";
 
 export const KNOWN_KINDS = new Set([
   "world",
@@ -206,6 +207,8 @@ export function LocationPlate({
   isDefault = false,
   busy = false,
   player = false,
+  copyHref,
+  tableId,
 }: {
   node: Location;
   onZoom: (id: string) => void;
@@ -214,6 +217,8 @@ export function LocationPlate({
   isDefault?: boolean;
   busy?: boolean;
   player?: boolean;
+  copyHref?: string;
+  tableId?: string;
 }) {
   const { lang, t } = useTranslation();
   const hasChildren = (node.children?.length ?? 0) > 0;
@@ -299,6 +304,14 @@ export function LocationPlate({
             >
               {t("tp.open")} →
             </Link>
+          ) : null}
+          {!player && copyHref ? (
+            <CopyToTableButton
+              copyHref={copyHref}
+              tableId={tableId}
+              title={t("ra.copyTitle")}
+              className="inline-flex items-center justify-center gap-1 rounded-md border border-zinc-700/50 bg-zinc-800/60 px-2 py-1.5 font-mono text-[10px] tracking-widest uppercase text-sky-300/80 transition-colors hover:border-sky-500/50 hover:text-sky-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600/60"
+            />
           ) : null}
         </div>
       </div>
