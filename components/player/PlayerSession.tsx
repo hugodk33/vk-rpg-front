@@ -985,7 +985,7 @@ export default function TurnPanel({
               </div>
 
               {rolls.length > 0 && isMyTurn && !committed ? (
-                <div className="mt-5 rounded-xl border border-blue-500/30 bg-blue-500/[0.05] p-4">
+                <div className="mt-2">
                   <div className="flex items-center gap-2 mb-3">
                     <span className="w-2.5 h-2.5 rounded-full bg-blue-400 shrink-0" />
                     <span className="font-mono text-[10px] tracking-widest uppercase text-blue-300/90">{t("ss.queue.endTurn")}</span>

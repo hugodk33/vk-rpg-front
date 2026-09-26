@@ -407,8 +407,8 @@ export default function PlayerConsole({
       ) : null}
 
       {RESOURCE_TABS.some((r) => r.key === tab) && tableId ? (
-        <div className="rounded-2xl border border-zinc-700/50 bg-zinc-900/40 overflow-hidden">
-          <div className="px-5 py-6">
+        <div className="">
+          <div className="pt-2">
             <p className="font-mono text-[10px] tracking-widest uppercase text-blue-300/90">{t("pl.res.eyebrow")}</p>
             <h2 className="text-lg font-bold text-zinc-100 mt-1">
               {t(RESOURCE_TABS.find((r) => r.key === tab)?.labelKey ?? "pl.res.title")}

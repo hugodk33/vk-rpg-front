@@ -80,10 +80,14 @@ export function ZoomRuler({
   chain,
   onJump,
   player = false,
+  minZoomId = null,
 }: {
   chain: Location[];
   onJump: (id: string) => void;
   player?: boolean;
+  /** id do local padrão: as porções da trilha ACIMA dele (maiores escalas)
+      ficam travadas — só se navega do padrão para baixo. */
+  minZoomId?: string | null;
 }) {
   const { t } = useTranslation();
   if (chain.length < 2) return null;
@@ -94,11 +98,16 @@ export function ZoomRuler({
   const sum = raw.reduce((a, b) => a + b, 0);
   const widths = raw.map((w) => (w / sum) * 100);
   const active = chain[chain.length - 1].id;
+  const cutIndex = minZoomId ? chain.findIndex((n) => n.id === minZoomId) : -1;
 
   return (
     <nav
       aria-label={t("tp.loc.zoomTrail")}
-      className={player ? "" : "rounded-xl border border-zinc-700/40 bg-zinc-800/30 px-4 py-3.5"}
+      className={
+        player
+          ? "rounded-xl border border-blue-400/20 bg-blue-400/[0.04] px-4 py-3.5"
+          : "rounded-xl border border-teal-400/20 bg-teal-400/[0.04] px-4 py-3.5"
+      }
     >
       {/* rung names */}
       <div className="flex flex-wrap items-center gap-y-1.5">
@@ -112,6 +121,10 @@ export function ZoomRuler({
               {isActive ? (
                 <span className={`font-mono text-[11px] uppercase tracking-widest truncate ${player ? "text-blue-300" : "text-teal-300"}`}
                   title={node.name}>
+                  {node.name}
+                </span>
+              ) : cutIndex >= 0 && i < cutIndex ? (
+                <span className="font-mono text-[11px] uppercase tracking-widest truncate text-zinc-600" title={t("tp.zoomLocked").replace("{name}", node.name)}>
                   {node.name}
                 </span>
               ) : (
@@ -324,7 +337,13 @@ export function CurrentMapStrip({
   const childCount = node.children?.length ?? 0;
   const members = group && group.length > 1 ? group : null;
   return (
-    <div className={player ? "" : "rounded-xl border border-teal-400/20 bg-teal-400/[0.04] px-4 py-3"}>
+    <div
+      className={
+        player
+          ? "rounded-xl border border-blue-400/20 bg-blue-400/[0.04] px-4 py-3"
+          : "rounded-xl border border-teal-400/20 bg-teal-400/[0.04] px-4 py-3"
+      }
+    >
       <div className="flex items-center gap-3">
         <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${player ? "bg-blue-300 shadow-[0_0_8px_rgba(96,165,250,0.6)]" : "bg-teal-300 shadow-[0_0_8px_rgba(94,234,212,0.6)]"}`} aria-hidden />
         <div className="min-w-0 flex-1">

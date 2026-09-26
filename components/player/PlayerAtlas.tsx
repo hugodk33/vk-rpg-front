@@ -133,7 +133,6 @@ export default function PlayerAtlas({ tree, defaultLocationId = null, currentLoc
         </div>
       ) : (
         <div ref={platesRef} className="space-y-4">
-          {active ? <ZoomRuler chain={active.chain} onJump={zoom} player /> : null}
           {active ? (
             <CurrentMapStrip
               node={active.node}
@@ -145,6 +144,7 @@ export default function PlayerAtlas({ tree, defaultLocationId = null, currentLoc
               onSearchChange={setSearch}
             />
           ) : null}
+          {active ? <ZoomRuler chain={active.chain} onJump={zoom} player minZoomId={defaultLocationId} /> : null}
           {plates.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-zinc-500 text-sm">

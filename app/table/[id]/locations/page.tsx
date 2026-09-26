@@ -107,9 +107,9 @@ export default function TableLocationsPage({ params }: { params: Promise<{ id: s
         </div>
         <Link
           href={`/table/${id}/locations/new${active ? `?parent_id=${active.node.id}` : ""}`}
-          className="shrink-0 inline-flex items-center gap-1.5 bg-amber-600 hover:bg-amber-500 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/60"
+          className="shrink-0 inline-flex items-center gap-1.5 bg-teal-600 hover:bg-teal-500 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500/60"
         >
-          + <span>{t("tp.new")}</span>
+          <span>{t("tp.new")}</span>
         </Link>
       </div>
 
@@ -185,7 +185,6 @@ export default function TableLocationsPage({ params }: { params: Promise<{ id: s
         </div>
       ) : (
         <div ref={platesRef} className="space-y-4">
-          {active ? <ZoomRuler chain={active.chain} onJump={zoom} /> : null}
           {active ? (
             <CurrentMapStrip
               node={active.node}
@@ -197,6 +196,7 @@ export default function TableLocationsPage({ params }: { params: Promise<{ id: s
               onSearchChange={setSearch}
             />
           ) : null}
+          {active ? <ZoomRuler chain={active.chain} onJump={zoom} minZoomId={defaultId} /> : null}
           {plates.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-zinc-500 text-sm">
