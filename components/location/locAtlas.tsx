@@ -32,6 +32,14 @@ export const KNOWN_KINDS = new Set([
   "point",
 ]);
 
+/* Player route: no greenish glyphs — every tint stays in the blue
+   family (the narrator keeps the full KIND_TINT palette). */
+export const PLAYER_KIND_TINT: Record<string, string> = {
+  continent: "text-blue-400",
+  region: "text-blue-400",
+  biome: "text-blue-300",
+};
+
 export function formatScale(m?: number | null): string {
   if (m == null) return "—";
   if (m >= 1000) {
@@ -68,7 +76,15 @@ export function indexTree(roots: Location[]): Map<string, IndexNode> {
 
 /* The ruler: segment width ∝ log scale so the bar visibly
    converges as the atlas zooms from world to battlemap. */
-export function ZoomRuler({ chain, onJump }: { chain: Location[]; onJump: (id: string) => void }) {
+export function ZoomRuler({
+  chain,
+  onJump,
+  player = false,
+}: {
+  chain: Location[];
+  onJump: (id: string) => void;
+  player?: boolean;
+}) {
   const { t } = useTranslation();
   if (chain.length < 2) return null;
   const raw = chain.map((n) => {
@@ -80,7 +96,10 @@ export function ZoomRuler({ chain, onJump }: { chain: Location[]; onJump: (id: s
   const active = chain[chain.length - 1].id;
 
   return (
-    <nav aria-label={t("tp.loc.zoomTrail")} className="rounded-xl border border-zinc-700/40 bg-zinc-800/30 px-4 py-3.5">
+    <nav
+      aria-label={t("tp.loc.zoomTrail")}
+      className={player ? "" : "rounded-xl border border-zinc-700/40 bg-zinc-800/30 px-4 py-3.5"}
+    >
       {/* rung names */}
       <div className="flex flex-wrap items-center gap-y-1.5">
         {chain.map((node, i) => {
@@ -91,7 +110,7 @@ export function ZoomRuler({ chain, onJump }: { chain: Location[]; onJump: (id: s
                 <span className="mx-2 text-zinc-700" aria-hidden>›</span>
               ) : null}
               {isActive ? (
-                <span className="font-mono text-[11px] uppercase tracking-widest truncate text-teal-300"
+                <span className={`font-mono text-[11px] uppercase tracking-widest truncate ${player ? "text-blue-300" : "text-teal-300"}`}
                   title={node.name}>
                   {node.name}
                 </span>
@@ -99,7 +118,7 @@ export function ZoomRuler({ chain, onJump }: { chain: Location[]; onJump: (id: s
                 <button
                   type="button"
                   onClick={() => onJump(node.id)}
-                  className="font-mono text-[11px] uppercase tracking-widest truncate text-zinc-500 hover:text-zinc-200 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600/60 rounded-sm"
+                  className={`font-mono text-[11px] uppercase tracking-widest truncate text-zinc-500 hover:text-zinc-200 transition-colors focus:outline-none focus-visible:ring-2 rounded-sm ${player ? "focus-visible:ring-blue-500/60" : "focus-visible:ring-teal-600/60"}`}
                   title={t("tp.loc.goTo").replace("{name}", node.name)}
                 >
                   {node.name}
@@ -118,7 +137,9 @@ export function ZoomRuler({ chain, onJump }: { chain: Location[]; onJump: (id: s
               <div
                 className={
                   i === chain.length - 1
-                    ? "h-[3px] rounded-full bg-teal-400/70 shadow-[0_0_8px_rgba(94,234,212,0.35)]"
+                    ? player
+                      ? "h-[3px] rounded-full bg-blue-400/70 shadow-[0_0_8px_rgba(96,165,250,0.35)]"
+                      : "h-[3px] rounded-full bg-teal-400/70 shadow-[0_0_8px_rgba(94,234,212,0.35)]"
                     : "h-[3px] rounded-full bg-zinc-600/70 group-hover:bg-zinc-500/70 transition-colors"
                 }
               />
@@ -132,7 +153,7 @@ export function ZoomRuler({ chain, onJump }: { chain: Location[]; onJump: (id: s
               style={{ width: `${w}%` }}>
               <span
                 className={`font-mono text-[9px] tracking-widest uppercase pr-2 ${
-                  i === chain.length - 1 ? "text-teal-400/90" : "text-zinc-600"
+                  i === chain.length - 1 ? (player ? "text-blue-400/90" : "text-teal-400/90") : "text-zinc-600"
                 }`}
               >
                 {formatRulerScale(chain[i].hex?.sizeM)}
@@ -143,7 +164,7 @@ export function ZoomRuler({ chain, onJump }: { chain: Location[]; onJump: (id: s
         {/* you-are-here marker */}
         <div className="relative mt-1" aria-hidden>
           <span
-            className="absolute -translate-x-1/2 text-[10px] leading-none text-teal-300"
+            className={`absolute -translate-x-1/2 text-[10px] leading-none ${player ? "text-blue-300" : "text-teal-300"}`}
             style={{ left: `calc(${widths.slice(0, -1).reduce((a, b) => a + b, 0)}% + ${widths[widths.length - 1] / 2}% )` }}
           >
             ▼
@@ -186,9 +207,12 @@ export function LocationPlate({
   const battle = !!node.isBattlemap;
   const kindLabel =
     node.kind && KNOWN_KINDS.has(node.kind) ? t(`tp.locKind.${node.kind}`) : t("tp.locKind.generic");
+  const glyphTint = player
+    ? (PLAYER_KIND_TINT[node.kind ?? ""] ?? KIND_TINT[node.kind ?? "site"] ?? "text-zinc-500")
+    : (KIND_TINT[node.kind ?? "site"] ?? "text-zinc-500");
   return (
     <div className="group relative flex h-full gap-3 rounded-xl border border-zinc-700/40 bg-zinc-800/40 px-4 py-3.5 transition-all hover:bg-zinc-800/70 hover:border-zinc-600/60">
-      <div className={`flex items-center shrink-0 ${KIND_TINT[node.kind ?? "site"] ?? "text-zinc-500"}`} aria-hidden>
+      <div className={`flex items-center shrink-0 ${glyphTint}`} aria-hidden>
         <KindGlyph
           kind={node.kind}
           className="h-11 w-11 opacity-90 transition-all duration-300 group-hover:opacity-100 group-hover:drop-shadow-[0_0_10px_currentColor]"
@@ -221,7 +245,7 @@ export function LocationPlate({
             </span>
           ) : null}
           {hasChildren ? (
-            <span className="font-mono text-[9px] tracking-widest uppercase px-1.5 py-0.5 rounded-full bg-teal-400/10 text-teal-300">
+            <span className={`font-mono text-[9px] tracking-widest uppercase px-1.5 py-0.5 rounded-full ${player ? "bg-blue-400/10 text-blue-300" : "bg-teal-400/10 text-teal-300"}`}>
               +{(node.children?.length ?? 0).toString().padStart(2, "0")}
             </span>
           ) : null}
@@ -246,7 +270,11 @@ export function LocationPlate({
             onClick={() => onZoom(node.id)}
             disabled={!hasChildren}
             title={hasChildren ? t("tp.loc.openSubs") : t("tp.loc.noSubs")}
-            className="flex-1 inline-flex items-center justify-center gap-1 rounded-md border border-teal-400/25 bg-teal-400/5 px-2 py-1.5 font-mono text-[10px] tracking-widest uppercase text-teal-300/90 transition-colors hover:bg-teal-400/10 hover:text-teal-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600/60 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-teal-400/5 disabled:hover:text-teal-300/90"
+            className={`flex-1 inline-flex items-center justify-center gap-1 rounded-md border px-2 py-1.5 font-mono text-[10px] tracking-widest uppercase transition-colors focus:outline-none focus-visible:ring-2 disabled:opacity-40 disabled:cursor-not-allowed ${
+              player
+                ? "border-blue-400/25 bg-blue-400/5 text-blue-300/90 hover:bg-blue-400/10 hover:text-blue-200 focus-visible:ring-blue-500/60 disabled:hover:bg-blue-400/5 disabled:hover:text-blue-300/90"
+                : "border-teal-400/25 bg-teal-400/5 text-teal-300/90 hover:bg-teal-400/10 hover:text-teal-200 focus-visible:ring-teal-600/60 disabled:hover:bg-teal-400/5 disabled:hover:text-teal-300/90"
+            }`}
           >
             ◱ {t("tp.loc.sublocations")}
           </button>
@@ -266,11 +294,10 @@ export function LocationPlate({
 }
 
 /* The "abertura" card: the current plate's banner + the region's
-   sublocation selector ("pesquisa") pinned to its bottom — the same
-   shape MapLog uses for the sublocation card. On the FIRST location
-   (the plate where the zoom begins) the search box sits in a column
-   NEXT TO the selector; from the first sublocation on only the
-   selector remains. */
+   sublocation selector pinned to its bottom — the same shape MapLog
+   uses for the sublocation card. In sublocations the search box sits
+   in a column NEXT TO the selector (two columns); the first-location
+   screen keeps the global search on top instead. */
 export function CurrentMapStrip({
   node,
   isDefault = false,
@@ -297,12 +324,12 @@ export function CurrentMapStrip({
   const childCount = node.children?.length ?? 0;
   const members = group && group.length > 1 ? group : null;
   return (
-    <div className="rounded-xl border border-teal-400/20 bg-teal-400/[0.04] px-4 py-3">
+    <div className={player ? "" : "rounded-xl border border-teal-400/20 bg-teal-400/[0.04] px-4 py-3"}>
       <div className="flex items-center gap-3">
-        <span className="w-1.5 h-1.5 rounded-full bg-teal-300 shrink-0 shadow-[0_0_8px_rgba(94,234,212,0.6)]" aria-hidden />
+        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${player ? "bg-blue-300 shadow-[0_0_8px_rgba(96,165,250,0.6)]" : "bg-teal-300 shadow-[0_0_8px_rgba(94,234,212,0.6)]"}`} aria-hidden />
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline gap-2 min-w-0">
-            <span className="font-mono text-[12px] font-bold tracking-widest uppercase text-teal-100 truncate">{node.name}</span>
+            <span className={`font-mono text-[12px] font-bold tracking-widest uppercase truncate ${player ? "text-blue-100" : "text-teal-100"}`}>{node.name}</span>
             <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 hidden sm:inline">
               {kindLabel} · {formatScale(hex?.sizeM)}
             </span>
@@ -347,7 +374,7 @@ export function CurrentMapStrip({
                     value={searchValue}
                     onChange={(e) => onSearchChange?.(e.target.value)}
                     placeholder={t("tp.searchPh")}
-                    className="w-full bg-zinc-800/80 border border-zinc-700/60 rounded-lg pl-9 pr-8 py-2 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-teal-700/60 transition-colors"
+                    className={`w-full bg-zinc-800/80 border border-zinc-700/60 rounded-lg pl-9 pr-8 py-2 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none transition-colors ${player ? "focus:border-blue-600/70" : "focus:border-teal-700/60"}`}
                   />
                   {searchValue ? (
                     <button
@@ -355,7 +382,7 @@ export function CurrentMapStrip({
                       onClick={() => onSearchChange?.("")}
                       aria-label={t("tp.clear")}
                       title={t("tp.clear")}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-zinc-400 hover:text-zinc-200 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600/60 rounded"
+                      className={`absolute right-2 top-1/2 -translate-y-1/2 p-1 text-zinc-400 hover:text-zinc-200 transition-colors focus:outline-none focus-visible:ring-2 rounded ${player ? "focus-visible:ring-blue-500/60" : "focus-visible:ring-teal-600/60"}`}
                     >
                       <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -369,7 +396,7 @@ export function CurrentMapStrip({
               <select
                 value={node.id}
                 onChange={(e) => onJump(e.target.value)}
-                className="w-full bg-zinc-800/80 border border-zinc-700/60 rounded-lg px-3 py-2 text-zinc-100 text-sm focus:outline-none focus:border-teal-700/60 transition-colors"
+                className={`w-full bg-zinc-800/80 border border-zinc-700/60 rounded-lg px-3 py-2 text-zinc-100 text-sm focus:outline-none transition-colors ${player ? "focus:border-blue-600/70" : "focus:border-teal-700/60"}`}
               >
                 {members.map((l) => (
                   <option key={l.id} value={l.id} className="bg-zinc-800">

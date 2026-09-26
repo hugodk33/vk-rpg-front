@@ -54,8 +54,19 @@ export default function PlayerAtlas({ tree, defaultLocationId = null, currentLoc
 
   const active = activeId ? index.get(activeId) : null;
   const stripGroup = useMemo(() => atlasStripGroup(active?.node, flat.map((i) => i.node)), [active, flat]);
+  const atFirst = !active || (firstId !== null && active.node.id === firstId);
+  const inSub = !!active && !atFirst;
 
-  const query = search.trim().toLowerCase();
+  const filtered = search.trim()
+    ? flat.filter(({ node }) => {
+        const q = search.trim().toLowerCase();
+        return (node.name ?? "").toLowerCase().includes(q)
+          || (node.region ?? "").toLowerCase().includes(q)
+          || (node.address ?? "").toLowerCase().includes(q);
+      })
+    : null;
+
+  const query = inSub ? search.trim().toLowerCase() : "";
   const children = active ? (active.node.children ?? []) : (tree ?? []);
   const plates = query
     ? children.filter((n) =>
@@ -74,8 +85,46 @@ export default function PlayerAtlas({ tree, defaultLocationId = null, currentLoc
 
   return (
     <div className="space-y-4">
+      {atFirst ? (
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={t("tp.searchPh")}
+              className="w-full bg-zinc-800/60 border border-zinc-700/50 rounded-lg pl-9 pr-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-blue-600/70"
+            />
+          </div>
+          {search ? (
+            <button
+              type="button"
+              onClick={() => setSearch("")}
+              className="bg-zinc-800/60 hover:bg-zinc-700/60 text-zinc-400 text-sm px-3 py-2 rounded-lg transition-colors border border-zinc-700/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600/60"
+            >
+              {t("tp.clear")}
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+
       {(tree?.length ?? 0) === 0 ? (
         <p className="text-sm text-zinc-500 italic">{t("pl.res.empty.locations")}</p>
+      ) : atFirst && filtered !== null ? (
+        filtered.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-zinc-500 text-sm">{t("tp.noResults")}</p>
+          </div>
+        ) : (
+          <div ref={platesRef} className="grid grid-cols-1 sm:grid-cols-2 gap-3" aria-live="polite">
+            {filtered.map(({ node, chain }) => (
+              <LocationPlate key={node.id} node={node} onZoom={zoom} player trail={chain.slice(0, -1)} />
+            ))}
+          </div>
+        )
       ) : !active ? (
         <div ref={platesRef} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {plates.map((node) => (
@@ -84,14 +133,14 @@ export default function PlayerAtlas({ tree, defaultLocationId = null, currentLoc
         </div>
       ) : (
         <div ref={platesRef} className="space-y-4">
-          {active ? <ZoomRuler chain={active.chain} onJump={zoom} /> : null}
+          {active ? <ZoomRuler chain={active.chain} onJump={zoom} player /> : null}
           {active ? (
             <CurrentMapStrip
               node={active.node}
               group={stripGroup}
               onJump={zoom}
               player
-              searchable={firstId !== null && active.node.id === firstId}
+              searchable={inSub}
               searchValue={search}
               onSearchChange={setSearch}
             />
@@ -99,7 +148,7 @@ export default function PlayerAtlas({ tree, defaultLocationId = null, currentLoc
           {plates.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-zinc-500 text-sm">
-                {search
+                {inSub && search
                   ? t("tp.noResults")
                   : interpolate(t("tp.noDivisions"), { name: active.node.name ?? t("tp.locKind.generic") })}
               </p>
