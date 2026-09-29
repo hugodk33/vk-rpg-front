@@ -1,5 +1,5 @@
 import { api } from "@/lib/api";
-import type { GameTable } from "@/lib/types";
+import type { GameTable, TableSettings } from "@/lib/types";
 import CharacterForm from "@/components/forms/CharacterForm";
 
 export const dynamic = "force-dynamic";
@@ -11,13 +11,14 @@ export default async function NewCharacterPage({
 }) {
   const { table_id } = await searchParams;
 
-  let tables: Array<{ id: string; title: string }> = [];
-  try {
-    const all = await api<GameTable[]>("/game-tables");
-    tables = all.map((t) => ({ id: t.id, title: t.title }));
-  } catch {
-    tables = [];
-  }
+  const [tables, settings] = await Promise.all([
+    api<GameTable[]>("/game-tables")
+      .then((all) => all.map((t) => ({ id: t.id, title: t.title })))
+      .catch(() => [] as Array<{ id: string; title: string }>),
+    table_id
+      ? api<TableSettings>(`/game-table-settings/${table_id}`).catch(() => null)
+      : Promise.resolve(null),
+  ]);
 
-  return <CharacterForm tableId={table_id} tables={tables} />;
+  return <CharacterForm tableId={table_id} tables={tables} settings={settings} />;
 }

@@ -15,7 +15,7 @@ interface PlayerEntry {
 
 const ALLY_NPC_STATUS = "ally";
 
-async function loadPlayerEntries(): Promise<PlayerEntry[]> {
+async function loadPlayerEntries(): Promise<{ entries: PlayerEntry[]; tables: GameTable[] }> {
   try {
     const tables = await api<GameTable[]>("/game-tables");
     const entries: PlayerEntry[] = [];
@@ -40,9 +40,9 @@ async function loadPlayerEntries(): Promise<PlayerEntry[]> {
         }
       }
     }
-    return entries;
+    return { entries, tables };
   } catch {
-    return [];
+    return { entries: [], tables: [] };
   }
 }
 
@@ -144,7 +144,7 @@ export default async function PlayerDashboard({
 }) {
   const { seat } = await searchParams;
   const t = makeT(await getLang());
-  const entries = await loadPlayerEntries();
+  const { entries, tables } = await loadPlayerEntries();
   const seatOptions = seatOptionsFrom(entries);
 
   // With a seat picked, "your company" = your own characters plus the
@@ -164,6 +164,14 @@ export default async function PlayerDashboard({
     }
   }
   const mine = (ch: TableCharacter) => seat ? mySeats.has(ch.id) : false;
+
+  // A trilha de criação do jogador é por mesa. Prioriza a mesa em que o
+  // jogador já tem personagem e cai na primeira mesa disponível.
+  const firstTableId =
+    (seat
+      ? entries.find((e) => (e.ch.user?.id ?? e.ch.userId) === seat && e.table?.id)?.table?.id
+      : undefined) ?? tables[0]?.id;
+  const firstTable = firstTableId ? tables.find((tb) => tb.id === firstTableId) : undefined;
 
   return (
     <div className="max-w-5xl mx-auto px-6 py-10">
@@ -187,7 +195,24 @@ export default async function PlayerDashboard({
                     )}
               </p>
             </div>
-            {seatOptions.length > 0 ? <SeatPicker options={seatOptions} /> : null}
+            <div className="flex flex-wrap items-center gap-3">
+              {seatOptions.length > 0 ? <SeatPicker options={seatOptions} /> : null}
+              {firstTableId ? (
+                <div className="flex flex-col items-start gap-1">
+                  <Link
+                    href={`/player/table/${firstTableId}/character/new`}
+                    className="bg-blue-600 hover:bg-blue-500 text-blue-950 text-sm font-semibold px-4 py-2 rounded-lg transition-colors shadow-lg shadow-blue-900/20"
+                  >
+                    + {t("tp.add.character")}
+                  </Link>
+                  {firstTable?.title ? (
+                    <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">
+                      {firstTable.title}
+                    </span>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
           </div>
         </div>
       </div>

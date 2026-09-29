@@ -888,6 +888,120 @@ export function drawAssetShape(ctx: CanvasRenderingContext2D, shape: DrawShape, 
   ctx.restore();
 }
 
+/* --------------------- location links overlay --------------------------- */
+
+/** A connection as rendered on its "here" hex (already shaped server-side:
+    masked labels arrive as "?"/alias, unknown links are simply absent). */
+export interface PlateLink {
+  id: string;
+  kind?: string | null;
+  label?: string | null;
+  description?: string | null;
+  floorFrom?: number | null;
+  floorTo?: number | null;
+  bidirectional?: boolean;
+  here?: { q?: number | null; r?: number | null } | null;
+}
+
+export interface DrawLinksOptions {
+  /** link ids whose label is painted above the badge (hover) */
+  labelIds?: Set<string> | null;
+}
+
+const LINK_KIND_COLOR: Record<string, string> = {
+  door: "#fbbf24",
+  stairs: "#38bdf8",
+  trapdoor: "#fb923c",
+  portal: "#a78bfa",
+  bridge: "#2dd4bf",
+  elevator: "#60a5fa",
+  secret: "#a1a1aa",
+};
+
+/** Marker radius (grid-space px) of a connection badge. */
+export function linkBadgeR(spec: GridSpec): number {
+  return Math.max(7, spec.R * 0.42);
+}
+
+/** Draw every connection that starts on this plate (rotated with the grid).
+    Each one renders as a badge on its `here` hex carrying a direction glyph
+    (↔ same floor, ↑ up, ↓ down) plus the floor delta when crossing levels. */
+export function drawPlateLinks(
+  ctx: CanvasRenderingContext2D,
+  W: number,
+  H: number,
+  spec: GridSpec,
+  links: PlateLink[],
+  opts: DrawLinksOptions = {}
+): void {
+  if (!links.length) return;
+  const font = `"Geist Mono", monospace`;
+  const o = gridOffset(spec);
+  withRotated(ctx, W, H, spec.rotationDeg, () => {
+    for (const lk of links) {
+      const h = lk.here;
+      if (h == null || h.q == null || h.r == null) continue;
+      if (h.q < 0 || h.r < 0 || h.q >= spec.cols || h.r >= spec.rows) continue;
+      const pt = centerOf(h.q, h.r, spec.orientation, spec.R);
+      const cx = o.x + pt.x;
+      const cy = o.y + pt.y;
+      const col = LINK_KIND_COLOR[lk.kind ?? ""] ?? "#38bdf8";
+      const r = linkBadgeR(spec);
+
+      ctx.save();
+      /* badge disc */
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.fillStyle = "#0b0d12";
+      ctx.globalAlpha = 0.85;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = col;
+      ctx.lineWidth = Math.max(1.2, spec.R * 0.07);
+      ctx.stroke();
+
+      /* direction glyph + floor delta */
+      const df = (lk.floorTo ?? 0) - (lk.floorFrom ?? 0);
+      ctx.fillStyle = col;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.font = `bold ${Math.max(9, spec.R * 0.48)}px ${font}`;
+      let glyph = "↔";
+      if (df > 0) glyph = "↑";
+      else if (df < 0) glyph = "↓";
+      else if (lk.kind === "portal") glyph = "◈";
+      ctx.fillText(glyph, cx, cy + spec.R * 0.02);
+      if (df !== 0) {
+        ctx.globalAlpha = 0.92;
+        ctx.font = `bold ${Math.max(8, spec.R * 0.34)}px ${font}`;
+        ctx.fillText(String(Math.abs(df)), cx, cy + r + Math.max(7, spec.R * 0.38));
+        ctx.globalAlpha = 1;
+      }
+
+      /* optional label above the badge (hovered / few links) */
+      if (opts.labelIds?.has(lk.id) && lk.label) {
+        ctx.fillStyle = "#d4d4d8";
+        ctx.font = `bold ${Math.max(8, spec.R * 0.3)}px ${font}`;
+        ctx.fillText(lk.label.length > 16 ? `${lk.label.slice(0, 15)}…` : lk.label, cx, cy - r - Math.max(5, spec.R * 0.3));
+      }
+      ctx.restore();
+    }
+  });
+}
+
+/** Hit-test a connection badge for a point in MESH space (no offset). */
+export function hitPlateLink(links: PlateLink[], p: Point, spec: GridSpec): string | null {
+  const r = linkBadgeR(spec) + 3;
+  for (const lk of links) {
+    const h = lk.here;
+    if (h == null || h.q == null || h.r == null) continue;
+    if (h.q < 0 || h.r < 0 || h.q >= spec.cols || h.r >= spec.rows) continue;
+    const pc = centerOf(h.q, h.r, spec.orientation, spec.R);
+    if (Math.hypot(pc.x - p.x, pc.y - p.y) <= r) return lk.id;
+  }
+  return null;
+}
+
 /* ----------------------- full board (viewer) render ---------------------- */
 
 export interface DrawPlateOptions {

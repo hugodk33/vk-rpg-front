@@ -752,7 +752,7 @@ export default function MapStudio({ location }: MapStudioProps) {
                           }
                           className="font-mono text-[9px] uppercase tracking-widest px-2 py-1 rounded border border-zinc-700/50 text-zinc-400 hover:text-zinc-200 transition-colors"
                         >
-                          {t("lc.ms.sizeUp")}
+                          + {t("lc.ms.sizeUp")}
                         </button>
                         <button
                           type="button"

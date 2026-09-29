@@ -24,6 +24,7 @@ import { PT as plPT, EN as plEN } from "./i18n-parts/pl";
 import { PT as ssPT, EN as ssEN } from "./i18n-parts/ss";
 import { PT as pgPT, EN as pgEN } from "./i18n-parts/pg";
 import { PT as tpPT, EN as tpEN } from "./i18n-parts/tp";
+import { PT as gaPT, EN as gaEN } from "./i18n-parts/ga";
 
 export function normalizeLang(value: string | null | undefined): Lang {
   return value === "en" ? "en" : "pt";
@@ -125,6 +126,8 @@ const ptBase: Record<string, string> = {
     "p.done": "Feito",
     "p.selected": "selecionado(s)",
     "p.budgetTitle": "Orçamento",
+    "p.budgetNone": "Sem orçamento de pontos — esta mesa não usa o sistema de pontos.",
+    "p.currencyTitle": "Moedas do mestre:",
     "p.remaining": "restam",
     "p.over": "Limite excedido — reduza os gastos antes de salvar.",
     "p.save": "Criar ficha",
@@ -482,6 +485,8 @@ const enBase: Record<string, string> = {
     "p.done": "Done",
     "p.selected": "selected",
     "p.budgetTitle": "Budget",
+    "p.budgetNone": "No point budget — this table does not use the points system.",
+    "p.currencyTitle": "GM currencies:",
     "p.remaining": "left",
     "p.over": "Over budget — trim expenses before saving.",
     "p.save": "Create sheet",
@@ -740,8 +745,8 @@ const enBase: Record<string, string> = {
 };
 
 const dict: Record<Lang, Record<string, string>> = {
-  pt: { ...ptBase, ...csPT, ...frPT, ...lcPT, ...vsPT, ...plPT, ...ssPT, ...pgPT, ...tpPT, ...enPT },
-  en: { ...enBase, ...csEN, ...frEN, ...lcEN, ...vsEN, ...plEN, ...ssEN, ...pgEN, ...tpEN, ...enEN },
+  pt: { ...ptBase, ...csPT, ...frPT, ...lcPT, ...vsPT, ...plPT, ...ssPT, ...pgPT, ...tpPT, ...gaPT, ...enPT },
+  en: { ...enBase, ...csEN, ...frEN, ...lcEN, ...vsEN, ...plEN, ...ssEN, ...pgEN, ...tpEN, ...gaEN, ...enEN },
 };
 
 export function translate(lang: Lang, key: string): string {

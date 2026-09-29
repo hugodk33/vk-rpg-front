@@ -13,6 +13,7 @@ import type {
   GameTableSkills,
   Item,
   Location,
+  LocationConnection,
   NarrationAction,
   QueueEntry,
   SkillItem,
@@ -53,6 +54,8 @@ export interface PlayerConsoleData {
   advantages: Advantage[];
   disadvantages: Disadvantage[];
   locations: Location[];
+  /** passagens entre mapas, já filtradas/mascaradas para o observador. */
+  connections: LocationConnection[];
   /** the viewer-shaped location TREE (server-filtered) for the atlas. */
   locationTree: Location[];
   /** the location the narrator pinned as the default route (rota padrão). */
@@ -90,8 +93,8 @@ export async function loadPlayerConsole(characterId: string): Promise<PlayerCons
         ? api<GameTableDisadvantages>(`/game-table-disadvantages/${tableId}?viewer=${encodeURIComponent(characterId)}`).catch(() => ({ table: null, disadvantages: [] }))
         : Promise.resolve({ table: null, disadvantages: [] }) as Promise<GameTableDisadvantages>,
       tableId
-        ? api<GameTableLocations>(`/game-table-locations/${tableId}?viewer=${encodeURIComponent(characterId)}`).catch(() => ({ table: null, locations: [], tree: [], defaultLocationId: null }))
-        : Promise.resolve({ table: null, locations: [], tree: [], defaultLocationId: null }) as Promise<GameTableLocations>,
+        ? api<GameTableLocations>(`/game-table-locations/${tableId}?viewer=${encodeURIComponent(characterId)}`).catch(() => ({ table: null, locations: [], connections: [], tree: [], defaultLocationId: null }))
+        : Promise.resolve({ table: null, locations: [], connections: [], tree: [], defaultLocationId: null }) as Promise<GameTableLocations>,
       tableId
         ? api<GameTableNpcs>(`/game-table-npcs/${tableId}`).catch(() => ({ table: null, npcs: [] }))
         : Promise.resolve({ table: null, npcs: [] }) as Promise<GameTableNpcs>,
@@ -122,6 +125,7 @@ export async function loadPlayerConsole(characterId: string): Promise<PlayerCons
     advantages: advData?.advantages ?? [],
     disadvantages: disData?.disadvantages ?? [],
     locations: locData?.locations ?? [],
+    connections: locData?.connections ?? [],
     locationTree: locData?.tree ?? [],
     defaultLocationId: locData?.defaultLocationId ?? null,
     npcs: npcsData?.npcs ?? [],

@@ -9,6 +9,7 @@ import type {
   GameTable,
   Item,
   Location,
+  LocationConnection,
   NarrationAction,
   QueueEntry,
   Scene,
@@ -76,6 +77,7 @@ interface PlayerConsoleProps {
   advantages: Advantage[];
   disadvantages: Disadvantage[];
   locations: Location[];
+  connections: LocationConnection[];
   locationTree: Location[];
   defaultLocationId: string | null;
   npcs: TableNpc[];
@@ -131,6 +133,7 @@ export default function PlayerConsole({
   advantages,
   disadvantages,
   locations,
+  connections,
   locationTree,
   defaultLocationId,
   npcs,
@@ -383,6 +386,7 @@ export default function PlayerConsole({
         <MapLog
           scenes={scenes}
           locations={locations}
+          connections={connections}
           characters={roster}
           npcIds={npcs?.map((n) => n.character_id).filter(Boolean) as string[]}
           role="player"

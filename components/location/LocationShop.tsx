@@ -14,6 +14,7 @@ import { api } from "@/lib/api";
 import { useTranslation } from "@/lib/i18n";
 import type { GameTableItems, GameTableNpcs, Item, TableNpc } from "@/lib/types";
 import ItemIcon from "@/components/items/ItemIcon";
+import { findCurrencyPreset, formatPrice } from "@/lib/currency";
 
 const STATUS_META: Record<string, { key: string; cls: string }> = {
   enemy: { key: "lc.shop.status.enemy", cls: "text-red-300 border-red-500/40 bg-red-500/10" },
@@ -30,7 +31,12 @@ const KIND_META: Record<string, string> = {
   equipment: "lc.shop.kind.equipment",
 };
 
-const money = (n?: number): string => (n == null ? "—" : `$${n}`);
+/** O preço é um inteiro na moeda que o item declara; o nome vem do item-moeda. */
+function priceLabel(item: Item, currencyNames: Map<string, string>): string {
+  if (item.cost == null) return "—";
+  const fallback = item.currency_item_id ? currencyNames.get(item.currency_item_id) : undefined;
+  return formatPrice(item.cost, findCurrencyPreset(fallback), fallback);
+}
 
 export default function LocationShop({
   locationId,
@@ -45,6 +51,7 @@ export default function LocationShop({
 }) {
   const [npcs, setNpcs] = useState<TableNpc[]>([]);
   const [items, setItems] = useState<Item[]>([]);
+  const [currencyNames, setCurrencyNames] = useState<Map<string, string>>(new Map());
   const [error, setError] = useState<string | null>(null);
   const { t } = useTranslation();
 
@@ -60,11 +67,17 @@ export default function LocationShop({
         table: null,
         items: [] as Item[],
       })),
+      // Catálogo inteiro só para resolver o nome dos itens-moeda.
+      api<GameTableItems>(`/game-table-items/${tableId}`).catch(() => ({
+        table: null,
+        items: [] as Item[],
+      })),
     ])
-      .then(([n, i]) => {
+      .then(([n, i, all]) => {
         if (cancel) return;
         setNpcs(n.npcs ?? []);
         setItems(i.items ?? []);
+        setCurrencyNames(new Map((all.items ?? []).map((it) => [it.id, it.name])));
         setError(null);
       })
       .catch(() => {
@@ -158,7 +171,7 @@ export default function LocationShop({
                       ) : null}
                     </div>
                   </div>
-                  <span className="shrink-0 font-mono text-[11px] text-zinc-300">{money(it.cost)}</span>
+                  <span className="shrink-0 font-mono text-[11px] text-zinc-300">{priceLabel(it, currencyNames)}</span>
                 </li>
               ))}
             </ul>

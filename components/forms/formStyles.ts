@@ -7,6 +7,10 @@ export const labelCls =
 export const submitCls =
   "bg-amber-600 hover:bg-amber-500 text-white font-semibold px-6 py-2.5 rounded-lg transition-colors";
 
+/* Narrador — o verde da trilha do narrador (mesmo tom dos CTAs em /narrator). */
+export const submitGreenCls =
+  "bg-green-800 hover:bg-green-700 text-white font-semibold px-6 py-2.5 rounded-lg transition-colors shadow-lg shadow-green-900/30";
+
 export const disabledSubmitCls =
   "bg-zinc-700 text-zinc-500 font-semibold px-6 py-2.5 rounded-lg cursor-not-allowed";
 

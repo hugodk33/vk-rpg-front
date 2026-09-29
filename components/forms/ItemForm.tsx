@@ -8,7 +8,7 @@ import { cancelCls, inputCls, labelCls, submitCls } from "./formStyles";
 import { FIT_OPTIONS } from "@/lib/fit";
 import { DAMAGE_SOURCE_LABELS, DAMAGE_TYPES } from "@/lib/damage";
 import { useTranslation } from "@/lib/i18n";
-import type { ArmorData, GameTableLocations, Item, Weapon, WeaponAttack } from "@/lib/types";
+import type { ArmorData, GameTableItems, GameTableLocations, Item, Weapon, WeaponAttack } from "@/lib/types";
 
 export interface ItemFormProps {
   initial?: Item;
@@ -67,12 +67,14 @@ export default function ItemForm({ initial, tableId, tables, defaultLocationId }
 
   const [currentTableId, setCurrentTableId] = useState(tableId ?? initial?.table_id ?? "");
   const [locationId, setLocationId] = useState(initial?.location_id ?? defaultLocationId ?? "");
-  const [locationOptions, setLocationOptions] = useState<Array<{ id: string; name: string }>>([]);
+    const [locationOptions, setLocationOptions] = useState<Array<{ id: string; name: string }>>([]);
+  const [currencyOptions, setCurrencyOptions] = useState<Array<{ id: string; name: string }>>([]);
   const [name, setName] = useState(initial?.name ?? "");
   const [kind, setKind] = useState(initial?.kind ?? "equipment");
   const [category, setCategory] = useState(initial?.category ?? "");
   const [weight, setWeight] = useState(initial?.weight_lb != null ? String(initial.weight_lb) : "");
   const [cost, setCost] = useState(initial?.cost != null ? String(initial.cost) : "");
+  const [currencyItemId, setCurrencyItemId] = useState(initial?.currency_item_id ?? "");
   const [dimensions, setDimensions] = useState(initial?.dimensions ?? "");
   const [quality, setQuality] = useState(initial?.quality ?? "");
   const [condition, setCondition] = useState(initial?.condition ?? "");
@@ -114,10 +116,20 @@ export default function ItemForm({ initial, tableId, tables, defaultLocationId }
         if (cancel) return;
         setLocationOptions([]);
       });
+    // Catálogo da mesa para o item escolher em que moeda o preço está cotado.
+    api<GameTableItems>(`/game-table-items/${currentTableId}`)
+      .then((d) => {
+        if (cancel) return;
+        setCurrencyOptions((d.items ?? []).filter((it) => it.id !== initial?.id).map((it) => ({ id: it.id, name: it.name })));
+      })
+      .catch(() => {
+        if (cancel) return;
+        setCurrencyOptions([]);
+      });
     return () => {
       cancel = true;
     };
-  }, [currentTableId]);
+  }, [currentTableId, initial?.id]);
 
   function setAttackField(index: number, patch: Partial<WeaponAttack>) {
     setAttacks((prev) => prev.map((a, i) => (i === index ? { ...a, ...patch } : a)));
@@ -214,6 +226,7 @@ export default function ItemForm({ initial, tableId, tables, defaultLocationId }
       category,
       weight_lb: weight === "" ? null : Number(weight),
       cost: cost === "" ? null : Number(cost),
+      currency_item_id: currencyItemId || null,
       dimensions,
       description,
       quality,
@@ -318,7 +331,16 @@ export default function ItemForm({ initial, tableId, tables, defaultLocationId }
             </div>
             <div>
               <label className={labelCls}>{t("fr.item.costDollar")}</label>
-              <input type="number" step="0.01" value={cost} onChange={(e) => setCost(e.target.value)} className={inputCls} />
+              <input type="number" step="1" value={cost} onChange={(e) => setCost(e.target.value)} className={inputCls} />
+            </div>
+            <div>
+              <label className={labelCls}>{t("fr.item.currency")}</label>
+              <select value={currencyItemId} onChange={(e) => setCurrencyItemId(e.target.value)} className={inputCls}>
+                <option value="">{t("fr.item.currencyNone")}</option>
+                {currencyOptions.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
             </div>
             <div>
               <label className={labelCls}>{t("fr.item.dimensions")}</label>

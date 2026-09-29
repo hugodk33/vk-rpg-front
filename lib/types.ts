@@ -325,10 +325,40 @@ export interface Location {
   hex?: LocationHexGrid
   isBattlemap?: boolean
   shopName?: string | null
+  floor?: number | null
+  floorName?: string | null
+  links?: LocationLink[]
   tiles?: HexTile[]
   drawing?: DrawShape[]
   ancestors?: Location[]
   children?: Location[]
+}
+
+export interface LocationConnection {
+  id: string
+  tableId?: string
+  kind: string
+  label?: string
+  description?: string
+  bidirectional?: boolean
+  sort?: number
+  floorFrom?: number
+  floorTo?: number
+  from?: { id?: string; q?: number; r?: number }
+  to?: { id?: string; q?: number; r?: number }
+}
+
+export interface LocationLink {
+  id: string
+  kind: string
+  label?: string
+  description?: string
+  bidirectional?: boolean
+  sort?: number
+  floorFrom?: number
+  floorTo?: number
+  here?: { q?: number; r?: number }
+  partner?: Location
 }
 
 export interface Modifier {
@@ -525,6 +555,7 @@ export interface GameTableLocations {
   table: GameTable | null
   locations: Location[]
   tree?: Location[]
+  connections?: LocationConnection[]
   defaultLocationId?: string | null
 }
 
@@ -544,12 +575,24 @@ export interface TableSettings {
   reaction_mode: "points" | "gm"
   /** O mestre pode adicionar o item diretamente (independente de pontos). */
   gm_adds_item: number
-  /** Item que representa dinheiro (moeda) para a loja inicial. */
+  /**
+   * @deprecated Substituído por `currencies` — uma mesa pode ter várias moedas.
+   */
   money_item_id?: string | null
+  /** Moedas da mesa. Cada uma é um item; `starting_amount` é o que o mestre dá. */
+  currencies?: TableCurrency[]
   /** Loja inicial habilitada. */
   starting_shop: number
   /** Orçamento de pontos para a primeira ficha do jogador. */
   starting_points: number
+}
+
+/** Uma moeda da mesa: o item que a representa e quanto o mestre dá no início. */
+export interface TableCurrency {
+  item_id?: string
+  /** Nome do item-moeda. No padrão do catálogo chega sem `item_id`: o item é criado. */
+  name?: string | null
+  starting_amount: number
 }
 
 /* ============================================================
@@ -680,6 +723,8 @@ export interface Item {
   category?: string
   weight_lb?: number
   cost?: number
+  /** Item-moeda em que o `cost` deste item está cotado. */
+  currency_item_id?: string | null
   dimensions?: string
   description?: string
   quality?: string

@@ -1,8 +1,9 @@
 import { api } from "@/lib/api";
 import { getLang, makeT } from "@/lib/i18n-server";
-import type { GameTableItems, TableSettings } from "@/lib/types";
+import type { GameTable, GameTableItems, TableSettings } from "@/lib/types";
 import TableTabs from "@/components/TableTabs";
 import TableSettingsPanel from "@/components/settings/TableSettingsPanel";
+import GuestNarratorsPanel from "@/components/settings/GuestNarratorsPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -14,12 +15,13 @@ export default async function TableSettingsPage({
   const { id } = await params;
   const t = makeT(await getLang());
 
-  const [settings, items] = await Promise.all([
+  const [settings, items, table] = await Promise.all([
     api<TableSettings>(`/game-table-settings/${id}`).catch(() => null),
     api<GameTableItems>(`/game-table-items/${id}`).catch(() => ({
       table: null,
       items: [],
     })),
+    api<GameTable>(`/game-table/${id}`).catch(() => null),
   ]);
 
   return (
@@ -32,6 +34,12 @@ export default async function TableSettingsPage({
       </div>
 
       <TableSettingsPanel tableId={id} initialSettings={settings} items={items?.items ?? []} />
+
+      {table?.narrator?.userId ? (
+        <div className="mt-4">
+          <GuestNarratorsPanel tableId={id} actorId={table.narrator.userId} />
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { api } from "@/lib/api";
-import type { CharacterViewer } from "@/lib/types";
+import type { CharacterViewer, TableSettings } from "@/lib/types";
 import CharacterForm from "@/components/forms/CharacterForm";
 
 export const dynamic = "force-dynamic";
@@ -16,5 +16,10 @@ export default async function EditCharacterPage({ params }: { params: Promise<{ 
   }
   if (!data) notFound();
 
-  return <CharacterForm initial={data} />;
+  const tableId = data.table?.id;
+  const settings = tableId
+    ? await api<TableSettings>(`/game-table-settings/${tableId}`).catch(() => null)
+    : null;
+
+  return <CharacterForm initial={data} settings={settings} />;
 }

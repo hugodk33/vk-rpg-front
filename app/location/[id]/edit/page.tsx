@@ -14,7 +14,7 @@ export default async function EditLocationPage({
 }) {
   const { id } = await params;
   const sp = await searchParams;
-  const defaultTab = sp.tab === "map" ? "map" : "form";
+  const defaultTab = sp.tab === "map" ? "map" : sp.tab === "links" ? "links" : "form";
 
   let location: Location | undefined;
   try {

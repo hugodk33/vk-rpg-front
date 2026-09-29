@@ -61,6 +61,8 @@ export default function LocationForm({
   const [centerR, setCenterR] = useState(h?.centerR != null ? String(h.centerR) : "0");
   const [orientation, setOrientation] = useState(h?.orientation ?? "flat");
   const [rotationDeg, setRotationDeg] = useState(h?.rotationDeg != null ? String(h.rotationDeg) : "0");
+  const [floor, setFloor] = useState(initial?.floor != null ? String(initial.floor) : "");
+  const [floorName, setFloorName] = useState(initial?.floorName ?? "");
 
   const [kindEdited, setKindEdited] = useState(isEdit);
   const [saving, setSaving] = useState(false);
@@ -131,6 +133,8 @@ export default function LocationForm({
       other,
       shop_name: shopName.trim() || null,
       is_indoor: indoor ? 1 : 0,
+      floor: floor === "" ? null : Number(floor),
+      floor_name: floorName.trim() || null,
       hex: {
         sizeM: sizeNum,
         width: width === "" ? null : Number(width),
@@ -248,6 +252,16 @@ export default function LocationForm({
                   <input type="checkbox" checked={indoor} onChange={(e) => setIndoor(e.target.checked)} className="accent-amber-500" />
                   <span className="text-sm text-zinc-300 font-medium">{t("fr.loc.indoor")}</span>
                 </label>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div>
+                <label className={labelCls}>{t("fr.loc.floor")}</label>
+                <input type="number" step="1" value={floor} onChange={(e) => setFloor(e.target.value)} className={inputCls} placeholder={t("fr.loc.floorPh")} />
+              </div>
+              <div className="md:col-span-3">
+                <label className={labelCls}>{t("fr.loc.floorName")}</label>
+                <input value={floorName} onChange={(e) => setFloorName(e.target.value)} className={inputCls} placeholder={t("fr.loc.floorNamePh")} />
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-3 text-[11px] text-zinc-500">

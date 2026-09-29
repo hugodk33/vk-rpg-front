@@ -15,14 +15,17 @@ import { hexFromPoint } from "@/lib/hexgrid";
 import {
   drawPlateBoard,
   drawPlateDrawing,
+  drawPlateLinks,
   drawPlateTokens,
   drawPlateTrail,
+  hitPlateLink,
   paintCanvas,
   plateCanvas,
   screenToGrid,
   type CanvasPlate,
   type CanvasToken,
   type GridSpec,
+  type PlateLink,
 } from "@/lib/canvasgrid";
 import ZoomControls from "@/components/map/ZoomControls";
 import { useTranslation } from "@/lib/i18n";
@@ -92,6 +95,10 @@ interface TacticalPlateProps {
   trail?: BoardTrail | null;
   /** hex destacado (destino selecionado / origem pintada) */
   mark?: PlatePoint | null;
+  /** passagens que começam neste mapa (badges clicáveis) */
+  links?: PlateLink[];
+  /** resposta a clique numa passagem — leva ao local vizinho */
+  onLinkClick?: (linkId: string) => void;
   /** resposta a clique num hex (modo interativo) */
   onHexClick?: (q: number, r: number) => void;
   accent?: string;
@@ -106,6 +113,8 @@ export default function TacticalPlate({
   tokens = [],
   trail = null,
   mark = null,
+  links = [],
+  onLinkClick,
   onHexClick,
   accent = "#38bdf8",
   R = 24,
@@ -120,6 +129,7 @@ export default function TacticalPlate({
   const [hand, setHand] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [hoverId, setHoverId] = useState<string | null>(null);
+  const [linkHoverId, setLinkHoverId] = useState<string | null>(null);
   const dragRef = useRef<{ pointerId: number; x: number; y: number; moved: boolean } | null>(null);
 
   const toggleHand = () => setHand((h) => !h);
@@ -185,28 +195,35 @@ export default function TacticalPlate({
   );
   const tokenImages = useTokenImages(placed);
 
+  const linkLabelIds = useMemo(() => {
+    const ids = new Set<string>();
+    if (!links.length) return ids;
+    if (links.length <= 3) for (const l of links) ids.add(l.id);
+    if (linkHoverId) ids.add(linkHoverId);
+    return ids;
+  }, [links, linkHoverId]);
+
   useEffect(() => {
     const cv = canvasRef.current;
     if (!cv) return;
     paintCanvas(cv, W, H, (ctx) => {
       drawPlateBoard(ctx, W, H, spec, location?.tiles ?? [], { accent, mark });
       drawPlateDrawing(ctx, W, H, spec, location?.drawing ?? []);
+      drawPlateLinks(ctx, W, H, spec, links, { labelIds: linkLabelIds });
       drawPlateTrail(ctx, W, H, spec, accent, trail?.moves ?? [], "tic", { tokens: placed });
       drawPlateTokens(ctx, W, H, spec, placed, { images: tokenImages, labelId: hoverId });
     }, zoom, fitBox);
-  }, [location, placed, trail, mark, accent, W, H, spec, zoom, fitBox, tokenImages, hoverId]);
+  }, [location, placed, links, linkLabelIds, trail, mark, accent, W, H, spec, zoom, fitBox, tokenImages, hoverId]);
 
-  function locateFromClient(clientX: number, clientY: number): PlatePoint | null {
+  function meshFromClient(clientX: number, clientY: number): { q: number; r: number } | null {
     const cv = canvasRef.current;
     if (!cv) return null;
     const rect = cv.getBoundingClientRect();
-    const cW = drawW * zoom;
-    const cH = drawH * zoom;
     const contentRect = {
       left: rect.left + offX * zoom,
       top: rect.top + offY * zoom,
-      width: cW,
-      height: cH,
+      width: drawW * zoom,
+      height: drawH * zoom,
     };
     const p = screenToGrid(clientX, clientY, contentRect, W, H, spec);
     const cell = hexFromPoint(p.x, p.y, spec.orientation, spec.R);
@@ -214,16 +231,47 @@ export default function TacticalPlate({
     return null;
   }
 
+  /** Mesh-space point (px, no offset) for a client coordinate. */
+  function meshPointFromClient(clientX: number, clientY: number): { x: number; y: number } | null {
+    const cv = canvasRef.current;
+    if (!cv) return null;
+    const rect = cv.getBoundingClientRect();
+    const contentRect = {
+      left: rect.left + offX * zoom,
+      top: rect.top + offY * zoom,
+      width: drawW * zoom,
+      height: drawH * zoom,
+    };
+    return screenToGrid(clientX, clientY, contentRect, W, H, spec);
+  }
+
   function handleClick(e: ReactMouseEvent<HTMLCanvasElement>) {
-    if (!onHexClick || hand) return;
-    const cell = locateFromClient(e.clientX, e.clientY);
+    if (hand) return;
+    if (onLinkClick && links.length) {
+      const p = meshPointFromClient(e.clientX, e.clientY);
+      if (p) {
+        const hit = hitPlateLink(links, p, spec);
+        if (hit) {
+          onLinkClick(hit);
+          return;
+        }
+      }
+    }
+    if (!onHexClick) return;
+    const cell = meshFromClient(e.clientX, e.clientY);
     if (cell) onHexClick(cell.q, cell.r);
   }
 
   function handleHover(e: React.PointerEvent<HTMLCanvasElement>) {
-    const cell = locateFromClient(e.clientX, e.clientY);
+    const cell = meshFromClient(e.clientX, e.clientY);
     const token = cell ? placed.find((t) => t.q === cell.q && t.r === cell.r) ?? null : null;
     setHoverId(token ? token.id : null);
+    if (links.length) {
+      const p = meshPointFromClient(e.clientX, e.clientY);
+      setLinkHoverId(p ? hitPlateLink(links, p, spec) : null);
+    } else {
+      setLinkHoverId(null);
+    }
   }
 
   function onPanDown(e: React.PointerEvent<HTMLDivElement>) {
@@ -258,7 +306,7 @@ export default function TacticalPlate({
         ref={scrollerRef}
         className={`relative overflow-auto select-none ${fill ? "h-full" : ""}`}
         style={{
-          cursor: hand ? (dragging ? "grabbing" : "grab") : onHexClick ? "pointer" : undefined,
+          cursor: hand ? (dragging ? "grabbing" : "grab") : onHexClick || (onLinkClick && linkHoverId) ? "pointer" : undefined,
           touchAction: hand ? "none" : undefined,
         }}
         onPointerDown={onPanDown}

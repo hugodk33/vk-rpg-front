@@ -6,7 +6,7 @@
 export const PT: Record<string, string> = {
   /* ---------- Locais (app/table/[id]/locations) ---------- */
   "tp.title": "Locais",
-  "tp.new": "+ Novo local",
+  "tp.new": "Novo local",
   "tp.count": "{n} locais",
   "tp.countOne": "{n} local",
   "tp.roots": "{n} raízes de território",
@@ -48,12 +48,13 @@ export const PT: Record<string, string> = {
   "tp.locKind.generic": "Local",
 
   /* ---------- Ações de criação (adicionar) ---------- */
-  "tp.add.advantage": "+ Vantagem",
-  "tp.add.character": "+ Personagem",
-  "tp.add.disadvantage": "+ Desvantagem",
-  "tp.add.item": "+ Item",
-  "tp.add.placeCharacter": "+ Colocar personagem",
-  "tp.add.skill": "+ Perícia",
+  /* O "+" fica no template do botão — o rótulo é só o texto. */
+  "tp.add.advantage": "Vantagem",
+  "tp.add.character": "Personagem",
+  "tp.add.disadvantage": "Desvantagem",
+  "tp.add.item": "Item",
+  "tp.add.placeCharacter": "Colocar personagem",
+  "tp.add.skill": "Perícia",
 
   /* ---------- Catálogo de itens ---------- */
   "tp.items.empty": "Nenhum item no catálogo ainda.",
@@ -165,7 +166,7 @@ export const PT: Record<string, string> = {
 
 export const EN: Record<string, string> = {
   "tp.title": "Locations",
-  "tp.new": "+ New location",
+  "tp.new": "New location",
   "tp.count": "{n} locations",
   "tp.countOne": "{n} location",
   "tp.roots": "{n} territory roots",
@@ -207,12 +208,13 @@ export const EN: Record<string, string> = {
   "tp.locKind.generic": "Place",
 
   /* ---------- Add actions ---------- */
-  "tp.add.advantage": "+ Advantage",
-  "tp.add.character": "+ Character",
-  "tp.add.disadvantage": "+ Disadvantage",
-  "tp.add.item": "+ Item",
-  "tp.add.placeCharacter": "+ Place character",
-  "tp.add.skill": "+ Skill",
+  /* The "+" lives in the button template — the label is text only. */
+  "tp.add.advantage": "Advantage",
+  "tp.add.character": "Character",
+  "tp.add.disadvantage": "Disadvantage",
+  "tp.add.item": "Item",
+  "tp.add.placeCharacter": "Place character",
+  "tp.add.skill": "Skill",
 
   /* ---------- Item catalog ---------- */
   "tp.items.empty": "No items in the catalog yet.",

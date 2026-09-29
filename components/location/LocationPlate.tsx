@@ -55,6 +55,8 @@ interface Loc {
   country?: string;
   area?: string;
   dimensions?: string;
+  floor?: number | null;
+  floorName?: string | null;
   description?: string;
   other?: string;
   hex?: LocHex;
@@ -330,6 +332,14 @@ export default function LocationPlate({ location, tableId, mode = "narrator" }: 
                   {t("lc.common.edit")}
                 </Link>
               ) : null}
+              {location.id && !isPlayer ? (
+                <Link
+                  href={`/location/${location.id}/edit?tab=links`}
+                  className={`font-mono text-[10px] tracking-widest uppercase text-zinc-500 ${chromeHover} transition-colors`}
+                >
+                  {t("lc.conn.title")}
+                </Link>
+              ) : null}
               {baseTableId && location.id && !isPlayer ? (
                 <Link
                   href={`/table/${baseTableId}/locations/new?parent_id=${location.id}`}
@@ -490,6 +500,9 @@ export default function LocationPlate({ location, tableId, mode = "narrator" }: 
                       <SurveyRow label={t("lc.common.scale")} value={formatScale(hex?.sizeM)} emphasize hex={accent} />
                       <SurveyRow label={t("lc.common.area")} value={hex?.width != null && hex?.height != null ? `${hex.width}×${hex.height} hex` : null} hex={accent} />
                       <SurveyRow label={t("lc.lp.qr")} value={hex?.centerQ != null && hex?.centerR != null ? `${hex.centerQ}, ${hex.centerR}` : null} hex={accent} />
+                      {location.floor != null ? (
+                        <SurveyRow label={t("lc.lp.floor")} value={location.floorName ?? (location.floor === 0 ? t("lc.floor.ground") : interpolate(t(location.floor > 0 ? "lc.floor.above" : "lc.floor.below"), { n: Math.abs(location.floor) }))} hex={accent} />
+                      ) : null}
                       {chain.length > 1 ? (
                         <SurveyRow label={t("lc.lp.qrAbs")} value={`${abs.q}, ${abs.r}`} hex={accent} />
                       ) : null}

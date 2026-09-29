@@ -20,7 +20,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { Location, Narration, NarrationAction, Scene, TableCharacter, VisibilityRule } from "@/lib/types";
+import type { Location, LocationConnection, Narration, NarrationAction, Scene, TableCharacter, VisibilityRule } from "@/lib/types";
 import { narrationBoardAt } from "@/lib/board";
 import type { BoardToken } from "@/lib/board";
 import { maskedLocationName, maskedTargetName } from "@/lib/visibility";
@@ -64,6 +64,8 @@ const toneOf = (isPlayer: boolean) => ({
 interface MapLogProps {
   scenes: Scene[];
   locations: Location[];
+  /** passagens entre mapas (connection_id já filtrado/mascarado p/ player). */
+  connections?: LocationConnection[];
   /** roster to complete token names (fallback when a beat lacks a token). */
   characters?: TableCharacter[];
   npcIds?: string[];
@@ -84,6 +86,7 @@ interface MapLogProps {
 export default function MapLog({
   scenes,
   locations,
+  connections = [],
   characters = [],
   npcIds = [],
   role = "narrator",
@@ -146,7 +149,10 @@ export default function MapLog({
   /* ---- primary vs sublocation: the default/master map keeps the full
      log layout; a sublocation opens as a location card above the map,
      with the region's selector pinned to the card's bottom. ---- */
-  const primaryLoc = useMemo(() => {
+  /* the default/master map keeps the full log layout; a sublocation opens
+     as a location card above the map, with the region's selector pinned
+     to the card's bottom. */
+  const primaryLoc = (() => {
     if (defaultLocationId) return locations.find((l) => l.id === defaultLocationId) ?? null;
     let cur = derivedMapLocation;
     if (!cur) return null;
@@ -158,9 +164,9 @@ export default function MapLog({
       cur = p;
     }
     return cur;
-  }, [defaultLocationId, locations, derivedMapLocation]);
+  })();
 
-  const group = useMemo(() => floorPlanGroup(mapLocation, locations), [mapLocation, locations]);
+  const group = floorPlanGroup(mapLocation, locations);
   const isSubView = !!(primaryLoc && mapLocation && mapLocation.id !== primaryLoc.id);
   const groupSiblings = group.length > 1 ? group.length - 1 : (mapLocation?.children?.length ?? 0);
   /* visibilidade no player SEMPRE: um local FORA do catálogo do observador
@@ -198,6 +204,52 @@ export default function MapLog({
         : "…"
       : mapLocation.name || t("lc.common.noName")
     : null;
+
+  /* ---- passagens: as conexões que começam/terminam no mapa em foco,
+     com o hex "here" do lado deste local (q/r). No player o servidor já
+     cortou as desconhecidas e mascarou rótulos. ---- */
+  const shownLinks = (() => {
+    if (!mapLocation) return [];
+    return connections
+      .filter(
+        (c) => (c.from?.id && c.from.id === mapLocation.id) || (c.to?.id && c.to.id === mapLocation.id)
+      )
+      .map((c) => {
+        const here =
+          c.from?.id === mapLocation.id
+            ? { q: c.from?.q ?? null, r: c.from?.r ?? null }
+            : { q: c.to?.q ?? null, r: c.to?.r ?? null };
+        return {
+          id: c.id,
+          kind: c.kind,
+          label: c.label,
+          description: c.description,
+          floorFrom: c.floorFrom,
+          floorTo: c.floorTo,
+          bidirectional: c.bidirectional,
+          here,
+        };
+      });
+  })();
+
+  function handleLinkClick(linkId: string) {
+    if (!mapLocation) return;
+    const c = connections.find((x) => x.id === linkId);
+    if (!c) return;
+    const target = c.from?.id === mapLocation.id ? c.to?.id : c.from?.id;
+    if (target && locations.some((l) => l.id === target)) setLocOverride(target);
+  }
+
+  const floorChip = (() => {
+    if (!mapLocation || !locRevealed) return null;
+    if (mapLocation.floorName) return mapLocation.floorName;
+    if (mapLocation.floor == null) return null;
+    if (mapLocation.floor === 0) return t("lc.floor.ground");
+    return interpolate(
+      t(mapLocation.floor > 0 ? "lc.floor.above" : "lc.floor.below"),
+      { n: Math.abs(mapLocation.floor) }
+    );
+  })();
 
   /* ---- tokens: roster completes anyone a beat doesn't place ---- */
   const rosterTokens: BoardToken[] = characters.map((c) => ({
@@ -398,6 +450,11 @@ export default function MapLog({
                         {kindLabel}
                         {locRevealed && mapLocation.hex?.sizeM != null ? ` · ${formatHexScale(mapLocation.hex.sizeM)}` : ""}
                       </span>
+                      {floorChip ? (
+                        <span className="inline-flex items-center gap-1 font-mono text-[9px] tracking-widest uppercase px-1.5 py-0.5 rounded-full bg-teal-400/10 border border-teal-400/30 text-teal-300 shrink-0">
+                          {floorChip}
+                        </span>
+                      ) : null}
                       {primaryLoc && mapLocation.id === primaryLoc.id ? (
                         <span className="inline-flex items-center gap-1 font-mono text-[9px] tracking-widest uppercase px-1.5 py-0.5 rounded-full bg-amber-400/15 text-amber-300 shrink-0">
                           <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1.8"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" /></svg>
@@ -451,6 +508,12 @@ export default function MapLog({
                     {mapLocation.hex.width}×{mapLocation.hex.height} hex · {mapLocation.hex.sizeM ?? 1}m/hex
                   </span>
                 ) : null}
+                {floorChip ? (
+                  <span className="inline-flex items-center gap-1 font-mono text-[9px] tracking-widest uppercase px-2 py-0.5 rounded-full bg-teal-400/10 border border-teal-400/30 text-teal-300 shrink-0">
+                    <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" /></svg>
+                    {floorChip}
+                  </span>
+                ) : null}
                 {effAction?.locationId && actionLoc && actionLoc.id !== effBeat?.location?.id ? (
                   <span className="font-mono text-[10px] uppercase tracking-widest px-2 py-0.5 rounded border border-amber-500/40 text-amber-300">
                     {t("lc.log.actionElsewhere")}
@@ -464,6 +527,8 @@ export default function MapLog({
                   location={mapLocation}
                   tokens={mapTokens}
                   trail={board.trail}
+                  links={shownLinks}
+                  onLinkClick={handleLinkClick}
                   mark={effAction && effAction.q != null && effAction.r != null ? { q: effAction.q, r: effAction.r } : null}
                   accent={tone.accent}
                   R={24}

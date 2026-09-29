@@ -2,9 +2,12 @@
 
 import { useState } from "react";
 import type { ReactNode } from "react";
+import { Trash2 } from "lucide-react";
+import { CURRENCY_PRESETS, DEFAULT_CURRENCY_PRESET } from "@/lib/currency";
+import type { CurrencyPreset } from "@/lib/currency";
 import { api } from "@/lib/api";
 import { useTranslation } from "@/lib/i18n";
-import type { Item, TableSettings } from "@/lib/types";
+import type { Item, TableCurrency, TableSettings } from "@/lib/types";
 
 /* ============================================================
    Table Settings — regras de mesa configuráveis por tabela.
@@ -92,22 +95,63 @@ export default function TableSettingsPanel({
     gm_adds_item: 1,
     money_item_id: null,
     starting_shop: 0,
-    starting_points: 150,
+    starting_points: 0,
+    currencies: [] as TableCurrency[],
   };
-
   const [turnEndMode, setTurnEndMode] = useState<"after_test" | "after_move">(s.turn_end_mode);
   const [itemMode, setItemMode] = useState<"points" | "gm">(s.item_mode);
   const [reactionMode, setReactionMode] = useState<"points" | "gm">(s.reaction_mode);
   const [gmAddsItem, setGmAddsItem] = useState(Boolean(s.gm_adds_item));
-  const [moneyItemId, setMoneyItemId] = useState(s.money_item_id ?? "");
+  // A maioria das mesas usa UMA moeda, então o padrão já vem escolhido; as
+  // extras são só para quem realmente precisa de mais de uma.
+  const [standard, setStandard] = useState<CurrencyPreset>(DEFAULT_CURRENCY_PRESET);
+  const [standardAmount, setStandardAmount] = useState(0);
+  const [extras, setExtras] = useState<TableCurrency[]>(s.currencies ?? []);
   const [startingShop, setStartingShop] = useState(Boolean(s.starting_shop));
-  const [startingPoints, setStartingPoints] = useState(s.starting_points ?? 150);
+  const [startingPoints, setStartingPoints] = useState(s.starting_points ?? 0);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Ao abrir uma mesa já configurada, o padrão passa a ser a moeda que ela já
+  // tem (caso contrário o catálogo padrão sobrescreveria o que foi escolhido).
+  const [hydrated, setHydrated] = useState(false);
+  if (!hydrated) {
+    setHydrated(true);
+    const first = (s.currencies ?? [])[0]
+    if (first) {
+      setStandard({
+        value: first.item_id ?? first.name ?? "generic",
+        name: first.name ?? DEFAULT_CURRENCY_PRESET.name,
+        label: first.name ?? DEFAULT_CURRENCY_PRESET.label,
+        symbol: DEFAULT_CURRENCY_PRESET.symbol,
+      })
+      setExtras((s.currencies ?? []).slice(1))
+      setStandardAmount(first.starting_amount ?? 0)
+    }
+  }
+
+  // Uma moeda por linha nas extras: escolhe o item e quanto o mestre dá.
+  function addExtra() {
+    const used = new Set(extras.map((c) => c.item_id).filter(Boolean))
+    used.add(standard.name)
+    const next = items.find((it) => !used.has(it.id))
+    setExtras((prev) => [
+      ...prev,
+      next ? { item_id: next.id, name: next.name, starting_amount: 0 } : { name: "", starting_amount: 0 },
+    ])
+  }
+
+  function setExtra(index: number, patch: Partial<TableCurrency>) {
+    setExtras((prev) => prev.map((c, i) => (i === index ? { ...c, ...patch } : c)))
+  }
+
+  function removeExtra(index: number) {
+    setExtras((prev) => prev.filter((_, i) => i !== index))
+  }
+
   async function save() {
-    setSaving(true);
-    setError(null);
+    setSaving(true)
+    setError(null)
     try {
       await api("/game-table-settings", {
         method: "PUT",
@@ -117,7 +161,10 @@ export default function TableSettingsPanel({
           item_mode: itemMode,
           reaction_mode: reactionMode,
           gm_adds_item: gmAddsItem ? 1 : 0,
-          money_item_id: moneyItemId || null,
+          currencies: [
+            { name: standard.name, starting_amount: standardAmount },
+            ...extras.filter((c) => c.item_id || c.name),
+          ],
           starting_shop: startingShop ? 1 : 0,
           starting_points: startingPoints,
         }),
@@ -221,25 +268,124 @@ export default function TableSettingsPanel({
             </span>
           </label>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <label className="block">
-              <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-500 block mb-1.5">{t("vs.sp.moneyItem")}</span>
-              <select
-                value={moneyItemId}
-                onChange={(e) => setMoneyItemId(e.target.value)}
-                className="w-full bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-3 py-2 text-zinc-100 text-sm focus:outline-none focus:border-emerald-600/60"
-              >
-                <option value="" className="bg-zinc-800">{t("vs.sp.noCurrency")}</option>
-                {items.map((it) => (
-                  <option key={it.id} value={it.id} className="bg-zinc-800">
-                    {it.name}
-                    {typeof it.cost === "number" ? ` — $${it.cost}` : ""}
-                  </option>
-                ))}
-              </select>
-            </label>
+          {/* ---- moeda padrão: uma só, como em LOCATION_KINDS ---- */}
+          <div className="space-y-2">
+            <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">
+              {t("vs.sp.standardCurrency")}
+            </span>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+              {CURRENCY_PRESETS.map((p) => (
+                <button
+                  key={p.value}
+                  type="button"
+                  onClick={() => setStandard(p)}
+                  className={`text-left rounded-lg border px-3 py-2 transition-colors ${
+                    standard.value === p.value
+                      ? "border-emerald-600/70 bg-emerald-900/20"
+                      : "border-zinc-700/50 bg-zinc-800/40 hover:border-zinc-600"
+                  }`}
+                >
+                  <span className="block text-sm font-medium text-zinc-200">
+                    {t(`vs.sp.cur.${p.value}`)}
+                  </span>
+                  <span className="block text-[10px] text-zinc-500 mt-0.5">{p.symbol}</span>
+                </button>
+              ))}
+            </div>
+            <div className="flex items-center gap-2 pt-1">
+              <span className="text-xs text-zinc-500">{t("vs.sp.startingAmount")}</span>
+              <input
+                type="number"
+                min={0}
+                step={1}
+                value={standardAmount}
+                onChange={(e) =>
+                  setStandardAmount(Math.max(0, Math.floor(Number(e.target.value) || 0)))
+                }
+                className="w-24 bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-3 py-2 text-zinc-100 text-sm focus:outline-none focus:border-emerald-600/60"
+              />
+              <span className="text-xs text-zinc-500">{standard.name}</span>
+            </div>
+            <p className="text-xs text-zinc-500">{t("vs.sp.currenciesBody")}</p>
+          </div>
 
-            <label className="flex items-start gap-3 cursor-pointer select-none pt-6">
+          {/* ---- outras moedas: a exceção ---- */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between gap-3">
+              <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">
+                {t("vs.sp.extraCurrencies")}
+              </span>
+              <button
+                type="button"
+                onClick={addExtra}
+                className="text-xs font-semibold text-emerald-400 hover:text-emerald-300"
+              >
+                {t("vs.sp.addCurrency")}
+              </button>
+            </div>
+
+            {extras.length === 0 ? (
+              <p className="text-xs text-zinc-500">{t("vs.sp.singleCurrency")}</p>
+            ) : (
+              <ul className="space-y-2">
+                {extras.map((c, i) => {
+                  const used = new Set(
+                    extras.filter((_, j) => j !== i).map((o) => o.item_id).filter(Boolean)
+                  )
+                  return (
+                    <li key={i} className="flex items-center gap-2">
+                      <select
+                        value={c.item_id ?? ""}
+                        onChange={(e) => {
+                          const it = items.find((x) => x.id === e.target.value)
+                          setExtra(i, { item_id: e.target.value, name: it?.name ?? c.name })
+                        }}
+                        className="flex-1 bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-3 py-2 text-zinc-100 text-sm focus:outline-none focus:border-emerald-600/60"
+                      >
+                        <option value="" className="bg-zinc-800">
+                          {t("vs.sp.pickCurrency")}
+                        </option>
+                        {items.map((it) => (
+                          <option
+                            key={it.id}
+                            value={it.id}
+                            disabled={used.has(it.id)}
+                            className="bg-zinc-800"
+                          >
+                            {it.name}
+                          </option>
+                        ))}
+                      </select>
+                      <input
+                        type="number"
+                        min={0}
+                        step={1}
+                        value={c.starting_amount}
+                        onChange={(e) =>
+                          setExtra(i, {
+                            starting_amount: Math.max(0, Math.floor(Number(e.target.value) || 0)),
+                          })
+                        }
+                        aria-label={t("vs.sp.startingAmount")}
+                        className="w-24 bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-3 py-2 text-zinc-100 text-sm focus:outline-none focus:border-emerald-600/60"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeExtra(i)}
+                        aria-label={t("vs.sp.removeCurrency")}
+                        className="p-2 text-zinc-500 hover:text-red-400 transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </li>
+                  )
+                })}
+              </ul>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <label className="flex items-start gap-3 cursor-pointer select-none">
               <input
                 type="checkbox"
                 checked={startingShop}
@@ -287,10 +433,12 @@ export default function TableSettingsPanel({
               type="number"
               min={0}
               max={100000}
-              value={startingPoints}
+              value={startingPoints || ""}
+              placeholder={t("vs.sp.noPoints")}
               onChange={(e) => {
                 const v = Number(e.target.value);
-                if (Number.isFinite(v) && v >= 0) setStartingPoints(Math.floor(v));
+                if (e.target.value === "") setStartingPoints(0);
+                else if (Number.isFinite(v) && v >= 0) setStartingPoints(Math.floor(v));
               }}
               className="w-full max-w-xs bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-3 py-2 text-zinc-100 text-sm focus:outline-none focus:border-emerald-600/60"
             />

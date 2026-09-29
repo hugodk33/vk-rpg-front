@@ -25,21 +25,15 @@ import type {
   SkillItem,
   TableSettings,
 } from "@/lib/types";
+import { INK, INK_PAGE, INK_LABEL } from "@/lib/ink";
 
 /* ------------------------------------------------------------
-   Paleta (mesa à noite) — mesma identidade do wizard.
+   Paleta: vem de lib/ink.ts, a mesma fonte da trilha do
+   narrador, para as duas se lerem como a mesma coisa.
    ------------------------------------------------------------ */
 
-const COLORS = {
-  ink: "#0E110D",
-  tabletone: "#182018",
-  parchment: "#EDE6CE",
-  ember: "#E07B3A",
-  brass: "#A9A177",
-  moss: "#7E876A",
-};
-
-const mono = "font-mono uppercase tracking-[0.14em] text-[11px]";
+const COLORS = INK;
+const mono = INK_LABEL;
 
 /* ------------------------------------------------------------
    Custos de atributo/perícia (GURPS) — mesmas tabelas da ficha.
@@ -129,7 +123,10 @@ export default function PlayerFirstSheet({ tableId, tableTitle, initialSettings,
   const router = useRouter();
   const { t } = useTranslation();
 
-  const budget = Math.max(0, initialSettings?.starting_points ?? 150);
+  // O mestre define a quantidade nas regras da mesa. 0 = não definido: sem
+  // medidor e sem limite — os itens vêm do mestre ou de moeda.
+  const budget = Math.max(0, initialSettings?.starting_points ?? 0);
+  const hasBudget = budget > 0;
   const players = useMemo(() => users.filter((u) => u.type !== 2), [users]);
 
   const [who, setWho] = useState<string>(() => {
@@ -192,11 +189,11 @@ export default function PlayerFirstSheet({ tableId, tableTitle, initialSettings,
     return attrCost + advCost - disCost + skCost - peculiarities.length;
   }, [attrs, selAdv, selDis, selSkills, peculiarities]);
 
-  const over = spent > budget;
+  const over = hasBudget && spent > budget;
   const remaining = budget - spent;
 
   function adjAttr(key: "st" | "dx" | "iq" | "ht", delta: number) {
-    if (delta > 0 && spent + ATTR_COSTS[key] > budget) return;
+    if (hasBudget && delta > 0 && spent + ATTR_COSTS[key] > budget) return;
     const next = attrs[key] + delta;
     if (next < 1 || next > 50) return;
     setAttrs((prev) => ({ ...prev, [key]: next }));
@@ -337,9 +334,15 @@ export default function PlayerFirstSheet({ tableId, tableTitle, initialSettings,
         advantages: selAdv.map((a) => ({ advantage_id: a.id, name: a.name, cost_points: a.cost_points, effect: "" })),
         disadvantages: selDis.map((d) => ({ disadvantage_id: d.id, name: d.name, cost_points: d.cost_points, effect: "" })),
         skills: selSkills.map((s) => ({ skill_id: s.id, cost_points: s.cost_points, effect: "" })),
-        equipment: selItems.map((i) => ({ item_id: i.id, quantity: 1, status: "in_inventory", location: "none" })),
+        equipment: [
+          ...selItems.map((i) => ({ item_id: i.id, quantity: 1, status: "in_inventory", location: "none" })),
+          // As moedas vêm do mestre; some uma moeda também escolhida à mão.
+          ...grantedCurrencies
+            .filter((c) => !selItems.some((i) => i.id === c.item_id))
+            .map((c) => ({ item_id: c.item_id, quantity: c.amount, status: "in_inventory", location: "none" })),
+        ],
         peculiarities,
-        respect_budget: true,
+        respect_budget: hasBudget,
       });
       router.push(`/player/character/${result.character_id}/session`);
       router.refresh();
@@ -349,7 +352,16 @@ export default function PlayerFirstSheet({ tableId, tableTitle, initialSettings,
     }
   }
 
-  const pct = budget > 0 ? Math.max(0, Math.min(100, (spent / budget) * 100)) : 0;
+  const pct = hasBudget ? Math.max(0, Math.min(100, (spent / budget) * 100)) : 0;
+
+  // Moedas que o mestre definiu nas regras da mesa: o jogador recebe a
+  // quantidade inicial, não escolhe — o item é uma moeda da mesa. O nome vem
+  // das próprias regras, então não precisa resolver o catálogo de itens.
+  const grantedCurrencies: Array<{ item_id: string; amount: number; name: string }> = [];
+  for (const c of initialSettings?.currencies ?? []) {
+    if (c.starting_amount <= 0 || !c.item_id || !c.name) continue;
+    grantedCurrencies.push({ item_id: c.item_id, amount: c.starting_amount, name: c.name });
+  }
 
   const rulesTags: string[] = [
     initialSettings?.turn_end_mode === "after_move" ? t("p.ruleMove") : t("p.ruleTurn"),
@@ -357,7 +369,7 @@ export default function PlayerFirstSheet({ tableId, tableTitle, initialSettings,
   ];
 
   return (
-    <div className="min-h-[80vh]" style={{ background: `radial-gradient(1100px 500px at 20% -10%, #18201866, transparent 60%), ${COLORS.ink}` }}>
+    <div className="min-h-[80vh]" style={{ background: INK_PAGE }}>
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
         {/* ---- breadcrumb ---- */}
         <a
@@ -384,25 +396,36 @@ export default function PlayerFirstSheet({ tableId, tableTitle, initialSettings,
         <div className="mt-6 rounded-xl border border-[#A9A177]/25 bg-[#182018]/70 p-4">
           <div className="flex flex-col sm:flex-row sm:items-center gap-3">
             <div className="flex-1">
-              <div className="flex items-baseline justify-between gap-3">
-                <span className={mono} style={{ color: COLORS.moss }}>
-                  {t("p.budgetTitle")}
-                </span>
-                <span
-                  className={`font-mono tabular-nums text-sm font-bold ${over ? "text-red-400" : "text-[#E07B3A]"}`}
-                >
-                  {formatPoints(spent)} / {formatPoints(budget)} · {Math.max(0, remaining)} {t("p.remaining")}
-                </span>
-              </div>
-              <div className="mt-2 h-1.5 rounded-full bg-[#0E110D] overflow-hidden">
-                <div
-                  className="h-full rounded-full transition-all"
-                  style={{
-                    width: `${pct}%`,
-                    background: over ? "#f87171" : COLORS.ember,
-                  }}
-                />
-              </div>
+              {hasBudget ? (
+                <>
+                  <div className="flex items-baseline justify-between gap-3">
+                    <span className={mono} style={{ color: COLORS.moss }}>
+                      {t("p.budgetTitle")}
+                    </span>
+                    <span
+                      className={`font-mono tabular-nums text-sm font-bold ${over ? "text-red-400" : "text-[#E07B3A]"}`}
+                    >
+                      {formatPoints(spent)} / {formatPoints(budget)} · {Math.max(0, remaining)} {t("p.remaining")}
+                    </span>
+                  </div>
+                  <div className="mt-2 h-1.5 rounded-full bg-[#0E110D] overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all"
+                      style={{
+                        width: `${pct}%`,
+                        background: over ? "#f87171" : COLORS.ember,
+                      }}
+                    />
+                  </div>
+                </>
+              ) : (
+                <div>
+                  <span className={mono} style={{ color: COLORS.moss }}>
+                    {t("p.budgetTitle")}
+                  </span>
+                  <p className="mt-1 text-sm text-[#7E876A]">{t("p.budgetNone")}</p>
+                </div>
+              )}
             </div>
             <div className="flex flex-wrap gap-1.5 shrink-0">
               {rulesTags.map((tag) => (
@@ -415,6 +438,29 @@ export default function PlayerFirstSheet({ tableId, tableTitle, initialSettings,
               ))}
             </div>
           </div>
+
+          {/* ---- moedas que o mestre destinou ---- */}
+          {grantedCurrencies.length > 0 && (
+            <div className="mt-4 pt-4 border-t border-[#A9A177]/20 flex flex-wrap items-center gap-2">
+              <span className={mono} style={{ color: COLORS.moss }}>
+                {t("p.currencyTitle")}
+              </span>
+              {grantedCurrencies.map((c) => (
+                <span
+                  key={c.item_id}
+                  className="inline-flex items-baseline gap-1.5 rounded-full border border-[#A9A177]/30 bg-[#0E110D]/60 px-2.5 py-1"
+                >
+                  <span
+                    className="font-mono tabular-nums text-sm font-bold"
+                    style={{ color: COLORS.ember }}
+                  >
+                    {formatPoints(c.amount)}
+                  </span>
+                  <span className="text-xs text-[#A9A177]">{c.name}</span>
+                </span>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="mt-8 space-y-6">
@@ -709,7 +755,7 @@ export default function PlayerFirstSheet({ tableId, tableTitle, initialSettings,
               type="button"
               onClick={() => void doSave()}
               disabled={saving || over || !name.trim() || !who}
-              className="text-sm font-semibold px-6 py-2.5 rounded-lg text-[#0E110D] bg-[#E07B3A] hover:brightness-110 transition-all disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-[#E07B3A]/70"
+              className="text-sm font-semibold px-6 py-2.5 rounded-lg text-blue-950 bg-blue-600 hover:bg-blue-500 shadow-lg shadow-blue-900/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/70"
             >
               {saving ? t("p.saving") : t("p.save")}
             </button>

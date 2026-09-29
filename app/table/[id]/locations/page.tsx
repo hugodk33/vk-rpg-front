@@ -109,7 +109,7 @@ export default function TableLocationsPage({ params }: { params: Promise<{ id: s
           href={`/table/${id}/locations/new${active ? `?parent_id=${active.node.id}` : ""}`}
           className="shrink-0 inline-flex items-center gap-1.5 bg-teal-600 hover:bg-teal-500 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500/60"
         >
-          <span>{t("tp.new")}</span>
+          <span>+ {t("tp.new")}</span>
         </Link>
       </div>
 

@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import LocationForm from "@/components/forms/LocationForm";
 import MapStudio from "@/components/location/MapStudio";
+import LocationLinks from "@/components/location/LocationLinks";
 import { interpolate, useTranslation } from "@/lib/i18n";
 import type { Location } from "@/lib/types";
 
@@ -16,11 +17,12 @@ import type { Location } from "@/lib/types";
    (max-w-5xl) used by the survey plates.
    ============================================================ */
 
-type EditorTab = "form" | "map";
+type EditorTab = "form" | "map" | "links";
 
 const EDITOR_TABS: Array<{ key: EditorTab; label: string; hint: string }> = [
   { key: "form", label: "lc.editor.tab.form", hint: "lc.editor.hint.form" },
   { key: "map", label: "lc.editor.tab.map", hint: "lc.editor.hint.map" },
+  { key: "links", label: "lc.editor.tab.links", hint: "lc.editor.hint.links" },
 ];
 
 export default function LocationEditor({
@@ -34,7 +36,7 @@ export default function LocationEditor({
   allLocations: Location[];
   defaultTab?: EditorTab;
 }) {
-  const [tab, setTab] = useState<EditorTab>(defaultTab === "map" ? "map" : "form");
+  const [tab, setTab] = useState<EditorTab>(defaultTab);
   const { t } = useTranslation();
   const baseTableId = tableId ?? location.tableId;
   const backHref = baseTableId ? `/table/${baseTableId}/locations` : "/narrator";
@@ -68,7 +70,7 @@ export default function LocationEditor({
               {location.name || t("lc.common.unmapped")}
             </h1>
             <p className="mt-1.5 font-mono text-[10px] uppercase tracking-widest text-zinc-600">
-              {tab === "map" ? t("lc.editor.subMap") : t("lc.editor.subForm")}
+              {tab === "map" ? t("lc.editor.subMap") : tab === "links" ? t("lc.editor.subLinks") : t("lc.editor.subForm")}
             </p>
           </div>
           <Link
@@ -112,8 +114,10 @@ export default function LocationEditor({
         <div className="px-6 py-8 lg:px-8" role="tabpanel">
           {tab === "form" ? (
             <LocationForm initial={location} tableId={baseTableId} allLocations={allLocations} />
-          ) : (
+          ) : tab === "map" ? (
             <MapStudio location={location} />
+          ) : (
+            <LocationLinks location={location} allLocations={allLocations} />
           )}
         </div>
       </div>
