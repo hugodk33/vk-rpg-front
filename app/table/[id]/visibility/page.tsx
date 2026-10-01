@@ -1,5 +1,6 @@
 import { api } from "@/lib/api";
 import { getLang, makeT } from "@/lib/i18n-server";
+import { getNarratorSideView } from "@/lib/actor";
 import type {
   GameTableAdvantages,
   GameTableCharacters,
@@ -21,6 +22,9 @@ export default async function TableVisibilityPage({
 }) {
   const { id } = await params;
   const t = makeT(await getLang());
+
+
+  const { query: actorQs } = await getNarratorSideView(id);
   const [chars, items, skills, advantages, disadvantages, locations, scenes] =
     await Promise.all([
       api<GameTableCharacters>(`/game-table-characters/${id}`),
@@ -28,7 +32,7 @@ export default async function TableVisibilityPage({
       api<GameTableSkills>(`/game-table-skills/${id}`),
       api<GameTableAdvantages>(`/game-table-advantages/${id}`),
       api<GameTableDisadvantages>(`/game-table-disadvantages/${id}`),
-      api<GameTableLocations>(`/game-table-locations/${id}`),
+      api<GameTableLocations>(`/game-table-locations/${id}${actorQs}`),
       api<GameTableScenes>(`/game-table-scenes/${id}`),
     ]);
 

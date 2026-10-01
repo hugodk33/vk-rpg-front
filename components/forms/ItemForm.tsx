@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
+import { seatActorQuery } from "@/lib/seat";
 import { submitJson } from "./submit";
 import { cancelCls, inputCls, labelCls, submitCls } from "./formStyles";
 import { FIT_OPTIONS } from "@/lib/fit";
@@ -107,7 +108,7 @@ export default function ItemForm({ initial, tableId, tables, defaultLocationId }
   useEffect(() => {
     if (!currentTableId) return;
     let cancel = false;
-    api<GameTableLocations>(`/game-table-locations/${currentTableId}`)
+    api<GameTableLocations>(`/game-table-locations/${currentTableId}${seatActorQuery()}`)
       .then((d) => {
         if (cancel) return;
         setLocationOptions((d.locations ?? []).map((l) => ({ id: l.id, name: l.name })));

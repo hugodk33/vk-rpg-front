@@ -12,9 +12,9 @@ export default async function PlayerCharacterSessionPage({
   const { id } = await params;
   const data = await loadPlayerConsole(id);
 
-  if (!data.character) {
-    redirect("/player");
-  }
+if (!data.character || !data.mayView) {
+      redirect("/player");
+    }
   const basePath = `/player/character/${id}`;
 
   return (

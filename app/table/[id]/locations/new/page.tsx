@@ -1,4 +1,5 @@
 import { api } from "@/lib/api";
+import { getNarratorSideView } from "@/lib/actor";
 import LocationForm from "@/components/forms/LocationForm";
 import type { GameTableLocations } from "@/lib/types";
 
@@ -14,9 +15,13 @@ export default async function NewLocationPage({
   const { id } = await params;
   const { parent_id, kind } = await searchParams;
 
+
+
+  const { query: actorQs } = await getNarratorSideView(id);
+
   let all: GameTableLocations | null = null;
   try {
-    all = await api<GameTableLocations>(`/game-table-locations/${id}`);
+    all = await api<GameTableLocations>(`/game-table-locations/${id}${actorQs}`);
   } catch {
     all = null;
   }

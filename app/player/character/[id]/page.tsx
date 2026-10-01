@@ -19,7 +19,9 @@ export default async function PlayerCharacterViewerPage({
   const { tab } = await searchParams;
   const data = await loadPlayerConsole(id);
 
-  if (!data.character) {
+  /* `id` vem da URL, então um player podia abrir a ficha de outro só trocando
+     o link. Sem personagem, ou sem permissão, volta para a lista. */
+  if (!data.character || !data.mayView) {
     redirect("/player");
   }
   const basePath = `/player/character/${id}`;

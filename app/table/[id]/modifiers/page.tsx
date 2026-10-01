@@ -1,5 +1,6 @@
 import { api } from "@/lib/api";
 import { getLang, makeT } from "@/lib/i18n-server";
+import { getNarratorSideView } from "@/lib/actor";
 import type {
   GameTableCharacters,
   GameTableLocations,
@@ -19,6 +20,10 @@ export default async function TableModifiersPage({
   const { id } = await params;
   const t = makeT(await getLang());
 
+
+
+  const { query: actorQs } = await getNarratorSideView(id);
+
   const [mods, chars, scenes, locations] = await Promise.all([
     api<GameTableModifiers>(`/game-table-modifiers/${id}`).catch(() => ({
       table: null,
@@ -32,7 +37,7 @@ export default async function TableModifiersPage({
       table: null,
       scenes: [],
     })),
-    api<GameTableLocations>(`/game-table-locations/${id}`).catch(() => ({
+    api<GameTableLocations>(`/game-table-locations/${id}${actorQs}`).catch(() => ({
       table: null,
       locations: [],
     })),

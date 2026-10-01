@@ -6,6 +6,7 @@ import { api } from "@/lib/api";
 import type { CharacterViewer, GameTableCharacters, TableCharacter } from "@/lib/types";
 import { interpolate, useTranslation } from "@/lib/i18n";
 import { readSeat, writeSeat, type Seat } from "@/lib/seat";
+import { readPerspective, setNarratorSide, setPlayerSide, type Side } from "@/lib/side";
 
 /* ============================================================
    Perspective Switch — dev tool that simulates an OAuth seat.
@@ -22,13 +23,21 @@ import { readSeat, writeSeat, type Seat } from "@/lib/seat";
      · /table/<id>/...   → /player/character/<your seat>  (console
                             open, table resources accessible from there).
      · anything else     → /player.
+
+   Which hat is on is stored explicitly (lib/side.ts) instead of being
+   guessed from the seat. Guessing is what used to break: adopting a player
+   seat wrote a player id into the actor cookie, and every narrator route
+   then read that cookie, decided "that is a player" and redirected here.
+   Switching back has to actually undo it, not just write a `vkrpg.role`
+   key that nothing ever read.
    ============================================================ */
 
 type Role = "narrator" | "player";
 
-const ROLE_KEY = "vkrpg.role";
-
-function currentRole(pathname: string): Role {
+/* The URL is still a strong hint about where you are, but it is no longer the
+   source of truth: landing on /player should not, by itself, mean the server
+   should filter you as that seat on the narrator's desk. */
+function pathRole(pathname: string): Role {
   return pathname.startsWith("/player") ? "player" : "narrator";
 }
 
@@ -84,13 +93,17 @@ export default function PerspectiveSwitch() {
   const { t } = useTranslation();
   const [fallbackName, setFallbackName] = useState<string | null>(null);
   const [seat, setSeat] = useState<Seat>({});
+  const [side, setSide] = useState<Side>("gm");
   const [busy, setBusy] = useState(false);
 
   /* localStorage only exists on the client — read the seat after mount
      (and again on navigation / cross-tab changes) so SSR and the first
      client render always agree and no hydration mismatch occurs. */
   useEffect(() => {
-    const refresh = () => setSeat(readSeat());
+    const refresh = () => {
+      setSeat(readSeat());
+      setSide(readPerspective().side);
+    };
     refresh();
     window.addEventListener("storage", refresh);
     return () => window.removeEventListener("storage", refresh);
@@ -99,7 +112,7 @@ export default function PerspectiveSwitch() {
   /* player seat name for the badge — prefers the seat USER (username);
      falls back to the seat character's sheet name. */
   useEffect(() => {
-    if (currentRole(pathname) !== "player") return;
+    if (pathRole(pathname) !== "player") return;
     const s = readSeat();
     if (s.username) return;
     const pid = s.characterId;
@@ -119,7 +132,7 @@ export default function PerspectiveSwitch() {
 
   const onSwitch = async () => {
     if (busy) return;
-    const isPlayer = currentRole(pathname) === "player";
+    const isPlayer = pathRole(pathname) === "player";
     setBusy(true);
     try {
       if (!isPlayer) {
@@ -131,7 +144,14 @@ export default function PerspectiveSwitch() {
         if (charPage && me) {
           if (tableId) {
             const seat = await adoptSeat(tableId, charPage[1]);
-            if (seat) writeSeat(seat);
+            if (seat) {
+              writeSeat(seat);
+              // Also record WHOSE character we are looking through. Without
+              // this the narrator cannot preview their own PC: the owner user
+              // id alone would still earn the unfiltered view.
+              if (seat.characterId) setPlayerSide(seat.characterId, seat.userId);
+              setSide("player");
+            }
           }
           router.push(`/player/character/${charPage[1]}`);
           return;
@@ -139,9 +159,15 @@ export default function PerspectiveSwitch() {
         const tableRoute = pathname.match(/^\/table\/([^/]+)/);
         if (tableRoute && tableRoute[1]) {
           const seat = await adoptSeat(tableRoute[1]);
-          if (seat) writeSeat(seat);
-          if (seat?.characterId) {
-            router.push(`/player/character/${seat.characterId}`);
+          if (seat) {
+            writeSeat(seat);
+            if (seat.characterId) {
+              setPlayerSide(seat.characterId, seat.userId);
+              setSide("player");
+              router.push(`/player/character/${seat.characterId}`);
+            } else {
+              router.push("/player");
+            }
           } else {
             router.push("/player");
           }
@@ -150,17 +176,29 @@ export default function PerspectiveSwitch() {
         router.push("/player");
         return;
       }
-      /* player → narrator */
-      localStorage.setItem(ROLE_KEY, "narrator");
+      /* player → narrator.
+
+         This has to clear the perspective, not just move the URL. The seat
+         stays (so the player hub still remembers who you were), but the
+         narrator hat now wins over whatever the actor cookie says, which is
+         what stops narrator routes from bouncing us back here. */
+      setNarratorSide();
+      setSide("gm");
       router.push(siblingPath(pathname, "narrator"));
     } finally {
       setBusy(false);
     }
   };
 
-  const isPlayer = currentRole(pathname) === "player";
+  /* Two different questions, deliberately kept apart:
+     `isPlayer` (from the URL) decides where the button takes you;
+     `wearingPlayerHat` (stored) is what the server actually honours when it
+     filters. When they disagree — sitting on /player with the narrator hat
+     on — the hat wins the badge, because that is what the data will show. */
+  const isPlayer = pathRole(pathname) === "player";
+  const wearingPlayerHat = side === "player";
   const displayName = seat.username ?? fallbackName;
-  const seatLabel = isPlayer
+  const seatLabel = wearingPlayerHat
     ? displayName
       ? interpolate(t("ps.playerSeat"), { name: displayName })
       : t("ps.player")
@@ -172,22 +210,25 @@ export default function PerspectiveSwitch() {
       <button
         type="button"
         onClick={onSwitch}
+        disabled={busy}
         title={
           isPlayer
             ? t("ps.titleGm")
             : t("ps.titlePlayer")
         }
-        className={`inline-flex items-center gap-2 rounded-full border px-3.5 py-2 text-xs font-medium shadow-lg backdrop-blur-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 ${
-          isPlayer
+        className={`inline-flex items-center gap-2 rounded-full border px-3.5 py-2 text-xs font-medium shadow-lg backdrop-blur-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 disabled:opacity-70 ${
+          wearingPlayerHat
             ? "bg-blue-900/80 border-blue-700/60 text-blue-100 hover:bg-blue-800/80"
             : "bg-green-900/80 border-green-900/60 text-white hover:bg-green-900/80"
         }`}
       >
         <span
-          className={`w-2 h-2 rounded-full ${isPlayer ? "bg-blue-300" : "bg-green-500"}`}
+          className={`w-2 h-2 rounded-full ${wearingPlayerHat ? "bg-blue-300" : "bg-green-500"}`}
         />
         <span className="font-mono uppercase tracking-widest">{seatLabel}</span>
-        <span className={`font-mono text-[10px] ${isPlayer ? "text-blue-300/70" : "text-green-400/70"}`}>
+        <span
+          className={`font-mono text-[10px] ${wearingPlayerHat ? "text-blue-300/70" : "text-green-400/70"}`}
+        >
           {busy ? "…" : hint}
         </span>
       </button>

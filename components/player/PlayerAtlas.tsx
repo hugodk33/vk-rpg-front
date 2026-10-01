@@ -2,7 +2,7 @@
 
 /* ============================================================
    PlayerAtlas — the player's "Locais" tab as a Survey Atlas.
-   Read-only. Every node comes from `/game-table-locations?viewer=`,
+   Read-only. Every node comes from `/game-table-locations?actor=`,
    so the server has already dropped the locations this character
    doesn't know and shaped the names/details of the others (masked
    alias / blanked detail). The atlas only re-renders those fields:

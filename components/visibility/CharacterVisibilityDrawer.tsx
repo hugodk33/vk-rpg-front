@@ -8,6 +8,7 @@
 
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
+import { seatActorQuery } from "@/lib/seat";
 import { useTranslation } from "@/lib/i18n";
 import type {
   Advantage,
@@ -53,7 +54,7 @@ export default function CharacterVisibilityDrawer({
     Promise.all([
       api<GameTableCharacters>(`/game-table-characters/${tableId}`),
       api<GameTableItems>(`/game-table-items/${tableId}`),
-      api<GameTableLocations>(`/game-table-locations/${tableId}`),
+      api<GameTableLocations>(`/game-table-locations/${tableId}${seatActorQuery()}`),
       api<GameTableSkills>(`/game-table-skills/${tableId}`),
       api<GameTableAdvantages>(`/game-table-advantages/${tableId}`),
       api<GameTableDisadvantages>(`/game-table-disadvantages/${tableId}`),

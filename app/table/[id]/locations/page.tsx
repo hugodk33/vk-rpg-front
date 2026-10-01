@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { GameTableLocations } from "@/lib/types";
 import TableTabs from "@/components/TableTabs";
 import { api } from "@/lib/api";
+import { seatActorQuery } from "@/lib/seat";
 import { submitJson } from "@/components/forms/submit";
 import { interpolate, useTranslation } from "@/lib/i18n";
 import {
@@ -36,7 +37,7 @@ export default function TableLocationsPage({ params }: { params: Promise<{ id: s
   const platesRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    api<GameTableLocations>(`/game-table-locations/${id}`)
+    api<GameTableLocations>(`/game-table-locations/${id}${seatActorQuery()}`)
       .then((d) => {
         setData(d);
         setDefaultId(d?.defaultLocationId ?? null);

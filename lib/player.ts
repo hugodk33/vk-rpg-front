@@ -23,6 +23,7 @@ import type {
 } from "./types";
 import { api } from "./api";
 import { getSessionState } from "./session";
+import { getSeatedUserId, getTableOwnerUserId } from "./actor";
 
 /* ============================================================
    Player console data loader (server-side).
@@ -61,6 +62,15 @@ export interface PlayerConsoleData {
   /** the location the narrator pinned as the default route (rota padrão). */
   defaultLocationId: string | null;
   npcs: TableNpc[];
+  /**
+   * May the current identity open this console at all?
+   *
+   * The route takes the character id straight from the URL, so without this
+   * any player could read someone else's sheet by editing the link. True for
+   * the PC's own player and for the table's narrator — the narrator needs it
+   * to preview a PC, which is the whole point of the perspective switch.
+   */
+  mayView: boolean;
 }
 
 export async function loadPlayerConsole(characterId: string): Promise<PlayerConsoleData> {
@@ -68,6 +78,18 @@ export async function loadPlayerConsole(characterId: string): Promise<PlayerCons
     () => null as CharacterViewer | null
   );
   const tableId = viewer?.table?.id ?? "";
+  /* Two identities, and conflating them is what let any player read any sheet:
+     the seat — who is ASKING;
+     the character on screen — whose console we are loading.
+
+   They only coincide on the honest path. Locations are filtered server-side
+   from `actor`, and for this route the interesting filter is the character
+   being viewed: the backend honours `asCharacter` for a narrator and ignores
+   it for a player (who always gets their own PC anyway). */
+  const requesterId = await getSeatedUserId();
+  const actor = requesterId
+    ? `?actor=${encodeURIComponent(requesterId)}&asCharacter=${encodeURIComponent(characterId)}`
+    : "";
 
   const [scenesData, queue, charsData, itemsData, skillsData, advData, disData, locData, npcsData, visibilityData] =
     await Promise.all([
@@ -92,8 +114,8 @@ export async function loadPlayerConsole(characterId: string): Promise<PlayerCons
       tableId
         ? api<GameTableDisadvantages>(`/game-table-disadvantages/${tableId}?viewer=${encodeURIComponent(characterId)}`).catch(() => ({ table: null, disadvantages: [] }))
         : Promise.resolve({ table: null, disadvantages: [] }) as Promise<GameTableDisadvantages>,
-      tableId
-        ? api<GameTableLocations>(`/game-table-locations/${tableId}?viewer=${encodeURIComponent(characterId)}`).catch(() => ({ table: null, locations: [], connections: [], tree: [], defaultLocationId: null }))
+      tableId && requesterId
+        ? api<GameTableLocations>(`/game-table-locations/${tableId}${actor}`).catch(() => ({ table: null, locations: [], connections: [], tree: [], defaultLocationId: null }))
         : Promise.resolve({ table: null, locations: [], connections: [], tree: [], defaultLocationId: null }) as Promise<GameTableLocations>,
       tableId
         ? api<GameTableNpcs>(`/game-table-npcs/${tableId}`).catch(() => ({ table: null, npcs: [] }))
@@ -105,10 +127,25 @@ export async function loadPlayerConsole(characterId: string): Promise<PlayerCons
 
   const state = getSessionState(scenesData.scenes);
 
+  /* Quem pode abrir este console: o dono do PC ou o narrador da mesa.
+     Guest narrators are deliberately NOT let in here — they have the
+     narrator's own routes, and every extra identity in this check is another
+     thing to get wrong before auth exists.
+
+     `character.userId` arrives as an EMPTY STRING here, and `??` does not
+     fall back on "", hence `||`. */
+  const characterOwnerId = viewer?.character?.user?.id || viewer?.character?.userId || null;
+  const tableOwnerId = tableId ? await getTableOwnerUserId(tableId) : null;
+  const mayView =
+    !!requesterId &&
+    !!characterOwnerId &&
+    (requesterId === characterOwnerId || requesterId === tableOwnerId);
+
   return {
     tableId,
     character: viewer?.character ?? null,
     viewer,
+    mayView,
     roster: (charsData?.characters ?? []).filter((c) => c.is_active !== false),
     table: scenesData.table ?? viewer?.table ?? null,
     scenes: scenesData.scenes ?? [],

@@ -2,6 +2,7 @@ import { api } from "@/lib/api";
 import { getLang, makeT } from "@/lib/i18n-server";
 import type { GameTableCharacters, GameTableLocations, GameTableNpcs, GameTableScenes, QueueEntry } from "@/lib/types";
 import { getSessionState } from "@/lib/session";
+import { getNarratorSideView } from "@/lib/actor";
 import TableTabs from "@/components/TableTabs";
 import SessionClient from "@/components/session/SessionClient";
 
@@ -10,12 +11,15 @@ export const dynamic = "force-dynamic";
 export default async function TableSessionPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const t = makeT(await getLang());
+
+
+  const { query: actorQs } = await getNarratorSideView(id);
   const [scenesData, charsData, npcsData, queue, locationsData] = await Promise.all([
     api<GameTableScenes>(`/game-table-scenes/${id}`),
     api<GameTableCharacters>(`/game-table-characters/${id}`),
     api<GameTableNpcs>(`/game-table-npcs/${id}`).catch(() => ({ table: null, npcs: [] })),
     api<QueueEntry[]>(`/game-table-queue/${id}`).catch(() => []),
-    api<GameTableLocations>(`/game-table-locations/${id}`).catch(() => ({ table: null, locations: [] })),
+    api<GameTableLocations>(`/game-table-locations/${id}${actorQs}`).catch(() => ({ table: null, locations: [] })),
   ]);
 
   const state = getSessionState(scenesData.scenes);
