@@ -712,8 +712,8 @@ export interface SkillItem {
   predefinition_value?: number
   description?: string
   effect?: string
-  predefinition?: Array<{ skill: string | null; value: string | null; depends_on_skill_for_others_attributes: string | null }>
-  dependencies?: Array<{ skill: string | null; value: string | null; type: string | null }>
+  predefinition?: Array<{ relation_id?: string; skill: string | null; skill_id?: string | null; value: string | null; depends_on_skill_for_others_attributes: string | null }>
+  dependencies?: Array<{ relation_id?: string; skill: string | null; skill_id?: string | null; value: string | null; type: string | null }>
 }
 
 export interface Item {

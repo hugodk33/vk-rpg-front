@@ -74,6 +74,7 @@ function DependencyRow({
   kind,
   kindLabel,
   skill,
+  skillId,
   value,
   note,
   hex,
@@ -81,6 +82,7 @@ function DependencyRow({
   kind: "requires" | "defaults";
   kindLabel: string;
   skill: string | null;
+  skillId?: string | null;
   value: string | null;
   note?: string | null;
   hex: string;
@@ -94,14 +96,15 @@ function DependencyRow({
       >
         {kindLabel}
       </span>
-      {skill ? (
-        <Link href={`/skill/${skill}`} className="text-sm text-zinc-300 hover:text-amber-400 transition-colors truncate">
-          {skill}
+      {/* /skill/[id] procura por id: linkar pelo nome dava 404. */}
+      {skillId ? (
+        <Link href={`/skill/${skillId}`} className="text-sm text-zinc-300 hover:text-amber-400 transition-colors truncate">
+          {skill || skillId}
         </Link>
       ) : (
         /* Sem skill alvo a linha carrega so a formula de atributo: nao ha o
            que linkar, e um `/skill/` vazio seria um link quebrado. */
-        <span className="text-sm text-zinc-400 truncate">{note || t("skx.skill")}</span>
+        <span className="text-sm text-zinc-400 truncate">{skill || note || t("skx.skill")}</span>
       )}
       {value ? <span className="font-mono text-xs text-zinc-500 ml-auto shrink-0">{value}</span> : null}
       {skill && note ? <span className="font-mono text-[10px] text-zinc-600 shrink-0 hidden sm:inline">{note}</span> : null}
@@ -286,7 +289,7 @@ export default function SkillExhibit({ skill, tableId }: { skill: SkillItem; tab
                     <div className="space-y-2">
                       {requires.length
                         ? requires.map((d, i) => (
-                            <DependencyRow key={i} kind="requires" kindLabel={t("skx.reqShort")} skill={d.skill} value={d.value} note={null} hex="#fb7185" />
+                            <DependencyRow key={i} kind="requires" kindLabel={t("skx.reqShort")} skill={d.skill} skillId={d.skill_id} value={d.value} note={null} hex="#fb7185" />
                           ))
                         : <p className="font-mono text-xs text-zinc-600 italic">{t("skx.noPrereq")}</p>}
                     </div>
@@ -301,6 +304,7 @@ export default function SkillExhibit({ skill, tableId }: { skill: SkillItem; tab
                               kind="defaults"
                               kindLabel={t("skx.dftShort")}
                               skill={d.skill}
+                              skillId={d.skill_id}
                               value={d.value}
                               note={d.depends_on_skill_for_others_attributes}
                               hex={accent}

@@ -24,10 +24,14 @@
                     the center cell that seams the plate into the
                     territory chain. Snapping (hex centers for boxes,
                     vertices for lines) keeps strokes on the lattice.
-   The canvas has a top-right zoom control (crisp re-render). The plate
-   keeps a fixed layout size — zoom is a pure CSS transform of the canvas
-   over a sized spacer, so the backing pixel grid grows (crisp) but the
-   element box never reflows; the wrapper scrolls with thin styled bars.
+The toolbar sits ABOVE the canvas (two rows, not two columns) and owns
+    the hand (pan) tool and the zoom stepper. They used to live in a
+    floating ZoomControls anchored inside the scroll wrapper, which meant
+    they scrolled away with the map and were effectively unreachable. The
+    plate keeps a fixed layout size — zoom is a pure CSS transform of the
+    canvas over a sized spacer, so the backing pixel grid grows (crisp)
+    but the element box never reflows; the wrapper scrolls with thin
+    styled bars.
 
    Saving posts a partial update to PUT /api/table-location/:id.
    ============================================================ */
@@ -55,7 +59,7 @@ import {
   type GridSpec,
   type Point,
 } from "@/lib/canvasgrid";
-import ZoomControls from "@/components/map/ZoomControls";
+import { Hand, Minus, Plus } from "lucide-react";
 import type { DrawAssetKind, DrawShape, HexTile, HexTileKind, Location } from "@/lib/types";
 import { TERRAIN } from "@/lib/terrain";
 
@@ -66,6 +70,12 @@ const HEX_NEIGHBORS = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, -1], [-1, 1]] as co
 const STROKES = ["#e4e4e7", "#38bdf8", "#fbbf24", "#f87171", "#4ade80", "#a78bfa"];
 const STROKE_WEIGHTS = [1, 1.6, 2.5, 4, 6];
 const WALL_BRIGHT = "#e4e4e7";
+
+/* Zoom limits shared by the toolbar buttons and the wheel handler. */
+const ZOOM_MIN = 0.5;
+const ZOOM_MAX = 4;
+const ZOOM_STEP = 0.25;
+const clampZoom = (v: number) => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, v));
 
 type Tool = "select" | "paint" | "erase" | "fill" | "pen" | "line" | "rect" | "ellipse" | "asset";
 type ShapeType = "path" | "rect" | "ellipse" | "line";
@@ -471,7 +481,7 @@ export default function MapStudio({ location }: MapStudioProps) {
       const zold = zoomRef.current;
       const delta = e.deltaY;
       const step = e.deltaMode === 1 ? 0.2 : e.deltaMode === 2 ? 2 : 0.1;
-      const znew = Math.min(4, Math.max(0.5, zold + (delta < 0 ? step : -step)));
+      const znew = clampZoom(zold + (delta < 0 ? step : -step));
       const ratio = znew / zold;
       if (ratio === 1) return;
 
@@ -685,10 +695,60 @@ export default function MapStudio({ location }: MapStudioProps) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[220px_1fr]">
-        {/* control rail */}
-        <div className="border-b lg:border-b-0 lg:border-r border-zinc-800 p-4 space-y-5">
-          <div>
+      <div className="flex flex-col">
+        {/* control rail — a full-width band on top, canvas below.
+            Two rows, not two columns: the grid needs the whole width and the
+            rail reads as a toolbar rather than a sidebar competing with it. */}
+        <div className="flex flex-wrap items-start gap-x-8 gap-y-5 border-b border-zinc-800 p-4">
+          <div className="min-w-[196px]">
+            <p className="font-mono text-[9px] uppercase tracking-widest text-zinc-500 mb-2">{t("lc.ms.nav")}</p>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setHand((v) => !v)}
+                aria-pressed={hand}
+                title={t("lc.zoom.hand")}
+                className={`flex h-8 w-8 items-center justify-center rounded-md border transition-colors ${
+                  hand ? "border-sky-500/60 bg-sky-500/15 text-sky-300" : "border-zinc-700/50 bg-zinc-800/40 text-zinc-500 hover:text-zinc-200"
+                }`}
+              >
+                <Hand className="w-4 h-4" strokeWidth={2.25} />
+              </button>
+              <span aria-hidden className="h-5 w-px bg-zinc-700/60" />
+              <button
+                type="button"
+                onClick={() => setZoom((v) => clampZoom(v - ZOOM_STEP))}
+                disabled={zoom <= ZOOM_MIN}
+                title={t("lc.zoom.out")}
+                aria-label={t("lc.zoom.out")}
+                className="flex h-8 w-8 items-center justify-center rounded-md border border-zinc-700/50 bg-zinc-800/40 text-zinc-500 hover:text-zinc-200 transition-colors disabled:opacity-35 disabled:hover:bg-zinc-800/40"
+              >
+                <Minus className="w-4 h-4" strokeWidth={2.25} />
+              </button>
+              <button
+                type="button"
+                onClick={() => setZoom(1)}
+                disabled={zoom === 1}
+                title={t("lc.zoom.resetTitle")}
+                className="h-8 min-w-[3.4rem] rounded-md border border-zinc-700/50 bg-zinc-800/40 font-mono text-[10px] tabular-nums text-zinc-300 hover:text-white transition-colors disabled:opacity-60"
+              >
+                {Math.round(zoom * 100)}%
+              </button>
+              <button
+                type="button"
+                onClick={() => setZoom((v) => clampZoom(v + ZOOM_STEP))}
+                disabled={zoom >= ZOOM_MAX}
+                title={t("lc.zoom.in")}
+                aria-label={t("lc.zoom.in")}
+                className="flex h-8 w-8 items-center justify-center rounded-md border border-zinc-700/50 bg-zinc-800/40 text-zinc-500 hover:text-zinc-200 transition-colors disabled:opacity-35 disabled:hover:bg-zinc-800/40"
+              >
+                <Plus className="w-4 h-4" strokeWidth={2.25} />
+              </button>
+            </div>
+            <p className="mt-1.5 text-[10px] leading-snug text-zinc-500">{t("lc.ms.navHint")}</p>
+          </div>
+
+          <div className="min-w-[196px]">
             <p className="font-mono text-[9px] uppercase tracking-widest text-zinc-500 mb-2">{t("lc.ms.tool")}</p>
             <div className="grid grid-cols-4 gap-1.5">
               {([
@@ -718,7 +778,7 @@ export default function MapStudio({ location }: MapStudioProps) {
           </div>
 
           {tool === "select" ? (
-            <div>
+            <div className="min-w-[196px]">
               <p className="font-mono text-[9px] uppercase tracking-widest text-zinc-500 mb-2">{t("lc.ms.selection")}</p>
               <div className="space-y-2">
                 <p className="text-[10px] leading-snug text-zinc-500">
@@ -795,7 +855,7 @@ export default function MapStudio({ location }: MapStudioProps) {
           ) : null}
 
           {tool === "asset" ? (
-            <div className="space-y-4">
+            <div className="min-w-[260px] space-y-4">
               <div>
                 <p className="font-mono text-[9px] uppercase tracking-widest text-zinc-500 mb-2">{t("lc.ms.assetCatalog")}</p>
                 <div className="grid grid-cols-3 gap-1.5">
@@ -873,7 +933,7 @@ export default function MapStudio({ location }: MapStudioProps) {
           ) : null}
 
           {tool === "paint" ? (
-            <div>
+            <div className="min-w-[196px]">
               <p className="font-mono text-[9px] uppercase tracking-widest text-zinc-500 mb-2">{t("lc.ms.terrain")}</p>
               <div className="grid grid-cols-2 gap-1.5">
                 {Object.entries(TERRAIN).map(([k, meta]) => (
@@ -898,7 +958,7 @@ export default function MapStudio({ location }: MapStudioProps) {
           ) : null}
 
           {tool === "pen" || tool === "line" || tool === "rect" || tool === "ellipse" ? (
-            <div className="space-y-4">
+            <div className="min-w-[196px] space-y-4">
               <div>
                 <p className="font-mono text-[9px] uppercase tracking-widest text-zinc-500 mb-2">{t("lc.ms.stroke")}</p>
                 <div className="flex flex-wrap gap-1.5">
@@ -947,7 +1007,7 @@ export default function MapStudio({ location }: MapStudioProps) {
             </div>
           ) : null}
 
-          <div>
+          <div className="min-w-[196px]">
             <p className="font-mono text-[9px] uppercase tracking-widest text-zinc-500 mb-2">{t("lc.ms.indoorGroup")}</p>
             <div className="grid grid-cols-2 gap-1.5">
               <button
@@ -970,7 +1030,7 @@ export default function MapStudio({ location }: MapStudioProps) {
             ) : null}
           </div>
 
-          <div>
+          <div className="min-w-[240px]">
             <p className="font-mono text-[9px] uppercase tracking-widest text-zinc-500 mb-2">{t("lc.common.grid")}</p>
             <div className="grid grid-cols-2 gap-2">
               <label className="block">
@@ -1003,7 +1063,7 @@ export default function MapStudio({ location }: MapStudioProps) {
 
         {/* canvas */}
         <div className="p-4">
-          <div ref={wrapRef} className="relative overflow-auto scroll-thin rounded-lg border border-zinc-700/40 bg-zinc-950/50" style={{ height: "min(70vh, 560px)" }}>
+          <div ref={wrapRef} className="relative overflow-auto scroll-thin rounded-lg border border-zinc-700/40 bg-zinc-950/50" style={{ height: "min(76vh, 640px)" }}>
             <div className="flex min-w-full min-h-full">
               <div className="relative m-auto" style={{ width: `${Math.round(W * zoom)}px`, height: `${Math.round(H * zoom)}px` }}>
                 <canvas
@@ -1027,7 +1087,6 @@ export default function MapStudio({ location }: MapStudioProps) {
                 />
               </div>
             </div>
-            <ZoomControls zoom={zoom} onZoom={setZoom} min={0.5} max={4} step={0.25} hand={hand} onToggleHand={() => setHand((h) => !h)} />
 
             {error ? <p className="absolute inset-x-0 bottom-0 bg-red-950/90 text-red-200 text-xs px-3 py-2">{error}</p> : null}
           </div>

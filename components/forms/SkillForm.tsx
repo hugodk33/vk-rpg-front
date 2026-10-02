@@ -7,6 +7,7 @@ import { submitJson } from "./submit";
 import { cancelCls, inputCls, labelCls, submitCls } from "./formStyles";
 import FormShell from "./FormShell";
 import EntityModifiers from "@/components/modifiers/EntityModifiers";
+import SkillRelations from "@/components/skill/SkillRelations";
 import { useTranslation } from "@/lib/i18n";
 import type { SkillItem } from "@/lib/types";
 
@@ -159,6 +160,11 @@ export default function SkillForm({ tableId, tableTitle, tables, initial }: Skil
             <label className={labelCls}>{t("fr.description")}</label>
             <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={4} className={inputCls} />
           </div>
+
+          <SkillRelations
+            skill={initial}
+            tableId={currentTableId || undefined}
+          />
 
           <EntityModifiers
             ownerField="skill_id"

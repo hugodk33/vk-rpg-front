@@ -222,7 +222,7 @@ export default function LocationForm({
             </div>
           </div>
 
-          <div className="space-y-4 border border-zinc-700/40 rounded-xl p-4 bg-zinc-800/30">
+          <div className="space-y-4 border-t border-zinc-700/40 pt-5">
             <h3 className="text-sm font-semibold text-zinc-300 uppercase tracking-wider">{t("fr.loc.hexGrid")}</h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div>
@@ -289,7 +289,7 @@ export default function LocationForm({
             </div>
           </div>
 
-          <div className="space-y-4 border border-zinc-700/40 rounded-xl p-4 bg-zinc-800/30">
+          <div className="space-y-4 border-t border-zinc-700/40 pt-5">
             <h3 className="text-sm font-semibold text-zinc-300 uppercase tracking-wider">{t("fr.loc.survey")}</h3>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               <div>
@@ -319,7 +319,7 @@ export default function LocationForm({
             </div>
           </div>
 
-          <div className="space-y-3 border border-zinc-700/40 rounded-xl p-4 bg-zinc-800/30">
+          <div className="space-y-3 border-t border-zinc-700/40 pt-5">
             <h3 className="text-sm font-semibold text-zinc-300 uppercase tracking-wider">{t("fr.loc.shop")}</h3>
             <p className="text-[11px] text-zinc-600">{t("fr.loc.shopHint")}</p>
             <input
