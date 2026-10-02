@@ -34,7 +34,7 @@ const chevron = (
 export function FormBreadcrumbs({ crumbs }: { crumbs: FormCrumb[] }) {
   const { t } = useTranslation();
   return (
-    <nav aria-label={t("nav.navigation")} className="flex items-center gap-1.5 text-sm mb-4 flex-wrap">
+    <nav aria-label={t("nav.breadcrumb")} className="flex items-center gap-1.5 text-sm mb-4 flex-wrap">
       {crumbs.map((crumb, index) => {
         const last = index === crumbs.length - 1;
         return (
@@ -103,9 +103,12 @@ export default function FormShell({
 
   return (
     <div className="max-w-5xl mx-auto p-6">
-      {tableId ? <TableTabs tableId={tableId} /> : null}
-
+      {/* A trilha sobe para cima da barra e o link "voltar" do TableTabs
+         sai: "Mesas" ja e o primeiro crumb, entao os dois diziam a mesma
+         coisa em posicoes opostas. */}
       <FormBreadcrumbs crumbs={crumbs} />
+
+      {tableId ? <TableTabs tableId={tableId} hideBreadcrumb /> : null}
 
       <div className="flex items-baseline gap-3 mb-1">
         <h1 className={formTitleCls}>{title}</h1>

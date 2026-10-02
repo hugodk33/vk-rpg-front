@@ -78,6 +78,7 @@ export default function DisadvantageForm({ tableId, tableTitle, tables, initial 
       resourceLabel="nav.disadvantages"
       actionLabel={isEdit ? "fr.dis.editTitle" : "fr.dis.newTitle"}
       title={isEdit ? t("fr.dis.editTitle") : t("fr.dis.newTitle")}
+      wide
     >
       <form onSubmit={handleSubmit} className="space-y-5">
           {!isEdit && !tableId ? (

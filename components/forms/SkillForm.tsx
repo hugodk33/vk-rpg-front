@@ -93,6 +93,7 @@ export default function SkillForm({ tableId, tableTitle, tables, initial }: Skil
       resourceLabel="nav.skills"
       actionLabel={isEdit ? "fr.sk.editTitle" : "fr.sk.newTitle"}
       title={isEdit ? t("fr.sk.editTitle") : t("fr.sk.newTitle")}
+      wide
     >
       <form onSubmit={handleSubmit} className="space-y-5">
           {!isEdit && !tableId ? (

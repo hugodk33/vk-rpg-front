@@ -11,7 +11,7 @@ import FormShell from "./FormShell";
 import { FIT_OPTIONS } from "@/lib/fit";
 import { DAMAGE_SOURCE_LABELS, DAMAGE_TYPES } from "@/lib/damage";
 import { useTranslation } from "@/lib/i18n";
-import type { ArmorData, GameTableItems, GameTableLocations, Item, Weapon, WeaponAttack } from "@/lib/types";
+import type { ArmorData, GameTableItems, GameTableLocations, GameTableSkills, Item, Weapon, WeaponAttack } from "@/lib/types";
 
 export interface ItemFormProps {
   initial?: Item;
@@ -86,6 +86,11 @@ export default function ItemForm({ initial, tableId, tableTitle, tables, default
 
   // Arma / escudo
   const [weaponSkill, setWeaponSkill] = useState(initial?.weapon?.skill ?? "");
+  // weapons.skill é texto solto (GURPS); skill_id é a perícia resolvida na
+  // mesa. O input continua livre — livrinhas trazem perícia que a mesa não
+  // tem — mas escolher uma da lista passa a gravar o id junto.
+  const [weaponSkillId, setWeaponSkillId] = useState<string | null>(initial?.weapon?.skill_id ?? initial?.skill_id ?? null);
+  const [skillOptions, setSkillOptions] = useState<Array<{ id: string; name: string }>>([]);
   const [minSt, setMinSt] = useState(initial?.weapon?.min_st != null ? String(initial.weapon.min_st) : "");
   const [ratedSt, setRatedSt] = useState(initial?.weapon?.rated_st != null ? String(initial.weapon.rated_st) : "");
   const [handedness, setHandedness] = useState(initial?.weapon?.handedness ?? 1);
@@ -130,6 +135,16 @@ export default function ItemForm({ initial, tableId, tableTitle, tables, default
         if (cancel) return;
         setCurrencyOptions([]);
       });
+    // Perícias da mesa, para o campo de skill sugerir as que existem de fato.
+    api<GameTableSkills>(`/game-table-skills/${currentTableId}`)
+      .then((d) => {
+        if (cancel) return;
+        setSkillOptions((d.skills ?? []).map((s) => ({ id: s.id, name: s.name })));
+      })
+      .catch(() => {
+        if (cancel) return;
+        setSkillOptions([]);
+      });
     return () => {
       cancel = true;
     };
@@ -160,6 +175,7 @@ export default function ItemForm({ initial, tableId, tableTitle, tables, default
       isWeaponish(kind) && isEdit && initial?.weapon
         ? {
             weapon_skill: weaponSkill || null,
+            skill_id: weaponSkillId,
             min_st: minSt === "" ? null : Number(minSt),
             rated_st: ratedSt === "" ? null : Number(ratedSt),
             handedness,
@@ -189,6 +205,7 @@ export default function ItemForm({ initial, tableId, tableTitle, tables, default
         : isWeaponish(kind)
           ? {
               weapon_skill: weaponSkill || null,
+            skill_id: weaponSkillId,
               min_st: minSt === "" ? null : Number(minSt),
               rated_st: ratedSt === "" ? null : Number(ratedSt),
               handedness,
@@ -385,12 +402,31 @@ export default function ItemForm({ initial, tableId, tableTitle, tables, default
           </div>
 
           {isWeaponish(kind) ? (
-            <div className="space-y-4 border border-zinc-700/40 rounded-xl p-4 bg-zinc-800/30">
+            <div className="space-y-4 border-t border-zinc-700/40 pt-5">
               <h3 className="text-sm font-semibold text-zinc-300 uppercase tracking-wider">{t("fr.item.weaponShield")}</h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
                   <label className={labelCls}>{t("fr.item.skill")}</label>
-                  <input value={weaponSkill} onChange={(e) => setWeaponSkill(e.target.value)} className={inputCls} placeholder={t("fr.item.skillPh")} />
+                  <input
+                    list="item-skill-options"
+                    value={weaponSkill}
+                    onChange={(e) => {
+                      const value = e.target.value
+                      setWeaponSkill(value)
+                      // Bate o texto contra as perícias da mesa: se casar,
+                      // grava o id; se for texto novo, limpa o id para o
+                      // backend resolver (ou recusar) pelo nome.
+                      const hit = skillOptions.find((s) => s.name === value)
+                      setWeaponSkillId(hit ? hit.id : null)
+                    }}
+                    className={inputCls}
+                    placeholder={t("fr.item.skillPh")}
+                  />
+                  <datalist id="item-skill-options">
+                    {skillOptions.map((s) => (
+                      <option key={s.id} value={s.name} />
+                    ))}
+                  </datalist>
                 </div>
                 <div>
                   <label className={labelCls}>{t("fr.item.minSt")}</label>
@@ -434,15 +470,15 @@ export default function ItemForm({ initial, tableId, tableTitle, tables, default
                 </div>
               </div>
 
-              <div>
-                <div className="flex items-center justify-between mb-2">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
                   <label className={labelCls}>{t("fr.attacks")}</label>
                   <button type="button" onClick={addAttack} className="bg-green-900/60 hover:bg-green-800 text-white text-sm font-medium px-3 py-1.5 rounded-lg transition-colors">
                     {t("fr.addAttack")}
                   </button>
                 </div>
                 {attacks.map((atk, index) => (
-                  <div key={index} className="border border-zinc-700/40 rounded-lg p-3 mb-3 bg-zinc-800/40">
+                  <div key={index} className="border-t border-zinc-700/40 pt-4">
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                       <div>
                         <label className="text-[10px] text-zinc-500 uppercase block mb-0.5">{t("fr.name")}</label>
@@ -509,7 +545,7 @@ export default function ItemForm({ initial, tableId, tableTitle, tables, default
           ) : null}
 
           {isArmorish(kind) ? (
-            <div className="space-y-4 border border-zinc-700/40 rounded-xl p-4 bg-zinc-800/30">
+            <div className="space-y-4 border-t border-zinc-700/40 pt-5">
               <h3 className="text-sm font-semibold text-zinc-300 uppercase tracking-wider">{t("fr.item.armor")}</h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div>

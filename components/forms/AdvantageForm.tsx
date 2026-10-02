@@ -76,6 +76,7 @@ export default function AdvantageForm({ tableId, tableTitle, tables, initial }: 
       resourceLabel="nav.advantages"
       actionLabel={isEdit ? "fr.adv.editTitle" : "fr.adv.newTitle"}
       title={isEdit ? t("fr.adv.editTitle") : t("fr.adv.newTitle")}
+      wide
     >
       <form onSubmit={handleSubmit} className="space-y-5">
         {!isEdit && !tableId ? (

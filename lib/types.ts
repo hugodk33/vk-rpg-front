@@ -175,10 +175,12 @@ export interface WeaponAttack {
 }
 
 export interface Weapon {
-  id?: string;
-  item_id?: string;
-  skill?: string | null;
-  min_st?: number | null;
+     id?: string;
+     item_id?: string;
+     skill?: string | null;
+     /** Perícia resolvida (game_table_skills.id). `skill` é o texto solto. */
+     skill_id?: string | null;
+     min_st?: number | null;
   rated_st?: number | null;
   handedness?: number;
   reach?: string;
@@ -727,6 +729,8 @@ export interface Item {
   cost?: number
   /** Item-moeda em que o `cost` deste item está cotado. */
   currency_item_id?: string | null
+  /** Perícia usada pelo item, resolvida (game_table_skills.id). */
+  skill_id?: string | null
   dimensions?: string
   description?: string
   quality?: string

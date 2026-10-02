@@ -147,8 +147,9 @@ const ptBase: Record<string, string> = {
     "search.close": "Fechar",
 
     /* ---------- Navegação da mesa ---------- */
-    "nav.tables": "Mesas",
-    "nav.table": "Mesa",
+"nav.tables": "Mesas",
+      "nav.table": "Mesa",
+      "nav.breadcrumb": "Trilha da página",
     "nav.resourcesOf": "Recursos da mesa",
     "nav.overview": "Visão geral",
     "nav.items": "Itens",
@@ -504,8 +505,9 @@ const enBase: Record<string, string> = {
     "search.empty": "No results.",
     "search.close": "Close",
 
-    "nav.tables": "Tables",
-    "nav.table": "Table",
+"nav.tables": "Tables",
+      "nav.table": "Table",
+      "nav.breadcrumb": "Page breadcrumb",
     "nav.resourcesOf": "Table resources",
     "nav.overview": "Overview",
     "nav.items": "Items",
