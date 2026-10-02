@@ -44,6 +44,7 @@ export default async function EditLocationPage({
     <LocationEditor
       location={location}
       tableId={location.tableId}
+      tableTitle={all?.table?.title}
       allLocations={all?.locations ?? []}
       defaultTab={defaultTab}
     />

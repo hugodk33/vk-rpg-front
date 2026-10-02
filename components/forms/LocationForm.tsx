@@ -1,9 +1,11 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { submitJson } from "./submit";
 import { cancelCls, inputCls, labelCls, submitCls } from "./formStyles";
+import FormShell from "./FormShell";
 import { LOCATION_KINDS, absoluteHex, formatHexScale } from "@/lib/location";
 import { useTranslation } from "@/lib/i18n";
 import type { Location } from "@/lib/types";
@@ -11,6 +13,7 @@ import type { Location } from "@/lib/types";
 export interface LocationFormProps {
   initial?: Location;
   tableId?: string;
+  tableTitle?: string;
   allLocations?: Location[];
   defaultParentId?: string;
   defaultKind?: string;
@@ -30,6 +33,7 @@ function rankOf(kind?: string): number {
 export default function LocationForm({
   initial,
   tableId,
+  tableTitle,
   allLocations = [],
   defaultParentId,
   defaultKind,
@@ -161,14 +165,20 @@ export default function LocationForm({
     }
   }
 
+  const contextTableId = tableId ?? initial?.tableId ?? "";
+  const contextTableTitle = tableTitle;
+
   return (
-    <div className="max-w-3xl mx-auto p-6">
-      <div className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-6">
-        <h1 className="text-2xl font-bold text-green-100 mb-1">
-          {isEdit ? t("fr.loc.editTitle") : t("fr.loc.newTitle")}
-        </h1>
-        <p className="text-sm text-zinc-500 mb-6">{t("fr.loc.subtitle")}</p>
-        <form onSubmit={handleSubmit} className="space-y-6">
+    <FormShell
+      tableId={contextTableId || undefined}
+      tableTitle={contextTableTitle}
+      resourceLabel="nav.locations"
+      actionLabel={isEdit ? "fr.loc.editTitle" : "fr.loc.newTitle"}
+      title={isEdit ? t("fr.loc.editTitle") : t("fr.loc.newTitle")}
+      subtitle={t("fr.loc.subtitle")}
+      wide
+    >
+      <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className={labelCls}>{t("fr.name")}</label>
@@ -337,15 +347,14 @@ export default function LocationForm({
             <button type="submit" disabled={saving} className={`${submitCls} disabled:opacity-50`}>
               {saving ? t("fr.saving") : isEdit ? t("fr.saveChanges") : t("fr.loc.create")}
             </button>
-            <a
+            <Link
               href={isEdit ? `/location/${locId}` : currentTableId ? `/table/${currentTableId}/locations` : "/narrator"}
               className={cancelCls}
             >
               {t("fr.cancel")}
-            </a>
+            </Link>
           </div>
         </form>
-      </div>
-    </div>
+    </FormShell>
   );
 }

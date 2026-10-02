@@ -1,32 +1,35 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { submitJson } from "./submit";
 import { cancelCls, inputCls, labelCls, submitCls } from "./formStyles";
+import FormShell from "./FormShell";
 import { useTranslation } from "@/lib/i18n";
 import type { SkillItem } from "@/lib/types";
 
 export interface SkillFormProps {
   tableId?: string;
+  tableTitle?: string;
   tables?: Array<{ id: string; title: string }>;
   initial?: SkillItem;
 }
 
 const TYPES: Array<{ value: string; label: string; hint: string }> = [
-  { value: "Physical", label: "fr.sk.typePhysical", hint: "fr.sk.hintPhysical" },
-  { value: "Mental", label: "fr.sk.typeMental", hint: "fr.sk.hintMental" },
-  { value: "Social", label: "fr.sk.typeSocial", hint: "fr.sk.hintSocial" },
-];
+    { value: "Physical", label: "sk.type.Physical", hint: "fr.sk.hintPhysical" },
+    { value: "Mental", label: "sk.type.Mental", hint: "fr.sk.hintMental" },
+    { value: "Social", label: "sk.type.Social", hint: "fr.sk.hintSocial" },
+  ];
 
 const DIFFICULTIES: Array<{ value: string; label: string }> = [
-  { value: "Easy", label: "fr.diff.easy" },
-  { value: "Average", label: "fr.diff.average" },
-  { value: "Hard", label: "fr.diff.hard" },
-  { value: "Very Hard", label: "fr.diff.veryHard" },
-];
+      { value: "Easy", label: "fr.diff.easy" },
+      { value: "Medium", label: "fr.diff.medium" },
+      { value: "Hard", label: "fr.diff.hard" },
+      { value: "Very Hard", label: "fr.diff.veryHard" },
+    ];
 
-export default function SkillForm({ tableId, tables, initial }: SkillFormProps) {
+export default function SkillForm({ tableId, tableTitle, tables, initial }: SkillFormProps) {
   const router = useRouter();
   const { t } = useTranslation();
   const isEdit = !!initial;
@@ -34,7 +37,7 @@ export default function SkillForm({ tableId, tables, initial }: SkillFormProps) 
   const [currentTableId, setCurrentTableId] = useState(tableId ?? initial?.table_id ?? "");
   const [name, setName] = useState(initial?.name ?? "");
   const [type, setType] = useState(initial?.predefinition_type ?? initial?.type ?? "Physical");
-  const [difficulty, setDifficulty] = useState(initial?.predefinition_difficulty ?? "Average");
+  const [difficulty, setDifficulty] = useState(initial?.predefinition_difficulty ?? "Medium");
   const [category, setCategory] = useState(initial?.category ?? "");
   const [subcategory, setSubcategory] = useState(initial?.subcategory ?? "");
   const [description, setDescription] = useState(initial?.description ?? "");
@@ -77,13 +80,19 @@ export default function SkillForm({ tableId, tables, initial }: SkillFormProps) 
     }
   }
 
+  const contextTableId = tableId ?? initial?.table_id ?? "";
+  const contextTableTitle =
+    tableTitle ?? tables?.find((entry) => entry.id === contextTableId)?.title;
+
   return (
-    <div className="max-w-2xl mx-auto p-6">
-      <div className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-6">
-        <h1 className="text-2xl font-bold text-green-100 mb-6">
-          {isEdit ? t("fr.sk.editTitle") : t("fr.sk.newTitle")}
-        </h1>
-        <form onSubmit={handleSubmit} className="space-y-5">
+    <FormShell
+      tableId={contextTableId || undefined}
+      tableTitle={contextTableTitle}
+      resourceLabel="nav.skills"
+      actionLabel={isEdit ? "fr.sk.editTitle" : "fr.sk.newTitle"}
+      title={isEdit ? t("fr.sk.editTitle") : t("fr.sk.newTitle")}
+    >
+      <form onSubmit={handleSubmit} className="space-y-5">
           {!isEdit && !tableId ? (
             <div>
               <label className={labelCls}>{t("fr.table")}</label>
@@ -156,12 +165,14 @@ export default function SkillForm({ tableId, tables, initial }: SkillFormProps) 
             <button type="submit" disabled={saving} className={`${submitCls} disabled:opacity-50`}>
               {saving ? t("fr.saving") : isEdit ? t("fr.saveChanges") : t("fr.sk.create")}
             </button>
-            <a href={currentTableId ? `/table/${currentTableId}/skills` : "/narrator"} className={cancelCls}>
+            <Link
+              href={currentTableId ? `/table/${currentTableId}/skills` : "/narrator"}
+              className={cancelCls}
+            >
               {t("fr.cancel")}
-            </a>
+            </Link>
           </div>
         </form>
-      </div>
-    </div>
+    </FormShell>
   );
 }

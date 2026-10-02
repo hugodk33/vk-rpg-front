@@ -63,6 +63,20 @@ export const PT: Record<string, string> = {
   "tp.items.searchPh": "Pesquisar itens…",
   "tp.items.weaponShort": "Arma",
 
+  /* ---------- Tipo de item (badge e contagem na listagem) ---------- */
+  "tp.kind.weapon": "Arma",
+  "tp.kind.shield": "Escudo",
+  "tp.kind.armor": "Armadura",
+  "tp.kind.equipment": "Equipamento",
+  "tp.kindCount.weaponOne": "{n} arma",
+  "tp.kindCount.weaponMany": "{n} armas",
+  "tp.kindCount.shieldOne": "{n} escudo",
+  "tp.kindCount.shieldMany": "{n} escudos",
+  "tp.kindCount.armorOne": "{n} armadura",
+  "tp.kindCount.armorMany": "{n} armaduras",
+  "tp.kindCount.equipmentOne": "{n} equipamento",
+  "tp.kindCount.equipmentMany": "{n} equipamentos",
+
   /* ---------- Catálogo de perícias ---------- */
   "tp.skills.empty": "Nenhuma perícia catalogada ainda.",
   "tp.skills.emptySearch": "Nenhuma perícia corresponde à sua pesquisa.",
@@ -105,6 +119,8 @@ export const PT: Record<string, string> = {
   "tp.chronicle.open": "Abrir a crônica →",
 
   /* ---------- Contadores ---------- */
+  "tp.count.itemsMany": "{n} itens",
+  "tp.count.itemsOne": "{n} item",
   "tp.count.recordsInArchive": "em arquivo",
   "tp.count.recordsInFileMany": "{n} registros",
   "tp.count.recordsInFileOne": "{n} registro",
@@ -223,6 +239,20 @@ export const EN: Record<string, string> = {
   "tp.items.searchPh": "Search items…",
   "tp.items.weaponShort": "Weapon",
 
+  /* ---------- Item kind (badge and count on the list) ---------- */
+  "tp.kind.weapon": "Weapon",
+  "tp.kind.shield": "Shield",
+  "tp.kind.armor": "Armor",
+  "tp.kind.equipment": "Equipment",
+  "tp.kindCount.weaponOne": "{n} weapon",
+  "tp.kindCount.weaponMany": "{n} weapons",
+  "tp.kindCount.shieldOne": "{n} shield",
+  "tp.kindCount.shieldMany": "{n} shields",
+  "tp.kindCount.armorOne": "{n} armor",
+  "tp.kindCount.armorMany": "{n} armor",
+  "tp.kindCount.equipmentOne": "{n} equipment",
+  "tp.kindCount.equipmentMany": "{n} equipment",
+
   /* ---------- Skill catalog ---------- */
   "tp.skills.empty": "No skills catalogued yet.",
   "tp.skills.emptySearch": "No skill matches your search.",
@@ -265,6 +295,8 @@ export const EN: Record<string, string> = {
   "tp.chronicle.open": "Open the chronicle →",
 
   /* ---------- Counts ---------- */
+  "tp.count.itemsMany": "{n} items",
+  "tp.count.itemsOne": "{n} item",
   "tp.count.recordsInArchive": "in archive",
   "tp.count.recordsInFileMany": "{n} records",
   "tp.count.recordsInFileOne": "{n} record",

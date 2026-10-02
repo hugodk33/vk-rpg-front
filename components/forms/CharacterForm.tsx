@@ -1,24 +1,28 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { submitJson } from "./submit";
 import { api } from "@/lib/api";
 import { interpolate, useTranslation } from "@/lib/i18n";
-import { INK, INK_PAGE, INK_LABEL, INK_FIELD, inkButton } from "@/lib/ink";
+import { inputCls, labelCls, submitCls } from "./formStyles";
+import TableTabs from "@/components/TableTabs";
+import { FormBreadcrumbs } from "./FormShell";
 import SearchModal from "./SearchModal";
 import InfoTooltip from "./InfoTooltip";
 import SplitToggle from "./SplitToggle";
 import type { Advantage, CharacterViewer, Disadvantage, GameTableAdvantages, GameTableDisadvantages, GameTableItems, GameTableSkills, Item, SkillItem, TableSettings } from "@/lib/types";
 
-/* Rótulo e campo do formulário, na mesma linguagem da ficha do player.
-   Não vêm de formStyles.ts porque aquele é compartilhado com os outros
-   formulários do sistema, que seguem o tema âmbar. */
-const label = `${INK_LABEL} block text-[#7E876A] mb-1.5`;
-const field = INK_FIELD;
+/* Rótulo e campo do formulário. Usa os mesmos tokens das demais telas de
+   Narrador (formStyles.ts) — antes este arquivo mantinha um par próprio de
+   tokens de tinta, que deixou criar/editar personagem fora da paleta da rota. */
+const label = labelCls;
+const field = inputCls;
 
 export interface CharacterFormProps {
   tableId?: string;
+  tableTitle?: string;
   tables?: Array<{ id: string; title: string }>;
   initial?: CharacterViewer;
   /** Regras da mesa — o orçamento de pontos vem daqui, não de um valor fixo. */
@@ -42,7 +46,7 @@ interface UserOption {
 const ATTR_COSTS: Record<"st" | "dx" | "iq" | "ht", number> = { st: 10, dx: 20, iq: 20, ht: 10 };
 const ATTR_NAMES: Array<{ key: "st" | "dx" | "iq" | "ht"; label: string; color: string; svg: string }> = [
   { key: "st", label: "ST", color: "text-red-400", svg: "M13 10V3L4 14h7v7l9-11h-7z" },
-  { key: "dx", label: "DX", color: "text-[#A9A177]", svg: "M13 5l7 7-7 7M5 5l7 7-7 7" },
+  { key: "dx", label: "DX", color: "text-zinc-400", svg: "M13 5l7 7-7 7M5 5l7 7-7 7" },
   {
     key: "iq",
     label: "IQ",
@@ -137,7 +141,7 @@ function skillPredefLabel(sk: { predefinition?: SkillItem["predefinition"] }): s
     .join(" / ");
 }
 
-export default function CharacterForm({ tableId, tables, initial, settings }: CharacterFormProps) {
+export default function CharacterForm({ tableId, tableTitle, tables, initial, settings }: CharacterFormProps) {
   const router = useRouter();
   const { t } = useTranslation();
   const isEdit = !!initial;
@@ -481,17 +485,38 @@ export default function CharacterForm({ tableId, tables, initial, settings }: Ch
     void doSave();
   }
 
+  const contextTableId = tableId ?? initial?.table?.id ?? "";
+  const contextTableTitle =
+    tableTitle ?? initial?.table?.title ?? tables?.find((entry) => entry.id === contextTableId)?.title;
+
   return (
-    <div className="min-h-[80vh]" style={{ background: INK_PAGE }}>
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
+    <div className="max-w-5xl mx-auto p-6">
+      {contextTableId ? <TableTabs tableId={contextTableId} /> : null}
+
+      <FormBreadcrumbs
+        crumbs={
+          contextTableId
+            ? [
+                { label: t("nav.tables"), href: "/narrator" },
+                { label: contextTableTitle || t("nav.table"), href: `/table/${contextTableId}` },
+                { label: t("nav.characters"), href: `/table/${contextTableId}/characters` },
+                { label: isEdit ? t("fr.ch.editTitle") : t("fr.ch.newTitle") },
+              ]
+            : [
+                { label: t("nav.tables"), href: "/narrator" },
+                { label: isEdit ? t("fr.ch.editTitle") : t("fr.ch.newTitle") },
+              ]
+        }
+      />
+
       {showPoints ? (
-        <div className="sticky top-14 z-40 backdrop-blur-sm border-b border-[#A9A177]/25 -mx-4 sm:-mx-6 px-4 sm:px-6 py-3 mb-6" style={{ background: `${INK.ink}ee` }}>
+        <div className="sticky top-14 z-40 backdrop-blur-sm bg-zinc-900/90 border-b border-zinc-800 -mx-6 px-6 py-3 mb-6">
           <div className="flex items-center justify-center gap-6 max-w-3xl mx-auto">
-            <div className={`${INK_LABEL} font-bold text-green-500 whitespace-nowrap tabular-nums`}>
+            <div className="font-mono text-[11px] uppercase tracking-[0.14em] font-bold text-green-400 whitespace-nowrap tabular-nums">
               {spent} / {totalPoints}
             </div>
             <div className="flex-1 max-w-md">
-              <div className="w-full rounded-full h-1.5" style={{ background: INK.ink }}>
+              <div className="w-full rounded-full h-1.5 bg-zinc-800">
                 <div className="bg-green-700 h-1.5 rounded-full transition-all" style={{ width: `${budgetPct}%` }} />
               </div>
             </div>
@@ -499,37 +524,24 @@ export default function CharacterForm({ tableId, tables, initial, settings }: Ch
         </div>
       ) : null}
 
-      <header className="mt-8 border-l-2 pl-5" style={{ borderColor: INK.ember }}>
+      <header className="mt-8 border-l-2 border-green-600 pl-5">
         <div className="flex items-center justify-between gap-4">
-          <div className="flex items-start gap-3">
-            {currentTableId ? (
-              <a
-                href={`/table/${currentTableId}`}
-                className="mt-1.5 text-[#A9A177] hover:text-[#EDE6CE] transition-colors rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-[#E07B3A]/70"
-                title={t("fr.backToTable")}
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
-                </svg>
-              </a>
-            ) : null}
-            <div>
-              <p className={INK_LABEL} style={{ color: INK.ember }}>
-                {t("fr.ch.eyebrow")}
-              </p>
-              <h1 className="mt-2 text-3xl font-bold tracking-tight" style={{ color: INK.parchment }}>
-                {isEdit ? t("fr.ch.editTitle") : t("fr.ch.newTitle")}
-              </h1>
-              <p className="mt-1 text-sm" style={{ color: INK.moss }}>
-                {isEdit ? t("fr.ch.subEdit") : t("fr.ch.subNew")}
-              </p>
-            </div>
+          <div>
+            <p className="font-mono uppercase tracking-[0.14em] text-[11px] text-green-400">
+              {t("fr.ch.eyebrow")}
+            </p>
+            <h1 className="mt-2 text-3xl font-bold tracking-tight text-zinc-100">
+              {isEdit ? t("fr.ch.editTitle") : t("fr.ch.newTitle")}
+            </h1>
+            <p className="mt-1 text-sm text-zinc-500">
+              {isEdit ? t("fr.ch.subEdit") : t("fr.ch.subNew")}
+            </p>
           </div>
           {isEdit ? (
             <button
               onClick={() => void doSave()}
               disabled={saving}
-              className={`${inkButton("narrator")} disabled:opacity-50`}
+              className={`${submitCls} disabled:opacity-50`}
             >
               {saving ? t("fr.saving") : t("fr.saveChanges")}
             </button>
@@ -537,16 +549,16 @@ export default function CharacterForm({ tableId, tables, initial, settings }: Ch
         </div>
       </header>
 
-      <div className="mt-6 flex items-center gap-1 border-b border-[#A9A177]/25 mb-6">
+      <div className="mt-6 flex items-center gap-1 border-b border-zinc-800 mb-6">
         {([["bio", t("fr.ch.tabBio")], ["sheet", t("fr.ch.tabSheet")], ["items", t("fr.ch.tabItems")]] as const).map(([key, label]) => (
           <button
             key={key}
             type="button"
             onClick={() => setActiveTab(key)}
-            className={`px-4 py-2.5 ${INK_LABEL} transition-colors border-b-2 -mb-px ${
+            className={`px-4 py-2.5 font-mono uppercase tracking-[0.14em] text-[11px] transition-colors border-b-2 -mb-px ${
               activeTab === key
-                ? "border-[#E07B3A] text-[#E07B3A]"
-                : "border-transparent text-[#7E876A] hover:text-[#A9A177]"
+                ? "border-green-600 text-green-400"
+                : "border-transparent text-zinc-500 hover:text-zinc-200"
             }`}
           >
             {label}
@@ -558,7 +570,7 @@ export default function CharacterForm({ tableId, tables, initial, settings }: Ch
         {activeTab === "bio" && (
           <div className="space-y-6">
             <div>
-              <h2 className="text-lg font-semibold text-[#EDE6CE] mb-3">{t("fr.ch.identity")}</h2>
+              <h2 className="text-lg font-semibold text-zinc-100 mb-3">{t("fr.ch.identity")}</h2>
             <div className="space-y-3 mb-3">
               <div>
                 <label className={label}>{t("fr.name")}</label>
@@ -576,7 +588,7 @@ export default function CharacterForm({ tableId, tables, initial, settings }: Ch
           </div>
 
           <div>
-            <h2 className="text-lg font-semibold text-[#EDE6CE] mb-3">{t("fr.ch.character")}</h2>
+            <h2 className="text-lg font-semibold text-zinc-100 mb-3">{t("fr.ch.character")}</h2>
 
             {!isEdit && !tableId ? (
               <div className="mb-3">
@@ -611,9 +623,9 @@ export default function CharacterForm({ tableId, tables, initial, settings }: Ch
                         value="pc"
                         checked={charType === "pc"}
                         onChange={() => setCharType("pc")}
-                        className="w-4 h-4 border-[#A9A177]/40 text-white0 focus:ring-green-800 bg-[#0E110D]"
+                        className="w-4 h-4 border-zinc-600 accent-green-700 focus:ring-green-800 bg-zinc-900"
                       />
-                      <span className="text-[#EDE6CE] text-sm">{t("fr.ch.pc")}</span>
+                      <span className="text-zinc-100 text-sm">{t("fr.ch.pc")}</span>
                     </label>
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input
@@ -622,9 +634,9 @@ export default function CharacterForm({ tableId, tables, initial, settings }: Ch
                         value="npc"
                         checked={charType === "npc"}
                         onChange={() => setCharType("npc")}
-                        className="w-4 h-4 border-[#A9A177]/40 text-white0 focus:ring-green-800 bg-[#0E110D]"
+                        className="w-4 h-4 border-zinc-600 accent-green-700 focus:ring-green-800 bg-zinc-900"
                       />
-                      <span className="text-[#EDE6CE] text-sm">{t("fr.ch.npc")}</span>
+                      <span className="text-zinc-100 text-sm">{t("fr.ch.npc")}</span>
                     </label>
                   </div>
                 </div>
@@ -651,8 +663,8 @@ export default function CharacterForm({ tableId, tables, initial, settings }: Ch
 
         {activeTab === "sheet" && (
         <>
-          <div className="border border-[#A9A177]/25 bg-[#182018]/70 rounded-xl p-5">
-            <h2 className="text-lg font-semibold text-[#EDE6CE] mb-6">{t("fr.ch.attributes")}</h2>
+          <div className="border border-zinc-700/60 bg-zinc-800/70 rounded-xl p-5">
+            <h2 className="text-lg font-semibold text-zinc-100 mb-6">{t("fr.ch.attributes")}</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-8">
               {ATTR_NAMES.map(({ key, label, color, svg }) => (
                 <div key={key} className="flex flex-col items-center gap-2">
@@ -660,13 +672,13 @@ export default function CharacterForm({ tableId, tables, initial, settings }: Ch
                     <svg className={`w-5 h-5 ${color}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={svg} />
                     </svg>
-                    <label className="text-[#A9A177] text-xs font-semibold uppercase tracking-wider">{label}</label>
+                    <label className="text-zinc-400 text-xs font-semibold uppercase tracking-wider">{label}</label>
                   </div>
                   <div className="flex items-center gap-1">
                     <button
                       type="button"
                       onClick={() => adjAttr(key, -1)}
-                      className="w-8 h-8 rounded bg-[#182018] hover:bg-[#A9A177]/15 text-[#EDE6CE] text-lg font-bold flex items-center justify-center leading-none"
+                      className="w-8 h-8 rounded bg-zinc-800 hover:bg-zinc-700/50 text-zinc-100 text-lg font-bold flex items-center justify-center leading-none"
                     >
                       −
                     </button>
@@ -674,7 +686,7 @@ export default function CharacterForm({ tableId, tables, initial, settings }: Ch
                     <button
                       type="button"
                       onClick={() => adjAttr(key, 1)}
-                      className="w-8 h-8 rounded bg-[#182018] hover:bg-[#A9A177]/15 text-[#EDE6CE] text-lg font-bold flex items-center justify-center leading-none"
+                      className="w-8 h-8 rounded bg-zinc-800 hover:bg-zinc-700/50 text-zinc-100 text-lg font-bold flex items-center justify-center leading-none"
                     >
                       +
                     </button>
@@ -682,66 +694,66 @@ export default function CharacterForm({ tableId, tables, initial, settings }: Ch
                 </div>
               ))}
             </div>
-            <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-[#A9A177]/20">
+            <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-zinc-700/50">
               <div>
                 <label className={label}>{t("fr.hp")}</label>
-                <div className="rounded-lg bg-[#182018] px-4 py-2.5 text-green-500 font-bold font-mono text-center">
+                <div className="rounded-lg bg-zinc-800 px-4 py-2.5 text-green-500 font-bold font-mono text-center">
                   {attrs.ht}
                 </div>
               </div>
               <div>
                 <label className={label}>{t("fr.ch.basicSpeed")}</label>
-                <div className="rounded-lg bg-[#182018] px-4 py-2.5 text-green-500 font-bold font-mono text-center">
+                <div className="rounded-lg bg-zinc-800 px-4 py-2.5 text-green-500 font-bold font-mono text-center">
                   {basicSpeed.toFixed(2)}
                 </div>
               </div>
               <div>
                 <label className={label}>{t("fr.ch.move")}</label>
-                <div className="rounded-lg bg-[#182018] px-4 py-2.5 text-green-500 font-bold font-mono text-center">
+                <div className="rounded-lg bg-zinc-800 px-4 py-2.5 text-green-500 font-bold font-mono text-center">
                   {move.toFixed(2)}
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="border border-[#A9A177]/25 bg-[#182018]/70 rounded-xl p-5">
-            <h3 className="text-sm font-semibold uppercase tracking-wider text-[#7E876A] mb-3">{t("fr.ch.defenseSpeed")}</h3>
+          <div className="border border-zinc-700/60 bg-zinc-800/70 rounded-xl p-5">
+            <h3 className="text-sm font-semibold uppercase tracking-wider text-zinc-500 mb-3">{t("fr.ch.defenseSpeed")}</h3>
             <div className="flex justify-center flex-wrap gap-6">
               {([
-                { label: "fr.ch.dodge", value: String(Math.floor(basicSpeed + 3)), color: "text-[#A9A177]", d: "M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" },
+                { label: "fr.ch.dodge", value: String(Math.floor(basicSpeed + 3)), color: "text-zinc-400", d: "M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" },
                 { label: "fr.hp", value: String(attrs.ht), color: "text-red-400", d: "M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" },
                 { label: "fr.fp", value: String(initial?.character?.sheet?.fatigue ?? 10), color: "text-green-500", d: "M13 10V3L4 14h7v7l9-11h-7z" },
-                { label: "fr.ch.basicSpeed", value: basicSpeed.toFixed(2), suffix: "km/h", color: "text-[#A9A177]", d: "M13 5l7 7-7 7M5 5l7 7-7 7" },
+                { label: "fr.ch.basicSpeed", value: basicSpeed.toFixed(2), suffix: "km/h", color: "text-zinc-400", d: "M13 5l7 7-7 7M5 5l7 7-7 7" },
                 { label: "fr.ch.move", value: String(move), color: "text-blue-400", d: "M5 12h14M12 5l7 7-7 7" },
                 { label: "fr.ch.encumbrance", value: t(ENCUMBRANCE_LABELS[encumbranceValue]), sub: `${itemsWeight.toFixed(1)} lb`, color: "text-purple-400", d: "M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" },
               ] as Array<{ label: string; value: string; suffix?: string; color: string; d: string }>).map(({ label, value, suffix, color, d }) => (
-                <div key={label} className="flex flex-col items-center gap-1 p-2 bg-[#182018]/40 rounded-lg min-w-[80px]">
+                <div key={label} className="flex flex-col items-center gap-1 p-2 bg-zinc-800/40 rounded-lg min-w-[80px]">
                   <svg className={`w-5 h-5 ${color}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={d} />
                   </svg>
                   <span className={`${color} text-sm font-bold`}>{value}{suffix ? <span className="font-light text-xs ml-0.5">{suffix}</span> : null}</span>
-                  <span className="text-[#7E876A] text-xs font-semibold uppercase">{t(label)}</span>
+                  <span className="text-zinc-500 text-xs font-semibold uppercase">{t(label)}</span>
                 </div>
               ))}
             </div>
           </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <section className="border border-[#A9A177]/25 bg-[#182018]/70 rounded-xl p-5">
+          <section className="border border-zinc-700/60 bg-zinc-800/70 rounded-xl p-5">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
-                <svg className="w-5 h-5 text-[#A9A177]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                 </svg>
-                <h2 className="text-lg font-semibold text-[#EDE6CE]">{t("fr.ch.advTitle")}</h2>
-                <span className="text-sm text-[#7E876A]">{interpolate(t("fr.list.slashF"), { n: selAdv.length })}</span>
+                <h2 className="text-lg font-semibold text-zinc-100">{t("fr.ch.advTitle")}</h2>
+                <span className="text-sm text-zinc-500">{interpolate(t("fr.list.slashF"), { n: selAdv.length })}</span>
               </div>
               <div className="flex items-center gap-2">
                 <SplitToggle active={splitAdv} onToggle={() => setSplitAdv((v) => !v)} />
                 <button
                   type="button"
                   onClick={() => setSearchFor("advantages")}
-                  className="flex items-center gap-1.5 text-xs font-semibold bg-[#182018] hover:bg-[#A9A177]/15 text-[#EDE6CE] px-2.5 py-1.5 rounded-lg transition-colors"
+                  className="flex items-center gap-1.5 text-xs font-semibold bg-zinc-800 hover:bg-zinc-700/50 text-zinc-100 px-2.5 py-1.5 rounded-lg transition-colors"
                 >
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-4.35-4.35M17 10.5a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z" />
@@ -768,19 +780,19 @@ export default function CharacterForm({ tableId, tables, initial, settings }: Ch
                         ]}
                       >
                         <label
-                          className={`flex items-center gap-3 p-2 rounded-lg hover:bg-[#A9A177]/10 cursor-pointer ${
-                            isSelected ? "border border-[#E07B3A]/40 bg-[#E07B3A]/10" : "border border-transparent"
+                          className={`flex items-center gap-3 p-2 rounded-lg hover:bg-zinc-700/40 cursor-pointer ${
+                            isSelected ? "border border-green-600/50 bg-green-800/20" : "border border-transparent"
                           }`}
                         >
                           <input
                             type="checkbox"
                             checked={isSelected}
                             onChange={(e) => toggleSelection("advantages", { id: a.id, name: a.name, cost_points: a.cost_points }, e.target.checked)}
-                            className="w-4 h-4 rounded border-[#A9A177]/40 text-white0 focus:ring-green-800 bg-[#0E110D]"
+                            className="w-4 h-4 rounded border-zinc-600 accent-green-700 focus:ring-green-800 bg-zinc-900"
                           />
                           <div className="flex-1 min-w-0">
-                            <div className="text-sm font-medium text-[#EDE6CE] truncate">{a.name || t("fr.noName")}</div>
-                            {a.description ? <div className="text-xs text-[#7E876A] truncate">{a.description}</div> : null}
+                            <div className="text-sm font-medium text-zinc-100 truncate">{a.name || t("fr.noName")}</div>
+                            {a.description ? <div className="text-xs text-zinc-500 truncate">{a.description}</div> : null}
                           </div>
                           <span className="text-xs font-mono text-green-500 font-bold shrink-0">
                             {a.cost_points != null ? (a.cost_points >= 0 ? "+" : "") + a.cost_points : "±0"}
@@ -789,19 +801,19 @@ export default function CharacterForm({ tableId, tables, initial, settings }: Ch
                       </InfoTooltip>
                     );
                   };
-                  if (available.advantages.length === 0) return <p className="text-[#7E876A] text-sm">{t("fr.list.noAdv")}</p>;
+                  if (available.advantages.length === 0) return <p className="text-zinc-500 text-sm">{t("fr.list.noAdv")}</p>;
                   if (splitAdv) {
                     return (
                       <>
                         {selRows.length > 0 ? (
                           <>
-                            <div className="text-xs font-semibold text-[#7E876A] uppercase tracking-wider pt-1">{interpolate(t("fr.list.slashF"), { n: selRows.length })}</div>
+                            <div className="text-xs font-semibold text-zinc-500 uppercase tracking-wider pt-1">{interpolate(t("fr.list.slashF"), { n: selRows.length })}</div>
                             {selRows.map(renderAdv)}
                           </>
                         ) : null}
                         {unselRows.length > 0 ? (
                           <>
-                            <div className="text-xs font-semibold text-[#7E876A] uppercase tracking-wider pt-3">{interpolate(t("fr.list.slashNF"), { n: unselRows.length })}</div>
+                            <div className="text-xs font-semibold text-zinc-500 uppercase tracking-wider pt-3">{interpolate(t("fr.list.slashNF"), { n: unselRows.length })}</div>
                             {unselRows.map(renderAdv)}
                           </>
                         ) : null}
@@ -813,21 +825,21 @@ export default function CharacterForm({ tableId, tables, initial, settings }: Ch
               </div>
             </section>
 
-            <section className="border border-[#A9A177]/25 bg-[#182018]/70 rounded-xl p-5">
+            <section className="border border-zinc-700/60 bg-zinc-800/70 rounded-xl p-5">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
                   <svg className="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
                   </svg>
-                  <h2 className="text-lg font-semibold text-[#EDE6CE]">{t("fr.ch.disTitle")}</h2>
-                  <span className="text-sm text-[#7E876A]">{interpolate(t("fr.list.slashF"), { n: selDis.length })}</span>
+                  <h2 className="text-lg font-semibold text-zinc-100">{t("fr.ch.disTitle")}</h2>
+                  <span className="text-sm text-zinc-500">{interpolate(t("fr.list.slashF"), { n: selDis.length })}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <SplitToggle active={splitDis} onToggle={() => setSplitDis((v) => !v)} />
                   <button
                     type="button"
                     onClick={() => setSearchFor("disadvantages")}
-                    className="flex items-center gap-1.5 text-xs font-semibold bg-[#182018] hover:bg-[#A9A177]/15 text-[#EDE6CE] px-2.5 py-1.5 rounded-lg transition-colors"
+                    className="flex items-center gap-1.5 text-xs font-semibold bg-zinc-800 hover:bg-zinc-700/50 text-zinc-100 px-2.5 py-1.5 rounded-lg transition-colors"
                   >
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-4.35-4.35M17 10.5a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z" />
@@ -855,19 +867,19 @@ export default function CharacterForm({ tableId, tables, initial, settings }: Ch
                         ]}
                       >
                         <label
-                          className={`flex items-center gap-3 p-2 rounded-lg hover:bg-[#A9A177]/10 cursor-pointer ${
-                            isSelected ? "border border-[#E07B3A]/40 bg-[#E07B3A]/10" : "border border-transparent"
+                          className={`flex items-center gap-3 p-2 rounded-lg hover:bg-zinc-700/40 cursor-pointer ${
+                            isSelected ? "border border-green-600/50 bg-green-800/20" : "border border-transparent"
                           }`}
                         >
                           <input
                             type="checkbox"
                             checked={isSelected}
                             onChange={(e) => toggleSelection("disadvantages", { id: d.id, name: d.name, cost_points: d.cost_points }, e.target.checked)}
-                            className="w-4 h-4 rounded border-[#A9A177]/40 text-white0 focus:ring-green-800 bg-[#0E110D]"
+                            className="w-4 h-4 rounded border-zinc-600 accent-green-700 focus:ring-green-800 bg-zinc-900"
                           />
                           <div className="flex-1 min-w-0">
-                            <div className="text-sm font-medium text-[#EDE6CE] truncate">{d.name || t("fr.noName")}</div>
-                            {d.description ? <div className="text-xs text-[#7E876A] truncate">{d.description}</div> : null}
+                            <div className="text-sm font-medium text-zinc-100 truncate">{d.name || t("fr.noName")}</div>
+                            {d.description ? <div className="text-xs text-zinc-500 truncate">{d.description}</div> : null}
                           </div>
                           <span className="text-xs font-mono text-green-500 font-bold shrink-0">
                             {d.cost_points != null ? (d.cost_points > 0 ? `-${d.cost_points}` : String(d.cost_points)) : "±0"}
@@ -876,19 +888,19 @@ export default function CharacterForm({ tableId, tables, initial, settings }: Ch
                       </InfoTooltip>
                     );
                   };
-                  if (available.disadvantages.length === 0) return <p className="text-[#7E876A] text-sm">{t("fr.list.noDis")}</p>;
+                  if (available.disadvantages.length === 0) return <p className="text-zinc-500 text-sm">{t("fr.list.noDis")}</p>;
                   if (splitDis) {
                     return (
                       <>
                         {selRows.length > 0 ? (
                           <>
-                            <div className="text-xs font-semibold text-[#7E876A] uppercase tracking-wider pt-1">{interpolate(t("fr.list.slashF"), { n: selRows.length })}</div>
+                            <div className="text-xs font-semibold text-zinc-500 uppercase tracking-wider pt-1">{interpolate(t("fr.list.slashF"), { n: selRows.length })}</div>
                             {selRows.map(renderDis)}
                           </>
                         ) : null}
                         {unselRows.length > 0 ? (
                           <>
-                            <div className="text-xs font-semibold text-[#7E876A] uppercase tracking-wider pt-3">{interpolate(t("fr.list.slashNF"), { n: unselRows.length })}</div>
+                            <div className="text-xs font-semibold text-zinc-500 uppercase tracking-wider pt-3">{interpolate(t("fr.list.slashNF"), { n: unselRows.length })}</div>
                             {unselRows.map(renderDis)}
                           </>
                         ) : null}
@@ -901,27 +913,27 @@ export default function CharacterForm({ tableId, tables, initial, settings }: Ch
             </section>
         </div>
 
-        <section className="border border-[#A9A177]/25 bg-[#182018]/70 rounded-xl p-5">
+        <section className="border border-zinc-700/60 bg-zinc-800/70 rounded-xl p-5">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
-                  <svg className="w-5 h-5 text-[#A9A177]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
                   </svg>
-                  <h2 className="text-lg font-semibold text-[#EDE6CE]">{t("fr.ch.quirks")}</h2>
-                  <span className="text-sm text-[#7E876A]">
+                  <h2 className="text-lg font-semibold text-zinc-100">{t("fr.ch.quirks")}</h2>
+                  <span className="text-sm text-zinc-500">
                     {quirks.length} / {MAX_QUIRKS}
                   </span>
                 </div>
               </div>
               <div className="space-y-3">
                 {quirks.map((q, index) => (
-                  <div key={index} className="rounded-lg border border-[#A9A177]/25 bg-[#0E110D]/60 p-3 space-y-2">
+                  <div key={index} className="rounded-lg border border-zinc-700/60 bg-zinc-900/60 p-3 space-y-2">
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-mono text-[#7E876A]">#{index + 1}</span>
+                      <span className="text-xs font-mono text-zinc-500">#{index + 1}</span>
                       <button
                         type="button"
                         onClick={() => removeQuirk(index)}
-                        className="ml-auto text-[#7E876A] hover:text-red-400 text-xs transition-colors"
+                        className="ml-auto text-zinc-500 hover:text-red-400 text-xs transition-colors"
                       >
                         {t("fr.ch.quirkRemove")}
                       </button>
@@ -941,28 +953,28 @@ export default function CharacterForm({ tableId, tables, initial, settings }: Ch
                   </div>
                 ))}
                 {quirks.length === 0 ? (
-                  <p className="text-[#7E876A] text-sm">{t("fr.ch.quirksEmpty")}</p>
+                  <p className="text-zinc-500 text-sm">{t("fr.ch.quirksEmpty")}</p>
                 ) : null}
               </div>
               <button
                 type="button"
                 onClick={addQuirk}
                 disabled={quirks.length >= MAX_QUIRKS}
-                className="mt-4 w-full bg-[#182018] hover:bg-[#A9A177]/15 disabled:opacity-40 disabled:cursor-not-allowed text-[#EDE6CE] text-sm font-semibold px-4 py-2 rounded-lg transition-colors"
+                className="mt-4 w-full bg-zinc-800 hover:bg-zinc-700/50 disabled:opacity-40 disabled:cursor-not-allowed text-zinc-100 text-sm font-semibold px-4 py-2 rounded-lg transition-colors"
               >
                 {t("fr.ch.quirkAdd")}
               </button>
             </section>
 
-        <div className="border-t border-[#A9A177]/20 pt-6">
-          <span className="text-sm text-[#7E876A] mb-2 block">{interpolate(t("fr.list.slashF"), { n: selSkills.length })}</span>
+        <div className="border-t border-zinc-700/50 pt-6">
+          <span className="text-sm text-zinc-500 mb-2 block">{interpolate(t("fr.list.slashF"), { n: selSkills.length })}</span>
           <div className="flex items-center gap-2 mb-1">
-            <h2 className="text-lg font-semibold text-[#EDE6CE]">{t("fr.ch.skillsTitle")}</h2>
+            <h2 className="text-lg font-semibold text-zinc-100">{t("fr.ch.skillsTitle")}</h2>
             <SplitToggle active={splitSkills} onToggle={() => setSplitSkills((v) => !v)} />
             <button
               type="button"
               onClick={() => setSearchFor("skills")}
-              className="flex items-center gap-1.5 text-xs font-semibold bg-[#182018] hover:bg-[#A9A177]/15 text-[#EDE6CE] px-2.5 py-1.5 rounded-lg transition-colors"
+              className="flex items-center gap-1.5 text-xs font-semibold bg-zinc-800 hover:bg-zinc-700/50 text-zinc-100 px-2.5 py-1.5 rounded-lg transition-colors"
             >
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-4.35-4.35M17 10.5a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z" />
@@ -970,9 +982,9 @@ export default function CharacterForm({ tableId, tables, initial, settings }: Ch
               {t("fr.search")}
             </button>
           </div>
-          <p className="text-xs text-[#7E876A] mb-4">{t("fr.ch.skillsHint")}</p>
-          <section className="border border-[#A9A177]/25 bg-[#182018]/70 rounded-xl p-5">
-            <div className="flex flex-wrap items-center gap-x-2 p-2 pb-2 pr-2 text-xs font-medium text-[#7E876A] border-b border-[#A9A177]/20 mb-1">
+          <p className="text-xs text-zinc-500 mb-4">{t("fr.ch.skillsHint")}</p>
+          <section className="border border-zinc-700/60 bg-zinc-800/70 rounded-xl p-5">
+            <div className="flex flex-wrap items-center gap-x-2 p-2 pb-2 pr-2 text-xs font-medium text-zinc-500 border-b border-zinc-700/50 mb-1">
               <div className="w-4 shrink-0" />
               <div className="flex-1 min-w-0" style={{maxWidth: "Calc(100% - 240px)"}}>{t("fr.ch.skillCol")}</div>
               <div className="flex items-center gap-3">
@@ -1025,19 +1037,19 @@ export default function CharacterForm({ tableId, tables, initial, settings }: Ch
                       ]}
                     >
                       <div
-                        className={`flex flex-wrap items-center gap-x-2 gap-y-1 p-2 rounded-lg hover:bg-[#A9A177]/10 ${
-                          sel ? "border border-[#E07B3A]/40 bg-[#E07B3A]/10" : "border border-transparent"
+                        className={`flex flex-wrap items-center gap-x-2 gap-y-1 p-2 rounded-lg hover:bg-zinc-700/40 ${
+                          sel ? "border border-green-600/50 bg-green-800/20" : "border border-transparent"
                         }`}
                       >
                         <input
                           type="checkbox"
                           checked={!!sel}
                           onChange={(e) => toggleSkill({ id: sk.id, name: sk.name }, e.target.checked)}
-                          className="w-4 h-4 rounded border-[#A9A177]/40 text-white0 focus:ring-green-800 bg-[#0E110D]"
+                          className="w-4 h-4 rounded border-zinc-600 accent-green-700 focus:ring-green-800 bg-zinc-900"
                         />
                         <div className="flex-1 min-w-0">
-                          <div className="text-sm font-medium text-[#EDE6CE] truncate">{sk.name || t("fr.noName")}</div>
-                          <div className="flex items-center gap-1.5 text-xs text-[#7E876A]">
+                          <div className="text-sm font-medium text-zinc-100 truncate">{sk.name || t("fr.noName")}</div>
+                          <div className="flex items-center gap-1.5 text-xs text-zinc-500">
                             {SKILL_TYPE_META[type] ? (
                               <svg className={`w-3.5 h-3.5 ${SKILL_TYPE_META[type].color}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={SKILL_TYPE_META[type].svg} />
@@ -1050,7 +1062,7 @@ export default function CharacterForm({ tableId, tables, initial, settings }: Ch
                                     sk.predefinition_difficulty === "Easy"
                                       ? t("fr.diff.easy")
                                       : sk.predefinition_difficulty === "Medium"
-                                        ? t("fr.diff.average")
+                                        ? t("fr.diff.medium")
                                         : sk.predefinition_difficulty === "Hard"
                                           ? t("fr.diff.hard")
                                           : sk.predefinition_difficulty === "Very Hard"
@@ -1060,19 +1072,19 @@ export default function CharacterForm({ tableId, tables, initial, settings }: Ch
                                 : ""}
                             </span>
                           </div>
-                          <div className="text-xs text-[#7E876A] truncate">
+                          <div className="text-xs text-zinc-500 truncate">
                             {skillPredefLabel(sk)
                               ? interpolate(t("fr.tip.standardPrefix"), { v: skillPredefLabel(sk) })
                               : t("fr.tip.standardNone")}
                           </div>
-                          {sk.description ? <div className="text-xs text-[#7E876A] truncate">{sk.description}</div> : null}
+                          {sk.description ? <div className="text-xs text-zinc-500 truncate">{sk.description}</div> : null}
                         </div>
                         <div className="flex items-center gap-3">
                           <div className="flex items-center gap-1">
                             <button
                               type="button"
                               onClick={() => adjSkill(sk.id, -1)}
-                              className="w-6 h-6 shrink-0 rounded bg-[#182018] hover:bg-[#A9A177]/15 text-[#EDE6CE] text-xs font-bold flex items-center justify-center"
+                              className="w-6 h-6 shrink-0 rounded bg-zinc-800 hover:bg-zinc-700/50 text-zinc-100 text-xs font-bold flex items-center justify-center"
                             >
                               −
                             </button>
@@ -1082,7 +1094,7 @@ export default function CharacterForm({ tableId, tables, initial, settings }: Ch
                             <button
                               type="button"
                               onClick={() => adjSkill(sk.id, 1)}
-                              className="w-6 h-6 shrink-0 rounded bg-[#182018] hover:bg-[#A9A177]/15 text-[#EDE6CE] text-xs font-bold flex items-center justify-center"
+                              className="w-6 h-6 shrink-0 rounded bg-zinc-800 hover:bg-zinc-700/50 text-zinc-100 text-xs font-bold flex items-center justify-center"
                             >
                               +
                             </button>
@@ -1095,19 +1107,19 @@ export default function CharacterForm({ tableId, tables, initial, settings }: Ch
                     </InfoTooltip>
                   );
                 };
-                if (available.skills.length === 0) return <p className="text-[#7E876A] text-sm">{t("fr.list.noSkill")}</p>;
+                if (available.skills.length === 0) return <p className="text-zinc-500 text-sm">{t("fr.list.noSkill")}</p>;
                 if (splitSkills) {
                   return (
                     <>
                       {selRows.length > 0 ? (
                         <>
-                          <div className="text-xs font-semibold text-[#7E876A] uppercase tracking-wider pt-1">{interpolate(t("fr.list.slashF"), { n: selRows.length })}</div>
+                          <div className="text-xs font-semibold text-zinc-500 uppercase tracking-wider pt-1">{interpolate(t("fr.list.slashF"), { n: selRows.length })}</div>
                           {selRows.map(renderSkill)}
                         </>
                       ) : null}
                       {unselRows.length > 0 ? (
                         <>
-                          <div className="text-xs font-semibold text-[#7E876A] uppercase tracking-wider pt-3">{interpolate(t("fr.list.slashNF"), { n: unselRows.length })}</div>
+                          <div className="text-xs font-semibold text-zinc-500 uppercase tracking-wider pt-3">{interpolate(t("fr.list.slashNF"), { n: unselRows.length })}</div>
                           {unselRows.map(renderSkill)}
                         </>
                       ) : null}
@@ -1125,23 +1137,23 @@ export default function CharacterForm({ tableId, tables, initial, settings }: Ch
         {activeTab === "items" && (
         <>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="border border-[#A9A177]/25 bg-[#182018]/70 rounded-xl p-5">
-              <h3 className="text-sm font-semibold uppercase tracking-wider text-[#7E876A] mb-3">{t("fr.ch.defenseSpeed")}</h3>
+            <div className="border border-zinc-700/60 bg-zinc-800/70 rounded-xl p-5">
+              <h3 className="text-sm font-semibold uppercase tracking-wider text-zinc-500 mb-3">{t("fr.ch.defenseSpeed")}</h3>
               <div className="grid grid-cols-3 gap-2">
                 {([
-                  { label: "fr.ch.dodge", value: String(Math.floor(basicSpeed + 3)), color: "text-[#A9A177]", d: "M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" },
+                  { label: "fr.ch.dodge", value: String(Math.floor(basicSpeed + 3)), color: "text-zinc-400", d: "M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" },
                   { label: "fr.hp", value: String(attrs.ht), color: "text-red-400", d: "M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" },
                   { label: "fr.fp", value: String(initial?.character?.sheet?.fatigue ?? 10), color: "text-green-500", d: "M13 10V3L4 14h7v7l9-11h-7z" },
-                  { label: "fr.ch.basicSpeed", value: basicSpeed.toFixed(2), suffix: "km/h", color: "text-[#A9A177]", d: "M13 5l7 7-7 7M5 5l7 7-7 7" },
+                  { label: "fr.ch.basicSpeed", value: basicSpeed.toFixed(2), suffix: "km/h", color: "text-zinc-400", d: "M13 5l7 7-7 7M5 5l7 7-7 7" },
                   { label: "fr.ch.move", value: String(move), color: "text-blue-400", d: "M5 12h14M12 5l7 7-7 7" },
                   { label: "fr.ch.encumbrance", value: t(ENCUMBRANCE_LABELS[encumbranceValue]), sub: `${itemsWeight.toFixed(1)} lb`, color: "text-purple-400", d: "M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" },
                 ] as Array<{ label: string; value: string; suffix?: string; color: string; d: string }>).map(({ label, value, suffix, color, d }) => (
-                  <div key={label} className="flex flex-col items-center gap-1 p-2 bg-[#182018]/40 rounded-lg min-w-[80px]">
+                  <div key={label} className="flex flex-col items-center gap-1 p-2 bg-zinc-800/40 rounded-lg min-w-[80px]">
                     <svg className={`w-5 h-5 ${color}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={d} />
                     </svg>
                     <span className={`${color} text-sm font-bold`}>{value}{suffix ? <span className="font-light text-xs ml-0.5">{suffix}</span> : null}</span>
-                    <span className="text-[#7E876A] text-xs font-semibold uppercase">{t(label)}</span>
+                    <span className="text-zinc-500 text-xs font-semibold uppercase">{t(label)}</span>
                   </div>
                 ))}
               </div>
@@ -1155,8 +1167,8 @@ export default function CharacterForm({ tableId, tables, initial, settings }: Ch
                 return { id: s.id, name: s.name, fit: eq?.location, value: item?.armor?.dr != null ? `DR ${item.armor.dr}` : undefined };
               });
               return (
-                <div className="border border-[#A9A177]/25 bg-[#182018]/70 rounded-xl p-5">
-                  <h3 className="text-sm font-semibold uppercase tracking-wider text-[#7E876A] mb-3">{t("fr.ch.body")}</h3>
+                <div className="border border-zinc-700/60 bg-zinc-800/70 rounded-xl p-5">
+                  <h3 className="text-sm font-semibold uppercase tracking-wider text-zinc-500 mb-3">{t("fr.ch.body")}</h3>
                   {(() => {
                     const drFor = (fits: string[]) => {
                       let total = 0;
@@ -1185,11 +1197,11 @@ export default function CharacterForm({ tableId, tables, initial, settings }: Ch
                             {(() => {
                               const badge = (label: string, dr: number, style: React.CSSProperties) => (
                                 <div
-                                  className="absolute flex flex-col items-center justify-center p-1 rounded border border-[#A9A177]/40"
+                                  className="absolute flex flex-col items-center justify-center p-1 rounded border border-zinc-600"
                                   style={{ ...style, width: 52, height: 44 }}
                                 >
-                                  <span className="text-[#A9A177] uppercase" style={{ fontSize: 7, lineHeight: 1, letterSpacing: 0.3 }}>{label}</span>
-                                  <span className="text-[#A9A177] font-bold text-sm leading-none mt-0.5">{dr}</span>
+                                  <span className="text-zinc-400 uppercase" style={{ fontSize: 7, lineHeight: 1, letterSpacing: 0.3 }}>{label}</span>
+                                  <span className="text-zinc-400 font-bold text-sm leading-none mt-0.5">{dr}</span>
                                 </div>
                               );
                               return (
@@ -1208,10 +1220,10 @@ export default function CharacterForm({ tableId, tables, initial, settings }: Ch
                       </div>
                     );
                   })()}
-                  <div className="space-y-1 mt-4 border-t border-[#A9A177]/20 pt-4">
+                  <div className="space-y-1 mt-4 border-t border-zinc-700/50 pt-4">
                     {armors.map((a) => (
                       <div key={a.id} className="flex justify-between text-xs">
-                        <span className="text-[#EDE6CE]">{a.name}</span>
+                        <span className="text-zinc-100">{a.name}</span>
                         <span className="text-green-500/80">
                           {(a.value ?? "").replace("DR ", "")} {a.fit || ""}
                         </span>
@@ -1224,29 +1236,29 @@ export default function CharacterForm({ tableId, tables, initial, settings }: Ch
           </div>
 
           {selItems.some((s) => isArmorish(available.items.find((i) => i.id === s.id))) ? (
-            <div className="border border-[#A9A177]/25 bg-[#182018]/70 rounded-xl p-5 mt-4">
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-[#7E876A] mb-3">{t("fr.ch.equip")}</h3>
+            <div className="border border-zinc-700/60 bg-zinc-800/70 rounded-xl p-5 mt-4">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-3">{t("fr.ch.equip")}</h3>
               <div className="space-y-3">
                 {selItems.filter((s) => isArmorish(available.items.find((i) => i.id === s.id))).map((s) => {
                   const item = available.items.find((i) => i.id === s.id);
                   const eq = equipped[s.id];
                   return (
-                    <div key={s.id} className="bg-[#0E110D]/60 rounded-lg border border-[#A9A177]/25 p-3">
+                    <div key={s.id} className="bg-zinc-900/60 rounded-lg border border-zinc-700/60 p-3">
                       <div className="flex items-center gap-2 mb-2">
                         <svg className="w-3.5 h-3.5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
                         </svg>
-                        <span className="text-sm font-medium text-[#EDE6CE] flex-1 truncate">{s.name}</span>
-                        {item?.weight_lb != null ? <span className="text-[10px] text-[#7E876A]">{item.weight_lb} lb</span> : null}
-                        {item?.armor?.dr != null ? <span className="text-[10px] text-[#A9A177]">DR {item.armor.dr}</span> : null}
+                        <span className="text-sm font-medium text-zinc-100 flex-1 truncate">{s.name}</span>
+                        {item?.weight_lb != null ? <span className="text-[10px] text-zinc-500">{item.weight_lb} lb</span> : null}
+                        {item?.armor?.dr != null ? <span className="text-[10px] text-zinc-400">DR {item.armor.dr}</span> : null}
                       </div>
                       <div className="grid grid-cols-2 gap-2 items-center">
                         <div>
-                          <label className="text-[10px] text-[#7E876A] uppercase block mb-0.5">{t("fr.equipState")}</label>
+                          <label className="text-[10px] text-zinc-500 uppercase block mb-0.5">{t("fr.equipState")}</label>
                           <select
                             value={eq?.status ?? ""}
                             onChange={(e) => setEquipped((prev) => ({ ...prev, [s.id]: { ...prev[s.id], status: e.target.value || undefined } }))}
-                            className="w-full rounded border-b border-[#A9A177]/40 bg-transparent px-2 py-1 text-xs text-[#EDE6CE]"
+                            className="w-full rounded border-b border-zinc-600 bg-transparent px-2 py-1 text-xs text-zinc-100"
                           >
                             <option value="">—</option>
                             <option value="equipped">{t("fr.equipped")}</option>
@@ -1255,11 +1267,11 @@ export default function CharacterForm({ tableId, tables, initial, settings }: Ch
                           </select>
                         </div>
                         <div>
-                          <label className="text-[10px] text-[#7E876A] uppercase block mb-0.5">{t("fr.loc.link")}</label>
+                          <label className="text-[10px] text-zinc-500 uppercase block mb-0.5">{t("fr.loc.link")}</label>
                           <select
                             value={eq?.location ?? ""}
                             onChange={(e) => setEquipped((prev) => ({ ...prev, [s.id]: { ...prev[s.id], location: e.target.value || undefined } }))}
-                            className="w-full rounded border-b border-[#A9A177]/40 bg-transparent px-2 py-1 text-xs text-[#EDE6CE]"
+                            className="w-full rounded border-b border-zinc-600 bg-transparent px-2 py-1 text-xs text-zinc-100"
                           >
                             <option value="">{t("fr.none")}</option>
                             {BODY_LOCATIONS.map((loc) => (
@@ -1270,10 +1282,10 @@ export default function CharacterForm({ tableId, tables, initial, settings }: Ch
                       </div>
                       {eq?.status === "equipped" || eq?.status === "wielded" ? (
                         <div className="flex items-center gap-1 mt-2">
-                          <svg className="w-3 h-3 text-[#A9A177]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-3 h-3 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                           </svg>
-                          <span className="text-[10px] text-[#A9A177]">{eq.status === "wielded" ? t("fr.wielded") : t("fr.equipped")}{eq.location ? ` — ${eq.location}` : ""}</span>
+                          <span className="text-[10px] text-zinc-400">{eq.status === "wielded" ? t("fr.wielded") : t("fr.equipped")}{eq.location ? ` — ${eq.location}` : ""}</span>
                         </div>
                       ) : null}
                     </div>
@@ -1283,15 +1295,15 @@ export default function CharacterForm({ tableId, tables, initial, settings }: Ch
             </div>
           ) : null}
 
-          <div className="border-t border-[#A9A177]/20 pt-6">
+          <div className="border-t border-zinc-700/50 pt-6">
             <div className="flex items-center justify-between mb-1">
               <div className="flex items-center gap-2">
-                <h2 className="text-lg font-semibold text-[#EDE6CE]">{t("fr.ch.itemsTitle")}</h2>
+                <h2 className="text-lg font-semibold text-zinc-100">{t("fr.ch.itemsTitle")}</h2>
                 <SplitToggle active={splitItems} onToggle={() => setSplitItems((v) => !v)} />
                 <button
                   type="button"
                   onClick={() => setSearchFor("items")}
-                  className="flex items-center gap-1.5 text-xs font-semibold bg-[#182018] hover:bg-[#A9A177]/15 text-[#EDE6CE] px-2.5 py-1.5 rounded-lg transition-colors"
+                  className="flex items-center gap-1.5 text-xs font-semibold bg-zinc-800 hover:bg-zinc-700/50 text-zinc-100 px-2.5 py-1.5 rounded-lg transition-colors"
                 >
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-4.35-4.35M17 10.5a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z" />
@@ -1299,9 +1311,9 @@ export default function CharacterForm({ tableId, tables, initial, settings }: Ch
                   {t("fr.search")}
                 </button>
               </div>
-              <span className="text-sm text-[#7E876A]">{interpolate(t("fr.list.slashM"), { n: selItems.length })}</span>
+              <span className="text-sm text-zinc-500">{interpolate(t("fr.list.slashM"), { n: selItems.length })}</span>
             </div>
-            <section className="border border-[#A9A177]/25 bg-[#182018]/70 rounded-xl p-5">
+            <section className="border border-zinc-700/60 bg-zinc-800/70 rounded-xl p-5">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-80 overflow-y-auto scroll-thin pr-2">
                 {(() => {
                   const renderItem = (item: Item) => {
@@ -1319,23 +1331,23 @@ export default function CharacterForm({ tableId, tables, initial, settings }: Ch
                         ]}
                       >
                         <label
-                          className={`flex items-center gap-3 p-2 rounded-lg hover:bg-[#A9A177]/10 cursor-pointer ${
-                            isSelected ? "border border-[#E07B3A]/40 bg-[#E07B3A]/10" : "border border-transparent"
+                          className={`flex items-center gap-3 p-2 rounded-lg hover:bg-zinc-700/40 cursor-pointer ${
+                            isSelected ? "border border-green-600/50 bg-green-800/20" : "border border-transparent"
                           }`}
                         >
                           <input
                             type="checkbox"
                             checked={isSelected}
                             onChange={(e) => toggleItem({ id: item.id, name: item.name }, e.target.checked)}
-                            className="w-4 h-4 rounded border-[#A9A177]/40 text-white0 focus:ring-green-800 bg-[#0E110D]"
+                            className="w-4 h-4 rounded border-zinc-600 accent-green-700 focus:ring-green-800 bg-zinc-900"
                           />
                           <div className="flex-1 min-w-0">
-                            <div className="text-sm font-medium text-[#EDE6CE] truncate">{item.name || t("fr.noName")}</div>
-                            <div className="text-xs text-[#7E876A] truncate">
+                            <div className="text-sm font-medium text-zinc-100 truncate">{item.name || t("fr.noName")}</div>
+                            <div className="text-xs text-zinc-500 truncate">
                               {[item.category, item.quality, item.condition].filter(Boolean).join(" · ") || ""}
                               {item.weight_lb != null ? ` · ${item.weight_lb} lb` : ""}
                             </div>
-                            {item.description ? <div className="text-xs text-[#7E876A] truncate">{item.description}</div> : null}
+                            {item.description ? <div className="text-xs text-zinc-500 truncate">{item.description}</div> : null}
                           </div>
                         </label>
                       </InfoTooltip>
@@ -1349,13 +1361,13 @@ export default function CharacterForm({ tableId, tables, initial, settings }: Ch
                       <>
                         {selRows.length > 0 ? (
                           <>
-                            <div className="col-span-full text-xs font-semibold text-[#7E876A] uppercase tracking-wider pt-1">{interpolate(t("fr.list.slashM"), { n: selRows.length })}</div>
+                            <div className="col-span-full text-xs font-semibold text-zinc-500 uppercase tracking-wider pt-1">{interpolate(t("fr.list.slashM"), { n: selRows.length })}</div>
                             {selRows.map(renderItem)}
                           </>
                         ) : null}
                         {unselRows.length > 0 ? (
                           <>
-                            <div className="col-span-full text-xs font-semibold text-[#7E876A] uppercase tracking-wider pt-3">{interpolate(t("fr.list.slashNM"), { n: unselRows.length })}</div>
+                            <div className="col-span-full text-xs font-semibold text-zinc-500 uppercase tracking-wider pt-3">{interpolate(t("fr.list.slashNM"), { n: unselRows.length })}</div>
                             {unselRows.map(renderItem)}
                           </>
                         ) : null}
@@ -1365,7 +1377,7 @@ export default function CharacterForm({ tableId, tables, initial, settings }: Ch
                   return available.items.map(renderItem);
                 })()}
                 {available.items.length === 0 ? (
-                  <p className="col-span-full text-[#7E876A] text-sm">{t("fr.list.noItem")}</p>
+                  <p className="col-span-full text-zinc-500 text-sm">{t("fr.list.noItem")}</p>
                 ) : null}
               </div>
             </section>
@@ -1388,11 +1400,11 @@ export default function CharacterForm({ tableId, tables, initial, settings }: Ch
                   <div
                     key={label}
                     className={`text-center text-xs rounded-lg px-2 py-1.5 ${
-                      active ? "bg-[#E07B3A]/10 text-[#EDE6CE]" : "bg-[#182018]/30 text-[#7E876A]"
+                      active ? "bg-green-800/20 text-zinc-100" : "bg-zinc-800/30 text-zinc-500"
                     }`}
                   >
                     {t(label)}
-                    <div className="text-[10px] text-[#7E876A]">{i === 0 ? "0" : `>${threshold} lb`}</div>
+                    <div className="text-[10px] text-zinc-500">{i === 0 ? "0" : `>${threshold} lb`}</div>
                   </div>
                 );
               })}
@@ -1405,12 +1417,15 @@ export default function CharacterForm({ tableId, tables, initial, settings }: Ch
 
         {!isEdit ? (
           <div className="flex items-center gap-3 pt-2 pb-8">
-            <button type="submit" disabled={saving} className={`${inkButton("narrator")} disabled:opacity-50`}>
+            <button type="submit" disabled={saving} className={`${submitCls} disabled:opacity-50`}>
               {saving ? t("fr.saving") : t("fr.ch.create")}
             </button>
-            <a href={currentTableId ? `/table/${currentTableId}/characters` : "/narrator"} className="text-[#A9A177] hover:text-[#EDE6CE] text-sm transition-colors">
+            <Link
+              href={currentTableId ? `/table/${currentTableId}/characters` : "/narrator"}
+              className="text-zinc-400 hover:text-zinc-100 text-sm transition-colors"
+            >
               {t("fr.cancel")}
-            </a>
+            </Link>
           </div>
         ) : null}
       </form>
@@ -1443,7 +1458,7 @@ export default function CharacterForm({ tableId, tables, initial, settings }: Ch
                     label: t("fr.ch.difficultyPh"),
                     options: [
                       ["Easy", t("fr.diff.easy")],
-                      ["Medium", t("fr.diff.average")],
+                      ["Medium", t("fr.diff.medium")],
                       ["Hard", t("fr.diff.hard")],
                       ["Very Hard", t("fr.diff.veryHard")],
                     ].map(([value, label]) => ({ value, label })),
@@ -1516,7 +1531,6 @@ export default function CharacterForm({ tableId, tables, initial, settings }: Ch
           onClose={() => setSearchFor(null)}
         />
       ) : null}
-    </div>
     </div>
   );
 }

@@ -28,11 +28,13 @@ const EDITOR_TABS: Array<{ key: EditorTab; label: string; hint: string }> = [
 export default function LocationEditor({
   location,
   tableId,
+  tableTitle,
   allLocations,
   defaultTab = "form",
 }: {
   location: Location;
   tableId?: string;
+  tableTitle?: string;
   allLocations: Location[];
   defaultTab?: EditorTab;
 }) {
@@ -113,7 +115,7 @@ export default function LocationEditor({
         {/* active panel */}
         <div className="px-6 py-8 lg:px-8" role="tabpanel">
           {tab === "form" ? (
-            <LocationForm initial={location} tableId={baseTableId} allLocations={allLocations} />
+            <LocationForm initial={location} tableId={baseTableId} tableTitle={tableTitle} allLocations={allLocations} />
           ) : tab === "map" ? (
             <MapStudio location={location} />
           ) : (

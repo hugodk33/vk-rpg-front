@@ -27,8 +27,9 @@ export default async function NewLocationPage({
   }
 
   return (
-    <LocationForm
+<LocationForm
       tableId={id}
+      tableTitle={all?.table?.title}
       allLocations={all?.locations ?? []}
       defaultParentId={parent_id}
       defaultKind={kind}

@@ -1,19 +1,22 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { submitJson } from "./submit";
 import { cancelCls, inputCls, labelCls, submitCls } from "./formStyles";
+import FormShell from "./FormShell";
 import { useTranslation } from "@/lib/i18n";
 import type { Disadvantage } from "@/lib/types";
 
 export interface DisadvantageFormProps {
   tableId?: string;
+  tableTitle?: string;
   tables?: Array<{ id: string; title: string }>;
   initial?: Disadvantage;
 }
 
-export default function DisadvantageForm({ tableId, tables, initial }: DisadvantageFormProps) {
+export default function DisadvantageForm({ tableId, tableTitle, tables, initial }: DisadvantageFormProps) {
   const router = useRouter();
   const { t } = useTranslation();
   const isEdit = !!initial;
@@ -63,14 +66,19 @@ export default function DisadvantageForm({ tableId, tables, initial }: Disadvant
     }
   }
 
-  return (
-    <div className="max-w-2xl mx-auto p-6">
-      <div className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-6">
-        <h1 className="text-2xl font-bold text-green-100 mb-6">
-          {isEdit ? t("fr.dis.editTitle") : t("fr.dis.newTitle")}
-        </h1>
+  const contextTableId = tableId ?? initial?.table_id ?? "";
+  const contextTableTitle =
+    tableTitle ?? tables?.find((entry) => entry.id === contextTableId)?.title;
 
-        <form onSubmit={handleSubmit} className="space-y-5">
+  return (
+    <FormShell
+      tableId={contextTableId || undefined}
+      tableTitle={contextTableTitle}
+      resourceLabel="nav.disadvantages"
+      actionLabel={isEdit ? "fr.dis.editTitle" : "fr.dis.newTitle"}
+      title={isEdit ? t("fr.dis.editTitle") : t("fr.dis.newTitle")}
+    >
+      <form onSubmit={handleSubmit} className="space-y-5">
           {!isEdit && !tableId ? (
             <div>
               <label className={labelCls}>{t("fr.table")}</label>
@@ -155,12 +163,14 @@ export default function DisadvantageForm({ tableId, tables, initial }: Disadvant
             <button type="submit" disabled={saving} className={`${submitCls} disabled:opacity-50`}>
               {saving ? t("fr.saving") : isEdit ? t("fr.saveChanges") : t("fr.dis.create")}
             </button>
-            <a href={currentTableId ? `/table/${currentTableId}/disadvantages` : "/narrator"} className={cancelCls}>
+            <Link
+              href={currentTableId ? `/table/${currentTableId}/disadvantages` : "/narrator"}
+              className={cancelCls}
+            >
               {t("fr.cancel")}
-            </a>
+            </Link>
           </div>
         </form>
-      </div>
-    </div>
+    </FormShell>
   );
 }

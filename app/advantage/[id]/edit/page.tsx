@@ -18,13 +18,15 @@ export default async function EditAdvantagePage({
   if (!table_id) notFound();
 
   let advantage: Advantage | undefined;
+  let tableTitle: string | undefined;
   try {
     const data = await api<GameTableAdvantages>(`/game-table-advantages/${table_id}`);
     advantage = (data.advantages ?? []).find((a) => a.id === id);
+    tableTitle = data.table?.title;
   } catch {
     advantage = undefined;
   }
   if (!advantage) notFound();
 
-  return <AdvantageForm tableId={table_id} initial={advantage} />;
+  return <AdvantageForm tableId={table_id} tableTitle={tableTitle} initial={advantage} />;
 }

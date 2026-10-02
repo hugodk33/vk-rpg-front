@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { seatActorQuery } from "@/lib/seat";
 import { submitJson } from "./submit";
 import { cancelCls, inputCls, labelCls, submitCls } from "./formStyles";
+import FormShell from "./FormShell";
 import { FIT_OPTIONS } from "@/lib/fit";
 import { DAMAGE_SOURCE_LABELS, DAMAGE_TYPES } from "@/lib/damage";
 import { useTranslation } from "@/lib/i18n";
@@ -14,6 +16,7 @@ import type { ArmorData, GameTableItems, GameTableLocations, Item, Weapon, Weapo
 export interface ItemFormProps {
   initial?: Item;
   tableId?: string;
+  tableTitle?: string;
   tables?: Array<{ id: string; title: string }>;
   defaultLocationId?: string;
 }
@@ -61,7 +64,7 @@ function emptyAttack(): WeaponAttack {
   };
 }
 
-export default function ItemForm({ initial, tableId, tables, defaultLocationId }: ItemFormProps) {
+export default function ItemForm({ initial, tableId, tableTitle, tables, defaultLocationId }: ItemFormProps) {
   const router = useRouter();
   const { t } = useTranslation();
   const isEdit = !!initial;
@@ -246,13 +249,20 @@ export default function ItemForm({ initial, tableId, tables, defaultLocationId }
     }
   }
 
+  const contextTableId = tableId ?? initial?.table_id ?? "";
+  const contextTableTitle =
+    tableTitle ?? tables?.find((entry) => entry.id === contextTableId)?.title;
+
   return (
-    <div className="max-w-3xl mx-auto p-6">
-      <div className="bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-6">
-        <h1 className="text-2xl font-bold text-green-100 mb-6">
-          {isEdit ? t("fr.item.editTitle") : t("fr.item.newTitle")}
-        </h1>
-        <form onSubmit={handleSubmit} className="space-y-5">
+    <FormShell
+      tableId={contextTableId || undefined}
+      tableTitle={contextTableTitle}
+      resourceLabel="nav.items"
+      actionLabel={isEdit ? "fr.item.editTitle" : "fr.item.newTitle"}
+      title={isEdit ? t("fr.item.editTitle") : t("fr.item.newTitle")}
+      wide
+    >
+      <form onSubmit={handleSubmit} className="space-y-5">
           {!isEdit && !tableId ? (
             <div>
               <label className={labelCls}>{t("fr.table")}</label>
@@ -540,12 +550,14 @@ export default function ItemForm({ initial, tableId, tables, defaultLocationId }
             <button type="submit" disabled={saving} className={`${submitCls} disabled:opacity-50`}>
               {saving ? t("fr.saving") : isEdit ? t("fr.saveChanges") : t("fr.item.create")}
             </button>
-            <a href={currentTableId ? `/table/${currentTableId}/items` : "/narrator"} className={cancelCls}>
+            <Link
+              href={currentTableId ? `/table/${currentTableId}/items` : "/narrator"}
+              className={cancelCls}
+            >
               {t("fr.cancel")}
-            </a>
+            </Link>
           </div>
         </form>
-      </div>
-    </div>
+    </FormShell>
   );
 }

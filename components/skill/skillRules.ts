@@ -52,10 +52,13 @@ export const SKILL_TYPES: Record<string, TypeDef> = {
    DEFAULT/basic training level) and pips. */
 export const DIFFICULTY_DEFS: Record<string, { label: string; offset: number; pips: number; hex: string }> = {
   Easy: { label: "sk.diff.Easy", offset: 0, pips: 1, hex: "#34d399" },
-  Average: { label: "sk.diff.Average", offset: -1, pips: 2, hex: "#fbbf24" },
   Medium: { label: "sk.diff.Medium", offset: -1, pips: 2, hex: "#fbbf24" },
   Hard: { label: "sk.diff.Hard", offset: -2, pips: 3, hex: "#fb7185" },
   "Very Hard": { label: "sk.diff.Very Hard", offset: -3, pips: 4, hex: "#f87171" },
+  // Valor legado: o formulário gravava "Average" onde o catálogo usa "Medium".
+  // Mantido só para que uma linha antiga ainda seja renderizada em vez de sumir;
+  // `migrate.ts` normaliza `Average` -> `Medium` no banco.
+  Average: { label: "sk.diff.Medium", offset: -1, pips: 2, hex: "#fbbf24" },
 };
 
 /* Exact 3d6 distribution (216 outcomes): target -> # outcomes <= target. */

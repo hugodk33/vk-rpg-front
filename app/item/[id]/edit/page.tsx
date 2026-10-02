@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { api } from "@/lib/api";
-import type { Item } from "@/lib/types";
+import type { GameTableItems, Item } from "@/lib/types";
 import ItemForm from "@/components/forms/ItemForm";
 
 export const dynamic = "force-dynamic";
@@ -16,5 +16,17 @@ export default async function EditItemPage({ params }: { params: Promise<{ id: s
   }
   if (!item) notFound();
 
-  return <ItemForm initial={item} tableId={item.table_id} />;
+  /* O detalhe do item não traz a mesa; buscamos a lista da mesa apenas para
+     obter `table.title` usado no breadcrumb do shell. */
+  let tableTitle: string | undefined;
+  if (item.table_id) {
+    try {
+      const data = await api<GameTableItems>(`/game-table-items/${item.table_id}`);
+      tableTitle = data.table?.title;
+    } catch {
+      tableTitle = undefined;
+    }
+  }
+
+  return <ItemForm initial={item} tableId={item.table_id} tableTitle={tableTitle} />;
 }

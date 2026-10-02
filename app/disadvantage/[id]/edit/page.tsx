@@ -18,13 +18,15 @@ export default async function EditDisadvantagePage({
   if (!table_id) notFound();
 
   let disadvantage: Disadvantage | undefined;
+  let tableTitle: string | undefined;
   try {
     const data = await api<GameTableDisadvantages>(`/game-table-disadvantages/${table_id}`);
     disadvantage = (data.disadvantages ?? []).find((d) => d.id === id);
+    tableTitle = data.table?.title;
   } catch {
     disadvantage = undefined;
   }
   if (!disadvantage) notFound();
 
-  return <DisadvantageForm tableId={table_id} initial={disadvantage} />;
+  return <DisadvantageForm tableId={table_id} tableTitle={tableTitle} initial={disadvantage} />;
 }
