@@ -94,11 +94,17 @@ function DependencyRow({
       >
         {kindLabel}
       </span>
-      <Link href={`/skill/${skill ?? ""}`} className="text-sm text-zinc-300 hover:text-amber-400 transition-colors truncate">
-        {skill || t("skx.skill")}
-      </Link>
+      {skill ? (
+        <Link href={`/skill/${skill}`} className="text-sm text-zinc-300 hover:text-amber-400 transition-colors truncate">
+          {skill}
+        </Link>
+      ) : (
+        /* Sem skill alvo a linha carrega so a formula de atributo: nao ha o
+           que linkar, e um `/skill/` vazio seria um link quebrado. */
+        <span className="text-sm text-zinc-400 truncate">{note || t("skx.skill")}</span>
+      )}
       {value ? <span className="font-mono text-xs text-zinc-500 ml-auto shrink-0">{value}</span> : null}
-      {note ? <span className="font-mono text-[10px] text-zinc-600 shrink-0 hidden sm:inline">{note}</span> : null}
+      {skill && note ? <span className="font-mono text-[10px] text-zinc-600 shrink-0 hidden sm:inline">{note}</span> : null}
       <span aria-hidden className="font-mono text-[10px] text-zinc-600 shrink-0">{kind === "requires" ? t("skx.backReq") : t("skx.frontDef")}</span>
     </div>
   );
@@ -122,8 +128,13 @@ export default function SkillExhibit({ skill, tableId }: { skill: SkillItem; tab
       })
     : [];
 
-  const requires = (skill.dependencies ?? []).filter((d) => d.skill);
-  const defaults = (skill.predefinition ?? []).filter((d) => d.skill);
+  /* Uma linha e uteis se trouxer QUALQUER payload: a pre-definicao de
+     Falcoaria, por exemplo, tem skill=null mas carrega "iq - 6". Filtrar
+     so por `skill` descartava essa formula e escondia parte do ledger. */
+  const requires = (skill.dependencies ?? []).filter((d) => d.skill || d.value || d.type);
+  const defaults = (skill.predefinition ?? []).filter(
+    (d) => d.skill || d.value || d.depends_on_skill_for_others_attributes
+  );
 
   return (
     <div className="relative max-w-5xl mx-auto">
@@ -147,51 +158,50 @@ export default function SkillExhibit({ skill, tableId }: { skill: SkillItem; tab
           </div>
         </div>
 
-        <div className="grid lg:grid-cols-[220px_1fr] gap-8 px-6 py-8 lg:px-8">
+        <div className="flex flex-col gap-6 px-6 py-8 lg:px-8">
           {/* -------- SIGILO + TYPE (signature) -------- */}
           <aside className="exhibit-reveal order-1">
-            <div className="sticky lg:top-28">
-              <div className="flex flex-col items-center bg-zinc-800/40 rounded-lg border border-zinc-700/50 px-4 py-5 text-center">
-                <span className="font-mono text-[10px] tracking-widest uppercase mb-4" style={{ color: accent }}>
-                  {type ? t(type.label) : (typeKey || t("skx.skill"))}
-                </span>
-                <div
-                  className="w-16 h-16 grid place-items-center rounded-full border border-dashed mb-4"
-                  style={{ borderColor: `${accent}66`, background: "radial-gradient(circle at 50% 40%, #27272a, #18181b)" }}
-                >
-                  {type ? (
-                    <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke={accent} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                      <path d={type.sigil} />
-                    </svg>
-                  ) : (
-                    <span className="text-zinc-500 text-xl">?</span>
-                  )}
-                </div>
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-4 bg-zinc-800/40 rounded-lg border border-zinc-700/50 px-4 py-4">
+              <div
+                className="w-14 h-14 grid place-items-center rounded-full border border-dashed shrink-0"
+                style={{ borderColor: `${accent}66`, background: "radial-gradient(circle at 50% 40%, #27272a, #18181b)" }}
+              >
+                {type ? (
+                  <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke={accent} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d={type.sigil} />
+                  </svg>
+                ) : (
+                  <span className="text-zinc-500 text-xl">?</span>
+                )}
+              </div>
 
-                <p className="font-mono text-[10px] text-zinc-500 leading-relaxed mb-5">
-                  {t("skx.testAgainst")} <span style={{ color: accent }}>{t(type?.attributeShort ?? "—")}</span>
-                  {type ? <> · {t(type.attribute)}</> : null}
-                </p>
+              <span className="font-mono text-[10px] tracking-widest uppercase shrink-0" style={{ color: accent }}>
+                {type ? t(type.label) : (typeKey || t("skx.skill"))}
+              </span>
 
-                {/* difficulty chain */}
-                <div className="w-full border-t border-zinc-700/50 pt-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">{t("skx.difficulty")}</span>
-                    {diff ? <Pips count={diff.pips} hex={diffHex} /> : <span className="text-zinc-600 text-xs">—</span>}
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">{t("skx.defaultLevel")}</span>
-                    <span className="font-mono text-sm font-semibold" style={{ color: diffHex }}>
-                      {metricRange(diff)}
-                    </span>
-                  </div>
-                  {skill.predefinition_value != null ? (
-                    <div className="flex items-center justify-between">
-                      <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">{t("skx.value")}</span>
-                      <span className="font-mono text-sm text-zinc-200">{skill.predefinition_value}</span>
-                    </div>
-                  ) : null}
+              <p className="font-mono text-[10px] text-zinc-500 leading-relaxed">
+                {t("skx.testAgainst")} <span style={{ color: accent }}>{t(type?.attributeShort ?? "—")}</span>
+                {type ? <> · {t(type.attribute)}</> : null}
+              </p>
+
+              {/* difficulty chain */}
+              <div className="flex flex-wrap items-baseline gap-x-6 gap-y-3 ml-auto">
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">{t("skx.difficulty")}</span>
+                  {diff ? <Pips count={diff.pips} hex={diffHex} /> : <span className="text-zinc-600 text-xs">—</span>}
                 </div>
+                <div className="flex items-baseline gap-2">
+                  <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">{t("skx.defaultLevel")}</span>
+                  <span className="font-mono text-sm font-semibold" style={{ color: diffHex }}>
+                    {metricRange(diff)}
+                  </span>
+                </div>
+                {skill.predefinition_value != null ? (
+                  <div className="flex items-baseline gap-2">
+                    <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">{t("skx.value")}</span>
+                    <span className="font-mono text-sm text-zinc-200">{skill.predefinition_value}</span>
+                  </div>
+                ) : null}
               </div>
             </div>
           </aside>
@@ -270,7 +280,7 @@ export default function SkillExhibit({ skill, tableId }: { skill: SkillItem; tab
             {(requires.length > 0 || defaults.length > 0) ? (
               <Panel>
                 <SectionTitle icon="⌁" tint={accent} label={t("skx.skillNet")} />
-                <div className="grid lg:grid-cols-2 gap-4">
+                <div className="flex flex-col gap-4">
                   <div>
                     <div className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 mb-2">{t("skx.requires")}</div>
                     <div className="space-y-2">

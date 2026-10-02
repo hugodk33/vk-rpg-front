@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { submitJson } from "./submit";
 import { cancelCls, inputCls, labelCls, submitCls } from "./formStyles";
 import FormShell from "./FormShell";
+import EntityModifiers from "@/components/modifiers/EntityModifiers";
 import { useTranslation } from "@/lib/i18n";
 import type { SkillItem } from "@/lib/types";
 
@@ -158,6 +159,12 @@ export default function SkillForm({ tableId, tableTitle, tables, initial }: Skil
             <label className={labelCls}>{t("fr.description")}</label>
             <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={4} className={inputCls} />
           </div>
+
+          <EntityModifiers
+            ownerField="skill_id"
+            ownerId={initial?.id}
+            tableId={currentTableId || undefined}
+          />
 
           {error && <p className="text-red-400 text-sm">{error}</p>}
 

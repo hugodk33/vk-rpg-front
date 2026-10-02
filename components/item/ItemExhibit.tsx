@@ -140,46 +140,41 @@ export default function ItemExhibit({ item, tableId }: { item: Item; tableId?: s
           </div>
         </div>
 
-        <div className="grid lg:grid-cols-[200px_1fr] gap-8 px-6 py-8 lg:px-8">
+        <div className="flex flex-col gap-6 px-6 py-8 lg:px-8">
           {/* -------- MAKER'S PLATE (signature) -------- */}
           <aside className="exhibit-reveal order-1">
-            <div className="sticky lg:top-28">
-              <div className="flex flex-col items-center bg-zinc-800/40 rounded-lg border border-zinc-700/50 px-4 py-5 text-center">
-                <div className="flex items-center gap-3 pb-4 w-full select-none">
-                  <span className="flex-1 h-px" style={{ background: `linear-gradient(90deg, transparent, ${tint}66)` }} />
-                  <span className="font-mono text-[10px] tracking-widest uppercase" style={{ color: tint }}>
-                    {t(GROUP_UI[group].label)}
-                  </span>
-                  <span className="flex-1 h-px" style={{ background: `linear-gradient(90deg, ${tint}66, transparent)` }} />
-                </div>
-
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-4 bg-zinc-800/40 rounded-lg border border-zinc-700/50 px-4 py-4">
+              <div className="flex items-center gap-3 shrink-0">
                 <div
-                  className="w-[72px] h-[72px] grid place-items-center rounded-full border border-dashed mb-4"
+                  className="w-14 h-14 grid place-items-center rounded-full border border-dashed"
                   style={{ borderColor: `${tint}66`, background: "radial-gradient(circle at 50% 40%, #27272a, #18181b)" }}
                 >
-                  <ItemIcon item={item} className="w-9 h-9" imgClassName="w-12 h-12 object-cover rounded-full" />
+                  <ItemIcon item={item} className="w-7 h-7" imgClassName="w-10 h-10 object-cover rounded-full" />
                 </div>
+                <span className="font-mono text-[10px] tracking-widest uppercase" style={{ color: tint }}>
+                  {t(GROUP_UI[group].label)}
+                </span>
+              </div>
 
-                {/* quality stamp */}
-                <div
-                  className="inline-flex items-baseline gap-1 px-2.5 py-1 rounded border mb-5"
-                  style={{ borderColor: `${qs.color}88`, color: qs.color, transform: "rotate(-1.5deg)" }}
-                >
-                  <span className="font-mono text-[13px] leading-none">{qs.mark}</span>
-                  <span className="font-mono text-[10px] tracking-[0.3em]">{qs.label}</span>
-                </div>
+              {/* quality stamp */}
+              <div
+                className="inline-flex items-baseline gap-1 px-2.5 py-1 rounded border shrink-0"
+                style={{ borderColor: `${qs.color}88`, color: qs.color, transform: "rotate(-1.5deg)" }}
+              >
+                <span className="font-mono text-[13px] leading-none">{qs.mark}</span>
+                <span className="font-mono text-[10px] tracking-[0.3em]">{qs.label}</span>
+              </div>
 
-                <div className="w-full space-y-4 text-left border-t border-zinc-700/50 pt-4">
-                  <LedgerCell label={t("itm.weight")} value={item.weight_lb != null ? `${item.weight_lb} lb` : "—"} tint={tint} />
-                  <LedgerCell label={t("itm.cost")} value={item.cost != null ? `$${item.cost}` : "—"} tint="#fbbf24" />
-                  <LedgerCell label={t("itm.size")} value={item.dimensions || "—"} />
-                  {item.category ? (
-                    <div className="min-w-0">
-                      <div className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">{t("itm.class")}</div>
-                      <div className="font-mono text-[13px] text-zinc-200 break-words">{item.category}</div>
-                    </div>
-                  ) : null}
-                </div>
+              <div className="flex flex-wrap items-baseline gap-x-6 gap-y-3">
+                <LedgerCell label={t("itm.weight")} value={item.weight_lb != null ? `${item.weight_lb} lb` : "—"} tint={tint} />
+                <LedgerCell label={t("itm.cost")} value={item.cost != null ? `$${item.cost}` : "—"} tint="#fbbf24" />
+                <LedgerCell label={t("itm.size")} value={item.dimensions || "—"} />
+                {item.category ? (
+                  <div className="min-w-0">
+                    <div className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">{t("itm.class")}</div>
+                    <div className="font-mono text-[13px] text-zinc-200 break-words">{item.category}</div>
+                  </div>
+                ) : null}
               </div>
             </div>
           </aside>

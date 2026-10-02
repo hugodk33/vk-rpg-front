@@ -115,8 +115,8 @@ export const PT: Record<string, string> = {
 
   /* ---------- Crônica (próxima sessão) ---------- */
   "tp.chronicle.awaiting": "Aguardando o narrador",
-  "tp.chronicle.continue": "Continuar a crônica →",
-  "tp.chronicle.open": "Abrir a crônica →",
+  "tp.chronicle.continue": "Continuar a crônica",
+  "tp.chronicle.open": "Abrir a crônica",
 
   /* ---------- Contadores ---------- */
   "tp.count.itemsMany": "{n} itens",
@@ -291,8 +291,8 @@ export const EN: Record<string, string> = {
 
   /* ---------- Chronicle (next session) ---------- */
   "tp.chronicle.awaiting": "Awaiting the GM",
-  "tp.chronicle.continue": "Continue the chronicle →",
-  "tp.chronicle.open": "Open the chronicle →",
+  "tp.chronicle.continue": "Continue the chronicle",
+  "tp.chronicle.open": "Open the chronicle",
 
   /* ---------- Counts ---------- */
   "tp.count.itemsMany": "{n} items",

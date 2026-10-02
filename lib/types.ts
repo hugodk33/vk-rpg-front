@@ -371,6 +371,8 @@ export interface Modifier {
   scene_id?: string
   narration_id?: string
   skill_id?: string
+  advantage_id?: string
+  disadvantage_id?: string
   location_id?: string
   cost_points?: number
   hp?: number

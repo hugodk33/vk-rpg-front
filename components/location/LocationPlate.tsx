@@ -421,7 +421,7 @@ export default function LocationPlate({ location, tableId, mode = "narrator" }: 
           </div>
         </div>
 
-        <div className="grid lg:grid-cols-[1fr_300px] gap-8 px-6 py-8 lg:px-8">
+        <div className="flex flex-col gap-6 px-6 py-8 lg:px-8">
           {/* -------- NAME + FIELD ACCOUNT -------- */}
           <div className="min-w-0 flex flex-col gap-5">
             <Panel>
@@ -488,33 +488,31 @@ export default function LocationPlate({ location, tableId, mode = "narrator" }: 
 
           {/* -------- SURVEY COORDINATES -------- */}
           <div className="min-w-0">
-            <div className="sticky lg:top-28">
-              <Panel>
-                <div className="bg-zinc-800/40 rounded-lg border border-zinc-700/50 px-4 py-2.5">
-                  <div className="flex items-center gap-2 border-b border-zinc-700/50 pb-2.5 mb-1">
-                    <span className="font-mono text-[10px] tracking-widest uppercase" style={{ color: accent }}>{t("lc.lp.tabSurvey")}</span>
-                    <span aria-hidden className="flex-1 h-px" style={{ background: `linear-gradient(90deg, ${accent}44, transparent)` }} />
-                  </div>
-                    <div className="pt-1">
-                      <SurveyRow label={t("lc.lp.kind")} value={kindLabel} hex={accent} />
-                      <SurveyRow label={t("lc.common.scale")} value={formatScale(hex?.sizeM)} emphasize hex={accent} />
-                      <SurveyRow label={t("lc.common.area")} value={hex?.width != null && hex?.height != null ? `${hex.width}×${hex.height} hex` : null} hex={accent} />
-                      <SurveyRow label={t("lc.lp.qr")} value={hex?.centerQ != null && hex?.centerR != null ? `${hex.centerQ}, ${hex.centerR}` : null} hex={accent} />
-                      {location.floor != null ? (
-                        <SurveyRow label={t("lc.lp.floor")} value={location.floorName ?? (location.floor === 0 ? t("lc.floor.ground") : interpolate(t(location.floor > 0 ? "lc.floor.above" : "lc.floor.below"), { n: Math.abs(location.floor) }))} hex={accent} />
-                      ) : null}
-                      {chain.length > 1 ? (
-                        <SurveyRow label={t("lc.lp.qrAbs")} value={`${abs.q}, ${abs.r}`} hex={accent} />
-                      ) : null}
-                      <SurveyRow label={t("lc.common.grid")} value={hex?.orientation ?? "flat"} hex={accent} />
-                      <SurveyRow label={t("lc.lp.region")} value={location.region ?? location.subRegion} hex={accent} />
-                      <SurveyRow label={t("lc.lp.size")} value={location.area} hex={accent} />
-                      <SurveyRow label={t("lc.lp.dimensions")} value={location.dimensions} hex={accent} />
-                      {location.address ? <SurveyRow label={t("lc.lp.address")} value={location.address} hex={accent} /> : null}
-                    </div>
+            <Panel>
+              <div className="bg-zinc-800/40 rounded-lg border border-zinc-700/50 px-4 py-2.5">
+                <div className="flex items-center gap-2 border-b border-zinc-700/50 pb-2.5 mb-1">
+                  <span className="font-mono text-[10px] tracking-widest uppercase" style={{ color: accent }}>{t("lc.lp.tabSurvey")}</span>
+                  <span aria-hidden className="flex-1 h-px" style={{ background: `linear-gradient(90deg, ${accent}44, transparent)` }} />
                 </div>
-              </Panel>
-            </div>
+                    <div className="pt-1">
+                  <SurveyRow label={t("lc.lp.kind")} value={kindLabel} hex={accent} />
+                  <SurveyRow label={t("lc.common.scale")} value={formatScale(hex?.sizeM)} emphasize hex={accent} />
+                  <SurveyRow label={t("lc.common.area")} value={hex?.width != null && hex?.height != null ? `${hex.width}×${hex.height} hex` : null} hex={accent} />
+                  <SurveyRow label={t("lc.lp.qr")} value={hex?.centerQ != null && hex?.centerR != null ? `${hex.centerQ}, ${hex.centerR}` : null} hex={accent} />
+                  {location.floor != null ? (
+                    <SurveyRow label={t("lc.lp.floor")} value={location.floorName ?? (location.floor === 0 ? t("lc.floor.ground") : interpolate(t(location.floor > 0 ? "lc.floor.above" : "lc.floor.below"), { n: Math.abs(location.floor) }))} hex={accent} />
+                  ) : null}
+                  {chain.length > 1 ? (
+                    <SurveyRow label={t("lc.lp.qrAbs")} value={`${abs.q}, ${abs.r}`} hex={accent} />
+                  ) : null}
+                  <SurveyRow label={t("lc.common.grid")} value={hex?.orientation ?? "flat"} hex={accent} />
+                  <SurveyRow label={t("lc.lp.region")} value={location.region ?? location.subRegion} hex={accent} />
+                  <SurveyRow label={t("lc.lp.size")} value={location.area} hex={accent} />
+                  <SurveyRow label={t("lc.lp.dimensions")} value={location.dimensions} hex={accent} />
+                  {location.address ? <SurveyRow label={t("lc.lp.address")} value={location.address} hex={accent} /> : null}
+                </div>
+              </div>
+            </Panel>
           </div>
         </div>
         </>

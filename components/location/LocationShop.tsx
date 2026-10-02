@@ -106,7 +106,7 @@ export default function LocationShop({
 
       {error ? <p className="text-[11px] text-red-400/80 mb-2">{error}</p> : null}
 
-      <div className="grid lg:grid-cols-2 gap-8">
+      <div className="flex flex-col gap-8">
         {/* -------- STAFF -------- */}
         <section>
           <div className="flex items-center justify-between mb-2">
