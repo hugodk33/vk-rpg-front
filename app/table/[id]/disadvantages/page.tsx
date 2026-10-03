@@ -105,10 +105,9 @@ export default function TableDisadvantagesPage({ params }: { params: Promise<{ i
           {disadvantages.map((d: Disadvantage) => {
             const colors = COLORS[d.category ?? ""] ?? FALLBACK;
             return (
-              <Link
+              <div
                 key={d.id}
-                href={`/disadvantage/${d.id}`}
-                className="group block bg-zinc-800/40 hover:bg-zinc-800/70 border border-zinc-700/40 hover:border-zinc-600/60 rounded-lg border-l-[3px] px-4 py-3 transition-all"
+                className="group relative block bg-zinc-800/40 hover:bg-zinc-800/70 border border-zinc-700/40 hover:border-zinc-600/60 rounded-lg border-l-[3px] px-4 py-3 transition-all"
                 style={{ borderLeftColor: colors.border }}
               >
                 <div className="flex items-center justify-between gap-3">
@@ -116,9 +115,12 @@ export default function TableDisadvantagesPage({ params }: { params: Promise<{ i
                     <svg className="w-4 h-4 shrink-0 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
                     </svg>
-                    <span className="text-sm font-medium text-zinc-200 group-hover:text-zinc-100 truncate">
+                    <Link
+                      href={`/disadvantage/${d.id}`}
+                      className="text-sm font-medium text-zinc-200 group-hover:text-zinc-100 truncate after:absolute after:inset-0 after:content-['']"
+                    >
                       {d.name || t("it.unnamed")}
-                    </span>
+                    </Link>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     {d.cost_points != null ? (
@@ -147,7 +149,7 @@ export default function TableDisadvantagesPage({ params }: { params: Promise<{ i
                     <span className="text-[11px] text-zinc-600 truncate">— {d.effect}</span>
                   ) : null}
                 </div>
-              </Link>
+              </div>
             );
           })}
         </div>

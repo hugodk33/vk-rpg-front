@@ -123,19 +123,21 @@ export default function TableSkillsPage({ params }: { params: Promise<{ id: stri
             const dots = DIFF_DOTS[s.predefinition_difficulty ?? ""] ?? 0;
             const parts = predefParts(s);
             return (
-              <Link
+<div
                 key={s.id}
-                href={`/skill/${s.id}`}
-                className="group block bg-zinc-800/40 hover:bg-zinc-800/70 border border-zinc-700/40 hover:border-zinc-600/60 rounded-lg border-l-[3px] border-l-amber-400/70 px-4 py-3 transition-all"
+                className="group relative block bg-zinc-800/40 hover:bg-zinc-800/70 border border-zinc-700/40 hover:border-zinc-600/60 rounded-lg border-l-[3px] border-l-amber-400/70 px-4 py-3 transition-all"
               >
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-3 min-w-0">
                     <svg className={`w-4 h-4 shrink-0 ${icon.color}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={icon.path} />
                     </svg>
-                    <span className="text-sm font-medium text-zinc-200 group-hover:text-zinc-100 truncate">
+<Link
+                      href={`/skill/${s.id}`}
+                      className="text-sm font-medium text-zinc-200 group-hover:text-zinc-100 truncate after:absolute after:inset-0 after:content-['']"
+                    >
                       {s.name || t("it.unnamed")}
-                    </span>
+                    </Link>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     {s.predefinition_difficulty ? (
@@ -185,8 +187,8 @@ export default function TableSkillsPage({ params }: { params: Promise<{ id: stri
                       <span className="text-zinc-700">+{parts.length - 3}</span>
                     ) : null}
                   </div>
-                ) : null}
-              </Link>
+) : null}
+              </div>
             );
           })}
         </div>

@@ -376,6 +376,7 @@ export interface Modifier {
   advantage_id?: string
   disadvantage_id?: string
   location_id?: string
+  item_id?: string
   cost_points?: number
   hp?: number
   st?: number

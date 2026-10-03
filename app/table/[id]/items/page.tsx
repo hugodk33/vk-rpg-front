@@ -106,17 +106,19 @@ export default function TableItemsPage({ params }: { params: Promise<{ id: strin
           {items.map((i: Item) => {
             const kindBadge = i.kind ? KIND_BADGES[i.kind] : null;
             return (
-              <Link
+              <div
                 key={i.id}
-                href={`/item/${i.id}`}
-                className="group block bg-zinc-800/40 hover:bg-zinc-800/70 border border-zinc-700/40 hover:border-zinc-600/60 rounded-lg border-l-[3px] border-l-rose-400/70 px-4 py-3 transition-all"
+                className="group relative block bg-zinc-800/40 hover:bg-zinc-800/70 border border-zinc-700/40 hover:border-zinc-600/60 rounded-lg border-l-[3px] border-l-rose-400/70 px-4 py-3 transition-all"
               >
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-3 min-w-0">
                     <ItemIcon item={i} className="w-4 h-4 shrink-0" imgClassName="w-4 h-4 object-cover rounded" />
-                    <span className="text-sm font-medium text-zinc-200 group-hover:text-zinc-100 truncate">
+                    <Link
+                      href={`/item/${i.id}`}
+                      className="text-sm font-medium text-zinc-200 group-hover:text-zinc-100 truncate after:absolute after:inset-0 after:content-['']"
+                    >
                       {i.name || t("it.unnamed")}
-                    </span>
+                    </Link>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     {kindBadge ? (
@@ -170,7 +172,7 @@ export default function TableItemsPage({ params }: { params: Promise<{ id: strin
                     ) : null}
                   </div>
                 ) : null}
-              </Link>
+              </div>
             );
           })}
         </div>

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef } from "react";
 import type { SkillItem } from "@/lib/types";
 import { interpolate, useTranslation } from "@/lib/i18n";
+import ModifiersModal from "@/components/modifiers/ModifiersModal";
 import {
   SKILL_TYPES,
   DIFFICULTY_DEFS,
@@ -318,6 +319,12 @@ export default function SkillExhibit({ skill, tableId }: { skill: SkillItem; tab
             ) : null}
           </div>
         </div>
+
+        {tableId ? (
+          <div className="flex justify-end px-6 pb-6 lg:px-8">
+            <ModifiersModal ownerField="skill_id" ownerId={skill.id} tableId={tableId} />
+          </div>
+        ) : null}
       </div>
     </div>
   );

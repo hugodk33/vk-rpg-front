@@ -6,6 +6,7 @@ import type { Item, WeaponAttack } from "@/lib/types";
 import { DAMAGE_TYPES, GURPS_DAMAGE_TABLE, resolveAttack } from "@/lib/damage";
 import { interpolate, useTranslation } from "@/lib/i18n";
 import ItemIcon from "@/components/items/ItemIcon";
+import ModifiersModal from "@/components/modifiers/ModifiersModal";
 import { classify, GROUP_UI, conditionLedger, qualityStyle, HANDEDNESS } from "./itemIdentity";
 
 /* ============================================================
@@ -298,10 +299,16 @@ export default function ItemExhibit({ item, tableId }: { item: Item; tableId?: s
               </p>
             </div>
           </div>
+) : null}
+        </div>
+
+        {tableId ? (
+          <div className="flex justify-end px-6 pb-6 lg:px-8">
+            <ModifiersModal ownerField="item_id" ownerId={item.id} tableId={tableId} />
+          </div>
         ) : null}
       </div>
-    </div>
-  );
+    );
 }
 
 function SectionTitle({ icon, tint, label }: { icon: string; tint: string; label: string }) {

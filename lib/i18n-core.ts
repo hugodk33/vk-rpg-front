@@ -178,6 +178,10 @@ const ptBase: Record<string, string> = {
     "ps.titleGm": "Mudar para a perspectiva do mestre (GM)",
     "ps.titlePlayer": "Mudar para a perspectiva do jogador (seu assento)",
 
+    /* ---------- Modal de modificações ---------- */
+    "mdl.modifiers": "Modificações",
+    "mdl.close": "Fechar",
+
     /* ---------- Ações de linha ---------- */
     "ra.edit": "Editar",
     "ra.delete": "Excluir",
@@ -534,6 +538,10 @@ const enBase: Record<string, string> = {
     "ps.toPlayer": "→ Player",
     "ps.titleGm": "Switch to the GM (master) perspective",
     "ps.titlePlayer": "Switch to the player perspective (your seat)",
+
+    /* ---------- Modifiers modal ---------- */
+    "mdl.modifiers": "Modifiers",
+    "mdl.close": "Close",
 
     "ra.edit": "Edit",
     "ra.delete": "Delete",

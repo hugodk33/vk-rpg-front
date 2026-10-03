@@ -95,10 +95,9 @@ export default function TableCharactersPage({ params }: { params: Promise<{ id: 
             if (isNpc(ch)) {
               const ally = isAlly(ch);
               return (
-                <Link
+                <div
                   key={ch.id}
-                  href={`/character/${ch.id}`}
-                  className="group block bg-zinc-800/40 hover:bg-zinc-800/70 border border-zinc-700/40 hover:border-zinc-600/60 rounded-lg border-l-[3px] px-4 py-3 transition-all"
+                  className="group relative block bg-zinc-800/40 hover:bg-zinc-800/70 border border-zinc-700/40 hover:border-zinc-600/60 rounded-lg border-l-[3px] px-4 py-3 transition-all"
                   style={{ borderLeftColor: ally ? "#34d399" : "#f87171" }}
                 >
                   <div className="flex items-center justify-between gap-3">
@@ -107,9 +106,12 @@ export default function TableCharactersPage({ params }: { params: Promise<{ id: 
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                       </svg>
                       <div className="min-w-0">
-                        <span className="text-sm font-medium text-zinc-200 group-hover:text-zinc-100 truncate block">
+                        <Link
+                          href={`/character/${ch.id}`}
+                          className="text-sm font-medium text-zinc-200 group-hover:text-zinc-100 truncate block after:absolute after:inset-0 after:content-['']"
+                        >
                           {s?.name || ch.name || t("it.unnamed")}
-                        </span>
+                        </Link>
                         <span className="text-[11px] text-zinc-500">NPC</span>
                       </div>
                       {ch.is_active === false ? (
@@ -144,14 +146,13 @@ export default function TableCharactersPage({ params }: { params: Promise<{ id: 
                       tableId={id}
                     />
                   </div>
-                </Link>
+                </div>
               );
             }
             return (
-              <Link
+              <div
                 key={ch.id}
-                href={`/character/${ch.id}`}
-                className="group block bg-zinc-800/40 hover:bg-zinc-800/70 border border-zinc-700/40 hover:border-zinc-600/60 rounded-lg border-l-[3px] border-l-violet-400/70 px-4 py-3 transition-all"
+                className="group relative block bg-zinc-800/40 hover:bg-zinc-800/70 border border-zinc-700/40 hover:border-zinc-600/60 rounded-lg border-l-[3px] border-l-violet-400/70 px-4 py-3 transition-all"
               >
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-3 min-w-0">
@@ -159,9 +160,12 @@ export default function TableCharactersPage({ params }: { params: Promise<{ id: 
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                     </svg>
                     <div className="min-w-0">
-                      <span className="text-sm font-medium text-zinc-200 group-hover:text-zinc-100 truncate block">
+                      <Link
+                        href={`/character/${ch.id}`}
+                        className="text-sm font-medium text-zinc-200 group-hover:text-zinc-100 truncate block after:absolute after:inset-0 after:content-['']"
+                      >
                         {s?.name || ch.name || t("it.unnamed")}
-                      </span>
+                      </Link>
                       {ch.user?.username ? (
                         <span className="text-[11px] text-zinc-500">{ch.user.username}</span>
                       ) : null}
@@ -190,7 +194,7 @@ export default function TableCharactersPage({ params }: { params: Promise<{ id: 
                     onDelete={() => submitJson(`/api/game-table-character/${ch.id}`, "DELETE")}
                   />
                 </div>
-              </Link>
+              </div>
             );
           })}
         </div>

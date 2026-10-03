@@ -38,8 +38,11 @@ export default function RowActions({
     }
   }
 
+  /* `relative z-10`: o titulo da linha e um <Link> "esticado"
+     (after:inset-0) que cobre o card inteiro, entao os botoes precisam
+     ficar por cima dele ou nao recebem o clique. */
   return (
-    <span className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+    <span className="relative z-10 flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
       <Link
         href={editHref}
         onClick={(e) => e.stopPropagation()}

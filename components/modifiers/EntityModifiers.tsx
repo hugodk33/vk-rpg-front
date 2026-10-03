@@ -2,7 +2,7 @@
 
 /* ============================================================
    EntityModifiers — the modification a single advantage,
-   disadvantage or skill implies.
+   disadvantage, skill or item implies.
 
    The narrator already owns modifier rows that say *what* a
    change does (advantage_value / disadvantage_value /
@@ -30,20 +30,51 @@ import { cancelCls, inputCls, labelCls } from "@/components/forms/formStyles";
 import type { GameTableModifiers, Modifier } from "@/lib/types";
 
 /** The owner column in `modifiers` that pins a row to the entity. */
-export type OwnerField = "advantage_id" | "disadvantage_id" | "skill_id";
+export type OwnerField =
+  | "advantage_id"
+  | "disadvantage_id"
+  | "skill_id"
+  | "item_id";
 
-/** Which value column carries the mechanical change, per entity kind. */
+/**
+ * Which value column carries the mechanical change, per entity kind.
+ *
+ * Items are the exception: `modifiers` gives them five separate columns
+ * (quantity, dimension, weight, range, status) instead of one value, so they
+ * get `ITEM_FIELDS` below and a wider form. `armor_value` / `damage_value`
+ * stay reachable from the table-wide ModifiersPanel.
+ */
 const VALUE_FIELD = {
   advantage_id: "advantage_value",
   disadvantage_id: "disadvantage_value",
   skill_id: "skill_value",
-} as const satisfies Record<OwnerField, keyof Modifier>;
+} as const satisfies Record<Exclude<OwnerField, "item_id">, keyof Modifier>;
 
 const VALUE_LABEL = {
   advantage_id: "fr.emod.valAdv",
   disadvantage_id: "fr.emod.valDis",
   skill_id: "fr.emod.valSkill",
-} as const satisfies Record<OwnerField, string>;
+} as const satisfies Record<Exclude<OwnerField, "item_id">, string>;
+
+/** The five `item_*` columns an item modifier can write. */
+type ItemFieldKey =
+  | "item_quantity"
+  | "item_weight"
+  | "item_dimension"
+  | "item_range"
+  | "item_status";
+
+const ITEM_FIELDS: Array<{
+  key: ItemFieldKey;
+  labelKey: string;
+  numeric: boolean;
+}> = [
+  { key: "item_quantity", labelKey: "vs.mp.f.itemQuantity", numeric: true },
+  { key: "item_weight", labelKey: "vs.mp.f.itemWeight", numeric: true },
+  { key: "item_dimension", labelKey: "vs.mp.f.itemDimension", numeric: false },
+  { key: "item_range", labelKey: "vs.mp.f.itemRange", numeric: false },
+  { key: "item_status", labelKey: "vs.mp.f.itemStatus", numeric: false },
+];
 
 const ATTR_MODS: Array<{ key: keyof Modifier; label: string }> = [
   { key: "mod_hp", label: "HP" },
@@ -62,6 +93,12 @@ interface FormState {
   cost_points: string;
   value: string;
   on_roll: boolean;
+  /** Only used when the owner is an item; see ITEM_FIELDS. */
+  item_quantity: string;
+  item_weight: string;
+  item_dimension: string;
+  item_range: string;
+  item_status: string;
 }
 
 const emptyForm = (): FormState => ({
@@ -71,6 +108,11 @@ const emptyForm = (): FormState => ({
   cost_points: "",
   value: "",
   on_roll: false,
+  item_quantity: "",
+  item_weight: "",
+  item_dimension: "",
+  item_range: "",
+  item_status: "",
 });
 
 const txt = (v: string): string | undefined =>
@@ -86,13 +128,22 @@ export default function EntityModifiers({
   ownerField,
   ownerId,
   tableId,
+  bare = false,
 }: {
   ownerField: OwnerField;
   ownerId?: string;
   tableId?: string;
+  /** Drops the outer card — for hosts that already provide a frame. */
+  bare?: boolean;
 }) {
   const { t } = useTranslation();
-  const valueField = VALUE_FIELD[ownerField];
+  const isItem = ownerField === "item_id";
+  const valueField = isItem ? null : VALUE_FIELD[ownerField];
+  /* Inside the modifiers dialog the dialog IS the frame; a card there would
+     be a box inside a box. */
+  const shellCls = bare
+    ? ""
+    : "rounded-xl border border-zinc-700/50 bg-zinc-800/40 p-5";
 
   const [modifiers, setModifiers] = useState<Modifier[]>([]);
   const [form, setForm] = useState<FormState>(emptyForm);
@@ -143,8 +194,13 @@ export default function EntityModifiers({
       effect: m.effect ?? "",
       description: m.description ?? "",
       cost_points: m.cost_points != null ? String(m.cost_points) : "",
-      value: (m[valueField] as string | undefined) ?? "",
+      value: valueField ? ((m[valueField] as string | undefined) ?? "") : "",
       on_roll: !!m.apply_on_roll,
+      item_quantity: m.item_quantity != null ? String(m.item_quantity) : "",
+      item_weight: m.item_weight != null ? String(m.item_weight) : "",
+      item_dimension: m.item_dimension ?? "",
+      item_range: m.item_range ?? "",
+      item_status: m.item_status ?? "",
     });
     setShowForm(true);
     setError(null);
@@ -195,8 +251,18 @@ export default function EntityModifiers({
       effect: txt(form.effect) ?? "",
       description: txt(form.description) ?? "",
       cost_points: num(form.cost_points) ?? null,
-      [valueField]: txt(form.value) ?? null,
       apply_on_roll: form.on_roll ? 1 : 0,
+      /* An item carries five value columns instead of one, so the payload
+         branches rather than writing a literal "null" key. */
+      ...(isItem
+        ? {
+            item_quantity: num(form.item_quantity) ?? null,
+            item_weight: num(form.item_weight) ?? null,
+            item_dimension: txt(form.item_dimension) ?? null,
+            item_range: txt(form.item_range) ?? null,
+            item_status: txt(form.item_status) ?? null,
+          }
+        : { [valueField as string]: txt(form.value) ?? null }),
     };
 
     try {
@@ -265,7 +331,7 @@ export default function EntityModifiers({
 
   if (!ownerId) {
     return (
-      <section className="rounded-xl border border-zinc-700/50 bg-zinc-800/40 p-5">
+      <section className={shellCls}>
         <header className="flex items-center gap-2.5 pb-1.5 mb-3 border-b border-zinc-700/60">
           <span aria-hidden className="font-mono text-base leading-none text-green-300">◐</span>
           <span className="font-mono text-[13px] font-bold uppercase tracking-wider text-zinc-300">
@@ -278,7 +344,7 @@ export default function EntityModifiers({
   }
 
   return (
-    <section className="rounded-xl border border-zinc-700/50 bg-zinc-800/40 p-5">
+    <section className={shellCls}>
       <header className="flex items-center gap-2.5 pb-1.5 mb-3 border-b border-zinc-700/60">
         <span aria-hidden className="font-mono text-base leading-none text-green-300">◐</span>
         <span className="font-mono text-[13px] font-bold uppercase tracking-wider text-zinc-300">
@@ -318,16 +384,34 @@ export default function EntityModifiers({
                 className={inputCls}
               />
             </div>
-            <div>
-              <label className={labelCls}>{t(VALUE_LABEL[ownerField])}</label>
-              <input
-                type="text"
-                value={form.value}
-                onChange={(e) => set("value", e.target.value)}
-                placeholder={t("fr.emod.valuePh")}
-                className={inputCls}
-              />
-            </div>
+            {isItem ? (
+              <div className="sm:col-span-3 grid gap-3 sm:grid-cols-3">
+                {ITEM_FIELDS.map((f) => (
+                  <div key={String(f.key)}>
+                    <label className={labelCls}>{t(f.labelKey)}</label>
+                    <input
+                      type={f.numeric ? "number" : "text"}
+                      value={String(form[f.key] ?? "")}
+                      onChange={(e) => set(f.key, e.target.value)}
+                      className={inputCls}
+                    />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div>
+                <label className={labelCls}>
+                  {t(VALUE_LABEL[ownerField as Exclude<OwnerField, "item_id">])}
+                </label>
+                <input
+                  type="text"
+                  value={form.value}
+                  onChange={(e) => set("value", e.target.value)}
+                  placeholder={t("fr.emod.valuePh")}
+                  className={inputCls}
+                />
+              </div>
+            )}
             <div>
               <label className={labelCls}>{t("fr.costPoints")}</label>
               <input
@@ -400,10 +484,18 @@ export default function EntityModifiers({
       {local.length > 0 ? (
         <ul>
           {local.map((m) => {
-            const value = m[valueField] as string | undefined;
+            const value = valueField
+              ? (m[valueField] as string | undefined)
+              : undefined;
             const attrs = ATTR_MODS.filter(
               (a) => m[a.key] != null && m[a.key] !== ""
             );
+            const itemChips = isItem
+              ? ITEM_FIELDS.filter((f) => {
+                  const v = m[f.key];
+                  return v != null && v !== "";
+                })
+              : [];
             return (
               <li key={m.id} className="border-b border-zinc-700/40 py-3 last:border-b-0">
                 <div className="flex items-start justify-between gap-3">
@@ -447,11 +539,20 @@ export default function EntityModifiers({
                 ) : null}
 
                 <div className="flex flex-wrap gap-1 mt-2">
-                  {value ? (
+                  {valueField && value ? (
                     <span className="font-mono text-[9px] uppercase tracking-widest text-green-200 bg-green-900/40 border border-green-800/50 rounded px-1.5 py-0.5">
-                      {t(VALUE_LABEL[ownerField])} {value}
+                      {t(VALUE_LABEL[ownerField as Exclude<OwnerField, "item_id">])}{" "}
+                      {value}
                     </span>
                   ) : null}
+                  {itemChips.map((f) => (
+                    <span
+                      key={String(f.key)}
+                      className="font-mono text-[9px] uppercase tracking-widest text-zinc-300 bg-zinc-800/80 border border-zinc-700/50 rounded px-1.5 py-0.5"
+                    >
+                      {t(f.labelKey)} {String(m[f.key])}
+                    </span>
+                  ))}
                   {m.cost_points != null ? (
                     <span className="font-mono text-[9px] uppercase tracking-widest text-zinc-300 bg-zinc-800/80 border border-zinc-700/50 rounded px-1.5 py-0.5">
                       {t("fr.costPoints")} ={m.cost_points}

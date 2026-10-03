@@ -78,19 +78,21 @@ export default function TableAdvantagesPage({ params }: { params: Promise<{ id: 
       ) : (
         <div className="space-y-2">
           {advantages.map((a: Advantage) => (
-            <Link
+            <div
               key={a.id}
-              href={`/advantage/${a.id}`}
-              className="group block bg-zinc-800/40 hover:bg-zinc-800/70 border border-zinc-700/40 hover:border-zinc-600/60 rounded-lg border-l-[3px] border-l-emerald-400/70 px-4 py-3 transition-all"
+              className="group relative block bg-zinc-800/40 hover:bg-zinc-800/70 border border-zinc-700/40 hover:border-zinc-600/60 rounded-lg border-l-[3px] border-l-emerald-400/70 px-4 py-3 transition-all"
             >
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3 min-w-0">
                   <svg className="w-4 h-4 shrink-0 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                   </svg>
-                  <span className="text-sm font-medium text-zinc-200 group-hover:text-zinc-100 truncate">
+                  <Link
+                    href={`/advantage/${a.id}`}
+                    className="text-sm font-medium text-zinc-200 group-hover:text-zinc-100 truncate after:absolute after:inset-0 after:content-['']"
+                  >
                     {a.name || t("it.unnamed")}
-                  </span>
+                  </Link>
                 </div>
                 {a.cost_points != null ? (
                   <span className="text-xs font-bold text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded shrink-0">
@@ -114,7 +116,7 @@ export default function TableAdvantagesPage({ params }: { params: Promise<{ id: 
                   <span className="text-[11px] text-zinc-600 truncate">— {a.description}</span>
                 ) : null}
               </div>
-            </Link>
+            </div>
           ))}
         </div>
       )}

@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { api } from "@/lib/api";
 import type { Advantage } from "@/lib/types";
 import { getLang, makeT } from "@/lib/i18n-server";
+import ModifiersModal from "@/components/modifiers/ModifiersModal";
 
 export const dynamic = "force-dynamic";
 
@@ -125,6 +126,13 @@ export default async function AdvantageDetailPage({
             <Link href={`/advantage/${advantage.id}/edit`} className="bg-green-900/60 hover:bg-green-800 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
               {t("ra.edit")}
             </Link>
+            {tableId ? (
+              <ModifiersModal
+                ownerField="advantage_id"
+                ownerId={advantage.id}
+                tableId={tableId}
+              />
+            ) : null}
           </div>
         </div>
       </div>
