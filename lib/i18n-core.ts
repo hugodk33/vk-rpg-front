@@ -172,7 +172,7 @@ const ptBase: Record<string, string> = {
     /* ---------- Troca de perspectiva ---------- */
     "ps.player": "Jogador",
     "ps.playerSeat": "Jogador · {name}",
-    "ps.narrator": "Narrador",
+    "ps.narrator": "Mestre",
     "ps.toGm": "→ Mestre",
     "ps.toPlayer": "→ Jogador",
     "ps.titleGm": "Mudar para a perspectiva do mestre (GM)",
@@ -529,7 +529,7 @@ const enBase: Record<string, string> = {
 
     "ps.player": "Player",
     "ps.playerSeat": "Player · {name}",
-    "ps.narrator": "Narrator",
+    "ps.narrator": "GM",
     "ps.toGm": "→ GM",
     "ps.toPlayer": "→ Player",
     "ps.titleGm": "Switch to the GM (master) perspective",

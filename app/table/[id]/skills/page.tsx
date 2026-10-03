@@ -47,6 +47,21 @@ export default function TableSkillsPage({ params }: { params: Promise<{ id: stri
     return acc;
   }, {});
 
+  /* Pré-definição numa linha só, cobrindo as duas formas que o banco tem:
+     fórmula de atributo ("iq - 6") e nível padrão em outra skill. */
+  const predefParts = (s: SkillItem): string[] =>
+    (s.predefinition ?? [])
+      .map((pre) => {
+        if (pre.depends_on_skill_for_others_attributes) {
+          return pre.depends_on_skill_for_others_attributes;
+        }
+        if (pre.skill) {
+          return pre.value ? `${pre.skill} ${pre.value}` : pre.skill;
+        }
+        return "";
+      })
+      .filter(Boolean);
+
   return (
     <div className="max-w-5xl mx-auto p-6">
       <TableTabs tableId={id} />
@@ -106,6 +121,7 @@ export default function TableSkillsPage({ params }: { params: Promise<{ id: stri
           {skills.map((s: SkillItem) => {
             const icon = TYPE_ICON[s.predefinition_type ?? ""] ?? FALLBACK_ICON;
             const dots = DIFF_DOTS[s.predefinition_difficulty ?? ""] ?? 0;
+            const parts = predefParts(s);
             return (
               <Link
                 key={s.id}
@@ -141,16 +157,35 @@ export default function TableSkillsPage({ params }: { params: Promise<{ id: stri
                     />
                   </div>
                 </div>
-                <div className="flex items-center gap-2 mt-1.5 ml-7">
+<div className="flex items-center gap-2 mt-1.5 ml-7">
                   {s.category ? (
                     <span className="text-[11px] text-zinc-500">
                       {s.category}{s.subcategory ? ` / ${s.subcategory}` : ""}
                     </span>
                   ) : null}
                   {s.effect ? (
-                    <span className="text-[11px] text-zinc-600 truncate">— {s.effect}</span>
+                    <span className="text-[11px] text-zinc-600 truncate">→ {s.effect}</span>
                   ) : null}
                 </div>
+                {/* Pré-definição: o nível padrão que a skill dá a outras. A
+                    API já devolve `predefinition` com duas formas — fórmula
+                    de atributo ("iq - 6") e nível em outra skill. Fica como
+                    texto puro: a linha ja e um card, e caixa dentro de caixa
+                    nao entra. */}
+                {parts.length ? (
+                  <div className="flex items-center gap-1.5 mt-1 ml-7 text-[11px] text-zinc-600 flex-wrap">
+                    <span className="text-zinc-500">{t("fr.tip.predef")}</span>
+                    {parts.slice(0, 3).map((part, i) => (
+                      <span key={i} className="flex items-center gap-1.5">
+                        {i > 0 ? <span className="text-zinc-700">·</span> : null}
+                        <span>{part}</span>
+                      </span>
+                    ))}
+                    {parts.length > 3 ? (
+                      <span className="text-zinc-700">+{parts.length - 3}</span>
+                    ) : null}
+                  </div>
+                ) : null}
               </Link>
             );
           })}
@@ -159,3 +194,4 @@ export default function TableSkillsPage({ params }: { params: Promise<{ id: stri
     </div>
   );
 }
+
