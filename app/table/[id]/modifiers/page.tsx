@@ -14,11 +14,16 @@ export const dynamic = "force-dynamic";
 
 export default async function TableModifiersPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ tab?: string }>;
 }) {
   const { id } = await params;
+  const { tab } = await searchParams;
   const t = makeT(await getLang());
+  const initialTab = tab === "new" ? ("form" as const) : ("list" as const);
+
 
 
 
@@ -68,12 +73,13 @@ export default async function TableModifiersPage({
         </p>
       </div>
 
-      <ModifiersPanel
+<ModifiersPanel
         tableId={id}
         initialModifiers={mods?.modifiers ?? []}
         characters={chars?.characters ?? []}
         scenes={scenes ?? null}
         locations={locations?.locations ?? []}
+        initialTab={initialTab}
       />
     </div>
   );

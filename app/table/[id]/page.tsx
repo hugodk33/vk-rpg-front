@@ -363,9 +363,9 @@ export default async function TableOverviewPage({ params }: { params: Promise<{ 
     { group: "Gear", name: t("nav.items"), unit: t("tp.unit.records"), count: items.length, seal: "#f59e0b", icon: Package, href: `/table/${id}/items`, addHref: `/item/new?table_id=${id}`, addLabel: t("tp.add.item") },
     { group: "Traits", name: t("nav.advantages"), unit: t("tp.unit.records"), count: advantages.length, seal: "#818cf8", icon: Sparkles, href: `/table/${id}/advantages`, addHref: `/advantage/new?table_id=${id}`, addLabel: t("tp.add.advantage") },
     { group: "Traits", name: t("nav.disadvantages"), unit: t("tp.unit.records"), count: disadvantages.length, seal: "#f87171", icon: Skull, href: `/table/${id}/disadvantages`, addHref: `/disadvantage/new?table_id=${id}`, addLabel: t("tp.add.disadvantage") },
-    { group: "Study", name: t("nav.skills"), unit: t("tp.unit.sheets"), count: skills.length, seal: "#a78bfa", icon: BookOpen, href: `/table/${id}/skills` },
-    { group: "Places", name: t("nav.locations"), unit: t("tp.unit.places"), count: places, seal: "#2dd4bf", icon: MapPin, href: `/table/${id}/locations` },
-    { group: "Conditions", name: t("nav.modifiers"), unit: t("tp.unit.conditions"), count: modsRes?.modifiers?.length ?? 0, seal: "#f472b6", icon: Activity, href: `/table/${id}/modifiers` },
+    { group: "Study", name: t("nav.skills"), unit: t("tp.unit.sheets"), count: skills.length, seal: "#a78bfa", icon: BookOpen, href: `/table/${id}/skills`, addHref: `/skill/new?table_id=${id}`, addLabel: t("tp.add.skill") },
+    { group: "Places", name: t("nav.locations"), unit: t("tp.unit.places"), count: places, seal: "#2dd4bf", icon: MapPin, href: `/table/${id}/locations`, addHref: `/table/${id}/locations/new`, addLabel: t("tp.add.location") },
+    { group: "Conditions", name: t("nav.modifiers"), unit: t("tp.unit.conditions"), count: modsRes?.modifiers?.length ?? 0, seal: "#f472b6", icon: Activity, href: `/table/${id}/modifiers`, addHref: `/table/${id}/modifiers?tab=new`, addLabel: t("tp.add.modifier") },
   ];
 
   const system = table?.system?.trim();

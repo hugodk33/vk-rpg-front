@@ -251,6 +251,7 @@ interface ModifiersPanelProps {
   characters: TableCharacter[];
   scenes: GameTableScenes | null;
   locations?: Location[];
+  initialTab?: "list" | "form";
 }
 
 export default function ModifiersPanel({
@@ -259,6 +260,7 @@ export default function ModifiersPanel({
   characters,
   scenes,
   locations,
+  initialTab = "list",
 }: ModifiersPanelProps) {
   const { t } = useTranslation();
   const [modifiers, setModifiers] = useState<Modifier[]>(initialModifiers);
@@ -266,7 +268,7 @@ export default function ModifiersPanel({
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [tab, setTab] = useState<"list" | "form">("list");
+  const [tab, setTab] = useState<"list" | "form">(initialTab);
 
   const locationNames = useMemo(() => {
     const m = new Map<string, string>();

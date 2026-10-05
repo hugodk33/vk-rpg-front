@@ -55,6 +55,8 @@ export const PT: Record<string, string> = {
   "tp.add.item": "Item",
   "tp.add.placeCharacter": "Colocar personagem",
   "tp.add.skill": "Perícia",
+  "tp.add.location": "Local",
+  "tp.add.modifier": "Modificador",
 
   /* ---------- Catálogo de itens ---------- */
   "tp.items.empty": "Nenhum item no catálogo ainda.",
@@ -231,6 +233,8 @@ export const EN: Record<string, string> = {
   "tp.add.item": "Item",
   "tp.add.placeCharacter": "Place character",
   "tp.add.skill": "Skill",
+  "tp.add.location": "Location",
+  "tp.add.modifier": "Modifier",
 
   /* ---------- Item catalog ---------- */
   "tp.items.empty": "No items in the catalog yet.",
