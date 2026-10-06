@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { Disadvantage, GameTableDisadvantages } from "@/lib/types";
 import TableTabs from "@/components/TableTabs";
 import RowActions from "@/components/table/RowActions";
+import ChipFilters, { countValues } from "@/components/table/ChipFilters";
 import { api } from "@/lib/api";
 import { submitJson } from "@/components/forms/submit";
 import { interpolate, useTranslation } from "@/lib/i18n";
@@ -23,12 +24,38 @@ export default function TableDisadvantagesPage({ params }: { params: Promise<{ i
   const { t } = useTranslation();
   const [data, setData] = useState<GameTableDisadvantages | null>(null);
   const [search, setSearch] = useState("");
+  const [cat, setCat] = useState("");
+  const [sub, setSub] = useState("");
 
   useEffect(() => {
     api<GameTableDisadvantages>(`/game-table-disadvantages/${id}`).then(setData).catch(() => setData({ table: null, disadvantages: [] }));
   }, [id]);
 
-  const disadvantages = (data?.disadvantages ?? []).filter((d: Disadvantage) => {
+  const allDisadvantages = data?.disadvantages ?? [];
+
+  const catOptions = countValues(allDisadvantages.map((d: Disadvantage) => d.category));
+  const subOptions = countValues(
+    allDisadvantages
+      .filter((d: Disadvantage) => !cat || (d.category ?? "") === cat)
+      .map((d: Disadvantage) => d.subcategory)
+  );
+
+  /* Trocar de categoria larga uma subcategoria que não pertence a ela. */
+  const pickCategory = (next: string) => {
+    setCat(next);
+    if (!next || !sub) return;
+    const valid = new Set(
+      allDisadvantages
+        .filter((d: Disadvantage) => (d.category ?? "") === next)
+        .map((d: Disadvantage) => (d.subcategory ?? "").trim())
+        .filter(Boolean)
+    );
+    if (!valid.has(sub)) setSub("");
+  };
+
+  const disadvantages = allDisadvantages.filter((d: Disadvantage) => {
+    if (cat && (d.category ?? "") !== cat) return false;
+    if (sub && (d.subcategory ?? "") !== sub) return false;
     if (!search) return true;
     const q = search.toLowerCase();
     return (d.name ?? "").toLowerCase().includes(q)
@@ -37,11 +64,7 @@ export default function TableDisadvantagesPage({ params }: { params: Promise<{ i
       || (d.category ?? "").toLowerCase().includes(q);
   });
 
-  const categoryCounts = (data?.disadvantages ?? []).reduce<Record<string, number>>((acc, d) => {
-    const c = d.category ?? "Other";
-    acc[c] = (acc[c] ?? 0) + 1;
-    return acc;
-  }, {});
+  const filtering = Boolean(search || cat || sub);
 
   return (
     <div className="max-w-5xl mx-auto p-6">
@@ -55,15 +78,6 @@ export default function TableDisadvantagesPage({ params }: { params: Promise<{ i
       <div className="flex items-center justify-between gap-6 mb-6">
         <div className="flex items-center gap-3 text-xs text-zinc-500">
           <span>{interpolate(t(disadvantages.length !== 1 ? "tp.count.disadvantagesMany" : "tp.count.disadvantagesOne"), { n: disadvantages.length })}</span>
-          {Object.entries(categoryCounts).map(([c, count]) => {
-            const colors = COLORS[c] ?? FALLBACK;
-            return (
-              <span key={c} className="flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: colors.border }} />
-                {count} {c}
-              </span>
-            );
-          })}
         </div>
         <Link
           href={`/disadvantage/new?table_id=${id}`}
@@ -93,12 +107,25 @@ export default function TableDisadvantagesPage({ params }: { params: Promise<{ i
         ) : null}
       </div>
 
+      <ChipFilters
+        groups={[
+          { key: "cat", label: t("fr.category"), options: catOptions, value: cat, onChange: pickCategory },
+          { key: "sub", label: t("fr.subcategory"), options: subOptions, value: sub, onChange: setSub },
+        ]}
+        onClearAll={() => {
+          setCat("");
+          setSub("");
+        }}
+      />
+
       {disadvantages.length === 0 ? (
         <div className="text-center py-16">
           <svg className="w-10 h-10 text-zinc-700 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
           </svg>
-          <p className="text-zinc-500 text-sm">{search ? t("tp.disadvantages.emptySearch") : t("tp.disadvantages.empty")}</p>
+          <p className="text-zinc-500 text-sm">
+            {filtering ? (search ? t("tp.disadvantages.emptySearch") : t("tp.filter.none")) : t("tp.disadvantages.empty")}
+          </p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -129,19 +156,11 @@ export default function TableDisadvantagesPage({ params }: { params: Promise<{ i
                           {d.name || t("it.unnamed")}
                         </Link>
                       </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        {d.category ? (
-                          <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${colors.badge}`}>
-                            {d.category}
-                          </span>
-                        ) : null}
-                        <RowActions
-                          editHref={`/disadvantage/${d.id}/edit?table_id=${id}`}
-                          onDelete={() => submitJson(`/api/game-table-disadvantage/${d.id}`, "DELETE")}
-                          copyHref={`/api/game-table-disadvantage/${d.id}/copy`}
-                          tableId={id}
-                        />
-                      </div>
+                      {d.category ? (
+                        <span className={`shrink-0 text-[10px] px-1.5 py-0.5 rounded-full ${colors.badge}`}>
+                          {d.category}
+                        </span>
+                      ) : null}
                     </div>
                     <div className="flex items-center gap-2 mt-1.5 ml-7">
                       {d.subcategory ? (
@@ -150,6 +169,14 @@ export default function TableDisadvantagesPage({ params }: { params: Promise<{ i
                       {d.effect ? (
                         <span className="text-[11px] text-zinc-600 truncate">— {d.effect}</span>
                       ) : null}
+                    </div>
+                    <div className="flex justify-end mt-2">
+                      <RowActions
+                        editHref={`/disadvantage/${d.id}/edit?table_id=${id}`}
+                        onDelete={() => submitJson(`/api/game-table-disadvantage/${d.id}`, "DELETE")}
+                        copyHref={`/api/game-table-disadvantage/${d.id}/copy`}
+                        tableId={id}
+                      />
                     </div>
                   </div>
                 </div>

@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { Advantage, GameTableAdvantages } from "@/lib/types";
 import TableTabs from "@/components/TableTabs";
 import RowActions from "@/components/table/RowActions";
+import ChipFilters, { countValues } from "@/components/table/ChipFilters";
 import { api } from "@/lib/api";
 import { submitJson } from "@/components/forms/submit";
 import { interpolate, useTranslation } from "@/lib/i18n";
@@ -14,18 +15,46 @@ export default function TableAdvantagesPage({ params }: { params: Promise<{ id: 
   const { t } = useTranslation();
   const [data, setData] = useState<GameTableAdvantages | null>(null);
   const [search, setSearch] = useState("");
+  const [cat, setCat] = useState("");
+  const [sub, setSub] = useState("");
 
   useEffect(() => {
     api<GameTableAdvantages>(`/game-table-advantages/${id}`).then(setData).catch(() => setData({ table: null, advantages: [] }));
   }, [id]);
 
-  const advantages = (data?.advantages ?? []).filter((a: Advantage) => {
+  const allAdvantages = data?.advantages ?? [];
+
+  const catOptions = countValues(allAdvantages.map((a: Advantage) => a.category));
+  const subOptions = countValues(
+    allAdvantages
+      .filter((a: Advantage) => !cat || (a.category ?? "") === cat)
+      .map((a: Advantage) => a.subcategory)
+  );
+
+  /* Trocar de categoria larga uma subcategoria que não pertence a ela. */
+  const pickCategory = (next: string) => {
+    setCat(next);
+    if (!next || !sub) return;
+    const valid = new Set(
+      allAdvantages
+        .filter((a: Advantage) => (a.category ?? "") === next)
+        .map((a: Advantage) => (a.subcategory ?? "").trim())
+        .filter(Boolean)
+    );
+    if (!valid.has(sub)) setSub("");
+  };
+
+  const advantages = allAdvantages.filter((a: Advantage) => {
+    if (cat && (a.category ?? "") !== cat) return false;
+    if (sub && (a.subcategory ?? "") !== sub) return false;
     if (!search) return true;
     const q = search.toLowerCase();
     return (a.name ?? "").toLowerCase().includes(q)
       || (a.description ?? "").toLowerCase().includes(q)
       || (a.category ?? "").toLowerCase().includes(q);
   });
+
+  const filtering = Boolean(search || cat || sub);
 
   return (
     <div className="max-w-5xl mx-auto p-6">
@@ -68,12 +97,25 @@ export default function TableAdvantagesPage({ params }: { params: Promise<{ id: 
         ) : null}
       </div>
 
+      <ChipFilters
+        groups={[
+          { key: "cat", label: t("fr.category"), options: catOptions, value: cat, onChange: pickCategory },
+          { key: "sub", label: t("fr.subcategory"), options: subOptions, value: sub, onChange: setSub },
+        ]}
+        onClearAll={() => {
+          setCat("");
+          setSub("");
+        }}
+      />
+
       {advantages.length === 0 ? (
         <div className="text-center py-16">
           <svg className="w-10 h-10 text-zinc-700 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M5 13l4 4L19 7" />
           </svg>
-          <p className="text-zinc-500 text-sm">{search ? t("tp.advantages.emptySearch") : t("tp.advantages.empty")}</p>
+          <p className="text-zinc-500 text-sm">
+            {filtering ? (search ? t("tp.advantages.emptySearch") : t("tp.filter.none")) : t("tp.advantages.empty")}
+          </p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -89,24 +131,16 @@ export default function TableAdvantagesPage({ params }: { params: Promise<{ id: 
                     </span>
                   </div>
                   <div className="min-w-0 flex-1 pl-4 pr-1 py-3">
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <svg className="w-4 h-4 shrink-0 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-                        </svg>
-                        <Link
-                          href={`/advantage/${a.id}`}
-                          className="text-sm font-medium text-zinc-200 group-hover:text-zinc-100 truncate after:absolute after:inset-0 after:content-['']"
-                        >
-                          {a.name || t("it.unnamed")}
-                        </Link>
-                      </div>
-                      <RowActions
-                        editHref={`/advantage/${a.id}/edit?table_id=${id}`}
-                        onDelete={() => submitJson(`/api/game-table-advantage/${a.id}`, "DELETE")}
-                        copyHref={`/api/game-table-advantage/${a.id}/copy`}
-                        tableId={id}
-                      />
+                    <div className="flex items-center gap-3 min-w-0">
+                      <svg className="w-4 h-4 shrink-0 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                      </svg>
+                      <Link
+                        href={`/advantage/${a.id}`}
+                        className="text-sm font-medium text-zinc-200 group-hover:text-zinc-100 truncate after:absolute after:inset-0 after:content-['']"
+                      >
+                        {a.name || t("it.unnamed")}
+                      </Link>
                     </div>
                     <div className="flex items-center gap-2 mt-1.5 ml-7">
                       {a.category ? (
@@ -117,6 +151,14 @@ export default function TableAdvantagesPage({ params }: { params: Promise<{ id: 
                       {a.description ? (
                         <span className="text-[11px] text-zinc-600 truncate">— {a.description}</span>
                       ) : null}
+                    </div>
+                    <div className="flex justify-end mt-2">
+                      <RowActions
+                        editHref={`/advantage/${a.id}/edit?table_id=${id}`}
+                        onDelete={() => submitJson(`/api/game-table-advantage/${a.id}`, "DELETE")}
+                        copyHref={`/api/game-table-advantage/${a.id}/copy`}
+                        tableId={id}
+                      />
                     </div>
                   </div>
                 </div>

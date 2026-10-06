@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { GameTableItems, Item } from "@/lib/types";
 import TableTabs from "@/components/TableTabs";
 import RowActions from "@/components/table/RowActions";
+import ChipFilters, { countValues } from "@/components/table/ChipFilters";
 import { api } from "@/lib/api";
 import { submitJson } from "@/components/forms/submit";
 import { interpolate, useTranslation } from "@/lib/i18n";
@@ -23,12 +24,21 @@ export default function TableItemsPage({ params }: { params: Promise<{ id: strin
   const { lang, t } = useTranslation();
   const [data, setData] = useState<GameTableItems | null>(null);
   const [search, setSearch] = useState("");
+  const [cat, setCat] = useState("");
+  const [kindF, setKindF] = useState("");
 
   useEffect(() => {
     api<GameTableItems>(`/game-table-items/${id}`).then(setData).catch(() => setData({ table: null, items: [] }));
   }, [id]);
 
-  const items = (data?.items ?? []).filter((i: Item) => {
+  const allItems = data?.items ?? [];
+
+  const kindOptions = countValues(allItems.map((i: Item) => (KIND_BADGES[i.kind ?? ""] ? i.kind : null)));
+  const catOptions = countValues(allItems.map((i: Item) => i.category));
+
+  const items = allItems.filter((i: Item) => {
+    if (kindF && (i.kind ?? "") !== kindF) return false;
+    if (cat && (i.category ?? "") !== cat) return false;
     if (!search) return true;
     const q = search.toLowerCase();
     return (i.name ?? "").toLowerCase().includes(q)
@@ -37,11 +47,8 @@ export default function TableItemsPage({ params }: { params: Promise<{ id: strin
       || ((i.kind ?? "") as string).toLowerCase().includes(q);
   });
 
-  const kindCounts = (data?.items ?? []).reduce<Record<string, number>>((acc, i) => {
-    const k = i.kind;
-    if (k) acc[k] = (acc[k] ?? 0) + 1;
-    return acc;
-  }, {});
+  const filtering = Boolean(search || cat || kindF);
+  const kindLabel = (v: string) => (KIND_BADGES[v] ? t(KIND_BADGES[v].label) : v);
 
   return (
     <div className="max-w-5xl mx-auto p-6">
@@ -55,16 +62,6 @@ export default function TableItemsPage({ params }: { params: Promise<{ id: strin
       <div className="flex items-center justify-between gap-6 mb-6">
         <div className="flex items-center gap-3 text-xs text-zinc-500">
           <span>{interpolate(t(items.length !== 1 ? "tp.count.itemsMany" : "tp.count.itemsOne"), { n: items.length })}</span>
-          {Object.entries(kindCounts).map(([kind, c]) => {
-            const badge = KIND_BADGES[kind];
-            if (!badge) return null;
-            const key = badge.label.replace("tp.kind.", "tp.kindCount.");
-            return (
-              <span key={kind} className={`px-1.5 py-0.5 rounded ${badge.class}`}>
-                {interpolate(t(c !== 1 ? `${key}Many` : `${key}One`), { n: c })}
-              </span>
-            );
-          })}
         </div>
         <Link
           href={`/item/new?table_id=${id}`}
@@ -94,12 +91,25 @@ export default function TableItemsPage({ params }: { params: Promise<{ id: strin
         ) : null}
       </div>
 
+      <ChipFilters
+        groups={[
+          { key: "kind", label: t("fr.type"), options: kindOptions, value: kindF, onChange: setKindF, labelOf: kindLabel },
+          { key: "cat", label: t("fr.category"), options: catOptions, value: cat, onChange: setCat },
+        ]}
+        onClearAll={() => {
+          setCat("");
+          setKindF("");
+        }}
+      />
+
       {items.length === 0 ? (
         <div className="text-center py-16">
           <svg className="w-10 h-10 text-zinc-700 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
           </svg>
-          <p className="text-zinc-500 text-sm">{search ? t("tp.items.emptySearch") : t("tp.items.empty")}</p>
+          <p className="text-zinc-500 text-sm">
+            {filtering ? (search ? t("tp.items.emptySearch") : t("tp.filter.none")) : t("tp.items.empty")}
+          </p>
         </div>
       ) : (
         <div className="space-y-2">

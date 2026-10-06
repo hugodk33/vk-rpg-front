@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { GameTableSkills, SkillItem } from "@/lib/types";
 import TableTabs from "@/components/TableTabs";
 import RowActions from "@/components/table/RowActions";
+import ChipFilters, { countValues } from "@/components/table/ChipFilters";
 import { api } from "@/lib/api";
 import { submitJson } from "@/components/forms/submit";
 import { interpolate, useTranslation } from "@/lib/i18n";
@@ -24,6 +25,10 @@ export default function TableSkillsPage({ params }: { params: Promise<{ id: stri
   const { t } = useTranslation();
   const [data, setData] = useState<GameTableSkills | null>(null);
   const [search, setSearch] = useState("");
+  const [cat, setCat] = useState("");
+  const [sub, setSub] = useState("");
+  const [typeF, setTypeF] = useState("");
+  const [diffF, setDiffF] = useState("");
 
   const typeName = (raw?: string) =>
     raw && KNOWN_TYPES.has(raw) ? t(`sk.type.${raw}`) : raw ?? "";
@@ -32,7 +37,35 @@ export default function TableSkillsPage({ params }: { params: Promise<{ id: stri
     api<GameTableSkills>(`/game-table-skills/${id}`).then(setData).catch(() => setData({ table: null, skills: [] }));
   }, [id]);
 
-  const skills = (data?.skills ?? []).filter((s: SkillItem) => {
+  const allSkills = data?.skills ?? [];
+
+  const typeOptions = countValues(allSkills.map((s: SkillItem) => s.predefinition_type));
+  const diffOptions = countValues(allSkills.map((s: SkillItem) => s.predefinition_difficulty));
+  const catOptions = countValues(allSkills.map((s: SkillItem) => s.category));
+  const subOptions = countValues(
+    allSkills
+      .filter((s: SkillItem) => !cat || (s.category ?? "") === cat)
+      .map((s: SkillItem) => s.subcategory)
+  );
+
+  /* Trocar de categoria larga uma subcategoria que não pertence a ela. */
+  const pickCategory = (next: string) => {
+    setCat(next);
+    if (!next || !sub) return;
+    const valid = new Set(
+      allSkills
+        .filter((s: SkillItem) => (s.category ?? "") === next)
+        .map((s: SkillItem) => (s.subcategory ?? "").trim())
+        .filter(Boolean)
+    );
+    if (!valid.has(sub)) setSub("");
+  };
+
+  const skills = allSkills.filter((s: SkillItem) => {
+    if (typeF && (s.predefinition_type ?? "") !== typeF) return false;
+    if (diffF && (s.predefinition_difficulty ?? "") !== diffF) return false;
+    if (cat && (s.category ?? "") !== cat) return false;
+    if (sub && (s.subcategory ?? "") !== sub) return false;
     if (!search) return true;
     const q = search.toLowerCase();
     return (s.name ?? "").toLowerCase().includes(q)
@@ -41,11 +74,7 @@ export default function TableSkillsPage({ params }: { params: Promise<{ id: stri
       || (s.category ?? "").toLowerCase().includes(q);
   });
 
-  const typeCounts = (data?.skills ?? []).reduce<Record<string, number>>((acc, s) => {
-    const t = s.predefinition_type ?? "Other";
-    acc[t] = (acc[t] ?? 0) + 1;
-    return acc;
-  }, {});
+  const filtering = Boolean(search || cat || sub || typeF || diffF);
 
   /* Pré-definição numa linha só, cobrindo as duas formas que o banco tem:
      fórmula de atributo ("iq - 6") e nível padrão em outra skill. */
@@ -74,12 +103,6 @@ export default function TableSkillsPage({ params }: { params: Promise<{ id: stri
       <div className="flex items-center justify-between gap-3 mb-6">
         <div className="flex items-center gap-3 text-xs text-zinc-500">
           <span>{interpolate(t(skills.length !== 1 ? "tp.count.skillsMany" : "tp.count.skillsOne"), { n: skills.length })}</span>
-          {Object.entries(typeCounts).map(([ty, c]) => (
-            <span key={ty} className="flex items-center gap-1">
-              <span className={`w-1.5 h-1.5 rounded-full ${TYPE_ICON[ty]?.color?.replace("text-", "bg-") ?? "bg-zinc-500"}`} />
-              {c} {typeName(ty)}
-            </span>
-          ))}
         </div>
         <Link
           href={`/skill/new?table_id=${id}`}
@@ -109,12 +132,29 @@ export default function TableSkillsPage({ params }: { params: Promise<{ id: stri
         ) : null}
       </div>
 
+      <ChipFilters
+        groups={[
+          { key: "type", label: t("fr.type"), options: typeOptions, value: typeF, onChange: setTypeF, labelOf: typeName },
+          { key: "diff", label: t("fr.difficulty"), options: diffOptions, value: diffF, onChange: setDiffF, labelOf: (v) => t(`sk.diff.${v}`) },
+          { key: "cat", label: t("fr.category"), options: catOptions, value: cat, onChange: pickCategory },
+          { key: "sub", label: t("fr.subcategory"), options: subOptions, value: sub, onChange: setSub },
+        ]}
+        onClearAll={() => {
+          setCat("");
+          setSub("");
+          setTypeF("");
+          setDiffF("");
+        }}
+      />
+
       {skills.length === 0 ? (
         <div className="text-center py-16">
           <svg className="w-10 h-10 text-zinc-700 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d={FALLBACK_ICON.path} />
           </svg>
-          <p className="text-zinc-500 text-sm">{search ? t("tp.skills.emptySearch") : t("tp.skills.empty")}</p>
+          <p className="text-zinc-500 text-sm">
+            {filtering ? (search ? t("tp.skills.emptySearch") : t("tp.filter.none")) : t("tp.skills.empty")}
+          </p>
         </div>
       ) : (
         <div className="space-y-2">

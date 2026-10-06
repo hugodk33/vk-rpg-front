@@ -13,6 +13,7 @@ export const PT: Record<string, string> = {
   "tp.rootOne": "{n} raiz de território",
   "tp.searchPh": "Pesquisar o território…",
   "tp.clear": "Limpar",
+  "tp.region": "Região",
   "tp.loading": "Carregando território…",
   "tp.noResults": "Nenhum local corresponde à sua pesquisa.",
   "tp.empty": "Nenhum território mapeado ainda. Crie seu primeiro mundo.",
@@ -95,13 +96,18 @@ export const PT: Record<string, string> = {
   "tp.disadvantages.searchPh": "Pesquisar desvantagens…",
 
   /* ---------- Personagens da mesa ---------- */
+  "tp.characters.active": "Ativo",
   "tp.characters.ally": "Aliado",
+  "tp.characters.bond": "Vínculo",
   "tp.characters.empty": "Nenhum personagem na mesa ainda.",
   "tp.characters.emptySearch": "Nenhum personagem corresponde à sua pesquisa.",
   "tp.characters.enemy": "Inimigo",
   "tp.characters.inactive": "Inativos",
+  "tp.characters.npc": "NPC",
   "tp.characters.noSheet": "Sem ficha",
+  "tp.characters.player": "Jogador",
   "tp.characters.searchPh": "Pesquisar personagens…",
+  "tp.characters.status": "Situação",
 
   /* ---------- Livro-razão de sessões (ledger) ---------- */
   "tp.chapter": "Capítulo",
@@ -180,6 +186,11 @@ export const PT: Record<string, string> = {
   "tp.mod.f.rested": "Descansado",
   "tp.mod.f.tired": "Cansado",
   "tp.mod.f.exhausted": "Exausto",
+
+  /* ---------- Filtros por chip (listas de entidades da mesa) ---------- */
+  "tp.filter.all": "Todos",
+  "tp.filter.clear": "Limpar filtros",
+  "tp.filter.none": "Nada cai dentro do filtro.",
 };
 
 export const EN: Record<string, string> = {
@@ -191,6 +202,7 @@ export const EN: Record<string, string> = {
   "tp.rootOne": "{n} territory root",
   "tp.searchPh": "Search the territory…",
   "tp.clear": "Clear",
+  "tp.region": "Region",
   "tp.loading": "Loading territory…",
   "tp.noResults": "No location matches your search.",
   "tp.empty": "No territory mapped yet. Create your first world.",
@@ -273,13 +285,18 @@ export const EN: Record<string, string> = {
   "tp.disadvantages.searchPh": "Search disadvantages…",
 
   /* ---------- Table characters ---------- */
+  "tp.characters.active": "Active",
   "tp.characters.ally": "Ally",
+  "tp.characters.bond": "Disposition",
   "tp.characters.empty": "No characters at this table yet.",
   "tp.characters.emptySearch": "No character matches your search.",
   "tp.characters.enemy": "Enemy",
   "tp.characters.inactive": "Inactive",
+  "tp.characters.npc": "NPC",
   "tp.characters.noSheet": "No sheet",
+  "tp.characters.player": "Player",
   "tp.characters.searchPh": "Search characters…",
+  "tp.characters.status": "Status",
 
   /* ---------- Session ledger ---------- */
   "tp.chapter": "Chapter",
@@ -358,4 +375,9 @@ export const EN: Record<string, string> = {
   "tp.mod.f.rested": "Rested",
   "tp.mod.f.tired": "Tired",
   "tp.mod.f.exhausted": "Exhausted",
+
+  /* ---------- Filtros por chip (listas de entidades da mesa) ---------- */
+  "tp.filter.all": "All",
+  "tp.filter.clear": "Clear filters",
+  "tp.filter.none": "Nothing falls inside the filter.",
 };

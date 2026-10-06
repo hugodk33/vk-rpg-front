@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { GameTable, Location, Modifier, Narration, NarrationAction, Scene, VisibilityRule } from "@/lib/types";
 import { maskedLocationName, maskedTargetName } from "@/lib/visibility";
 import { narrationBoard } from "@/lib/board";
 import { useTableLive } from "@/lib/useTableLive";
 import { interpolate, useTranslation } from "@/lib/i18n";
+import ChipFilters, { countValues } from "@/components/table/ChipFilters";
 import TacticalPlate from "@/components/tactical/TacticalPlate";
 
 /* ============================================================
@@ -353,13 +354,17 @@ export default function SceneTimeline({ table, scenes, showEditButtons = true, r
   const mask: (id: string, real: string) => string = rules
     ? (id, real) => maskedTargetName(rules, id, real)
     : (id, real) => real;
+  const [chapterF, setChapterF] = useState("");
   const chapters = new Map<number, Scene[]>();
   for (const scene of scenes) {
     const ch = scene.chapter || 1;
     if (!chapters.has(ch)) chapters.set(ch, []);
     chapters.get(ch)!.push(scene);
   }
-  const chapterEntries = [...chapters.entries()];
+  const chapterOptions = countValues(scenes.map((s) => String(s.chapter || 1)));
+  const chapterEntries = [...chapters.entries()].filter(
+    ([ch]) => !chapterF || String(ch) === chapterF
+  );
 
   /* tempo real: a crônica cresce sem recarregar a página */
   useTableLive(table?.id ?? null, () => router.refresh());
@@ -381,12 +386,30 @@ export default function SceneTimeline({ table, scenes, showEditButtons = true, r
         </div>
       </Panel>
 
+      <ChipFilters
+        groups={[
+          {
+            key: "chapter",
+            label: t("vs.tl.chapter"),
+            options: chapterOptions,
+            value: chapterF,
+            onChange: setChapterF,
+            labelOf: (v) => roman(Number(v)),
+          },
+        ]}
+        onClearAll={() => setChapterF("")}
+      />
+
       {scenes.length === 0 ? (
         <div className="text-center py-20">
           <svg className="w-10 h-10 text-zinc-700 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
           </svg>
           <p className="text-zinc-500 text-sm">{t("vs.tl.empty")}</p>
+        </div>
+      ) : chapterEntries.length === 0 ? (
+        <div className="text-center py-20">
+          <p className="text-zinc-500 text-sm">{t("tp.filter.none")}</p>
         </div>
       ) : (
         chapterEntries.map(([chapter, chapterScenes]) => (

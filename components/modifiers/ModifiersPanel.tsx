@@ -16,6 +16,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
 import { interpolate, useTranslation } from "@/lib/i18n";
+import ChipFilters, { countValues } from "@/components/table/ChipFilters";
 import type {
   GameTableModifiers,
   GameTableScenes,
@@ -272,6 +273,8 @@ export default function ModifiersPanel({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<"list" | "form">(initialTab);
+  const [kindF, setKindF] = useState("");
+  const [targetF, setTargetF] = useState("");
 
   const locationNames = useMemo(() => {
     const m = new Map<string, string>();
@@ -339,6 +342,34 @@ export default function ModifiersPanel({
     }
     return null;
   };
+
+  /* Linha sem `kind` no banco ainda conta como efeito — é o default da
+     coluna — então normaliza nos dois lados do filtro. */
+  const kindOf = (m: Modifier) => (m.kind === "modelo" ? "modelo" : "effect");
+
+  /* Qual coluna de destino a linha preenche: é assim que o painel mostra
+     "em quem/cai", e vira o recorte "Aplica em". */
+  const targetOf = (m: Modifier): string => {
+    if (m.character_id) return "character";
+    if (m.scene_id) return "scene";
+    if (m.location_id) return "location";
+    if (m.narration_id) return "narration";
+    if (m.action_id) return "action";
+    if (m.skill_id) return "skill";
+    if (m.advantage_id) return "advantage";
+    if (m.disadvantage_id) return "disadvantage";
+    if (m.item_id) return "item";
+    return "global";
+  };
+
+  const kindOptions = countValues(modifiers.map(kindOf));
+  const targetOptions = countValues(modifiers.map(targetOf));
+
+  const visibleModifiers = modifiers.filter((m) => {
+    if (kindF && kindOf(m) !== kindF) return false;
+    if (targetF && targetOf(m) !== targetF) return false;
+    return true;
+  });
 
   const set = (field: keyof FormState, value: string) =>
     setForm((f) => ({ ...f, [field]: value }));
@@ -462,6 +493,16 @@ export default function ModifiersPanel({
 
       {tab === "list" ? (
         <section>
+          <ChipFilters
+            groups={[
+              { key: "kind", label: t("vs.mp.f.kind"), options: kindOptions, value: kindF, onChange: setKindF, labelOf: (v) => (v === "modelo" ? t("vs.mp.f.kindModel") : t("vs.mp.f.kindEffect")) },
+              { key: "target", label: t("vs.mp.tgLabel"), options: targetOptions, value: targetF, onChange: setTargetF, labelOf: (v) => t(`vs.mp.tg.${v}`) },
+            ]}
+            onClearAll={() => {
+              setKindF("");
+              setTargetF("");
+            }}
+          />
 
           {modifiers.length === 0 ? (
             <div className="rounded-xl border border-dashed border-zinc-700/60 px-4 py-10 text-center">
@@ -472,9 +513,13 @@ export default function ModifiersPanel({
                 {t("vs.mp.emptyBody")}
               </p>
             </div>
+          ) : visibleModifiers.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-zinc-700/60 px-4 py-10 text-center">
+              <p className="text-sm text-zinc-400">{t("tp.filter.none")}</p>
+            </div>
           ) : (
             <ul className="space-y-2">
-              {modifiers.map((m) => {
+              {visibleModifiers.map((m) => {
                 const char = nameOf(m.character_id);
                 const scene = sceneOf(m.scene_id);
                 const locName = locationNameOf(m.location_id);

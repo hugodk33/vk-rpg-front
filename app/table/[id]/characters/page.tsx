@@ -6,6 +6,7 @@ import type { GameTableCharacters, GameTableNpcs, TableCharacter } from "@/lib/t
 import TableTabs from "@/components/TableTabs";
 import RadarChart from "@/components/RadarChart";
 import RowActions from "@/components/table/RowActions";
+import ChipFilters, { countValues } from "@/components/table/ChipFilters";
 import { api } from "@/lib/api";
 import { submitJson } from "@/components/forms/submit";
 import { interpolate, useTranslation } from "@/lib/i18n";
@@ -16,19 +17,14 @@ export default function TableCharactersPage({ params }: { params: Promise<{ id: 
   const [data, setData] = useState<GameTableCharacters | null>(null);
   const [npcs, setNpcs] = useState<GameTableNpcs | null>(null);
   const [search, setSearch] = useState("");
+  const [typeF, setTypeF] = useState("");
+  const [bondF, setBondF] = useState("");
+  const [statusF, setStatusF] = useState("");
 
   useEffect(() => {
     api<GameTableCharacters>(`/game-table-characters/${id}`).then(setData).catch(() => setData({ table: null, characters: [] }));
     api<GameTableNpcs>(`/game-table-npcs/${id}`).then(setNpcs).catch(() => setNpcs({ table: null, npcs: [] }));
   }, [id]);
-
-  const characters = (data?.characters ?? []).filter((ch: TableCharacter) => {
-    if (!search) return true;
-    const q = search.toLowerCase();
-    const s = ch.sheet;
-    return (s?.name ?? ch.name ?? "").toLowerCase().includes(q)
-      || (ch.user?.username ?? "").toLowerCase().includes(q);
-  });
 
   const npcStatusById = new Map((npcs?.npcs ?? []).map((n) => [n.character_id, n.status]));
   const npcIdByCharacter = new Map((npcs?.npcs ?? []).map((n) => [n.character_id, n.id]));
@@ -39,6 +35,27 @@ export default function TableCharactersPage({ params }: { params: Promise<{ id: 
     const st = npcStatusById.get(ch.id);
     return st ? st.toLowerCase() !== "enemy" : true;
   };
+
+  const allCharacters = data?.characters ?? [];
+
+  const typeOptions = countValues(allCharacters.map((ch) => (isNpc(ch) ? "npc" : "player")));
+  const bondOptions = countValues(allCharacters.filter(isNpc).map((ch) => (isAlly(ch) ? "ally" : "enemy")));
+  const statusOptions = countValues(allCharacters.map((ch) => (ch.is_active === false ? "inactive" : "active")));
+
+  const characters = allCharacters.filter((ch: TableCharacter) => {
+    const npc = isNpc(ch);
+    if (typeF === "npc" && !npc) return false;
+    if (typeF === "player" && npc) return false;
+    if (bondF && (!npc || (bondF === "ally") !== isAlly(ch))) return false;
+    if (statusF && ((ch.is_active === false ? "inactive" : "active") !== statusF)) return false;
+    if (!search) return true;
+    const q = search.toLowerCase();
+    const s = ch.sheet;
+    return (s?.name ?? ch.name ?? "").toLowerCase().includes(q)
+      || (ch.user?.username ?? "").toLowerCase().includes(q);
+  });
+
+  const filtering = Boolean(search || typeF || bondF || statusF);
 
   return (
     <div className="max-w-5xl mx-auto p-6">
@@ -81,12 +98,27 @@ export default function TableCharactersPage({ params }: { params: Promise<{ id: 
         ) : null}
       </div>
 
+      <ChipFilters
+        groups={[
+          { key: "type", label: t("fr.type"), options: typeOptions, value: typeF, onChange: setTypeF, labelOf: (v) => (v === "npc" ? t("tp.characters.npc") : t("tp.characters.player")) },
+          { key: "bond", label: t("tp.characters.bond"), options: bondOptions, value: bondF, onChange: setBondF, labelOf: (v) => (v === "ally" ? t("tp.characters.ally") : t("tp.characters.enemy")) },
+          { key: "status", label: t("tp.characters.status"), options: statusOptions, value: statusF, onChange: setStatusF, labelOf: (v) => (v === "active" ? t("tp.characters.active") : t("tp.characters.inactive")) },
+        ]}
+        onClearAll={() => {
+          setTypeF("");
+          setBondF("");
+          setStatusF("");
+        }}
+      />
+
       {characters.length === 0 ? (
         <div className="text-center py-16">
           <svg className="w-10 h-10 text-zinc-700 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
           </svg>
-          <p className="text-zinc-500 text-sm">{search ? t("tp.characters.emptySearch") : t("tp.characters.empty")}</p>
+          <p className="text-zinc-500 text-sm">
+            {filtering ? (search ? t("tp.characters.emptySearch") : t("tp.filter.none")) : t("tp.characters.empty")}
+          </p>
         </div>
       ) : (
         <div className="space-y-2">

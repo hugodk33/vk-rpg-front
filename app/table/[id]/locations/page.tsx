@@ -4,6 +4,7 @@ import { use, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import type { GameTableLocations } from "@/lib/types";
 import TableTabs from "@/components/TableTabs";
+import ChipFilters, { countValues } from "@/components/table/ChipFilters";
 import { api } from "@/lib/api";
 import { seatActorQuery } from "@/lib/seat";
 import { submitJson } from "@/components/forms/submit";
@@ -11,6 +12,7 @@ import { interpolate, useTranslation } from "@/lib/i18n";
 import {
   CurrentMapStrip,
   indexTree,
+  KNOWN_KINDS,
   LocationPlate,
   ZoomRuler,
 } from "@/components/location/locAtlas";
@@ -30,6 +32,8 @@ export default function TableLocationsPage({ params }: { params: Promise<{ id: s
   const { t } = useTranslation();
   const [data, setData] = useState<GameTableLocations | null>(null);
   const [search, setSearch] = useState("");
+  const [kindF, setKindF] = useState("");
+  const [regionF, setRegionF] = useState("");
   const [activeId, setActiveId] = useState<string | null>(null);
   const [firstId, setFirstId] = useState<string | null>(null);
   const [defaultId, setDefaultId] = useState<string | null>(null);
@@ -52,12 +56,22 @@ export default function TableLocationsPage({ params }: { params: Promise<{ id: s
   const atFirst = !active || (firstId !== null && active.node.id === firstId);
   const inSub = !!active && !atFirst;
 
-  const filtered = search.trim()
+  /* A visão "atlas" é a raiz; qualquer chip ativo leva para o mesmo modo
+     plano da busca, para o filtro valer sobre todos os territórios. */
+  const textQuery = search.trim().toLowerCase();
+  const flatMode = Boolean(textQuery || kindF || regionF);
+
+  const kindOptions = countValues(flat.map(({ node }) => node.kind));
+  const regionOptions = countValues(flat.map(({ node }) => node.region));
+
+  const filtered = flatMode
     ? flat.filter(({ node }) => {
-        const q = search.trim().toLowerCase();
-        return (node.name ?? "").toLowerCase().includes(q)
-          || (node.region ?? "").toLowerCase().includes(q)
-          || (node.address ?? "").toLowerCase().includes(q);
+        if (kindF && (node.kind ?? "") !== kindF) return false;
+        if (regionF && (node.region ?? "") !== regionF) return false;
+        if (!textQuery) return true;
+        return (node.name ?? "").toLowerCase().includes(textQuery)
+          || (node.region ?? "").toLowerCase().includes(textQuery)
+          || (node.address ?? "").toLowerCase().includes(textQuery);
       })
     : null;
 
@@ -122,29 +136,42 @@ export default function TableLocationsPage({ params }: { params: Promise<{ id: s
       </div>
 
       {atFirst ? (
-        <div className="flex gap-2 mb-5">
-          <div className="relative flex-1">
-            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder={t("tp.searchPh")}
-              className="w-full bg-zinc-800/60 border border-zinc-700/50 rounded-lg pl-9 pr-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-teal-700/60"
-            />
+        <>
+          <div className="flex gap-2 mb-5">
+            <div className="relative flex-1">
+              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder={t("tp.searchPh")}
+                className="w-full bg-zinc-800/60 border border-zinc-700/50 rounded-lg pl-9 pr-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-teal-700/60"
+              />
+            </div>
+            {search ? (
+              <button
+                type="button"
+                onClick={() => setSearch("")}
+                className="bg-zinc-800/60 hover:bg-zinc-700/60 text-zinc-400 text-sm px-3 py-2 rounded-lg transition-colors border border-zinc-700/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600/60"
+              >
+                {t("tp.clear")}
+              </button>
+            ) : null}
           </div>
-          {search ? (
-            <button
-              type="button"
-              onClick={() => setSearch("")}
-              className="bg-zinc-800/60 hover:bg-zinc-700/60 text-zinc-400 text-sm px-3 py-2 rounded-lg transition-colors border border-zinc-700/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600/60"
-            >
-              {t("tp.clear")}
-            </button>
-          ) : null}
-        </div>
+
+          <ChipFilters
+            groups={[
+              { key: "kind", label: t("fr.type"), options: kindOptions, value: kindF, onChange: setKindF, labelOf: (v) => (KNOWN_KINDS.has(v) ? t(`tp.locKind.${v}`) : v) },
+              { key: "region", label: t("tp.region"), options: regionOptions, value: regionF, onChange: setRegionF },
+            ]}
+            onClearAll={() => {
+              setKindF("");
+              setRegionF("");
+            }}
+          />
+        </>
       ) : null}
 
       {!data ? (
@@ -156,7 +183,7 @@ export default function TableLocationsPage({ params }: { params: Promise<{ id: s
       ) : atFirst && filtered !== null ? (
         filtered.length === 0 ? (
           <div className="text-center py-16">
-            <p className="text-zinc-500 text-sm">{t("tp.noResults")}</p>
+            <p className="text-zinc-500 text-sm">{search ? t("tp.noResults") : t("tp.filter.none")}</p>
           </div>
         ) : (
           <div ref={platesRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3" aria-live="polite">
