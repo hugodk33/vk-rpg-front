@@ -107,47 +107,51 @@ export default function TableDisadvantagesPage({ params }: { params: Promise<{ i
             return (
               <div
                 key={d.id}
-                className="group relative block bg-zinc-800/40 hover:bg-zinc-800/70 border border-zinc-700/40 hover:border-zinc-600/60 rounded-lg border-l-[3px] px-4 py-3 transition-all"
+                className="group relative block bg-zinc-800/40 hover:bg-zinc-800/70 border border-zinc-700/40 hover:border-zinc-600/60 rounded-lg border-l-[3px] pr-3 transition-all"
                 style={{ borderLeftColor: colors.border }}
               >
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <svg className="w-4 h-4 shrink-0 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                    </svg>
-                    <Link
-                      href={`/disadvantage/${d.id}`}
-                      className="text-sm font-medium text-zinc-200 group-hover:text-zinc-100 truncate after:absolute after:inset-0 after:content-['']"
-                    >
-                      {d.name || t("it.unnamed")}
-                    </Link>
+                <div className="flex items-stretch">
+                  <div className="flex w-16 shrink-0 flex-col items-center justify-center border-r border-zinc-700/50 py-3">
+                    <span className="text-lg font-bold leading-none text-red-400">
+                      {d.cost_points != null ? d.cost_points : "—"}
+                    </span>
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    {d.cost_points != null ? (
-                      <span className="text-xs font-bold text-red-400 bg-red-400/10 px-2 py-0.5 rounded">
-                        {d.cost_points}
-                      </span>
-                    ) : null}
-                    {d.category ? (
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${colors.badge}`}>
-                        {d.category}
-                      </span>
-                    ) : null}
-                    <RowActions
-                      editHref={`/disadvantage/${d.id}/edit?table_id=${id}`}
-                      onDelete={() => submitJson(`/api/game-table-disadvantage/${d.id}`, "DELETE")}
-                      copyHref={`/api/game-table-disadvantage/${d.id}/copy`}
-                      tableId={id}
-                    />
+                  <div className="min-w-0 flex-1 pl-4 pr-1 py-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <svg className="w-4 h-4 shrink-0 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                        </svg>
+                        <Link
+                          href={`/disadvantage/${d.id}`}
+                          className="text-sm font-medium text-zinc-200 group-hover:text-zinc-100 truncate after:absolute after:inset-0 after:content-['']"
+                        >
+                          {d.name || t("it.unnamed")}
+                        </Link>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {d.category ? (
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${colors.badge}`}>
+                            {d.category}
+                          </span>
+                        ) : null}
+                        <RowActions
+                          editHref={`/disadvantage/${d.id}/edit?table_id=${id}`}
+                          onDelete={() => submitJson(`/api/game-table-disadvantage/${d.id}`, "DELETE")}
+                          copyHref={`/api/game-table-disadvantage/${d.id}/copy`}
+                          tableId={id}
+                        />
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 mt-1.5 ml-7">
+                      {d.subcategory ? (
+                        <span className="text-[11px] text-zinc-500">{d.subcategory}</span>
+                      ) : null}
+                      {d.effect ? (
+                        <span className="text-[11px] text-zinc-600 truncate">— {d.effect}</span>
+                      ) : null}
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-center gap-2 mt-1.5 ml-7">
-                  {d.subcategory ? (
-                    <span className="text-[11px] text-zinc-500">{d.subcategory}</span>
-                  ) : null}
-                  {d.effect ? (
-                    <span className="text-[11px] text-zinc-600 truncate">— {d.effect}</span>
-                  ) : null}
                 </div>
               </div>
             );

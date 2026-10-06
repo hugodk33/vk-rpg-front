@@ -80,42 +80,46 @@ export default function TableAdvantagesPage({ params }: { params: Promise<{ id: 
           {advantages.map((a: Advantage) => (
             <div
               key={a.id}
-              className="group relative block bg-zinc-800/40 hover:bg-zinc-800/70 border border-zinc-700/40 hover:border-zinc-600/60 rounded-lg border-l-[3px] border-l-emerald-400/70 px-4 py-3 transition-all"
+              className="group relative block bg-zinc-800/40 hover:bg-zinc-800/70 border border-zinc-700/40 hover:border-zinc-600/60 rounded-lg border-l-[3px] border-l-emerald-400/70 pr-3 transition-all"
             >
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3 min-w-0">
-                  <svg className="w-4 h-4 shrink-0 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-                  </svg>
-                  <Link
-                    href={`/advantage/${a.id}`}
-                    className="text-sm font-medium text-zinc-200 group-hover:text-zinc-100 truncate after:absolute after:inset-0 after:content-['']"
-                  >
-                    {a.name || t("it.unnamed")}
-                  </Link>
+                <div className="flex items-stretch">
+                  <div className="flex w-16 shrink-0 flex-col items-center justify-center border-r border-zinc-700/50 py-3">
+                    <span className="text-lg font-bold leading-none text-emerald-400">
+                      {a.cost_points == null ? "—" : a.cost_points >= 0 ? `+${a.cost_points}` : a.cost_points}
+                    </span>
+                  </div>
+                  <div className="min-w-0 flex-1 pl-4 pr-1 py-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <svg className="w-4 h-4 shrink-0 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                        </svg>
+                        <Link
+                          href={`/advantage/${a.id}`}
+                          className="text-sm font-medium text-zinc-200 group-hover:text-zinc-100 truncate after:absolute after:inset-0 after:content-['']"
+                        >
+                          {a.name || t("it.unnamed")}
+                        </Link>
+                      </div>
+                      <RowActions
+                        editHref={`/advantage/${a.id}/edit?table_id=${id}`}
+                        onDelete={() => submitJson(`/api/game-table-advantage/${a.id}`, "DELETE")}
+                        copyHref={`/api/game-table-advantage/${a.id}/copy`}
+                        tableId={id}
+                      />
+                    </div>
+                    <div className="flex items-center gap-2 mt-1.5 ml-7">
+                      {a.category ? (
+                        <span className="text-[11px] text-zinc-500">
+                          {a.category}{a.subcategory ? ` / ${a.subcategory}` : ""}
+                        </span>
+                      ) : null}
+                      {a.description ? (
+                        <span className="text-[11px] text-zinc-600 truncate">— {a.description}</span>
+                      ) : null}
+                    </div>
+                  </div>
                 </div>
-                {a.cost_points != null ? (
-                  <span className="text-xs font-bold text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded shrink-0">
-                    +{a.cost_points}
-                  </span>
-                ) : null}
-                <RowActions
-                  editHref={`/advantage/${a.id}/edit?table_id=${id}`}
-                  onDelete={() => submitJson(`/api/game-table-advantage/${a.id}`, "DELETE")}
-                  copyHref={`/api/game-table-advantage/${a.id}/copy`}
-                  tableId={id}
-                />
-              </div>
-              <div className="flex items-center gap-2 mt-1.5 ml-7">
-                {a.category ? (
-                  <span className="text-[11px] text-zinc-500">
-                    {a.category}{a.subcategory ? ` / ${a.subcategory}` : ""}
-                  </span>
-                ) : null}
-                {a.description ? (
-                  <span className="text-[11px] text-zinc-600 truncate">— {a.description}</span>
-                ) : null}
-              </div>
             </div>
           ))}
         </div>
