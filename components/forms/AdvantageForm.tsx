@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { submitJson } from "./submit";
 import { cancelCls, inputCls, labelCls, submitCls } from "./formStyles";
 import FormShell from "./FormShell";
+import CategoryField from "./CategoryField";
 import EntityModifiers from "@/components/modifiers/EntityModifiers";
 import { useTranslation } from "@/lib/i18n";
 import type { Advantage } from "@/lib/types";
@@ -116,26 +117,16 @@ export default function AdvantageForm({ tableId, tableTitle, tables, initial }: 
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className={labelCls}>{t("fr.category")}</label>
-            <input
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              placeholder={t("fr.adv.categoryPh")}
-              className={inputCls}
-            />
-          </div>
-          <div>
-            <label className={labelCls}>{t("fr.subcategory")}</label>
-            <input
-              value={subcategory}
-              onChange={(e) => setSubcategory(e.target.value)}
-              placeholder={t("fr.adv.subcategoryPh")}
-              className={inputCls}
-            />
-          </div>
-        </div>
+        <CategoryField
+          tableId={currentTableId || undefined}
+          entity="advantage"
+          category={category}
+          subcategory={subcategory}
+          onCategory={setCategory}
+          onSubcategory={setSubcategory}
+          categoryPlaceholder={t("fr.adv.categoryPh")}
+          subcategoryPlaceholder={t("fr.adv.subcategoryPh")}
+        />
 
         <div>
           <label className={labelCls}>{t("fr.description")}</label>
