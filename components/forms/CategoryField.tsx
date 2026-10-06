@@ -26,6 +26,9 @@ export type CategoryEntity = "advantage" | "disadvantage" | "skill" | "item";
 /** Sentinel shown by the selects to switch into free text. */
 const NEW = "__new__";
 
+/** Stable empty list, so the memos below don't recompute every render. */
+const NO_ROWS: CategoryRow[] = [];
+
 const ENDPOINT: Record<CategoryEntity, (tableId: string) => string> = {
   advantage: (id) => `/game-table-advantages/${id}`,
   disadvantage: (id) => `/game-table-disadvantages/${id}`,
@@ -52,7 +55,6 @@ export default function CategoryField({
   subcategory,
   onCategory,
   onSubcategory,
-  initiallyOpen = false,
   hasSubcategory = true,
   categoryPlaceholder,
   subcategoryPlaceholder,
@@ -63,8 +65,6 @@ export default function CategoryField({
   subcategory: string;
   onCategory: (v: string) => void;
   onSubcategory: (v: string) => void;
-  /** Editing an entry that already has a category: open, so the value is visible. */
-  initiallyOpen?: boolean;
   /** Items have no subcategory column. */
   hasSubcategory?: boolean;
   categoryPlaceholder?: string;
@@ -72,32 +72,38 @@ export default function CategoryField({
 }) {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(
-    initiallyOpen || Boolean(category) || Boolean(subcategory)
+    Boolean(category) || Boolean(subcategory)
   );
   const [newCategory, setNewCategory] = useState(false);
   const [newSubcategory, setNewSubcategory] = useState(false);
 
-  const [rows, setRows] = useState<CategoryRow[]>([]);
+  const [loaded, setLoaded] = useState<{ key: string; rows: CategoryRow[] }>({
+    key: "",
+    rows: [],
+  });
+
+  const fetchKey = tableId ? `${entity}:${tableId}` : "";
 
   useEffect(() => {
-    if (!tableId) {
-      setRows([]);
-      return;
-    }
+    if (!tableId) return;
     let cancelled = false;
     api<Record<string, unknown>>(ENDPOINT[entity](tableId))
       .then((res) => {
         if (cancelled) return;
         const list = (res[LIST_KEY[entity]] ?? []) as CategoryRow[];
-        setRows(list);
+        setLoaded({ key: `${entity}:${tableId}`, rows: list });
       })
       .catch(() => {
-        if (!cancelled) setRows([]);
+        if (!cancelled) setLoaded({ key: `${entity}:${tableId}`, rows: [] });
       });
     return () => {
       cancelled = true;
     };
   }, [tableId, entity]);
+
+  /* No table picked yet reads as an empty list instead of a synchronous
+     setRows([]) inside the effect above. */
+  const rows = loaded.key === fetchKey ? loaded.rows : NO_ROWS;
 
   const categories = useMemo(() => {
     const seen = new Set<string>();
@@ -110,18 +116,25 @@ export default function CategoryField({
     return Array.from(seen).sort((a, b) => a.localeCompare(b));
   }, [rows, category]);
 
-  const subcategories = useMemo(() => {
+  const subsFor = (rows: CategoryRow[], cat: string): string[] => {
     const seen = new Set<string>();
     for (const row of rows) {
       const v = row.subcategory?.trim();
       if (!v) continue;
-      /* Narrowed by the chosen category; with none picked, every option. */
-      if (category && row.category?.trim() !== category) continue;
+      if (cat && row.category?.trim() !== cat) continue;
       seen.add(v);
     }
+    return Array.from(seen);
+  };
+
+  const subcategories = useMemo(() => {
+    /* The current value is always an option, even when it belongs to the
+       category just left — otherwise the select renders blank while holding
+       data the form would still submit. */
     const current = subcategory.trim();
-    if (current) seen.add(current);
-    return Array.from(seen).sort((a, b) => a.localeCompare(b));
+    const list = subsFor(rows, category);
+    if (current && !list.includes(current)) list.push(current);
+    return list.sort((a, b) => a.localeCompare(b));
   }, [rows, category, subcategory]);
 
   const hasValue = Boolean(category || subcategory);
@@ -138,7 +151,7 @@ export default function CategoryField({
     setNewCategory(false);
     onCategory(value);
     /* The subcategory belonged to the category just left behind. */
-    if (subcategory && value && !subcategories.includes(subcategory)) {
+    if (subcategory && value && !subsFor(rows, value).includes(subcategory)) {
       onSubcategory("");
     }
   };

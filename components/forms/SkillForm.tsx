@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { submitJson } from "./submit";
 import { cancelCls, inputCls, labelCls, submitCls } from "./formStyles";
 import FormShell from "./FormShell";
+import CategoryField from "./CategoryField";
 import EntityModifiers from "@/components/modifiers/EntityModifiers";
 import SkillRelations from "@/components/skill/SkillRelations";
 import { useTranslation } from "@/lib/i18n";
@@ -146,16 +147,16 @@ export default function SkillForm({ tableId, tableTitle, tables, initial }: Skil
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className={labelCls}>{t("fr.category")}</label>
-              <input value={category} onChange={(e) => setCategory(e.target.value)} className={inputCls} placeholder={t("fr.sk.categoryPh")} />
-            </div>
-            <div>
-              <label className={labelCls}>{t("fr.subcategory")}</label>
-              <input value={subcategory} onChange={(e) => setSubcategory(e.target.value)} className={inputCls} placeholder={t("fr.sk.subcategoryPh")} />
-            </div>
-          </div>
+          <CategoryField
+            tableId={currentTableId || undefined}
+            entity="skill"
+            category={category}
+            subcategory={subcategory}
+            onCategory={setCategory}
+            onSubcategory={setSubcategory}
+            categoryPlaceholder={t("fr.sk.categoryPh")}
+            subcategoryPlaceholder={t("fr.sk.subcategoryPh")}
+          />
 
           <div>
             <label className={labelCls}>{t("fr.description")}</label>

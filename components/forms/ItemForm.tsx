@@ -8,6 +8,7 @@ import { seatActorQuery } from "@/lib/seat";
 import { submitJson } from "./submit";
 import { cancelCls, inputCls, labelCls, submitCls } from "./formStyles";
 import FormShell from "./FormShell";
+import CategoryField from "./CategoryField";
 import { FIT_OPTIONS } from "@/lib/fit";
 import { DAMAGE_SOURCE_LABELS, DAMAGE_TYPES } from "@/lib/damage";
 import { useTranslation } from "@/lib/i18n";
@@ -321,16 +322,18 @@ export default function ItemForm({ initial, tableId, tableTitle, tables, default
               <label className={labelCls}>{t("fr.name")}</label>
               <input value={name} onChange={(e) => setName(e.target.value)} required className={inputCls} />
             </div>
-            <div>
-              <label className={labelCls}>{t("fr.category")}</label>
-              <input
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                className={inputCls}
-                placeholder={t("fr.item.categoryPh")}
-              />
-            </div>
           </div>
+
+          <CategoryField
+            tableId={currentTableId || undefined}
+            entity="item"
+            category={category}
+            subcategory=""
+            onCategory={setCategory}
+            onSubcategory={() => {}}
+            hasSubcategory={false}
+            categoryPlaceholder={t("fr.item.categoryPh")}
+          />
 
           <div>
             <label className={labelCls}>{t("fr.item.kindLabel")}</label>
