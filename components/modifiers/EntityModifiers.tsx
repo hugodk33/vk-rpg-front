@@ -76,7 +76,7 @@ const ITEM_FIELDS: Array<{
   { key: "item_status", labelKey: "vs.mp.f.itemStatus", numeric: false },
 ];
 
-const ATTR_MODS: Array<{ key: keyof Modifier; label: string }> = [
+const ATTR_MODS: Array<{ key: AttrModKey; label: string }> = [
   { key: "mod_hp", label: "HP" },
   { key: "mod_st", label: "ST" },
   { key: "mod_dx", label: "DX" },
@@ -85,6 +85,17 @@ const ATTR_MODS: Array<{ key: keyof Modifier; label: string }> = [
   { key: "mod_fatigue", label: "FAT" },
 ];
 
+/** The attribute columns a modifier adds to (never replaces). */
+type AttrModKey =
+  | "mod_hp"
+  | "mod_st"
+  | "mod_dx"
+  | "mod_iq"
+  | "mod_ht"
+  | "mod_fatigue";
+
+type AttrMods = Record<AttrModKey, string>;
+
 interface FormState {
   id?: string;
   name: string;
@@ -92,6 +103,7 @@ interface FormState {
   description: string;
   cost_points: string;
   value: string;
+  attrs: AttrMods;
   on_roll: boolean;
   /** Only used when the owner is an item; see ITEM_FIELDS. */
   item_quantity: string;
@@ -101,12 +113,22 @@ interface FormState {
   item_status: string;
 }
 
+const emptyAttrs = (): AttrMods => ({
+  mod_hp: "",
+  mod_st: "",
+  mod_dx: "",
+  mod_iq: "",
+  mod_ht: "",
+  mod_fatigue: "",
+});
+
 const emptyForm = (): FormState => ({
   name: "",
   effect: "",
   description: "",
   cost_points: "",
   value: "",
+  attrs: emptyAttrs(),
   on_roll: false,
   item_quantity: "",
   item_weight: "",
@@ -187,6 +209,9 @@ export default function EntityModifiers({
   const set = <K extends keyof FormState>(field: K, value: FormState[K]) =>
     setForm((f) => ({ ...f, [field]: value }));
 
+  const setAttr = (field: AttrModKey, value: string) =>
+    setForm((f) => ({ ...f, attrs: { ...f.attrs, [field]: value } }));
+
   const startEdit = (m: Modifier) => {
     setForm({
       id: m.id,
@@ -195,6 +220,14 @@ export default function EntityModifiers({
       description: m.description ?? "",
       cost_points: m.cost_points != null ? String(m.cost_points) : "",
       value: valueField ? ((m[valueField] as string | undefined) ?? "") : "",
+      attrs: {
+        mod_hp: m.mod_hp != null ? String(m.mod_hp) : "",
+        mod_st: m.mod_st != null ? String(m.mod_st) : "",
+        mod_dx: m.mod_dx != null ? String(m.mod_dx) : "",
+        mod_iq: m.mod_iq != null ? String(m.mod_iq) : "",
+        mod_ht: m.mod_ht != null ? String(m.mod_ht) : "",
+        mod_fatigue: m.mod_fatigue != null ? String(m.mod_fatigue) : "",
+      },
       on_roll: !!m.apply_on_roll,
       item_quantity: m.item_quantity != null ? String(m.item_quantity) : "",
       item_weight: m.item_weight != null ? String(m.item_weight) : "",
@@ -238,6 +271,7 @@ export default function EntityModifiers({
     item_range: m.item_range ?? null,
     item_status: m.item_status ?? null,
     apply_on_roll: m.apply_on_roll ?? 0,
+    kind: m.kind ?? "modelo",
   });
 
   const save = async () => {
@@ -252,6 +286,14 @@ export default function EntityModifiers({
       description: txt(form.description) ?? "",
       cost_points: num(form.cost_points) ?? null,
       apply_on_roll: form.on_roll ? 1 : 0,
+      /* The attribute the entry moves: these are what actually reach the
+         character sheet's composition. */
+      mod_hp: num(form.attrs.mod_hp) ?? null,
+      mod_st: num(form.attrs.mod_st) ?? null,
+      mod_dx: num(form.attrs.mod_dx) ?? null,
+      mod_iq: num(form.attrs.mod_iq) ?? null,
+      mod_ht: num(form.attrs.mod_ht) ?? null,
+      mod_fatigue: num(form.attrs.mod_fatigue) ?? null,
       /* An item carries five value columns instead of one, so the payload
          branches rather than writing a literal "null" key. */
       ...(isItem
@@ -263,6 +305,9 @@ export default function EntityModifiers({
             item_status: txt(form.item_status) ?? null,
           }
         : { [valueField as string]: txt(form.value) ?? null }),
+      /* Attached to a catalog entry, so it is a rule: every character
+         holding that trait or item picks it up on read. */
+      kind: form.id ? undefined : "modelo",
     };
 
     try {
@@ -413,6 +458,25 @@ export default function EntityModifiers({
               </div>
             )}
             <div>
+              <label className={labelCls}>{t("fr.emod.attrs")}</label>
+              <div className="grid grid-cols-3 gap-2">
+                {ATTR_MODS.map((a) => (
+                  <label key={String(a.key)} className="relative">
+                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 font-mono text-[10px] uppercase tracking-widest text-zinc-500 pointer-events-none">
+                      {a.label}
+                    </span>
+                    <input
+                      type="number"
+                      value={form.attrs[a.key]}
+                      onChange={(e) => setAttr(a.key, e.target.value)}
+                      placeholder={t("fr.emod.attrPh")}
+                      className={`${inputCls} pl-9`}
+                    />
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div>
               <label className={labelCls}>{t("fr.costPoints")}</label>
               <input
                 type="number"
@@ -455,6 +519,10 @@ export default function EntityModifiers({
             {t("fr.emod.onRoll")}
           </label>
 
+          <p className="text-[11px] text-zinc-500 leading-relaxed">
+            {t("fr.emod.passive")}
+          </p>
+
           <div className="flex items-center gap-3">
             <button
               type="button"
@@ -487,9 +555,7 @@ export default function EntityModifiers({
             const value = valueField
               ? (m[valueField] as string | undefined)
               : undefined;
-            const attrs = ATTR_MODS.filter(
-              (a) => m[a.key] != null && m[a.key] !== ""
-            );
+            const attrs = ATTR_MODS.filter((a) => m[a.key] != null);
             const itemChips = isItem
               ? ITEM_FIELDS.filter((f) => {
                   const v = m[f.key];
@@ -561,9 +627,9 @@ export default function EntityModifiers({
                   {attrs.map((a) => (
                     <span
                       key={String(a.key)}
-                      className="font-mono text-[9px] uppercase tracking-widest text-zinc-300 bg-zinc-800/80 border border-zinc-700/50 rounded px-1.5 py-0.5"
+                      className="font-mono text-[9px] uppercase tracking-widest text-emerald-300 bg-emerald-900/30 border border-emerald-800/50 rounded px-1.5 py-0.5"
                     >
-                      {a.label} {String(m[a.key])}
+                      {a.label} {Number(m[a.key]) > 0 ? `+${m[a.key]}` : String(m[a.key])}
                     </span>
                   ))}
                   {m.apply_on_roll ? (

@@ -1,5 +1,9 @@
 export const PT: Record<string, string> = {
   "cs.activeEffects": "Efeitos ativos",
+  "cs.ruleDisable": "desligar",
+  "cs.ruleEnable": "ligar",
+  "cs.ruleOff": "Desligar esta regra só neste personagem",
+  "cs.ruleOn": "Ligar esta regra neste personagem",
   "cs.advantages": "Vantagens",
   "cs.armor": "Armadura",
   "cs.attack": "Ataque",
@@ -107,6 +111,10 @@ export const PT: Record<string, string> = {
 
 export const EN: Record<string, string> = {
   "cs.activeEffects": "Active effects",
+  "cs.ruleDisable": "off",
+  "cs.ruleEnable": "on",
+  "cs.ruleOff": "Turn this rule off for this character only",
+  "cs.ruleOn": "Turn this rule on for this character",
   "cs.advantages": "Advantages",
   "cs.armor": "Armor",
   "cs.attack": "Attack",

@@ -67,7 +67,7 @@ export default async function CharacterViewerPage({
         />
       ) : (
         <>
-          <CharacterSheet data={data} basePath={basePath} showName={false} />
+          <CharacterSheet data={data} basePath={basePath} showName={false} managePassive />
           <CharacterVisibilityDrawer tableId={tableId} targetId={data.character.id} />
         </>
       )}

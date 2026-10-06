@@ -403,6 +403,17 @@ export interface Modifier {
   item_range?: string
   item_status?: string
   apply_on_roll?: number
+  /** "efeito": uma vez, neste personagem. "modelo": a regra do catálogo —
+      entra na ficha de quem tiver o traço ou o item. */
+  kind?: "effect" | "modelo"
+  /** 0 = a linha existe mas não compõe (instância desligada). */
+  enabled?: number
+  /** Numa linha "efeito", o modelo que ela está ajustando. */
+  source_modifier_id?: string | null
+  /** Na leitura da ficha: de qual modelo esta linha veio. */
+  from_model?: string
+  /** A instância por personagem que sobrepôs o modelo. */
+  instance_id?: string
 }
 
 export interface GameTableModifiers {
@@ -410,7 +421,7 @@ export interface GameTableModifiers {
   modifiers: Modifier[]
 }
 
-export interface CharacterHistoryEvent extends Modifier {
+export type CharacterHistoryEvent = Omit<Modifier, "kind"> & {
   kind?: "consequence" | "test"
   test_kind?: string | null
   test_skill?: string | null

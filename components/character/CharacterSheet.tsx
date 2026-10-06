@@ -1,6 +1,8 @@
 "use client";
 
-import { Fragment } from "react";
+import { Fragment, useState } from "react";
+import { useRouter } from "next/navigation";
+import { api } from "@/lib/api";
 import type { CharacterViewer, Sheet, VisibilityRule } from "@/lib/types";
 import RadarChart from "@/components/RadarChart";
 import { buildVisibilityMap, isItemHidden, isSkillHidden, isAttributeHidden, isAdvantageHidden, isDisadvantageHidden } from "@/lib/visibility";
@@ -425,15 +427,44 @@ interface CharacterSheetProps {
   /** The page already shows the name in its own header — hide the
       sheet's identity banner so the name is never duplicated. */
   showName?: boolean;
+  /** Narrator-only: lets a catalog rule be switched off for this one
+      character without touching the rule itself. */
+  managePassive?: boolean;
 }
 
-export default function CharacterSheet({ data, visibility, showName = true }: CharacterSheetProps) {
+export default function CharacterSheet({ data, visibility, showName = true, managePassive = false }: CharacterSheetProps) {
   const { t } = useTranslation();
+  const router = useRouter();
+  const [busyRule, setBusyRule] = useState<string | null>(null);
   const ch = data.character;
   const s = ch.sheet;
   const name = s?.name || ch.name || t("cs.fallbackName");
   const modifiers = ch.active_effects ?? [];
-  const effects = modifiers.filter(activeEffects);
+  /* A rule switched off for this character still shows, greyed, so the
+     narrator can see it exists and turn it back on. */
+  const effects = modifiers.filter(
+    (m) => m.enabled !== 0 && activeEffects(m)
+  );
+  const inactiveRules = modifiers.filter(
+    (m) => m.enabled === 0 && activeEffects(m)
+  );
+
+  const toggleRule = async (modifierId: string, enabled: boolean) => {
+    setBusyRule(modifierId);
+    try {
+      await api("/game-table-character/modifier", {
+        method: "POST",
+        body: JSON.stringify({
+          character_id: ch.id,
+          modifier_id: modifierId,
+          enabled: enabled ? 1 : 0,
+        }),
+      });
+      router.refresh();
+    } finally {
+      setBusyRule(null);
+    }
+  };
   const fatigueState = s?.fatigue_state ?? "active";
   const fatigued = fatigueState !== "active";
 
@@ -764,7 +795,7 @@ export default function CharacterSheet({ data, visibility, showName = true }: Ch
             </div>
           </div>
 
-          {effects.length > 0 ? (
+          {effects.length > 0 || inactiveRules.length > 0 ? (
             <div className="mt-6 pt-4 border-t border-zinc-700/40">
               <div className="flex items-center gap-2 mb-3">
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
@@ -782,6 +813,7 @@ export default function CharacterSheet({ data, visibility, showName = true }: Ch
                     sign < 0 ? "bg-rose-400 shadow-[0_0_6px_rgba(251,113,133,0.7)]" :
                     sign > 0 ? "bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.7)]" :
                     "bg-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.6)]";
+                  const ruleId = m.from_model ?? m.id;
                   return (
                     <div
                       key={m.id}
@@ -797,6 +829,52 @@ export default function CharacterSheet({ data, visibility, showName = true }: Ch
                             </span>
                           ))}
                         </span>
+                      ) : null}
+                      {m.from_model && managePassive ? (
+                        <button
+                          type="button"
+                          disabled={busyRule === ruleId}
+                          onClick={() => toggleRule(ruleId, false)}
+                          title={t("cs.ruleOff")}
+                          className="ml-0.5 font-mono text-[9px] uppercase tracking-widest text-zinc-500 hover:text-zinc-200 transition-colors disabled:opacity-40"
+                        >
+                          {t("cs.ruleDisable")}
+                        </button>
+                      ) : null}
+                    </div>
+                  );
+                })}
+                {inactiveRules.map((m) => {
+                  const deltas = effectDeltas(m);
+                  const ruleId = m.from_model ?? m.id;
+                  return (
+                    <div
+                      key={m.id}
+                      className="flex items-center gap-2 bg-zinc-900/60 border border-dashed border-zinc-700/40 rounded-lg px-2.5 py-1.5 opacity-70"
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full shrink-0 bg-zinc-600" />
+                      <span className="text-zinc-400 text-sm font-medium line-through">
+                        {m.name || t("cs.effect")}
+                      </span>
+                      {deltas.length > 0 ? (
+                        <span className="flex items-center gap-1.5 ml-1">
+                          {deltas.map((d) => (
+                            <span key={d.key} className="font-mono text-[10px] text-zinc-600">
+                              {d.label} {d.value}
+                            </span>
+                          ))}
+                        </span>
+                      ) : null}
+                      {managePassive ? (
+                        <button
+                          type="button"
+                          disabled={busyRule === ruleId}
+                          onClick={() => toggleRule(ruleId, true)}
+                          title={t("cs.ruleOn")}
+                          className="ml-0.5 font-mono text-[9px] uppercase tracking-widest text-amber-300/80 hover:text-amber-200 transition-colors disabled:opacity-40"
+                        >
+                          {t("cs.ruleEnable")}
+                        </button>
                       ) : null}
                     </div>
                   );

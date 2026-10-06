@@ -156,6 +156,7 @@ interface FormState {
   skill_id: string;
   apply_on_roll: number;
   location_id: string;
+  kind: "effect" | "modelo";
 }
 
 const emptyForm = (): FormState => ({
@@ -196,6 +197,7 @@ const emptyForm = (): FormState => ({
   skill_id: "",
   apply_on_roll: 0,
   location_id: "",
+  kind: "effect",
 });
 
 const toForm = (m: Modifier, scenes: GameTableScenes | null): FormState => {
@@ -240,6 +242,7 @@ const toForm = (m: Modifier, scenes: GameTableScenes | null): FormState => {
     skill_id: m.skill_id ?? "",
     apply_on_roll: m.apply_on_roll ? 1 : 0,
     location_id: m.location_id ?? "",
+    kind: m.kind === "modelo" ? "modelo" : "effect",
   };
 };
 
@@ -348,7 +351,7 @@ export default function ModifiersPanel({
   };
 
   const save = async () => {
-    if (!form.character_id && !form.location_id) {
+    if (!form.character_id && !form.location_id && !form.skill_id) {
       setError(t("vs.mp.errTarget"));
       return;
     }
@@ -391,6 +394,7 @@ export default function ModifiersPanel({
       skill_id: txt(form.skill_id),
       apply_on_roll: form.apply_on_roll ? 1 : 0,
       location_id: form.location_id ? txt(form.location_id) ?? null : null,
+      kind: form.kind,
     };
     try {
       if (form.id) {
@@ -490,7 +494,11 @@ export default function ModifiersPanel({
                           {m.name || t("vs.mp.unnamed")}
                         </p>
                         <p className="font-mono text-[9px] uppercase tracking-widest text-zinc-500 mt-0.5">
-                          {char ? charName(char, t) : "—"}
+                          {char
+                            ? charName(char, t)
+                            : m.kind === "modelo"
+                              ? t("vs.mp.catalogRule")
+                              : "—"}
                         </p>
                       </div>
                       <button
@@ -777,6 +785,40 @@ export default function ModifiersPanel({
                   className={fieldCls}
                 />
               </label>
+            </div>
+
+            <div>
+              <p className="text-[10px] font-mono uppercase tracking-wider text-zinc-500 mb-2">
+                {t("vs.mp.f.kind")}
+              </p>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {(["effect", "modelo"] as const).map((k) => (
+                  <label
+                    key={k}
+                    className={`flex cursor-pointer flex-col gap-1 rounded border px-3 py-2 transition-colors ${
+                      form.kind === k
+                        ? "border-green-700/70 bg-green-950/30"
+                        : "border-zinc-700/60 hover:border-zinc-600/60"
+                    }`}
+                  >
+                    <span className="flex items-center gap-2 text-[11px] font-mono uppercase tracking-wider text-zinc-300">
+                      <input
+                        type="radio"
+                        name="mp-kind"
+                        checked={form.kind === k}
+                        onChange={() => setForm((f) => ({ ...f, kind: k }))}
+                        className="accent-green-700"
+                      />
+                      {k === "effect" ? t("vs.mp.f.kindEffect") : t("vs.mp.f.kindModel")}
+                    </span>
+                    <span className="text-[11px] leading-relaxed text-zinc-500">
+                      {k === "effect"
+                        ? t("vs.mp.f.kindEffectNote")
+                        : t("vs.mp.f.kindModelNote")}
+                    </span>
+                  </label>
+                ))}
+              </div>
             </div>
 
             <div>
