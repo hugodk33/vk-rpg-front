@@ -127,8 +127,14 @@ export const PT: Record<string, string> = {
   "tp.chronicle.open": "Abrir a crônica",
 
   /* ---------- Contadores ---------- */
+  "tp.count.advantagesMany": "{n} vantagens",
+  "tp.count.advantagesOne": "{n} vantagem",
   "tp.count.attacksMany": "{n} ataques",
   "tp.count.attacksOne": "{n} ataque",
+  "tp.count.charactersMany": "{n} personagens",
+  "tp.count.charactersOne": "{n} personagem",
+  "tp.count.disadvantagesMany": "{n} desvantagens",
+  "tp.count.disadvantagesOne": "{n} desvantagem",
   "tp.count.itemsMany": "{n} itens",
   "tp.count.itemsOne": "{n} item",
   "tp.count.recordsInArchive": "em arquivo",
@@ -138,6 +144,8 @@ export const PT: Record<string, string> = {
   "tp.count.scenesOne": "{n} cena",
   "tp.count.seatsMany": "{n} assentos",
   "tp.count.seatsOne": "{n} assento",
+  "tp.count.skillsMany": "{n} perícias",
+  "tp.count.skillsOne": "{n} perícia",
 
   /* ---------- Assentos (seats) ---------- */
   "tp.npcs": "PNJs",
@@ -318,8 +326,14 @@ export const EN: Record<string, string> = {
   "tp.chronicle.open": "Open the chronicle",
 
   /* ---------- Counts ---------- */
+  "tp.count.advantagesMany": "{n} advantages",
+  "tp.count.advantagesOne": "{n} advantage",
   "tp.count.attacksMany": "{n} attacks",
   "tp.count.attacksOne": "{n} attack",
+  "tp.count.charactersMany": "{n} characters",
+  "tp.count.charactersOne": "{n} character",
+  "tp.count.disadvantagesMany": "{n} disadvantages",
+  "tp.count.disadvantagesOne": "{n} disadvantage",
   "tp.count.itemsMany": "{n} items",
   "tp.count.itemsOne": "{n} item",
   "tp.count.recordsInArchive": "in archive",
@@ -329,6 +343,8 @@ export const EN: Record<string, string> = {
   "tp.count.scenesOne": "{n} scene",
   "tp.count.seatsMany": "{n} seats",
   "tp.count.seatsOne": "{n} seat",
+  "tp.count.skillsMany": "{n} skills",
+  "tp.count.skillsOne": "{n} skill",
 
   /* ---------- Seats ---------- */
   "tp.npcs": "NPCs",

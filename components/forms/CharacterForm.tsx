@@ -155,11 +155,12 @@ export default function CharacterForm({ tableId, tableTitle, tables, initial, se
   const [bio, setBio] = useState(initial?.character?.sheet?.bio ?? "");
   const [backstory, setBackstory] = useState(initial?.character?.sheet?.backstory ?? "");
   const [userId, setUserId] = useState(initial?.character?.userId ?? "");
-  // O orçamento vem das regras da mesa — nunca de um valor fixo. 0 (ou
-  // ausente) = o mestre ainda não definiu pontos: sem barra e sem limite,
+  // O orçamento vem das regras da mesa, mas o mestre pode ajustá-lo nesta
+  // ficha. 0 (ou ausente) = sem sistema de pontos: sem barra e sem limite,
   // porque aí os itens vêm do mestre ou de moeda.
   const tableBudget = settings?.starting_points ?? 0;
-  const totalPoints = initial?.character?.sheet?.points ?? tableBudget;
+  const [budget, setBudget] = useState<number>(initial?.character?.sheet?.points ?? tableBudget);
+  const totalPoints = budget;
   const hasBudget = totalPoints > 0;
   const [attrs, setAttrs] = useState<Record<"st" | "dx" | "iq" | "ht", number>>({
     st: initial?.character?.sheet?.st ?? 10,
@@ -177,7 +178,7 @@ export default function CharacterForm({ tableId, tableTitle, tables, initial, se
   const [splitDis, setSplitDis] = useState(false);
   const [splitSkills, setSplitSkills] = useState(false);
   const [splitItems, setSplitItems] = useState(false);
-  const [activeTab, setActiveTab] = useState<"bio" | "sheet" | "items">("bio");
+  const [activeTab, setActiveTab] = useState<"setup" | "bio" | "sheet" | "items">(isEdit ? "bio" : "setup");
   const [equipped, setEquipped] = useState<Record<string, { status?: string; location?: string }>>({});
 
   const [users, setUsers] = useState<UserOption[]>([]);
@@ -478,8 +479,8 @@ export default function CharacterForm({ tableId, tableTitle, tables, initial, se
   const budgetPct = totalPoints > 0 ? Math.min(100, (spent / totalPoints) * 100) : 0;
 
   // A barra só aparece onde os pontos são gastos — ficha e itens — e só
-  // depois de o mestre definir a quantidade. Na biografia nunca aparece.
-  const showPoints = !isEdit && activeTab !== "bio" && hasBudget;
+  // depois de o mestre definir a quantidade.
+  const showPoints = !isEdit && (activeTab === "sheet" || activeTab === "items") && hasBudget;
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -489,6 +490,19 @@ export default function CharacterForm({ tableId, tableTitle, tables, initial, se
   const contextTableId = tableId ?? initial?.table?.id ?? "";
   const contextTableTitle =
     tableTitle ?? initial?.table?.title ?? tables?.find((entry) => entry.id === contextTableId)?.title;
+
+  const tabs: Array<[typeof activeTab, string]> = !isEdit
+    ? [
+        ["setup", t("fr.ch.tabSetup")],
+        ["bio", t("fr.ch.tabBio")],
+        ["sheet", t("fr.ch.tabSheet")],
+        ["items", t("fr.ch.tabItems")],
+      ]
+    : [
+        ["bio", t("fr.ch.tabBio")],
+        ["sheet", t("fr.ch.tabSheet")],
+        ["items", t("fr.ch.tabItems")],
+      ];
 
   return (
     <div className="max-w-5xl mx-auto p-6">
@@ -509,21 +523,6 @@ export default function CharacterForm({ tableId, tableTitle, tables, initial, se
               ]
         }
       />
-
-      {showPoints ? (
-        <div className="sticky top-14 z-40 backdrop-blur-sm bg-zinc-900/90 border-b border-zinc-800 -mx-6 px-6 py-3 mb-6">
-          <div className="flex items-center justify-center gap-6 max-w-3xl mx-auto">
-            <div className="font-mono text-[11px] uppercase tracking-[0.14em] font-bold text-green-400 whitespace-nowrap tabular-nums">
-              {spent} / {totalPoints}
-            </div>
-            <div className="flex-1 max-w-md">
-              <div className="w-full rounded-full h-1.5 bg-zinc-800">
-                <div className="bg-green-700 h-1.5 rounded-full transition-all" style={{ width: `${budgetPct}%` }} />
-              </div>
-            </div>
-          </div>
-        </div>
-      ) : null}
 
       <header className="mt-8 border-l-2 border-green-600 pl-5">
         <div className="flex items-center justify-between gap-4">
@@ -551,7 +550,7 @@ export default function CharacterForm({ tableId, tableTitle, tables, initial, se
       </header>
 
       <div className="mt-6 flex items-center gap-1 border-b border-zinc-800 mb-6">
-        {([["bio", t("fr.ch.tabBio")], ["sheet", t("fr.ch.tabSheet")], ["items", t("fr.ch.tabItems")]] as const).map(([key, label]) => (
+        {tabs.map(([key, label]) => (
           <button
             key={key}
             type="button"
@@ -567,99 +566,130 @@ export default function CharacterForm({ tableId, tableTitle, tables, initial, se
         ))}
       </div>
 
+      {showPoints ? (
+        <div className="sticky top-14 z-40 backdrop-blur-sm bg-zinc-900/90 -mx-6 px-6 py-3 mb-6">
+          <div className="flex items-center justify-center gap-6 max-w-3xl mx-auto">
+            <div className="font-mono text-[11px] uppercase tracking-[0.14em] font-bold text-green-400 whitespace-nowrap tabular-nums">
+              {spent} / {totalPoints}
+            </div>
+            <div className="flex-1 max-w-md">
+              <div className="w-full rounded-full h-1.5 bg-zinc-800">
+                <div className="bg-green-700 h-1.5 rounded-full transition-all" style={{ width: `${budgetPct}%` }} />
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       <form onSubmit={handleSubmit} className="space-y-6">
+        {activeTab === "setup" && (
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-lg font-semibold text-zinc-100 mb-3">{t("fr.ch.character")}</h2>
+
+              {!isEdit && !tableId ? (
+                <div className="mb-3">
+                  <label className={label}>{t("fr.table")}</label>
+                  <select
+                    value={currentTableId}
+                    onChange={(e) => setCurrentTableId(e.target.value)}
+                    required
+                    className={field}
+                  >
+                    <option value="" disabled>
+                      {t("fr.pickTable")}
+                    </option>
+                    {(tables ?? []).map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.title}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : null}
+
+              {!isEdit ? (
+                <>
+                  <div className="mb-3">
+                    <label className={`${label} mb-2`}>{t("fr.type")}</label>
+                    <div className="flex gap-4 mb-3">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="charType"
+                          value="pc"
+                          checked={charType === "pc"}
+                          onChange={() => setCharType("pc")}
+                          className="w-4 h-4 border-zinc-600 accent-green-700 focus:ring-green-800 bg-zinc-900"
+                        />
+                        <span className="text-zinc-100 text-sm">{t("fr.ch.pc")}</span>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="charType"
+                          value="npc"
+                          checked={charType === "npc"}
+                          onChange={() => setCharType("npc")}
+                          className="w-4 h-4 border-zinc-600 accent-green-700 focus:ring-green-800 bg-zinc-900"
+                        />
+                        <span className="text-zinc-100 text-sm">{t("fr.ch.npc")}</span>
+                      </label>
+                    </div>
+                  </div>
+                  <div className="mb-3">
+                    <label className={label}>{t("fr.ch.pointsBudget")}</label>
+                    <input
+                      type="number"
+                      min={0}
+                      step={1}
+                      value={budget}
+                      onChange={(e) => setBudget(Math.max(0, Math.floor(Number(e.target.value) || 0)))}
+                      className={field}
+                    />
+                    <p className="mt-1 text-xs text-zinc-500">{t("fr.ch.pointsBudgetHint")}</p>
+                  </div>
+                  {charType === "pc" ? (
+                    <div>
+                      <label className={label}>{t("fr.ch.assignPlayer")}</label>
+                      <select value={userId} onChange={(e) => setUserId(e.target.value)} required className={field}>
+                        <option value="">{t("fr.pickPlayerPh")}</option>
+                        {users
+                          .filter((u) => u.type !== 2)
+                          .map((u) => (
+                            <option key={u.id} value={u.id}>
+                              {u.username || u.email || u.id}
+                            </option>
+                          ))}
+                      </select>
+                    </div>
+                  ) : null}
+                </>
+              ) : null}
+            </div>
+          </div>
+        )}
+
         {activeTab === "bio" && (
           <div className="space-y-6">
             <div>
               <h2 className="text-lg font-semibold text-zinc-100 mb-3">{t("fr.ch.identity")}</h2>
-            <div className="space-y-3 mb-3">
-              <div>
-                <label className={label}>{t("fr.name")}</label>
-                <input value={name} onChange={(e) => setName(e.target.value)} required className={field} />
-              </div>
-              <div>
-                <label className={label}>{t("fr.ch.bio")}</label>
-                <input value={bio} onChange={(e) => setBio(e.target.value)} className={field} />
-              </div>
-            </div>
-            <div>
-              <label className={label}>{t("fr.ch.backstory")}</label>
-              <textarea value={backstory} onChange={(e) => setBackstory(e.target.value)} rows={2} className={field} />
-            </div>
-          </div>
-
-          <div>
-            <h2 className="text-lg font-semibold text-zinc-100 mb-3">{t("fr.ch.character")}</h2>
-
-            {!isEdit && !tableId ? (
-              <div className="mb-3">
-                <label className={label}>{t("fr.table")}</label>
-                <select
-                  value={currentTableId}
-                  onChange={(e) => setCurrentTableId(e.target.value)}
-                  required
-                  className={field}
-                >
-                  <option value="" disabled>
-                    {t("fr.pickTable")}
-                  </option>
-                  {(tables ?? []).map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.title}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            ) : null}
-
-            {!isEdit ? (
-              <>
+              <div className="space-y-3 mb-3">
                 <div>
-                  <label className={`${label} mb-2`}>{t("fr.type")}</label>
-                  <div className="flex gap-4 mb-3">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="radio"
-                        name="charType"
-                        value="pc"
-                        checked={charType === "pc"}
-                        onChange={() => setCharType("pc")}
-                        className="w-4 h-4 border-zinc-600 accent-green-700 focus:ring-green-800 bg-zinc-900"
-                      />
-                      <span className="text-zinc-100 text-sm">{t("fr.ch.pc")}</span>
-                    </label>
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="radio"
-                        name="charType"
-                        value="npc"
-                        checked={charType === "npc"}
-                        onChange={() => setCharType("npc")}
-                        className="w-4 h-4 border-zinc-600 accent-green-700 focus:ring-green-800 bg-zinc-900"
-                      />
-                      <span className="text-zinc-100 text-sm">{t("fr.ch.npc")}</span>
-                    </label>
-                  </div>
+                  <label className={label}>{t("fr.name")}</label>
+                  <input value={name} onChange={(e) => setName(e.target.value)} required className={field} />
                 </div>
-                {charType === "pc" ? (
-                  <div>
-                    <label className={label}>{t("fr.ch.assignPlayer")}</label>
-                    <select value={userId} onChange={(e) => setUserId(e.target.value)} required className={field}>
-                      <option value="">{t("fr.pickPlayerPh")}</option>
-                      {users
-                        .filter((u) => u.type !== 2)
-                        .map((u) => (
-                          <option key={u.id} value={u.id}>
-                            {u.username || u.email || u.id}
-                          </option>
-                        ))}
-                    </select>
-                  </div>
-                ) : null}
-              </>
-            ) : null}
+                <div>
+                  <label className={label}>{t("fr.ch.bio")}</label>
+                  <input value={bio} onChange={(e) => setBio(e.target.value)} className={field} />
+                </div>
+              </div>
+              <div>
+                <label className={label}>{t("fr.ch.backstory")}</label>
+                <textarea value={backstory} onChange={(e) => setBackstory(e.target.value)} rows={2} className={field} />
+              </div>
+            </div>
           </div>
-        </div>
         )}
 
         {activeTab === "sheet" && (

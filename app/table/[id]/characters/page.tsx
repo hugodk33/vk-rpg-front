@@ -228,6 +228,8 @@ export default function TableCharactersPage({ params }: { params: Promise<{ id: 
                   <RowActions
                     editHref={`/character/${ch.id}/edit?table_id=${id}`}
                     onDelete={() => submitJson(`/api/game-table-character/${ch.id}`, "DELETE")}
+                    copyHref={`/api/game-table-character/${ch.id}/copy`}
+                    tableId={id}
                   />
                 </div>
               </div>
