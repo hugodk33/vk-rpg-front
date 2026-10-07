@@ -6,6 +6,8 @@ import type { GameTableItems, Item } from "@/lib/types";
 import TableTabs from "@/components/TableTabs";
 import RowActions from "@/components/table/RowActions";
 import ChipFilters, { countValues } from "@/components/table/ChipFilters";
+import { categoryLabel } from "@/lib/categories";
+import { formatKg } from "@/lib/units";
 import { api } from "@/lib/api";
 import { submitJson } from "@/components/forms/submit";
 import { interpolate, useTranslation } from "@/lib/i18n";
@@ -94,7 +96,7 @@ export default function TableItemsPage({ params }: { params: Promise<{ id: strin
       <ChipFilters
         groups={[
           { key: "kind", label: t("fr.type"), options: kindOptions, value: kindF, onChange: setKindF, labelOf: kindLabel },
-          { key: "cat", label: t("fr.category"), options: catOptions, value: cat, onChange: setCat },
+          { key: "cat", label: t("fr.category"), options: catOptions, value: cat, onChange: setCat, labelOf: (v) => categoryLabel(t, v) },
         ]}
         onClearAll={() => {
           setCat("");
@@ -137,19 +139,13 @@ export default function TableItemsPage({ params }: { params: Promise<{ id: strin
                       </span>
                     ) : null}
                     {i.weight_lb != null ? (
-                      <span className="text-[10px] text-zinc-500">{i.weight_lb} lb</span>
+                      <span className="text-[10px] text-zinc-500">{formatKg(i.weight_lb)}</span>
                     ) : null}
-                    <RowActions
-                      editHref={`/item/${i.id}/edit?table_id=${id}`}
-                      onDelete={() => submitJson(`/api/game-table-item/${i.id}`, "DELETE")}
-                      copyHref={`/api/game-table-item/${i.id}/copy`}
-                      tableId={id}
-                    />
                   </div>
                 </div>
                 <div className="flex items-center gap-2 mt-1.5 ml-7">
                   {i.category ? (
-                    <span className="text-[11px] text-zinc-500">{i.category}</span>
+                    <span className="text-[11px] text-zinc-500">{categoryLabel(t, i.category)}</span>
                   ) : null}
                   {i.description ? (
                     <span className="text-[11px] text-zinc-600 truncate">— {i.description}</span>
@@ -160,7 +156,7 @@ export default function TableItemsPage({ params }: { params: Promise<{ id: strin
                     {i.weapon ? (
                       <span className="inline-flex items-center gap-1 text-[10px] text-red-400 bg-red-400/10 px-1.5 py-0.5 rounded">
                         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14.121 14.121L19 19m-7-7l7-7m-7 7l-2.879 2.879M12 12L9.121 9.121m0 5.758a3 3 0 10-4.243 4.243 3 3 0 004.243-4.243zm0-5.758a3 3 0 10-4.243-4.243 3 3 0 004.243-4.243z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 19l-6-6M5 21l-2-2M8 16l-4 4M9.5 17.5 20.414 6.586A2 2 0 0021 5.172V3h-2.172a2 2 0 00-1.414.586L6.5 14.5" />
                         </svg>
                         {i.weapon.attacks?.length
                           ? interpolate(t(i.weapon.attacks.length !== 1 ? "tp.count.attacksMany" : "tp.count.attacksOne"), { n: i.weapon.attacks.length })
@@ -182,6 +178,14 @@ export default function TableItemsPage({ params }: { params: Promise<{ id: strin
                     ) : null}
                   </div>
                 ) : null}
+                <div className="flex justify-end mt-2">
+                  <RowActions
+                    editHref={`/item/${i.id}/edit?table_id=${id}`}
+                    onDelete={() => submitJson(`/api/game-table-item/${i.id}`, "DELETE")}
+                    copyHref={`/api/game-table-item/${i.id}/copy`}
+                    tableId={id}
+                  />
+                </div>
               </div>
             );
           })}

@@ -24,6 +24,7 @@ import { PT as plPT, EN as plEN } from "./i18n-parts/pl";
 import { PT as ssPT, EN as ssEN } from "./i18n-parts/ss";
 import { PT as pgPT, EN as pgEN } from "./i18n-parts/pg";
 import { PT as tpPT, EN as tpEN } from "./i18n-parts/tp";
+import { PT as catPT, EN as catEN } from "./i18n-parts/cat";
 import { PT as gaPT, EN as gaEN } from "./i18n-parts/ga";
 
 export function normalizeLang(value: string | null | undefined): Lang {
@@ -755,8 +756,8 @@ const enBase: Record<string, string> = {
 };
 
 const dict: Record<Lang, Record<string, string>> = {
-  pt: { ...ptBase, ...csPT, ...frPT, ...lcPT, ...vsPT, ...plPT, ...ssPT, ...pgPT, ...tpPT, ...gaPT, ...enPT },
-  en: { ...enBase, ...csEN, ...frEN, ...lcEN, ...vsEN, ...plEN, ...ssEN, ...pgEN, ...tpEN, ...gaEN, ...enEN },
+  pt: { ...ptBase, ...csPT, ...frPT, ...lcPT, ...vsPT, ...plPT, ...ssPT, ...pgPT, ...tpPT, ...gaPT, ...enPT, ...catPT },
+  en: { ...enBase, ...csEN, ...frEN, ...lcEN, ...vsEN, ...plEN, ...ssEN, ...pgEN, ...tpEN, ...gaEN, ...enEN, ...catEN },
 };
 
 export function translate(lang: Lang, key: string): string {

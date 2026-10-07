@@ -171,6 +171,8 @@ export default function TableCharactersPage({ params }: { params: Promise<{ id: 
                     ) : (
                       <span className="text-[11px] text-zinc-600 italic shrink-0">{t("tp.characters.noSheet")}</span>
                     )}
+                  </div>
+                  <div className="flex justify-end mt-2">
                     <RowActions
                       editHref={`/npc/${npcIdByCharacter.get(ch.id) ?? ""}/edit`}
                       onDelete={() => submitJson(`/api/game-table-npc/${npcIdByCharacter.get(ch.id) ?? ""}`, "DELETE")}
@@ -221,6 +223,8 @@ export default function TableCharactersPage({ params }: { params: Promise<{ id: 
                   ) : (
                     <span className="text-[11px] text-zinc-600 italic shrink-0">{t("tp.characters.noSheet")}</span>
                   )}
+                </div>
+                <div className="flex justify-end mt-2">
                   <RowActions
                     editHref={`/character/${ch.id}/edit?table_id=${id}`}
                     onDelete={() => submitJson(`/api/game-table-character/${ch.id}`, "DELETE")}

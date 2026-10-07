@@ -6,6 +6,7 @@ import type { Advantage, GameTableAdvantages } from "@/lib/types";
 import TableTabs from "@/components/TableTabs";
 import RowActions from "@/components/table/RowActions";
 import ChipFilters, { countValues } from "@/components/table/ChipFilters";
+import { categoryLabel } from "@/lib/categories";
 import { api } from "@/lib/api";
 import { submitJson } from "@/components/forms/submit";
 import { interpolate, useTranslation } from "@/lib/i18n";
@@ -99,8 +100,8 @@ export default function TableAdvantagesPage({ params }: { params: Promise<{ id: 
 
       <ChipFilters
         groups={[
-          { key: "cat", label: t("fr.category"), options: catOptions, value: cat, onChange: pickCategory },
-          { key: "sub", label: t("fr.subcategory"), options: subOptions, value: sub, onChange: setSub },
+          { key: "cat", label: t("fr.category"), options: catOptions, value: cat, onChange: pickCategory, labelOf: (v) => categoryLabel(t, v) },
+          { key: "sub", label: t("fr.subcategory"), options: subOptions, value: sub, onChange: setSub, labelOf: (v) => categoryLabel(t, v) },
         ]}
         onClearAll={() => {
           setCat("");
@@ -145,7 +146,7 @@ export default function TableAdvantagesPage({ params }: { params: Promise<{ id: 
                     <div className="flex items-center gap-2 mt-1.5 ml-7">
                       {a.category ? (
                         <span className="text-[11px] text-zinc-500">
-                          {a.category}{a.subcategory ? ` / ${a.subcategory}` : ""}
+                          {categoryLabel(t, a.category)}{a.subcategory ? ` / ${categoryLabel(t, a.subcategory)}` : ""}
                         </span>
                       ) : null}
                       {a.description ? (

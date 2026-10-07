@@ -12,6 +12,7 @@ import type {
   TableNpc,
 } from "@/lib/types";
 import ItemIcon from "@/components/items/ItemIcon";
+import { formatKg } from "@/lib/units";
 import PlayerAtlas from "@/components/player/PlayerAtlas";
 import { interpolate, useTranslation } from "@/lib/i18n";
 
@@ -166,7 +167,7 @@ export default function TableResources({
                     <ItemIcon item={i} className="w-4 h-4 shrink-0" imgClassName="w-4 h-4 object-cover rounded" />
                     <span className="truncate">{i.name || t("pl.res.unnamed")}</span>
                   </span>
-                  {i.weight_lb != null ? <span className="text-zinc-500 text-xs shrink-0">{i.weight_lb} lb</span> : null}
+                  {i.weight_lb != null ? <span className="text-zinc-500 text-xs shrink-0">{formatKg(i.weight_lb)}</span> : null}
                 </div>
                 {i.category || i.quality || i.condition ? (
                   <div className="flex flex-wrap gap-x-3 text-xs text-zinc-500 mb-1">

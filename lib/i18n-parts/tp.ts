@@ -127,6 +127,8 @@ export const PT: Record<string, string> = {
   "tp.chronicle.open": "Abrir a crônica",
 
   /* ---------- Contadores ---------- */
+  "tp.count.attacksMany": "{n} ataques",
+  "tp.count.attacksOne": "{n} ataque",
   "tp.count.itemsMany": "{n} itens",
   "tp.count.itemsOne": "{n} item",
   "tp.count.recordsInArchive": "em arquivo",
@@ -316,6 +318,8 @@ export const EN: Record<string, string> = {
   "tp.chronicle.open": "Open the chronicle",
 
   /* ---------- Counts ---------- */
+  "tp.count.attacksMany": "{n} attacks",
+  "tp.count.attacksOne": "{n} attack",
   "tp.count.itemsMany": "{n} items",
   "tp.count.itemsOne": "{n} item",
   "tp.count.recordsInArchive": "in archive",

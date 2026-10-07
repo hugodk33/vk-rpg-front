@@ -18,6 +18,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
+import { categoryLabel } from "@/lib/categories";
 import { inputCls, labelCls } from "./formStyles";
 import { useTranslation } from "@/lib/i18n";
 
@@ -141,7 +142,7 @@ export default function CategoryField({
 
   const summary = !category && !subcategory
     ? t("fr.cat.none")
-    : [category, subcategory].filter(Boolean).join(" / ");
+    : [categoryLabel(t, category), categoryLabel(t, subcategory)].filter(Boolean).join(" / ");
 
   const pickCategory = (value: string) => {
     if (value === NEW) {
@@ -216,7 +217,7 @@ export default function CategoryField({
                 <option value="">{t("fr.cat.none")}</option>
                 {categories.map((c) => (
                   <option key={c} value={c}>
-                    {c}
+                    {categoryLabel(t, c)}
                   </option>
                 ))}
                 <option value={NEW}>{t("fr.cat.newOption")}</option>
@@ -256,7 +257,7 @@ export default function CategoryField({
                   <option value="">{t("fr.cat.none")}</option>
                   {subcategories.map((s) => (
                     <option key={s} value={s}>
-                      {s}
+                      {categoryLabel(t, s)}
                     </option>
                   ))}
                   <option value={NEW}>{t("fr.cat.newSubOption")}</option>

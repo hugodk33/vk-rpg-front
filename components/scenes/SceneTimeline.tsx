@@ -8,6 +8,7 @@ import { maskedLocationName, maskedTargetName } from "@/lib/visibility";
 import { narrationBoard } from "@/lib/board";
 import { useTableLive } from "@/lib/useTableLive";
 import { interpolate, useTranslation } from "@/lib/i18n";
+import { formatKg } from "@/lib/units";
 import ChipFilters, { countValues } from "@/components/table/ChipFilters";
 import TacticalPlate from "@/components/tactical/TacticalPlate";
 
@@ -134,7 +135,7 @@ function modifierChips(m: Modifier | null, t: (key: string) => string): StatChip
   if (m.damage_value != null) chips.push({ label: t("vs.tl.chipDamage"), hex: "#f87171", val: m.damage_value });
   if (m.skill_value != null) chips.push({ label: t("vs.tl.chipSkill"), hex: "#fbbf24", val: m.skill_value });
   if (m.item_quantity != null) chips.push({ label: t("vs.tl.chipQty"), hex: "#fbbf24", val: String(m.item_quantity) });
-  if (m.item_weight != null) chips.push({ label: t("vs.tl.chipWeight"), hex: "#fbbf24", val: String(m.item_weight) });
+  if (m.item_weight != null) chips.push({ label: t("vs.tl.chipWeight"), hex: "#fbbf24", val: formatKg(m.item_weight) });
   return chips;
 }
 

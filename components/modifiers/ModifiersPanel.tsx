@@ -15,6 +15,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
+import { kgToLb, lbToKg, formatKg } from "@/lib/units";
 import { interpolate, useTranslation } from "@/lib/i18n";
 import ChipFilters, { countValues } from "@/components/table/ChipFilters";
 import type {
@@ -115,7 +116,7 @@ const effectChips = (m: Modifier, t: (key: string) => string): { label: string; 
   if (m.advantage_value) out.push({ label: t("vs.mp.c.adv"), value: m.advantage_value });
   if (m.disadvantage_value) out.push({ label: t("vs.mp.c.dis"), value: m.disadvantage_value });
   if (m.item_quantity) out.push({ label: t("vs.mp.c.qty"), value: `=${m.item_quantity}` });
-  if (m.item_weight != null) out.push({ label: t("vs.mp.c.weight"), value: `${m.item_weight} lb` });
+  if (m.item_weight != null) out.push({ label: t("vs.mp.c.weight"), value: formatKg(m.item_weight) });
   return out;
 };
 
@@ -236,7 +237,7 @@ const toForm = (m: Modifier, scenes: GameTableScenes | null): FormState => {
     advantage_value: m.advantage_value ?? "",
     disadvantage_value: m.disadvantage_value ?? "",
     item_quantity: m.item_quantity != null ? String(m.item_quantity) : "",
-    item_weight: m.item_weight != null ? String(m.item_weight) : "",
+    item_weight: m.item_weight != null ? String(Number(lbToKg(m.item_weight).toFixed(2))) : "",
     item_dimension: m.item_dimension ?? "",
     item_range: m.item_range ?? "",
     item_status: m.item_status ?? "",
@@ -418,7 +419,7 @@ export default function ModifiersPanel({
       advantage_value: txt(form.advantage_value),
       disadvantage_value: txt(form.disadvantage_value),
       item_quantity: num(form.item_quantity),
-      item_weight: num(form.item_weight),
+      item_weight: num(form.item_weight) != null ? Number(kgToLb(num(form.item_weight)!).toFixed(3)) : null,
       item_dimension: txt(form.item_dimension),
       item_range: txt(form.item_range),
       item_status: txt(form.item_status),

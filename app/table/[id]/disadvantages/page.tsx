@@ -6,6 +6,7 @@ import type { Disadvantage, GameTableDisadvantages } from "@/lib/types";
 import TableTabs from "@/components/TableTabs";
 import RowActions from "@/components/table/RowActions";
 import ChipFilters, { countValues } from "@/components/table/ChipFilters";
+import { categoryLabel } from "@/lib/categories";
 import { api } from "@/lib/api";
 import { submitJson } from "@/components/forms/submit";
 import { interpolate, useTranslation } from "@/lib/i18n";
@@ -109,8 +110,8 @@ export default function TableDisadvantagesPage({ params }: { params: Promise<{ i
 
       <ChipFilters
         groups={[
-          { key: "cat", label: t("fr.category"), options: catOptions, value: cat, onChange: pickCategory },
-          { key: "sub", label: t("fr.subcategory"), options: subOptions, value: sub, onChange: setSub },
+          { key: "cat", label: t("fr.category"), options: catOptions, value: cat, onChange: pickCategory, labelOf: (v) => categoryLabel(t, v) },
+          { key: "sub", label: t("fr.subcategory"), options: subOptions, value: sub, onChange: setSub, labelOf: (v) => categoryLabel(t, v) },
         ]}
         onClearAll={() => {
           setCat("");
@@ -158,13 +159,13 @@ export default function TableDisadvantagesPage({ params }: { params: Promise<{ i
                       </div>
                       {d.category ? (
                         <span className={`shrink-0 text-[10px] px-1.5 py-0.5 rounded-full ${colors.badge}`}>
-                          {d.category}
+                          {categoryLabel(t, d.category)}
                         </span>
                       ) : null}
                     </div>
                     <div className="flex items-center gap-2 mt-1.5 ml-7">
                       {d.subcategory ? (
-                        <span className="text-[11px] text-zinc-500">{d.subcategory}</span>
+                        <span className="text-[11px] text-zinc-500">{categoryLabel(t, d.subcategory)}</span>
                       ) : null}
                       {d.effect ? (
                         <span className="text-[11px] text-zinc-600 truncate">— {d.effect}</span>

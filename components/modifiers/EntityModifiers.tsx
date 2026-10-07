@@ -25,6 +25,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
+import { kgToLb, lbToKg } from "@/lib/units";
 import { useTranslation } from "@/lib/i18n";
 import { cancelCls, inputCls, labelCls } from "@/components/forms/formStyles";
 import type { GameTableModifiers, Modifier } from "@/lib/types";
@@ -230,7 +231,7 @@ export default function EntityModifiers({
       },
       on_roll: !!m.apply_on_roll,
       item_quantity: m.item_quantity != null ? String(m.item_quantity) : "",
-      item_weight: m.item_weight != null ? String(m.item_weight) : "",
+      item_weight: m.item_weight != null ? String(Number(lbToKg(m.item_weight).toFixed(2))) : "",
       item_dimension: m.item_dimension ?? "",
       item_range: m.item_range ?? "",
       item_status: m.item_status ?? "",
@@ -299,7 +300,7 @@ export default function EntityModifiers({
       ...(isItem
         ? {
             item_quantity: num(form.item_quantity) ?? null,
-            item_weight: num(form.item_weight) ?? null,
+            item_weight: num(form.item_weight) != null ? Number(kgToLb(num(form.item_weight)!).toFixed(3)) : null,
             item_dimension: txt(form.item_dimension) ?? null,
             item_range: txt(form.item_range) ?? null,
             item_status: txt(form.item_status) ?? null,

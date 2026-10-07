@@ -7,6 +7,7 @@ import type { CharacterViewer, Sheet, VisibilityRule } from "@/lib/types";
 import RadarChart from "@/components/RadarChart";
 import { buildVisibilityMap, isItemHidden, isSkillHidden, isAttributeHidden, isAdvantageHidden, isDisadvantageHidden } from "@/lib/visibility";
 import { resolveAttack, DAMAGE_TYPES } from "@/lib/damage";
+import { formatKg } from "@/lib/units";
 import { useTranslation } from "@/lib/i18n";
 import ItemIcon from "@/components/items/ItemIcon";
 
@@ -1089,7 +1090,7 @@ export default function CharacterSheet({ data, visibility, showName = true, mana
                                   ) : null}
                                 </div>
                                 <div className="flex items-center gap-2 text-[10px] uppercase tracking-wide text-zinc-500">
-                                  {it.weight_lb != null ? <span>{it.weight_lb} lb</span> : null}
+                                  {it.weight_lb != null ? <span>{formatKg(it.weight_lb)}</span> : null}
                                   {it.equipment_status !== "in_inventory" && it.equipment_location ? (
                                     <span>{it.equipment_location.replace(/_/g, " ")}</span>
                                   ) : null}

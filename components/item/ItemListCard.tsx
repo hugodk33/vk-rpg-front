@@ -1,6 +1,7 @@
 "use client";
 
 import type { Item } from "@/lib/types";
+import { formatKg } from "@/lib/units";
 import ItemIcon from "@/components/items/ItemIcon";
 import { useTranslation } from "@/lib/i18n";
 import { classify, GROUP_UI, conditionLedger, itemParticulars, qualityStyle } from "./itemIdentity";
@@ -49,7 +50,7 @@ export default function ItemListCard({ item }: { item: Item }) {
               {item.name || t("it.unnamed")}
             </span>
             <span className="font-mono text-[10px] text-zinc-500 shrink-0">
-              {item.weight_lb != null ? `${item.weight_lb} lb` : ""}
+              {item.weight_lb != null ? formatKg(item.weight_lb) : ""}
             </span>
           </div>
 

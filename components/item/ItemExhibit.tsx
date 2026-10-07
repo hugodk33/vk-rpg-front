@@ -5,6 +5,7 @@ import { useEffect, useRef } from "react";
 import type { Item, WeaponAttack } from "@/lib/types";
 import { DAMAGE_TYPES, GURPS_DAMAGE_TABLE, resolveAttack } from "@/lib/damage";
 import { interpolate, useTranslation } from "@/lib/i18n";
+import { formatKg } from "@/lib/units";
 import ItemIcon from "@/components/items/ItemIcon";
 import ModifiersModal from "@/components/modifiers/ModifiersModal";
 import { classify, GROUP_UI, conditionLedger, qualityStyle, HANDEDNESS } from "./itemIdentity";
@@ -167,7 +168,7 @@ export default function ItemExhibit({ item, tableId }: { item: Item; tableId?: s
               </div>
 
               <div className="flex flex-wrap items-baseline gap-x-6 gap-y-3">
-                <LedgerCell label={t("itm.weight")} value={item.weight_lb != null ? `${item.weight_lb} lb` : "—"} tint={tint} />
+                <LedgerCell label={t("itm.weight")} value={item.weight_lb != null ? formatKg(item.weight_lb) : "—"} tint={tint} />
                 <LedgerCell label={t("itm.cost")} value={item.cost != null ? `$${item.cost}` : "—"} tint="#fbbf24" />
                 <LedgerCell label={t("itm.size")} value={item.dimensions || "—"} />
                 {item.category ? (

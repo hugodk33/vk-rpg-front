@@ -11,6 +11,7 @@ import FormShell from "./FormShell";
 import CategoryField from "./CategoryField";
 import { FIT_OPTIONS } from "@/lib/fit";
 import { DAMAGE_SOURCE_LABELS, DAMAGE_TYPES } from "@/lib/damage";
+import { kgToLb, lbToKg } from "@/lib/units";
 import { useTranslation } from "@/lib/i18n";
 import type { ArmorData, GameTableItems, GameTableLocations, GameTableSkills, Item, Weapon, WeaponAttack } from "@/lib/types";
 
@@ -77,7 +78,7 @@ export default function ItemForm({ initial, tableId, tableTitle, tables, default
   const [name, setName] = useState(initial?.name ?? "");
   const [kind, setKind] = useState(initial?.kind ?? "equipment");
   const [category, setCategory] = useState(initial?.category ?? "");
-  const [weight, setWeight] = useState(initial?.weight_lb != null ? String(initial.weight_lb) : "");
+  const [weight, setWeight] = useState(initial?.weight_lb != null ? String(Number(lbToKg(initial.weight_lb).toFixed(2))) : "");
   const [cost, setCost] = useState(initial?.cost != null ? String(initial.cost) : "");
   const [currencyItemId, setCurrencyItemId] = useState(initial?.currency_item_id ?? "");
   const [dimensions, setDimensions] = useState(initial?.dimensions ?? "");
@@ -246,7 +247,7 @@ export default function ItemForm({ initial, tableId, tableTitle, tables, default
       name,
       kind,
       category,
-      weight_lb: weight === "" ? null : Number(weight),
+      weight_lb: weight === "" ? null : Number(kgToLb(Number(weight)).toFixed(3)),
       cost: cost === "" ? null : Number(cost),
       currency_item_id: currencyItemId || null,
       dimensions,
@@ -357,7 +358,7 @@ export default function ItemForm({ initial, tableId, tableTitle, tables, default
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div>
-              <label className={labelCls}>{t("fr.item.weightLb")}</label>
+              <label className={labelCls}>{t("fr.item.weightKg")}</label>
               <input type="number" step="0.1" value={weight} onChange={(e) => setWeight(e.target.value)} className={inputCls} />
             </div>
             <div>

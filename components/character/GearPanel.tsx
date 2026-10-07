@@ -6,6 +6,7 @@ import type { CharacterItem, CharacterViewer } from "@/lib/types";
 import { api } from "@/lib/api";
 import { resolveAttack, DAMAGE_TYPES } from "@/lib/damage";
 import { fitLabel } from "@/lib/fit";
+import { formatKg } from "@/lib/units";
 import { useTranslation } from "@/lib/i18n";
 import ItemIcon from "@/components/items/ItemIcon";
 
@@ -226,7 +227,7 @@ export default function GearPanel({ data, historic }: GearPanelProps) {
                     .concat(a.fit ? [fitLabel(a.fit, lang)] : [])
                     .join(" · ")
                 : i.weight_lb != null
-                  ? `${i.weight_lb} lb`
+                  ? `${formatKg(i.weight_lb)}`
                   : "";
             return (
               <div
@@ -413,7 +414,7 @@ function GearCard({ item, st, status }: { item: CharacterItem; st: number; statu
         {item.weight_lb != null ? (
           <div className="flex justify-between">
             <dt className="text-zinc-500 uppercase tracking-wide shrink-0 mr-3">{t("itm.weight")}</dt>
-            <dd className="text-zinc-300">{item.weight_lb} lb</dd>
+            <dd className="text-zinc-300">{formatKg(item.weight_lb)}</dd>
           </div>
         ) : null}
         {item.cost != null ? (

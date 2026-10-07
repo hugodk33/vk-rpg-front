@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { submitJson } from "./submit";
 import { api } from "@/lib/api";
+import { formatKg } from "@/lib/units";
 import { interpolate, useTranslation } from "@/lib/i18n";
 import { inputCls, labelCls, submitCls } from "./formStyles";
 import TableTabs from "@/components/TableTabs";
@@ -359,7 +360,7 @@ export default function CharacterForm({ tableId, tableTitle, tables, initial, se
         return (data?.items ?? []).map((item: Item) => ({
           id: item.id,
           name: item.name,
-          meta: [item.category, item.kind, item.weight_lb != null ? `${item.weight_lb} lb` : null].filter(Boolean).join(" · ") || undefined,
+          meta: [item.category, item.kind, item.weight_lb != null ? formatKg(item.weight_lb) : null].filter(Boolean).join(" · ") || undefined,
           description: item.description,
         }));
       }
@@ -725,7 +726,7 @@ export default function CharacterForm({ tableId, tableTitle, tables, initial, se
                 { label: "fr.fp", value: String(initial?.character?.sheet?.fatigue ?? 10), color: "text-green-500", d: "M13 10V3L4 14h7v7l9-11h-7z" },
                 { label: "fr.ch.basicSpeed", value: basicSpeed.toFixed(2), suffix: "km/h", color: "text-zinc-400", d: "M13 5l7 7-7 7M5 5l7 7-7 7" },
                 { label: "fr.ch.move", value: String(move), color: "text-blue-400", d: "M5 12h14M12 5l7 7-7 7" },
-                { label: "fr.ch.encumbrance", value: t(ENCUMBRANCE_LABELS[encumbranceValue]), sub: `${itemsWeight.toFixed(1)} lb`, color: "text-purple-400", d: "M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" },
+                { label: "fr.ch.encumbrance", value: t(ENCUMBRANCE_LABELS[encumbranceValue]), sub: formatKg(itemsWeight), color: "text-purple-400", d: "M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" },
               ] as Array<{ label: string; value: string; suffix?: string; color: string; d: string }>).map(({ label, value, suffix, color, d }) => (
                 <div key={label} className="flex flex-col items-center gap-1 p-2 bg-zinc-800/40 rounded-lg min-w-[80px]">
                   <svg className={`w-5 h-5 ${color}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1146,7 +1147,7 @@ export default function CharacterForm({ tableId, tableTitle, tables, initial, se
                   { label: "fr.fp", value: String(initial?.character?.sheet?.fatigue ?? 10), color: "text-green-500", d: "M13 10V3L4 14h7v7l9-11h-7z" },
                   { label: "fr.ch.basicSpeed", value: basicSpeed.toFixed(2), suffix: "km/h", color: "text-zinc-400", d: "M13 5l7 7-7 7M5 5l7 7-7 7" },
                   { label: "fr.ch.move", value: String(move), color: "text-blue-400", d: "M5 12h14M12 5l7 7-7 7" },
-                  { label: "fr.ch.encumbrance", value: t(ENCUMBRANCE_LABELS[encumbranceValue]), sub: `${itemsWeight.toFixed(1)} lb`, color: "text-purple-400", d: "M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" },
+                  { label: "fr.ch.encumbrance", value: t(ENCUMBRANCE_LABELS[encumbranceValue]), sub: formatKg(itemsWeight), color: "text-purple-400", d: "M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" },
                 ] as Array<{ label: string; value: string; suffix?: string; color: string; d: string }>).map(({ label, value, suffix, color, d }) => (
                   <div key={label} className="flex flex-col items-center gap-1 p-2 bg-zinc-800/40 rounded-lg min-w-[80px]">
                     <svg className={`w-5 h-5 ${color}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1249,7 +1250,7 @@ export default function CharacterForm({ tableId, tableTitle, tables, initial, se
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
                         </svg>
                         <span className="text-sm font-medium text-zinc-100 flex-1 truncate">{s.name}</span>
-                        {item?.weight_lb != null ? <span className="text-[10px] text-zinc-500">{item.weight_lb} lb</span> : null}
+                        {item?.weight_lb != null ? <span className="text-[10px] text-zinc-500">{formatKg(item.weight_lb)}</span> : null}
                         {item?.armor?.dr != null ? <span className="text-[10px] text-zinc-400">DR {item.armor.dr}</span> : null}
                       </div>
                       <div className="grid grid-cols-2 gap-2 items-center">
@@ -1324,7 +1325,7 @@ export default function CharacterForm({ tableId, tableTitle, tables, initial, se
                         rows={[
                           { label: t("fr.tip.category"), value: item.category },
                           { label: t("fr.tip.type"), value: item.kind },
-                          { label: t("fr.tip.weight"), value: item.weight_lb != null ? `${item.weight_lb} lb` : undefined },
+                          { label: t("fr.tip.weight"), value: item.weight_lb != null ? formatKg(item.weight_lb) : undefined },
                           { label: t("fr.tip.quality"), value: item.quality },
                           { label: t("fr.tip.condition"), value: item.condition },
                           { label: t("fr.tip.description"), value: item.description },
@@ -1345,7 +1346,7 @@ export default function CharacterForm({ tableId, tableTitle, tables, initial, se
                             <div className="text-sm font-medium text-zinc-100 truncate">{item.name || t("fr.noName")}</div>
                             <div className="text-xs text-zinc-500 truncate">
                               {[item.category, item.quality, item.condition].filter(Boolean).join(" · ") || ""}
-                              {item.weight_lb != null ? ` · ${item.weight_lb} lb` : ""}
+                              {item.weight_lb != null ? ` · ${formatKg(item.weight_lb)}` : ""}
                             </div>
                             {item.description ? <div className="text-xs text-zinc-500 truncate">{item.description}</div> : null}
                           </div>
@@ -1389,7 +1390,7 @@ export default function CharacterForm({ tableId, tableTitle, tables, initial, se
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
               </svg>
               <label className={label}>
-                {interpolate(t("fr.ch.encLoad"), { load: t(ENCUMBRANCE_LABELS[encumbranceValue]), w: itemsWeight.toFixed(1) })}
+                {interpolate(t("fr.ch.encLoad"), { load: t(ENCUMBRANCE_LABELS[encumbranceValue]), w: formatKg(itemsWeight) })}
               </label>
             </div>
             <div className="mt-2 grid grid-cols-5 gap-1">
@@ -1404,7 +1405,7 @@ export default function CharacterForm({ tableId, tableTitle, tables, initial, se
                     }`}
                   >
                     {t(label)}
-                    <div className="text-[10px] text-zinc-500">{i === 0 ? "0" : `>${threshold} lb`}</div>
+                    <div className="text-[10px] text-zinc-500">{i === 0 ? "0" : `>${formatKg(threshold)}`}</div>
                   </div>
                 );
               })}

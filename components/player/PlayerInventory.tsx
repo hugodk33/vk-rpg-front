@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { CharacterItem, CharacterViewer, TableCharacter } from "@/lib/types";
 import { api } from "@/lib/api";
+import { formatKg } from "@/lib/units";
 import ItemIcon from "@/components/items/ItemIcon";
 import { interpolate, useTranslation } from "@/lib/i18n";
 
@@ -250,7 +251,7 @@ export default function PlayerInventory({ items, characterId, roster, targets }:
                       {i.equipment_location && stt !== "in_inventory" ? (
                         <span>· {i.equipment_location.replace(/_/g, " ")}</span>
                       ) : null}
-                      {i.weight_lb != null ? <span>· {i.weight_lb} lb</span> : null}
+                      {i.weight_lb != null ? <span>· {formatKg(i.weight_lb)}</span> : null}
                       {i.cost != null ? <span>· ${i.cost}</span> : null}
                     </div>
                   </div>

@@ -6,6 +6,7 @@ import type { GameTableSkills, SkillItem } from "@/lib/types";
 import TableTabs from "@/components/TableTabs";
 import RowActions from "@/components/table/RowActions";
 import ChipFilters, { countValues } from "@/components/table/ChipFilters";
+import { categoryLabel } from "@/lib/categories";
 import { api } from "@/lib/api";
 import { submitJson } from "@/components/forms/submit";
 import { interpolate, useTranslation } from "@/lib/i18n";
@@ -136,8 +137,8 @@ export default function TableSkillsPage({ params }: { params: Promise<{ id: stri
         groups={[
           { key: "type", label: t("fr.type"), options: typeOptions, value: typeF, onChange: setTypeF, labelOf: typeName },
           { key: "diff", label: t("fr.difficulty"), options: diffOptions, value: diffF, onChange: setDiffF, labelOf: (v) => t(`sk.diff.${v}`) },
-          { key: "cat", label: t("fr.category"), options: catOptions, value: cat, onChange: pickCategory },
-          { key: "sub", label: t("fr.subcategory"), options: subOptions, value: sub, onChange: setSub },
+          { key: "cat", label: t("fr.category"), options: catOptions, value: cat, onChange: pickCategory, labelOf: (v) => categoryLabel(t, v) },
+          { key: "sub", label: t("fr.subcategory"), options: subOptions, value: sub, onChange: setSub, labelOf: (v) => categoryLabel(t, v) },
         ]}
         onClearAll={() => {
           setCat("");
@@ -191,18 +192,12 @@ export default function TableSkillsPage({ params }: { params: Promise<{ id: stri
                     {s.predefinition_type ? (
                       <span className="text-[10px] text-zinc-600 hidden sm:inline">{typeName(s.predefinition_type)}</span>
                     ) : null}
-                    <RowActions
-                      editHref={`/skill/${s.id}/edit?table_id=${id}`}
-                      onDelete={() => submitJson(`/api/game-table-skill/${s.id}`, "DELETE")}
-                      copyHref={`/api/game-table-skill/${s.id}/copy`}
-                      tableId={id}
-                    />
                   </div>
                 </div>
 <div className="flex items-center gap-2 mt-1.5 ml-7">
                   {s.category ? (
                     <span className="text-[11px] text-zinc-500">
-                      {s.category}{s.subcategory ? ` / ${s.subcategory}` : ""}
+                      {categoryLabel(t, s.category)}{s.subcategory ? ` / ${categoryLabel(t, s.subcategory)}` : ""}
                     </span>
                   ) : null}
                   {s.effect ? (
@@ -228,6 +223,14 @@ export default function TableSkillsPage({ params }: { params: Promise<{ id: stri
                     ) : null}
                   </div>
 ) : null}
+                <div className="flex justify-end mt-2">
+                  <RowActions
+                    editHref={`/skill/${s.id}/edit?table_id=${id}`}
+                    onDelete={() => submitJson(`/api/game-table-skill/${s.id}`, "DELETE")}
+                    copyHref={`/api/game-table-skill/${s.id}/copy`}
+                    tableId={id}
+                  />
+                </div>
               </div>
             );
           })}

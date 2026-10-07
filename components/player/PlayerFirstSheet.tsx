@@ -11,6 +11,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { submitJson } from "@/components/forms/submit";
+import { formatKg } from "@/lib/units";
 import SearchModal, { type SearchModalItem } from "@/components/forms/SearchModal";
 import { readSeat } from "@/lib/seat";
 import { useTranslation } from "@/lib/i18n";
@@ -289,7 +290,7 @@ export default function PlayerFirstSheet({ tableId, tableTitle, initialSettings,
       return (data?.items ?? []).map((item) => ({
         id: item.id,
         name: item.name,
-        meta: [item.category, item.kind, item.weight_lb != null ? `${item.weight_lb} lb` : null].filter(Boolean).join(" · ") || undefined,
+        meta: [item.category, item.kind, item.weight_lb != null ? formatKg(item.weight_lb) : null].filter(Boolean).join(" · ") || undefined,
         description: item.description,
       }));
     },
