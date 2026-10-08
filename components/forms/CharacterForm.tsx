@@ -13,7 +13,7 @@ import { FormBreadcrumbs } from "./FormShell";
 import SearchModal from "./SearchModal";
 import InfoTooltip from "./InfoTooltip";
 import SplitToggle from "./SplitToggle";
-import type { Advantage, CharacterViewer, Disadvantage, GameTableAdvantages, GameTableDisadvantages, GameTableItems, GameTableSkills, Item, SkillItem, TableSettings } from "@/lib/types";
+import type { Advantage, CharacterViewer, Disadvantage, GameTableAdvantages, GameTableDisadvantages, GameTableItems, GameTableModifiers, GameTableSkills, Item, Modifier, SkillItem, TableSettings } from "@/lib/types";
 
 /* Rótulo e campo do formulário. Usa os mesmos tokens das demais telas de
    Narrador (formStyles.ts) — antes este arquivo mantinha um par próprio de
@@ -58,6 +58,81 @@ const ATTR_NAMES: Array<{ key: "st" | "dx" | "iq" | "ht"; label: string; color: 
 ];
   const ENCUMBRANCE_LABELS = ["fr.enc.none", "fr.enc.light", "fr.enc.medium", "fr.enc.heavy", "fr.enc.veryHeavy"];
   const BODY_LOCATIONS = ["Head", "Torso", "Arms", "Legs", "Full Body"];
+
+const OWNER_KEYS = ["advantage_id", "disadvantage_id", "skill_id", "item_id"] as const;
+type OwnerKey = (typeof OWNER_KEYS)[number];
+
+interface AttrTotals {
+  hp: number;
+  st: number;
+  dx: number;
+  iq: number;
+  ht: number;
+  fp: number;
+}
+
+const EMPTY_TOTALS: AttrTotals = { hp: 0, st: 0, dx: 0, iq: 0, ht: 0, fp: 0 };
+
+/* De que coluna de dono a regra está pendurada (modificador de traço/item). */
+function ownerRef(m: Modifier): [OwnerKey, string] | null {
+  for (const k of OWNER_KEYS) {
+    const v = m[k];
+    if (v && String(v).trim().length > 0) return [k, String(v)];
+  }
+  return null;
+}
+
+function sumModTotals(mods: Modifier[]): AttrTotals {
+  return mods.reduce<AttrTotals>(
+    (acc, m) => {
+      acc.hp += m.mod_hp ?? 0;
+      acc.st += m.mod_st ?? 0;
+      acc.dx += m.mod_dx ?? 0;
+      acc.iq += m.mod_iq ?? 0;
+      acc.ht += m.mod_ht ?? 0;
+      acc.fp += m.mod_fatigue ?? 0;
+      return acc;
+    },
+    { ...EMPTY_TOTALS }
+  );
+}
+
+const ATTR_MOD_CHIP = [
+  { key: "hp", label: "HP", cls: "text-red-400" },
+  { key: "st", label: "ST", cls: "text-red-400" },
+  { key: "dx", label: "DX", cls: "text-emerald-400" },
+  { key: "iq", label: "IQ", cls: "text-blue-400" },
+  { key: "ht", label: "HT", cls: "text-purple-400" },
+  { key: "fp", label: "FP", cls: "text-blue-400" },
+] as const;
+
+const signed = (n: number): string => `${n >= 0 ? "+" : ""}${n}`;
+
+function modChips(t: AttrTotals): Array<{ key: string; label: string; value: string; cls: string }> {
+  return ATTR_MOD_CHIP.filter(({ key }) => t[key] !== 0).map(({ key, label, cls }) => ({
+    key,
+    label,
+    value: signed(t[key]),
+    cls,
+  }));
+}
+
+function ModChips({ totals, className }: { totals: AttrTotals; className?: string }) {
+  const chips = modChips(totals);
+  if (chips.length === 0) return null;
+  return (
+    <div className={`flex flex-wrap gap-1 ${className ?? ""}`}>
+      {chips.map((c) => (
+        <span
+          key={c.key}
+          className={`font-mono text-[10px] leading-none ${c.cls} bg-zinc-900/70 rounded px-1 py-0.5`}
+        >
+          {c.label} {c.value}
+        </span>
+      ))}
+    </div>
+  );
+}
 
 const isArmorish = (item?: Item | null): boolean =>
   item?.kind === "armor" || item?.kind === "shield";
@@ -188,6 +263,7 @@ export default function CharacterForm({ tableId, tableTitle, tables, initial, se
     skills: SkillItem[];
     items: Item[];
   }>({ advantages: [], disadvantages: [], skills: [], items: [] });
+  const [tableMods, setTableMods] = useState<Modifier[]>([]);
 
   const [selAdv, setSelAdv] = useState<Selection[]>(
     (initial?.character?.advantages ?? []).map((a) => ({
@@ -223,11 +299,12 @@ export default function CharacterForm({ tableId, tableTitle, tables, initial, se
     let active = true;
     (async () => {
       try {
-        const [adv, dis, sk, items, us] = await Promise.all([
+        const [adv, dis, sk, items, mods, us] = await Promise.all([
           api<GameTableAdvantages>(`/game-table-advantages/${currentTableId}`),
           api<GameTableDisadvantages>(`/game-table-disadvantages/${currentTableId}`),
           api<GameTableSkills>(`/game-table-skills/${currentTableId}`),
           api<GameTableItems>(`/game-table-items/${currentTableId}`),
+          api<GameTableModifiers>(`/game-table-modifiers/${currentTableId}`),
           api<UserOption[]>(`/users`),
         ]);
         if (!active) return;
@@ -237,6 +314,7 @@ export default function CharacterForm({ tableId, tableTitle, tables, initial, se
           skills: sk?.skills ?? [],
           items: items?.items ?? [],
         });
+        setTableMods(mods?.modifiers ?? []);
         setUsers(Array.isArray(us) ? us : []);
       } catch {
         /* forms degrade gracefully */
@@ -259,6 +337,50 @@ export default function CharacterForm({ tableId, tableTitle, tables, initial, se
     const quirkCost = peculiarities.length;
     return attrCost + advCost - disCost + skCost - quirkCost;
   }, [attrs, selAdv, selDis, selSkills, peculiarities]);
+
+  const modsByOwner = useMemo(() => {
+    const map = new Map<string, Modifier[]>();
+    for (const m of tableMods) {
+      const ref = ownerRef(m);
+      if (ref) {
+        const list = map.get(ref[1]) ?? [];
+        list.push(m);
+        map.set(ref[1], list);
+      }
+    }
+    return map;
+  }, [tableMods]);
+
+  /* Traços selecionados que carregam algum modificador de atributo. */
+  const modSources = useMemo(() => {
+    const sources: Array<{ name: string; totals: AttrTotals }> = [];
+    const push = (name: string, mods: Modifier[]) => {
+      const totals = sumModTotals(mods);
+      if (modChips(totals).length > 0) sources.push({ name, totals });
+    };
+    for (const s of selAdv) push(s.name, modsByOwner.get(s.id) ?? []);
+    for (const s of selDis) push(s.name, modsByOwner.get(s.id) ?? []);
+    for (const s of selSkills) push(s.name, modsByOwner.get(s.id) ?? []);
+    for (const s of selItems) push(s.name, modsByOwner.get(s.id) ?? []);
+    return sources;
+  }, [selAdv, selDis, selSkills, selItems, modsByOwner]);
+
+  const modTotals = useMemo(
+    () =>
+      modSources.reduce<AttrTotals>(
+        (acc, s) => {
+          acc.hp += s.totals.hp;
+          acc.st += s.totals.st;
+          acc.dx += s.totals.dx;
+          acc.iq += s.totals.iq;
+          acc.ht += s.totals.ht;
+          acc.fp += s.totals.fp;
+          return acc;
+        },
+        { ...EMPTY_TOTALS }
+      ),
+    [modSources]
+  );
 
   function adjAttr(key: "st" | "dx" | "iq" | "ht", delta: number) {
     if (hasBudget && delta > 0 && spent + ATTR_COSTS[key] > totalPoints) return;
@@ -694,7 +816,7 @@ export default function CharacterForm({ tableId, tableTitle, tables, initial, se
 
         {activeTab === "sheet" && (
         <>
-          <div className="border border-zinc-700/60 bg-zinc-800/70 rounded-xl p-5">
+          <div className="border border-zinc-700/60 bg-zinc-800/70 rounded-xl p-3">
             <h2 className="text-lg font-semibold text-zinc-100 mb-6">{t("fr.ch.attributes")}</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-8">
               {ATTR_NAMES.map(({ key, label, color, svg }) => (
@@ -722,6 +844,12 @@ export default function CharacterForm({ tableId, tableTitle, tables, initial, se
                       +
                     </button>
                   </div>
+                  {modTotals[key] !== 0 ? (
+                    <span className="font-mono text-[11px] text-zinc-400">
+                      {t("fr.ch.effective")}{" "}
+                      <span className="text-green-400 font-bold">{attrs[key] + modTotals[key]}</span>
+                    </span>
+                  ) : null}
                 </div>
               ))}
             </div>
@@ -729,7 +857,10 @@ export default function CharacterForm({ tableId, tableTitle, tables, initial, se
               <div>
                 <label className={label}>{t("fr.hp")}</label>
                 <div className="rounded-lg bg-zinc-800 px-4 py-2.5 text-green-500 font-bold font-mono text-center">
-                  {attrs.ht}
+                  {attrs.ht + modTotals.hp}
+                  {modTotals.hp !== 0 ? (
+                    <span className="text-[11px] text-green-300/80 font-medium ml-1">{signed(modTotals.hp)}</span>
+                  ) : null}
                 </div>
               </div>
               <div>
@@ -745,15 +876,28 @@ export default function CharacterForm({ tableId, tableTitle, tables, initial, se
                 </div>
               </div>
             </div>
+            {modSources.length > 0 ? (
+              <div className="mt-4 pt-3 border-t border-zinc-700/50">
+                <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mb-2">{t("fr.ch.modSources")}:</div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1.5">
+                  {modSources.map((s) => (
+                    <div key={s.name} className="flex items-center gap-1.5 min-w-0">
+                      <span className="text-xs text-zinc-400 truncate">{s.name}</span>
+                      <ModChips totals={s.totals} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
           </div>
 
-          <div className="border border-zinc-700/60 bg-zinc-800/70 rounded-xl p-5">
+          <div className="border border-zinc-700/60 bg-zinc-800/70 rounded-xl p-3">
             <h3 className="text-sm font-semibold uppercase tracking-wider text-zinc-500 mb-3">{t("fr.ch.defenseSpeed")}</h3>
             <div className="flex justify-center flex-wrap gap-6">
               {([
                 { label: "fr.ch.dodge", value: String(Math.floor(basicSpeed + 3)), color: "text-zinc-400", d: "M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" },
-                { label: "fr.hp", value: String(attrs.ht), color: "text-red-400", d: "M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" },
-                { label: "fr.fp", value: String(initial?.character?.sheet?.fatigue ?? 10), color: "text-green-500", d: "M13 10V3L4 14h7v7l9-11h-7z" },
+                { label: "fr.hp", value: String(attrs.ht + modTotals.hp), color: "text-red-400", d: "M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" },
+                { label: "fr.fp", value: String((initial?.character?.sheet?.fatigue ?? 10) + modTotals.fp), color: "text-green-500", d: "M13 10V3L4 14h7v7l9-11h-7z" },
                 { label: "fr.ch.basicSpeed", value: basicSpeed.toFixed(2), suffix: "km/h", color: "text-zinc-400", d: "M13 5l7 7-7 7M5 5l7 7-7 7" },
                 { label: "fr.ch.move", value: String(move), color: "text-blue-400", d: "M5 12h14M12 5l7 7-7 7" },
                 { label: "fr.ch.encumbrance", value: t(ENCUMBRANCE_LABELS[encumbranceValue]), sub: formatKg(itemsWeight), color: "text-purple-400", d: "M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" },
@@ -769,8 +913,8 @@ export default function CharacterForm({ tableId, tableTitle, tables, initial, se
             </div>
           </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <section className="border border-zinc-700/60 bg-zinc-800/70 rounded-xl p-5">
+        <div className="space-y-6">
+          <section className="border border-zinc-700/60 bg-zinc-800/70 rounded-xl p-3">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <svg className="w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -824,6 +968,7 @@ export default function CharacterForm({ tableId, tableTitle, tables, initial, se
                           <div className="flex-1 min-w-0">
                             <div className="text-sm font-medium text-zinc-100 truncate">{a.name || t("fr.noName")}</div>
                             {a.description ? <div className="text-xs text-zinc-500 truncate">{a.description}</div> : null}
+                            <ModChips totals={sumModTotals(modsByOwner.get(a.id) ?? [])} className="mt-1" />
                           </div>
                           <span className="text-xs font-mono text-green-500 font-bold shrink-0">
                             {a.cost_points != null ? (a.cost_points >= 0 ? "+" : "") + a.cost_points : "±0"}
@@ -856,7 +1001,7 @@ export default function CharacterForm({ tableId, tableTitle, tables, initial, se
               </div>
             </section>
 
-            <section className="border border-zinc-700/60 bg-zinc-800/70 rounded-xl p-5">
+            <section className="border border-zinc-700/60 bg-zinc-800/70 rounded-xl p-3">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
                   <svg className="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -911,6 +1056,7 @@ export default function CharacterForm({ tableId, tableTitle, tables, initial, se
                           <div className="flex-1 min-w-0">
                             <div className="text-sm font-medium text-zinc-100 truncate">{d.name || t("fr.noName")}</div>
                             {d.description ? <div className="text-xs text-zinc-500 truncate">{d.description}</div> : null}
+                            <ModChips totals={sumModTotals(modsByOwner.get(d.id) ?? [])} className="mt-1" />
                           </div>
                           <span className="text-xs font-mono text-green-500 font-bold shrink-0">
                             {d.cost_points != null ? (d.cost_points > 0 ? `-${d.cost_points}` : String(d.cost_points)) : "±0"}
@@ -944,60 +1090,7 @@ export default function CharacterForm({ tableId, tableTitle, tables, initial, se
             </section>
         </div>
 
-        <section className="border border-zinc-700/60 bg-zinc-800/70 rounded-xl p-5">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <svg className="w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
-                  </svg>
-                  <h2 className="text-lg font-semibold text-zinc-100">{t("fr.ch.quirks")}</h2>
-                  <span className="text-sm text-zinc-500">
-                    {quirks.length} / {MAX_QUIRKS}
-                  </span>
-                </div>
-              </div>
-              <div className="space-y-3">
-                {quirks.map((q, index) => (
-                  <div key={index} className="rounded-lg border border-zinc-700/60 bg-zinc-900/60 p-3 space-y-2">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-mono text-zinc-500">#{index + 1}</span>
-                      <button
-                        type="button"
-                        onClick={() => removeQuirk(index)}
-                        className="ml-auto text-zinc-500 hover:text-red-400 text-xs transition-colors"
-                      >
-                        {t("fr.ch.quirkRemove")}
-                      </button>
-                    </div>
-                    <div>
-                      <label className={label}>{t("fr.name")}</label>
-                      <div className="flex items-center gap-2">
-                        <input
-                          value={q.name}
-                          onChange={(e) => updateQuirk(index, e.target.value)}
-                          className={field}
-                          placeholder={t("fr.ch.quirkPh")}
-                        />
-                        <span className="text-xs font-mono text-green-500 font-bold shrink-0">-1</span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-                {quirks.length === 0 ? (
-                  <p className="text-zinc-500 text-sm">{t("fr.ch.quirksEmpty")}</p>
-                ) : null}
-              </div>
-              <button
-                type="button"
-                onClick={addQuirk}
-                disabled={quirks.length >= MAX_QUIRKS}
-                className="mt-4 w-full bg-zinc-800 hover:bg-zinc-700/50 disabled:opacity-40 disabled:cursor-not-allowed text-zinc-100 text-sm font-semibold px-4 py-2 rounded-lg transition-colors"
-              >
-                {t("fr.ch.quirkAdd")}
-              </button>
-            </section>
-
-        <div className="border-t border-zinc-700/50 pt-6">
+        <div className="pt-6">
           <span className="text-sm text-zinc-500 mb-2 block">{interpolate(t("fr.list.slashF"), { n: selSkills.length })}</span>
           <div className="flex items-center gap-2 mb-1">
             <h2 className="text-lg font-semibold text-zinc-100">{t("fr.ch.skillsTitle")}</h2>
@@ -1014,7 +1107,7 @@ export default function CharacterForm({ tableId, tableTitle, tables, initial, se
             </button>
           </div>
           <p className="text-xs text-zinc-500 mb-4">{t("fr.ch.skillsHint")}</p>
-          <section className="border border-zinc-700/60 bg-zinc-800/70 rounded-xl p-5">
+          <section className="border border-zinc-700/60 bg-zinc-800/70 rounded-xl p-3">
             <div className="flex flex-wrap items-center gap-x-2 p-2 pb-2 pr-2 text-xs font-medium text-zinc-500 border-b border-zinc-700/50 mb-1">
               <div className="w-4 shrink-0" />
               <div className="flex-1 min-w-0" style={{maxWidth: "Calc(100% - 240px)"}}>{t("fr.ch.skillCol")}</div>
@@ -1109,6 +1202,7 @@ export default function CharacterForm({ tableId, tableTitle, tables, initial, se
                               : t("fr.tip.standardNone")}
                           </div>
                           {sk.description ? <div className="text-xs text-zinc-500 truncate">{sk.description}</div> : null}
+                          <ModChips totals={sumModTotals(modsByOwner.get(sk.id) ?? [])} className="mt-1" />
                         </div>
                         <div className="flex items-center gap-3">
                           <div className="flex items-center gap-1">
@@ -1162,34 +1256,65 @@ export default function CharacterForm({ tableId, tableTitle, tables, initial, se
             </div>
           </section>
         </div>
+
+        <section className="border border-zinc-700/60 bg-zinc-800/70 rounded-xl p-3">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <svg className="w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                  </svg>
+                  <h2 className="text-lg font-semibold text-zinc-100">{t("fr.ch.quirks")}</h2>
+                  <span className="text-sm text-zinc-500">
+                    {quirks.length} / {MAX_QUIRKS}
+                  </span>
+                </div>
+              </div>
+              <div className="space-y-3">
+                {quirks.map((q, index) => (
+                  <div key={index} className="rounded-lg border border-zinc-700/60 bg-zinc-900/60 p-3 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-mono text-zinc-500">#{index + 1}</span>
+                      <button
+                        type="button"
+                        onClick={() => removeQuirk(index)}
+                        className="ml-auto text-zinc-500 hover:text-red-400 text-xs transition-colors"
+                      >
+                        {t("fr.ch.quirkRemove")}
+                      </button>
+                    </div>
+                    <div>
+                      <label className={label}>{t("fr.name")}</label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          value={q.name}
+                          onChange={(e) => updateQuirk(index, e.target.value)}
+                          className={field}
+                          placeholder={t("fr.ch.quirkPh")}
+                        />
+                        <span className="text-xs font-mono text-green-500 font-bold shrink-0">-1</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                {quirks.length === 0 ? (
+                  <p className="text-zinc-500 text-sm">{t("fr.ch.quirksEmpty")}</p>
+                ) : null}
+              </div>
+              <button
+                type="button"
+                onClick={addQuirk}
+                disabled={quirks.length >= MAX_QUIRKS}
+                className="mt-4 w-full bg-zinc-800 hover:bg-zinc-700/50 disabled:opacity-40 disabled:cursor-not-allowed text-zinc-100 text-sm font-semibold px-4 py-2 rounded-lg transition-colors"
+              >
+                {t("fr.ch.quirkAdd")}
+              </button>
+            </section>
         </>
         )}
 
         {activeTab === "items" && (
         <>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="border border-zinc-700/60 bg-zinc-800/70 rounded-xl p-5">
-              <h3 className="text-sm font-semibold uppercase tracking-wider text-zinc-500 mb-3">{t("fr.ch.defenseSpeed")}</h3>
-              <div className="grid grid-cols-3 gap-2">
-                {([
-                  { label: "fr.ch.dodge", value: String(Math.floor(basicSpeed + 3)), color: "text-zinc-400", d: "M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" },
-                  { label: "fr.hp", value: String(attrs.ht), color: "text-red-400", d: "M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" },
-                  { label: "fr.fp", value: String(initial?.character?.sheet?.fatigue ?? 10), color: "text-green-500", d: "M13 10V3L4 14h7v7l9-11h-7z" },
-                  { label: "fr.ch.basicSpeed", value: basicSpeed.toFixed(2), suffix: "km/h", color: "text-zinc-400", d: "M13 5l7 7-7 7M5 5l7 7-7 7" },
-                  { label: "fr.ch.move", value: String(move), color: "text-blue-400", d: "M5 12h14M12 5l7 7-7 7" },
-                  { label: "fr.ch.encumbrance", value: t(ENCUMBRANCE_LABELS[encumbranceValue]), sub: formatKg(itemsWeight), color: "text-purple-400", d: "M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" },
-                ] as Array<{ label: string; value: string; suffix?: string; color: string; d: string }>).map(({ label, value, suffix, color, d }) => (
-                  <div key={label} className="flex flex-col items-center gap-1 p-2 bg-zinc-800/40 rounded-lg min-w-[80px]">
-                    <svg className={`w-5 h-5 ${color}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={d} />
-                    </svg>
-                    <span className={`${color} text-sm font-bold`}>{value}{suffix ? <span className="font-light text-xs ml-0.5">{suffix}</span> : null}</span>
-                    <span className="text-zinc-500 text-xs font-semibold uppercase">{t(label)}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
+          <div className="space-y-6">
             {(() => {
               const armorItems = selItems.filter((s) => isArmorish(available.items.find((i) => i.id === s.id)));
               const armors = armorItems.map((s) => {
@@ -1198,9 +1323,8 @@ export default function CharacterForm({ tableId, tableTitle, tables, initial, se
                 return { id: s.id, name: s.name, fit: eq?.location, value: item?.armor?.dr != null ? `DR ${item.armor.dr}` : undefined };
               });
               return (
-                <div className="border border-zinc-700/60 bg-zinc-800/70 rounded-xl p-5">
-                  <h3 className="text-sm font-semibold uppercase tracking-wider text-zinc-500 mb-3">{t("fr.ch.body")}</h3>
-                  {(() => {
+<div>
+                      {(() => {
                     const drFor = (fits: string[]) => {
                       let total = 0;
                       for (const a of armors) {
@@ -1267,7 +1391,7 @@ export default function CharacterForm({ tableId, tableTitle, tables, initial, se
           </div>
 
           {selItems.some((s) => isArmorish(available.items.find((i) => i.id === s.id))) ? (
-            <div className="border border-zinc-700/60 bg-zinc-800/70 rounded-xl p-5 mt-4">
+            <div className="border border-zinc-700/60 bg-zinc-800/70 rounded-xl p-3 mt-4">
               <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-3">{t("fr.ch.equip")}</h3>
               <div className="space-y-3">
                 {selItems.filter((s) => isArmorish(available.items.find((i) => i.id === s.id))).map((s) => {
@@ -1326,7 +1450,7 @@ export default function CharacterForm({ tableId, tableTitle, tables, initial, se
             </div>
           ) : null}
 
-          <div className="border-t border-zinc-700/50 pt-6">
+          <div className="pt-6">
             <div className="flex items-center justify-between mb-1">
               <div className="flex items-center gap-2">
                 <h2 className="text-lg font-semibold text-zinc-100">{t("fr.ch.itemsTitle")}</h2>
@@ -1344,7 +1468,7 @@ export default function CharacterForm({ tableId, tableTitle, tables, initial, se
               </div>
               <span className="text-sm text-zinc-500">{interpolate(t("fr.list.slashM"), { n: selItems.length })}</span>
             </div>
-            <section className="border border-zinc-700/60 bg-zinc-800/70 rounded-xl p-5">
+            <section className="border border-zinc-700/60 bg-zinc-800/70 rounded-xl p-3">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-80 overflow-y-auto scroll-thin pr-2">
                 {(() => {
                   const renderItem = (item: Item) => {
@@ -1379,6 +1503,7 @@ export default function CharacterForm({ tableId, tableTitle, tables, initial, se
                               {item.weight_lb != null ? ` · ${formatKg(item.weight_lb)}` : ""}
                             </div>
                             {item.description ? <div className="text-xs text-zinc-500 truncate">{item.description}</div> : null}
+                            <ModChips totals={sumModTotals(modsByOwner.get(item.id) ?? [])} className="mt-1" />
                           </div>
                         </label>
                       </InfoTooltip>
@@ -1441,6 +1566,110 @@ export default function CharacterForm({ tableId, tableTitle, tables, initial, se
               })}
             </div>
           </section>
+
+          <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Defesa e Velocidade */}
+            <div>
+              <h3 className="text-sm font-semibold uppercase tracking-wider text-zinc-500 mb-3">{t("fr.ch.defenseSpeed")}</h3>
+              <div className="grid grid-cols-2 gap-2">
+                {([
+                  { label: "fr.ch.dodge", value: String(Math.floor(basicSpeed + 3)), color: "text-zinc-400", d: "M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" },
+                  { label: "fr.hp", value: String(attrs.ht), color: "text-red-400", d: "M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" },
+                  { label: "fr.fp", value: String(initial?.character?.sheet?.fatigue ?? 10), color: "text-green-500", d: "M13 10V3L4 14h7v7l9-11h-7z" },
+                  { label: "fr.ch.basicSpeed", value: basicSpeed.toFixed(2), suffix: "km/h", color: "text-zinc-400", d: "M13 5l7 7-7 7M5 5l7 7-7 7" },
+                  { label: "fr.ch.move", value: String(move), color: "text-blue-400", d: "M5 12h14M12 5l7 7-7 7" },
+                  { label: "fr.ch.encumbrance", value: t(ENCUMBRANCE_LABELS[encumbranceValue]), sub: formatKg(itemsWeight), color: "text-purple-400", d: "M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" },
+                ] as Array<{ label: string; value: string; suffix?: string; color: string; d: string }>).map(({ label, value, suffix, color, d }) => (
+                  <div key={label} className="flex flex-col items-center gap-1 p-2 bg-zinc-800/40 rounded-lg">
+                    <svg className={`w-5 h-5 ${color}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={d} />
+                    </svg>
+                    <span className={`${color} text-sm font-bold`}>{value}{suffix ? <span className="font-light text-xs ml-0.5">{suffix}</span> : null}</span>
+                    <span className="text-zinc-500 text-xs font-semibold uppercase">{t(label)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            {/* Corpo (DR) */}
+            <div>
+              {(() => {
+                const armorItems = selItems.filter((s) => isArmorish(available.items.find((i) => i.id === s.id)));
+                const armors = armorItems.map((s) => {
+                  const item = available.items.find((i) => i.id === s.id);
+                  const eq = equipped[s.id];
+                  return { id: s.id, name: s.name, fit: eq?.location, value: item?.armor?.dr != null ? `DR ${item.armor.dr}` : undefined };
+                });
+                return (
+                  <>
+                    <h3 className="text-sm font-semibold uppercase tracking-wider text-zinc-500 mb-3">{t("fr.ch.body")}</h3>
+                    <div className="border border-zinc-700/60 bg-zinc-800/70 rounded-xl p-3">
+                      {(() => {
+                        const drFor = (fits: string[]) => {
+                          let total = 0;
+                          for (const a of armors) {
+                            if (fits.some((f) => a.fit?.toLowerCase()?.includes(f))) {
+                              const m = /(\d+)/.exec(a.value ?? "");
+                              if (m) total += parseInt(m[1], 10);
+                            }
+                          }
+                          return total;
+                        };
+                        const head = drFor(["head", "helmet", "skull"]);
+                        const torso = drFor(["torso", "chest", "body", "full body"]);
+                        const armR = drFor(["arm", "arms"]);
+                        const armL = armR;
+                        const legR = drFor(["leg", "legs"]);
+                        const legL = legR;
+                        return (
+                          <div className="relative flex justify-center py-10">
+                            <div className="relative">
+                              <svg fill="#52525b" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" style={{ width: 80 }}>
+                                <circle cx="256" cy="56" r="56" />
+                                <path d="M437,128H75a27,27,0,0,0,0,54H176.88c6.91,0,15,3.09,19.58,15,5.35,13.83,2.73,40.54-.57,61.23l-4.32,24.45a.42.42,0,0,1-.12.35l-34.6,196.81A27.43,27.43,0,0,0,179,511.58a27.06,27.06,0,0,0,31.42-22.29l23.91-136.8S242,320,256,320c14.23,0,21.74,32.49,21.74,32.49l23.91,136.92a27.24,27.24,0,1,0,53.62-9.6L320.66,283a.45.45,0,0,0-.11-.35l-4.33-24.45c-3.3-20.69-5.92-47.4-.57-61.23,4.56-11.88,12.91-15,19.28-15H437a27,27,0,0,0,0-54Z" />
+                              </svg>
+                              <div className="absolute inset-0 w-full">
+                                {(() => {
+                                  const badge = (label: string, dr: number, style: React.CSSProperties) => (
+                                    <div
+                                      className="absolute flex flex-col items-center justify-center p-0.5 rounded border border-zinc-600"
+                                      style={{ ...style, width: 46, height: 38 }}
+                                    >
+                                      <span className="text-zinc-400 uppercase" style={{ fontSize: 6, lineHeight: 1, letterSpacing: 0.3 }}>{label}</span>
+                                      <span className="text-zinc-400 font-bold text-xs leading-none mt-0.5">{dr}</span>
+                                    </div>
+                                  );
+                                  return (
+                                    <>
+                                      {badge(t("fr.ch.badge.head"), head, { top: -48, left: "50%", transform: "translateX(-50%)" })}
+                                      {badge(t("fr.ch.badge.armR"), armR, { top: -28, right: -44 })}
+                                      {badge(t("fr.ch.badge.armL"), armL, { top: -28, left: -44 })}
+                                      {badge(t("fr.ch.badge.torso"), torso, { top: 20, width: 46, left: -42, height: 44 })}
+                                      {badge(t("fr.ch.badge.legR"), legR, { top: 76, right: -44 })}
+                                      {badge(t("fr.ch.badge.legL"), legL, { top: 76, left: -44 })}
+                                    </>
+                                  );
+                                })()}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })()}
+                      {armors.length > 0 && (
+                        <div className="space-y-1 mt-2 border-t border-zinc-700/50 pt-2">
+                          {armors.map((a) => (
+                            <div key={a.id} className="flex justify-between text-xs">
+                              <span className="text-zinc-100 truncate">{a.name}</span>
+                              <span className="text-green-500/80 shrink-0">{(a.value ?? "").replace("DR ", "")} {a.fit || ""}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </>
+                );
+              })()}
+            </div>
+          </div>
         </>
         )}
 
