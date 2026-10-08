@@ -15,6 +15,7 @@ import InfoTooltip from "./InfoTooltip";
 import SplitToggle from "./SplitToggle";
 import ChipFilters, { countValues } from "@/components/table/ChipFilters";
 import { categoryLabel } from "@/lib/categories";
+import { DAMAGE_TYPES, resolveAttack } from "@/lib/damage";
 import type { Advantage, CharacterViewer, Disadvantage, GameTableAdvantages, GameTableDisadvantages, GameTableItems, GameTableModifiers, GameTableSkills, Item, Modifier, SkillItem, TableSettings } from "@/lib/types";
 
 /* Rótulo e campo do formulário. Usa os mesmos tokens das demais telas de
@@ -22,6 +23,14 @@ import type { Advantage, CharacterViewer, Disadvantage, GameTableAdvantages, Gam
    tokens de tinta, que deixou criar/editar personagem fora da paleta da rota. */
 const label = labelCls;
 const field = inputCls;
+
+/* `right_hand`/`left_hand` viram rótulo legível; qualquer outro fit
+   (torso, arms...) já vem como texto e só perde os underscores. */
+function locLabel(t: (key: string) => string, loc?: string | null): string {
+  if (loc === "right_hand") return t("fr.hand.right");
+  if (loc === "left_hand") return t("fr.hand.left");
+  return (loc ?? "").replace(/_/g, " ");
+}
 
 export interface CharacterFormProps {
   tableId?: string;
@@ -588,7 +597,10 @@ export default function CharacterForm({ tableId, tableTitle, tables, initial, se
             item_id: i.id,
             quantity: 1,
             status: equipped[i.id]?.status || "in_inventory",
-            location: equipped[i.id]?.location || "none",
+            location:
+              equipped[i.id]?.status && equipped[i.id].status !== "in_inventory"
+                ? equipped[i.id].location || "none"
+                : "none",
           })),
           peculiarities,
         });
@@ -819,80 +831,78 @@ export default function CharacterForm({ tableId, tableTitle, tables, initial, se
 
         {activeTab === "sheet" && (
         <>
-          <div className="border border-zinc-700/60 bg-zinc-800/70 rounded-xl p-3">
-            <h2 className="text-lg font-semibold text-zinc-100 mb-6">{t("fr.ch.attributes")}</h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-8">
-              {ATTR_NAMES.map(({ key, label, color, svg }) => (
-                <div key={key} className="flex flex-col items-center gap-2">
-                  <div className="flex items-center gap-1.5">
-                    <svg className={`w-5 h-5 ${color}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={svg} />
-                    </svg>
-                    <label className="text-zinc-400 text-xs font-semibold uppercase tracking-wider">{label}</label>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <button
-                      type="button"
-                      onClick={() => adjAttr(key, -1)}
-                      className="w-8 h-8 rounded bg-zinc-800 hover:bg-zinc-700/50 text-zinc-100 text-lg font-bold flex items-center justify-center leading-none"
-                    >
-                      −
-                    </button>
-                    <span className="w-10 text-center text-xl font-bold text-green-500">{attrs[key]}</span>
-                    <button
-                      type="button"
-                      onClick={() => adjAttr(key, 1)}
-                      className="w-8 h-8 rounded bg-zinc-800 hover:bg-zinc-700/50 text-zinc-100 text-lg font-bold flex items-center justify-center leading-none"
-                    >
-                      +
-                    </button>
-                  </div>
-                  {modTotals[key] !== 0 ? (
-                    <span className="font-mono text-[11px] text-zinc-400">
-                      {t("fr.ch.effective")}{" "}
-                      <span className="text-green-400 font-bold">{attrs[key] + modTotals[key]}</span>
-                    </span>
-                  ) : null}
+          <h2 className="text-lg font-semibold text-zinc-100 mb-6">{t("fr.ch.attributes")}</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            {ATTR_NAMES.map(({ key, label, color, svg }) => (
+              <div key={key} className="border border-zinc-700/60 bg-zinc-800/70 rounded-xl p-3 flex flex-col items-center gap-2">
+                <div className="flex items-center gap-1.5">
+                  <svg className={`w-5 h-5 ${color}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={svg} />
+                  </svg>
+                  <label className="text-zinc-400 text-xs font-semibold uppercase tracking-wider">{label}</label>
                 </div>
-              ))}
-            </div>
-            <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-zinc-700/50">
-              <div>
-                <label className={label}>{t("fr.hp")}</label>
-                <div className="rounded-lg bg-zinc-800 px-4 py-2.5 text-green-500 font-bold font-mono text-center">
-                  {attrs.ht + modTotals.hp}
-                  {modTotals.hp !== 0 ? (
-                    <span className="text-[11px] text-green-300/80 font-medium ml-1">{signed(modTotals.hp)}</span>
-                  ) : null}
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => adjAttr(key, -1)}
+                    className="w-8 h-8 rounded bg-zinc-800 hover:bg-zinc-700/50 text-zinc-100 text-lg font-bold flex items-center justify-center leading-none"
+                  >
+                    −
+                  </button>
+                  <span className="w-10 text-center text-xl font-bold text-green-500">{attrs[key]}</span>
+                  <button
+                    type="button"
+                    onClick={() => adjAttr(key, 1)}
+                    className="w-8 h-8 rounded bg-zinc-800 hover:bg-zinc-700/50 text-zinc-100 text-lg font-bold flex items-center justify-center leading-none"
+                  >
+                    +
+                  </button>
                 </div>
+                {modTotals[key] !== 0 ? (
+                  <span className="font-mono text-[11px] text-zinc-400">
+                    {t("fr.ch.effective")}{" "}
+                    <span className="text-green-400 font-bold">{attrs[key] + modTotals[key]}</span>
+                  </span>
+                ) : null}
               </div>
-              <div>
-                <label className={label}>{t("fr.ch.basicSpeed")}</label>
-                <div className="rounded-lg bg-zinc-800 px-4 py-2.5 text-green-500 font-bold font-mono text-center">
-                  {basicSpeed.toFixed(2)}
-                </div>
-              </div>
-              <div>
-                <label className={label}>{t("fr.ch.move")}</label>
-                <div className="rounded-lg bg-zinc-800 px-4 py-2.5 text-green-500 font-bold font-mono text-center">
-                  {move.toFixed(2)}
-                </div>
-              </div>
-            </div>
-            {modSources.length > 0 ? (
-              <div className="mt-4 pt-3 border-t border-zinc-700/50">
-                <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mb-2">{t("fr.ch.modSources")}:</div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1.5">
-                  {modSources.map((s) => (
-                    <div key={s.name} className="flex items-center gap-1.5 min-w-0">
-                      <span className="text-xs text-zinc-400 truncate">{s.name}</span>
-                      <ModChips totals={s.totals} />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : null}
+            ))}
           </div>
+          <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className={label}>{t("fr.hp")}</label>
+              <div className="rounded-lg bg-zinc-800 px-4 py-2.5 text-green-500 font-bold font-mono text-center">
+                {attrs.ht + modTotals.hp}
+                {modTotals.hp !== 0 ? (
+                  <span className="text-[11px] text-green-300/80 font-medium ml-1">{signed(modTotals.hp)}</span>
+                ) : null}
+              </div>
+            </div>
+            <div>
+              <label className={label}>{t("fr.ch.basicSpeed")}</label>
+              <div className="rounded-lg bg-zinc-800 px-4 py-2.5 text-green-500 font-bold font-mono text-center">
+                {basicSpeed.toFixed(2)}
+              </div>
+            </div>
+            <div>
+              <label className={label}>{t("fr.ch.move")}</label>
+              <div className="rounded-lg bg-zinc-800 px-4 py-2.5 text-green-500 font-bold font-mono text-center">
+                {move.toFixed(2)}
+              </div>
+            </div>
+          </div>
+          {modSources.length > 0 ? (
+            <div className="mt-4 pt-3 border-t border-zinc-700/50">
+              <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mb-2">{t("fr.ch.modSources")}:</div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1.5">
+                {modSources.map((s) => (
+                  <div key={s.name} className="flex items-center gap-1.5 min-w-0">
+                    <span className="text-xs text-zinc-400 truncate">{s.name}</span>
+                    <ModChips totals={s.totals} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
 
           <div className="border border-zinc-700/60 bg-zinc-800/70 rounded-xl p-3">
             <h3 className="text-sm font-semibold uppercase tracking-wider text-zinc-500 mb-3">{t("fr.ch.defenseSpeed")}</h3>
@@ -1426,7 +1436,7 @@ export default function CharacterForm({ tableId, tableTitle, tables, initial, se
             {selItems.length === 0 ? (
               <p className="text-zinc-500 text-sm italic">{t("fr.list.noItem")}</p>
             ) : (
-              <div className="space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 {selItems.map((s) => {
                   const item = available.items.find((i) => i.id === s.id);
                   const eq = equipped[s.id];
@@ -1441,35 +1451,69 @@ export default function CharacterForm({ tableId, tableTitle, tables, initial, se
                   const statusLabel = stt === "equipped" ? t("fr.equipped") : stt === "wielded" ? t("fr.wielded") : t("fr.inInventory");
                   const statusCls = stt === "equipped" ? "text-emerald-300/90" : stt === "wielded" ? "text-amber-300/90" : "text-zinc-500";
                   return (
-                    <div key={s.id} className="bg-zinc-900/60 rounded-lg border border-zinc-700/60 p-3">
-                      <div className="flex items-center gap-2">
-                        <svg className="w-3.5 h-3.5 text-green-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                        </svg>
-                        <span className="text-sm font-medium text-zinc-100 flex-1 truncate">{s.name}</span>
+                    <div key={s.id} className="bg-zinc-900/60 rounded-lg border border-zinc-700/60 p-3 flex flex-col gap-2">
+                      <div className="flex items-center justify-center gap-2 flex-wrap">
+                        <span className="flex items-center gap-1.5 min-w-0">
+                          <svg className="w-3.5 h-3.5 text-green-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                          </svg>
+                          <span className="text-sm font-medium text-zinc-100 truncate">{s.name}</span>
+                        </span>
                         {item?.weight_lb != null ? <span className="text-[10px] text-zinc-500">{formatKg(item.weight_lb)}</span> : null}
                         {item?.armor?.dr != null ? <span className="text-[10px] text-zinc-400">DR {item.armor.dr}</span> : null}
-                      </div>
-                      <div className="flex items-center gap-2 flex-wrap mt-2">
                         <span className={`text-[10px] uppercase tracking-wide ${statusCls}`}>{statusLabel}</span>
-                        {stt !== "in_inventory" && eq?.location && eq.location !== "any" && eq.location !== "none" ? (
-                          <span className="text-[10px] text-zinc-400">· {eq.location.replace(/_/g, " ")}</span>
+                        {stt === "wielded" ? (
+                          <select
+                            value={eq?.location === "left_hand" ? "left_hand" : "right_hand"}
+                            onChange={(e) => setEquipped((prev) => ({ ...prev, [s.id]: { ...prev[s.id], status: "wielded", location: e.target.value } }))}
+                            className="rounded bg-zinc-900 border border-zinc-600 px-2 py-1 text-xs text-zinc-100"
+                            style={{ colorScheme: "dark" }}
+                          >
+                            <option value="right_hand" className="bg-zinc-900 text-zinc-100">{t("fr.hand.right")}</option>
+                            <option value="left_hand" className="bg-zinc-900 text-zinc-100">{t("fr.hand.left")}</option>
+                          </select>
                         ) : null}
+                        {stt !== "in_inventory" && stt !== "wielded" && eq?.location && eq.location !== "any" && eq.location !== "none" ? (
+                          <span className="text-[10px] text-zinc-400">{locLabel(t, eq.location)}</span>
+                        ) : null}
+                        {stt === "equipped" && locOptions.length > 1 ? (
+                          <select
+                            value={chosen ?? locOptions[0]}
+                            onChange={(e) => setEquipped((prev) => ({ ...prev, [s.id]: { ...prev[s.id], status: "equipped", location: e.target.value } }))}
+                            className="rounded bg-zinc-900 border border-zinc-600 px-2 py-1 text-xs text-zinc-100"
+                            style={{ colorScheme: "dark" }}
+                          >
+                            {locOptions.map((loc) => (
+                              <option key={loc} value={loc} className="bg-zinc-900 text-zinc-100">{loc}</option>
+                            ))}
+                          </select>
+                        ) : null}
+                      </div>
+                      <div className="flex gap-2">
                         {stt === "in_inventory" ? (
                           <>
                             {isWeaponish ? (
-                              <button
-                                type="button"
-                                onClick={() => setEquipped((prev) => ({ ...prev, [s.id]: { status: "wielded", location: "right_hand" } }))}
-                                className="text-[11px] px-2 py-1 rounded-md bg-amber-600/40 hover:bg-amber-600/70 text-amber-100 border border-amber-600/40 transition-colors"
-                              >
-                                {t("pl.inv.wield")}
-                              </button>
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => setEquipped((prev) => ({ ...prev, [s.id]: { status: "wielded", location: "right_hand" } }))}
+                                  className="flex-1 text-[11px] px-2 py-1 rounded-md bg-amber-600/40 hover:bg-amber-600/70 text-amber-100 border border-amber-600/40 transition-colors"
+                                >
+                                  {t("fr.wieldR")}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setEquipped((prev) => ({ ...prev, [s.id]: { status: "wielded", location: "left_hand" } }))}
+                                  className="flex-1 text-[11px] px-2 py-1 rounded-md bg-amber-600/40 hover:bg-amber-600/70 text-amber-100 border border-amber-600/40 transition-colors"
+                                >
+                                  {t("fr.wieldL")}
+                                </button>
+                              </>
                             ) : null}
                             <button
                               type="button"
                               onClick={() => setEquipped((prev) => ({ ...prev, [s.id]: { status: "equipped", location: (isArmor && chosen) || "any" } }))}
-                              className="text-[11px] px-2 py-1 rounded-md bg-emerald-600/40 hover:bg-emerald-600/70 text-emerald-100 border border-emerald-600/40 transition-colors"
+                              className="flex-1 text-[11px] px-2 py-1 rounded-md bg-emerald-600/40 hover:bg-emerald-600/70 text-emerald-100 border border-emerald-600/40 transition-colors"
                             >
                               {t("pl.inv.equip")}
                             </button>
@@ -1478,23 +1522,11 @@ export default function CharacterForm({ tableId, tableTitle, tables, initial, se
                           <button
                             type="button"
                             onClick={() => setEquipped((prev) => ({ ...prev, [s.id]: { status: "in_inventory" } }))}
-                            className="text-[11px] px-2 py-1 rounded-md bg-zinc-700/60 hover:bg-zinc-600/60 text-zinc-200 border border-zinc-600/40 transition-colors"
+                            className="flex-1 text-[11px] px-2 py-1 rounded-md bg-zinc-700/60 hover:bg-zinc-600/60 text-zinc-200 border border-zinc-600/40 transition-colors"
                           >
                             {stt === "wielded" ? t("pl.inv.stow") : t("pl.inv.unequip")}
                           </button>
                         )}
-                        {stt === "equipped" && locOptions.length > 1 ? (
-                          <select
-                            value={chosen ?? locOptions[0]}
-                            onChange={(e) => setEquipped((prev) => ({ ...prev, [s.id]: { ...prev[s.id], status: "equipped", location: e.target.value } }))}
-                            className="ml-auto rounded bg-zinc-900 border border-zinc-600 px-2 py-1 text-xs text-zinc-100"
-                            style={{ colorScheme: "dark" }}
-                          >
-                            {locOptions.map((loc) => (
-                              <option key={loc} value={loc} className="bg-zinc-900 text-zinc-100">{loc}</option>
-                            ))}
-                          </select>
-                        ) : null}
                       </div>
                     </div>
                   );
@@ -1562,7 +1594,19 @@ export default function CharacterForm({ tableId, tableTitle, tables, initial, se
                   const item = available.items.find((i) => i.id === s.id);
                   const eq = equipped[s.id];
                   const worn = eq?.status === "equipped" || eq?.status === "wielded";
-                  return { id: s.id, name: s.name, fit: worn ? eq?.location : undefined, value: item?.armor?.dr != null ? `DR ${item.armor.dr}` : undefined };
+                  return { id: s.id, name: s.name, kind: item?.kind, fit: worn ? eq?.location : undefined, value: item?.armor?.dr != null ? `DR ${item.armor.dr}` : undefined };
+                });
+                const armorRows = armors.filter((a) => a.kind === "armor");
+                const arsenal = selItems.flatMap((s) => {
+                  const item = available.items.find((i) => i.id === s.id);
+                  if (!item || (item.kind !== "weapon" && item.kind !== "shield")) return [];
+                  const eq = equipped[s.id];
+                  const hand = eq?.status === "wielded" ? locLabel(t, eq.location === "left_hand" ? "left_hand" : "right_hand") : null;
+                  const dmg = (item.weapon?.attacks ?? []).map(
+                    (a) => `${resolveAttack(a, attrs.st, item.weapon?.rated_st)} ${t(DAMAGE_TYPES[a.damage_type] || a.damage_type)}`,
+                  );
+                  const dr = item.armor?.dr != null && item.kind === "shield" ? `DR ${item.armor.dr}` : null;
+                  return [{ id: s.id, name: s.name, hand, dmg, dr }];
                 });
                 return (
                   <>
@@ -1579,10 +1623,23 @@ export default function CharacterForm({ tableId, tableTitle, tables, initial, se
                           }
                           return total;
                         };
+                        const armDr = (side: "right" | "left") => {
+                          let total = 0;
+                          for (const a of armors) {
+                            const f = (a.fit ?? "").toLowerCase();
+                            if (!f) continue;
+                            if (!f.includes("arm") && !f.includes("hand")) continue;
+                            const sideFit = f.includes("right") ? "right" : f.includes("left") ? "left" : null;
+                            if (sideFit && sideFit !== side) continue;
+                            const m = /(\d+)/.exec(a.value ?? "");
+                            if (m) total += parseInt(m[1], 10);
+                          }
+                          return total;
+                        };
                         const head = drFor(["head", "helmet", "skull"]);
                         const torso = drFor(["torso", "chest", "body", "full body"]);
-                        const armR = drFor(["arm", "arms"]);
-                        const armL = armR;
+                        const armR = armDr("right");
+                        const armL = armDr("left");
                         const legR = drFor(["leg", "legs"]);
                         const legL = legR;
                         return (
@@ -1619,12 +1676,31 @@ export default function CharacterForm({ tableId, tableTitle, tables, initial, se
                           </div>
                         );
                       })()}
-                      {armors.length > 0 && (
+                      {armorRows.length > 0 && (
                         <div className="space-y-1 mt-2 border-t border-zinc-700/50 pt-2">
-                          {armors.map((a) => (
+                          {armorRows.map((a) => (
                             <div key={a.id} className="flex justify-between text-xs">
                               <span className="text-zinc-100 truncate">{a.name}</span>
-                              <span className="text-green-500/80 shrink-0">{(a.value ?? "").replace("DR ", "")} {a.fit || ""}</span>
+                              <span className="text-green-500/80 shrink-0">{(a.value ?? "").replace("DR ", "")} {locLabel(t, a.fit)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {arsenal.length > 0 && (
+                        <div className="space-y-1 mt-2 border-t border-zinc-700/50 pt-2">
+                          <p className="text-[10px] uppercase tracking-widest text-zinc-500">{t("fr.ch.weapons")}</p>
+                          {arsenal.map((w) => (
+                            <div key={w.id} className="flex items-baseline justify-between gap-2 text-xs">
+                              <span className="text-zinc-100 truncate">
+                                {w.name}
+                                {w.hand ? <span className="text-zinc-500"> · {w.hand}</span> : null}
+                              </span>
+                              <span className="flex items-baseline gap-2 shrink-0">
+                                {w.dr ? <span className="text-green-500/80">{w.dr}</span> : null}
+                                {w.dmg.map((d, i) => (
+                                  <span key={i} className="text-red-400 font-bold">{d}</span>
+                                ))}
+                              </span>
                             </div>
                           ))}
                         </div>
