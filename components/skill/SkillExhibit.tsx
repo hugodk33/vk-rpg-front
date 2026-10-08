@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { SkillItem } from "@/lib/types";
 import { interpolate, useTranslation } from "@/lib/i18n";
 import ModifiersModal from "@/components/modifiers/ModifiersModal";
+import SkillNetwork from "./SkillNetwork";
 import {
   SKILL_TYPES,
   DIFFICULTY_DEFS,
@@ -116,6 +117,7 @@ function DependencyRow({
 
 export default function SkillExhibit({ skill, tableId }: { skill: SkillItem; tableId?: string }) {
   const { t } = useTranslation();
+  const [netView, setNetView] = useState<"list" | "net">("list");
   const typeKey = skill.predefinition_type ?? "";
   const type = SKILL_TYPES[typeKey];
   const diffKey = skill.predefinition_difficulty ?? "";
@@ -281,9 +283,35 @@ export default function SkillExhibit({ skill, tableId }: { skill: SkillItem; tab
             ) : null}
 
             {/* -------- REQUIRES / DEFAULTS (dependency ledger) -------- */}
-            {(requires.length > 0 || defaults.length > 0) ? (
+            {tableId || requires.length > 0 || defaults.length > 0 ? (
               <Panel>
-                <SectionTitle icon="⌁" tint={accent} label={t("skx.skillNet")} />
+                <div className="flex items-center justify-between mb-3 pb-1.5 border-b border-zinc-700/60">
+                  <div className="flex items-center gap-2.5">
+                    <span aria-hidden className="font-mono text-base leading-none" style={{ color: accent }}>⌁</span>
+                    <span className="font-mono text-[13px] font-bold uppercase tracking-wider text-zinc-300">{t("skx.skillNet")}</span>
+                    <span className="flex-1 h-px" style={{ background: `linear-gradient(90deg, ${accent}55, transparent)` }} />
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0 ml-3">
+                    {(["list", "net"] as const).map((v) => (
+                      <button
+                        key={v}
+                        type="button"
+                        onClick={() => setNetView(v)}
+                        aria-pressed={netView === v}
+                        className={`font-mono text-[10px] uppercase tracking-widest px-2 py-1 rounded border transition-colors ${
+                          netView === v
+                            ? "border-amber-600/60 text-amber-400 bg-amber-600/10"
+                            : "border-zinc-700/60 text-zinc-500 hover:text-zinc-300"
+                        }`}
+                      >
+                        {v === "list" ? t("skx.netList") : t("skx.netGraph")}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {netView === "net" && tableId ? (
+                  <SkillNetwork skill={skill} tableId={tableId} accent={accent} />
+                ) : (
                 <div className="flex flex-col gap-4">
                   <div>
                     <div className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 mb-2">{t("skx.requires")}</div>
@@ -315,6 +343,7 @@ export default function SkillExhibit({ skill, tableId }: { skill: SkillItem; tab
                     </div>
                   </div>
                 </div>
+                )}
               </Panel>
             ) : null}
           </div>
