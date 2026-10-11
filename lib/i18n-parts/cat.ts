@@ -69,7 +69,7 @@ export const PT: Record<string, string> = {
   "cat.equipment": "Equipamento",
   "cat.consumable": "Consumíveis",
 
-  /* ---------- PNJs (papel) ---------- */
+  /* ---------- NPCs (papel) ---------- */
   "cat.combatante": "Combatentes",
   "cat.atirador": "Atiradores",
   "cat.arcano": "Arcanos",

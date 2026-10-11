@@ -222,7 +222,7 @@ export const PT: Record<string, string> = {
   "vs.vis.groupIdentity": "Identidade",
   "vs.vis.groupItems": "Itens",
   "vs.vis.groupLocations": "Locais",
-  "vs.vis.groupNpcs": "PNJs",
+  "vs.vis.groupNpcs": "NPCs",
   "vs.vis.groupSkills": "Perícias",
   "vs.vis.hideGroup": "Ocultar grupo",
   "vs.vis.hideThis": "Ocultar este",

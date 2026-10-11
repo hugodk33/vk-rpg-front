@@ -44,7 +44,7 @@ const EQUIP_STATUS: { value: string; label: string }[] = [
 ];
 
 const fieldCls =
-  "w-full bg-zinc-950 border border-zinc-800 rounded-md px-2.5 py-1.5 text-sm text-zinc-200 placeholder-zinc-600 focus:border-teal-700/60 focus:outline-none";
+  "w-full bg-zinc-950 rounded-md px-2.5 py-1.5 text-sm text-zinc-200 placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-teal-600/60";
 
 const num = (v: string): number | undefined => {
   if (v.trim() === "") return undefined;
@@ -240,13 +240,33 @@ export default function TableQuickActions({
   };
 
   return (
-    <div className="rounded-xl border border-zinc-700/40 bg-zinc-900/50 overflow-hidden">
+    <div className="space-y-4">
       {error ? (
-        <div className="border-b border-rose-500/40 bg-rose-500/10 px-4 py-2 text-sm text-rose-300">{error}</div>
+        <div className="rounded-lg bg-rose-500/10 px-3 py-2 text-sm text-rose-300">{error}</div>
       ) : null}
 
-      <div className="p-4">
-        <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-zinc-500 mb-3">
+      <div className="grid gap-3 md:grid-cols-2">
+        <div className="flex flex-col gap-1">
+          <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-500">{t("qa.action")}</span>
+          <div className="grid grid-cols-3 gap-1">
+            {([["status", "qa.status"], ["item", "qa.item"], ["xp", "qa.xp"]] as const).map(([key, labelKey]) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setMode(key)}
+                className={`font-mono text-[10px] uppercase tracking-wider rounded-md px-2 py-1.5 text-center transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600/60 ${
+                  mode === key
+                    ? "bg-teal-500/15 text-teal-300"
+                    : "text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/60"
+                }`}
+              >
+                {t(labelKey)}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-zinc-500">
           {t("qa.target")}
           <select value={targetId} onChange={(e) => setTargetId(e.target.value)} className={fieldCls} disabled={targets.length === 0}>
             <option value="">{targets.length === 0 ? t("qa.noTargets") : t("qa.chooseTarget")}</option>
@@ -257,130 +277,108 @@ export default function TableQuickActions({
             ))}
           </select>
         </label>
-
-        <div className="grid gap-3 md:grid-cols-[9rem_1fr]">
-          <div className="flex flex-col gap-1">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-500">{t("qa.action")}</span>
-            <div className="flex flex-col gap-1">
-              {([["status", "qa.status"], ["item", "qa.item"], ["xp", "qa.xp"]] as const).map(([key, labelKey]) => (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => setMode(key)}
-                  className={`font-mono text-[10px] uppercase tracking-widest rounded-md px-3 py-1.5 border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600/60 ${
-                    mode === key
-                      ? "bg-teal-500/10 border-teal-500/40 text-teal-300"
-                      : "border-zinc-800 text-zinc-500 hover:text-zinc-200 hover:border-zinc-700"
-                  }`}
-                >
-                  {t(labelKey)}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="rounded-lg border border-zinc-800 bg-zinc-950/40 p-3">
-            {mode === "status" ? (
-              <div className="space-y-3">
-                <div className="grid grid-cols-2 gap-3">
-                  <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-zinc-500">
-                    {t("qa.hp")}
-                    <input type="number" value={hpDelta} onChange={(e) => setHpDelta(e.target.value)} placeholder={interpolate(t("qa.hpPh"), { hp: target?.hp ?? "?" })} className={fieldCls} />
-                  </label>
-                  <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-zinc-500">
-                    {t("qa.fp")}
-                    <input type="number" value={fpDelta} onChange={(e) => setFpDelta(e.target.value)} placeholder={t("qa.fpPh")} className={fieldCls} />
-                  </label>
-                </div>
-                <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-zinc-500">
-                  {t("qa.note")}
-                  <input type="text" value={note} onChange={(e) => setNote(e.target.value)} placeholder={t("qa.noteHpPh")} className={fieldCls} />
-                </label>
-              </div>
-            ) : null}
-
-            {mode === "item" ? (
-              <div className="space-y-3">
-                <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-zinc-500">
-                  {t("qa.item")}
-                  <select value={itemId} onChange={(e) => setItemId(e.target.value)} className={fieldCls} disabled={items.length === 0}>
-                    <option value="">{items.length === 0 ? t("qa.noItems") : t("qa.chooseItem")}</option>
-                    {items.map((i) => (
-                      <option key={i.id} value={i.id}>
-                        {i.name}
-                        {pointsMode ? (i.cost != null ? ` · ${interpolate(t("qa.ptsEach"), { n: i.cost })}` : ` · ${t("qa.noCost")}`) : ""}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <div className="grid grid-cols-2 gap-3">
-                  <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-zinc-500">
-                    {t("qa.quantity")}
-                    <input type="number" value={qty} onChange={(e) => setQty(e.target.value)} className={fieldCls} />
-                  </label>
-                  <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-zinc-500">
-                    {t("qa.state")}
-                    <select value={eqStatus} onChange={(e) => setEqStatus(e.target.value)} className={fieldCls}>
-                      {EQUIP_STATUS.map((s) => (
-                        <option key={s.value} value={s.value}>{t(s.label)}</option>
-                      ))}
-                    </select>
-                  </label>
-                </div>
-                <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-zinc-500">
-                  {t("qa.note")}
-                  <input type="text" value={note} onChange={(e) => setNote(e.target.value)} placeholder={t("qa.noteItemPh")} className={fieldCls} />
-                </label>
-                {pointsMode ? (
-                  <p className="text-[11px] text-amber-300/90">
-                    {interpolate(t("qa.itemPointsWarn"), { name: target?.name ?? "?", pts: target?.points ?? 0 })}
-                  </p>
-                ) : null}
-              </div>
-            ) : null}
-
-            {mode === "xp" ? (
-              <div className="space-y-3">
-                <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-zinc-500">
-                  {t("qa.pointsSigned")}
-                  <input type="number" value={xpDelta} onChange={(e) => setXpDelta(e.target.value)} placeholder={t("qa.ptsPh")} className={fieldCls} />
-                </label>
-                <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-zinc-500">
-                  {t("qa.note")}
-                  <input type="text" value={note} onChange={(e) => setNote(e.target.value)} placeholder={t("qa.noteXpPh")} className={fieldCls} />
-                </label>
-              </div>
-            ) : null}
-
-            <div className="flex items-center gap-3 mt-4 pt-3 border-t border-zinc-800">
-              <button
-                type="button"
-                disabled={busy || !target}
-                onClick={run}
-                className="inline-flex items-center gap-2 bg-teal-700 hover:bg-teal-600 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600/60"
-              >
-                {busy ? t("qa.applying") : t("qa.apply")}
-              </button>
-              <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-600">
-                {mode === "status" ? t("qa.hint.status") : mode === "item" ? t("qa.hint.item") : t("qa.hint.xp")}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {done.length > 0 ? (
-          <ul className="mt-4 space-y-1.5">
-            {done.map((d, i) => (
-              <li key={`${i}-${d.summary}`} className="flex items-start gap-2 font-mono text-[10px] uppercase tracking-widest">
-                <span className={d.kind === "item" ? "text-amber-400/90" : d.kind === "xp" ? "text-violet-400/90" : "text-rose-300/90"}>
-                  {d.kind === "status" ? "◆" : d.kind === "item" ? "◇" : "✚"}
-                </span>
-                <span className="text-zinc-500">{d.summary}</span>
-              </li>
-            ))}
-          </ul>
-        ) : null}
       </div>
+
+      <div>
+        {mode === "status" ? (
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-zinc-500">
+                {t("qa.hp")}
+                <input type="number" value={hpDelta} onChange={(e) => setHpDelta(e.target.value)} placeholder={interpolate(t("qa.hpPh"), { hp: target?.hp ?? "?" })} className={fieldCls} />
+              </label>
+              <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-zinc-500">
+                {t("qa.fp")}
+                <input type="number" value={fpDelta} onChange={(e) => setFpDelta(e.target.value)} placeholder={t("qa.fpPh")} className={fieldCls} />
+              </label>
+            </div>
+            <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-zinc-500">
+              {t("qa.note")}
+              <input type="text" value={note} onChange={(e) => setNote(e.target.value)} placeholder={t("qa.noteHpPh")} className={fieldCls} />
+            </label>
+          </div>
+        ) : null}
+
+        {mode === "item" ? (
+          <div className="space-y-3">
+            <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-zinc-500">
+              {t("qa.item")}
+              <select value={itemId} onChange={(e) => setItemId(e.target.value)} className={fieldCls} disabled={items.length === 0}>
+                <option value="">{items.length === 0 ? t("qa.noItems") : t("qa.chooseItem")}</option>
+                {items.map((i) => (
+                  <option key={i.id} value={i.id}>
+                    {i.name}
+                    {pointsMode ? (i.cost != null ? ` · ${interpolate(t("qa.ptsEach"), { n: i.cost })}` : ` · ${t("qa.noCost")}`) : ""}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-zinc-500">
+                {t("qa.quantity")}
+                <input type="number" value={qty} onChange={(e) => setQty(e.target.value)} className={fieldCls} />
+              </label>
+              <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-zinc-500">
+                {t("qa.state")}
+                <select value={eqStatus} onChange={(e) => setEqStatus(e.target.value)} className={fieldCls}>
+                  {EQUIP_STATUS.map((s) => (
+                    <option key={s.value} value={s.value}>{t(s.label)}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-zinc-500">
+              {t("qa.note")}
+              <input type="text" value={note} onChange={(e) => setNote(e.target.value)} placeholder={t("qa.noteItemPh")} className={fieldCls} />
+            </label>
+            {pointsMode ? (
+              <p className="text-[11px] text-amber-300/90">
+                {interpolate(t("qa.itemPointsWarn"), { name: target?.name ?? "?", pts: target?.points ?? 0 })}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+
+        {mode === "xp" ? (
+          <div className="space-y-3">
+            <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-zinc-500">
+              {t("qa.pointsSigned")}
+              <input type="number" value={xpDelta} onChange={(e) => setXpDelta(e.target.value)} placeholder={t("qa.ptsPh")} className={fieldCls} />
+            </label>
+            <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-zinc-500">
+              {t("qa.note")}
+              <input type="text" value={note} onChange={(e) => setNote(e.target.value)} placeholder={t("qa.noteXpPh")} className={fieldCls} />
+            </label>
+          </div>
+        ) : null}
+
+        <div className="flex items-center gap-3 mt-4">
+          <button
+            type="button"
+            disabled={busy || !target}
+            onClick={run}
+            className="inline-flex items-center gap-2 bg-teal-700 hover:bg-teal-600 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600/60"
+          >
+            {busy ? t("qa.applying") : t("qa.apply")}
+          </button>
+          <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-600">
+            {mode === "status" ? t("qa.hint.status") : mode === "item" ? t("qa.hint.item") : t("qa.hint.xp")}
+          </span>
+        </div>
+      </div>
+
+      {done.length > 0 ? (
+        <ul className="space-y-1.5">
+          {done.map((d, i) => (
+            <li key={`${i}-${d.summary}`} className="flex items-start gap-2 font-mono text-[10px] uppercase tracking-widest">
+              <span className={d.kind === "item" ? "text-amber-400/90" : d.kind === "xp" ? "text-violet-400/90" : "text-rose-300/90"}>
+                {d.kind === "status" ? "◆" : d.kind === "item" ? "◇" : "✚"}
+              </span>
+              <span className="text-zinc-500">{d.summary}</span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
     </div>
   );
 }

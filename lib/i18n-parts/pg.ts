@@ -45,7 +45,7 @@ export const PT: Record<string, string> = {
   "pg.player.adventurerMany": "{n} aventureiros",
   "pg.player.adventurerOne": "1 aventureiro",
   "pg.player.adventurerUnnamed": "Aventureiro sem nome",
-  "pg.player.allyNpc": "PNJ aliado",
+  "pg.player.allyNpc": "NPC aliado",
   "pg.player.companion": "Companheiro",
   "pg.player.company": "Companhia",
   "pg.player.emptyEyebrow": "Nada por enquanto",

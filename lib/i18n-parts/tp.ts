@@ -1,4 +1,4 @@
-/* ============================================================
+﻿/* ============================================================
    i18n-parts/tp — chaves das PÁGINAS de tabelas (app/table/**).
    Mescladas ao dict de lib/i18n-core.ts via spread.
    ============================================================ */
@@ -11,15 +11,15 @@ export const PT: Record<string, string> = {
   "tp.countOne": "{n} local",
   "tp.roots": "{n} raízes de território",
   "tp.rootOne": "{n} raiz de território",
-  "tp.searchPh": "Pesquisar o território…",
+  "tp.searchPh": "Pesquisar o território...",
   "tp.clear": "Limpar",
-  "tp.region": "Região",
-  "tp.loading": "Carregando território…",
+  "tp.region": "região",
+  "tp.loading": "Carregando território...",
   "tp.noResults": "Nenhum local corresponde à sua pesquisa.",
   "tp.empty": "Nenhum território mapeado ainda. Crie seu primeiro mundo.",
   "tp.manyWorlds": "Vários mundos — abra um para levantar",
   "tp.noDivisions": "Nenhuma divisão dentro de {name} ainda.",
-  "tp.default": "Padrão",
+  "tp.default": "padrão",
   "tp.openMap": "Abrir mapa →",
   "tp.divisions": "{n} divisões",
   "tp.division": "{n} divisão",
@@ -36,8 +36,8 @@ export const PT: Record<string, string> = {
   "tp.loc.openOwn": "Abrir {name}",
   "tp.locKind.world": "Mundo",
   "tp.locKind.continent": "Continente",
-  "tp.locKind.nation": "Nação",
-  "tp.locKind.region": "Região",
+  "tp.locKind.nation": "nação",
+  "tp.locKind.region": "região",
   "tp.locKind.biome": "Bioma",
   "tp.locKind.province": "Província",
   "tp.locKind.city": "Cidade",
@@ -63,7 +63,7 @@ export const PT: Record<string, string> = {
   "tp.items.empty": "Nenhum item no catálogo ainda.",
   "tp.items.emptySearch": "Nenhum item corresponde à sua pesquisa.",
   "tp.items.fitLabel": "Tamanho",
-  "tp.items.searchPh": "Pesquisar itens…",
+  "tp.items.searchPh": "Pesquisar itens...",
   "tp.items.weaponShort": "Arma",
 
   /* ---------- Tipo de item (badge e contagem na listagem) ---------- */
@@ -83,17 +83,17 @@ export const PT: Record<string, string> = {
   /* ---------- Catálogo de perícias ---------- */
   "tp.skills.empty": "Nenhuma perícia catalogada ainda.",
   "tp.skills.emptySearch": "Nenhuma perícia corresponde à sua pesquisa.",
-  "tp.skills.searchPh": "Pesquisar perícias…",
+  "tp.skills.searchPh": "Pesquisar perícias...",
 
   /* ---------- Catálogo de vantagens ---------- */
   "tp.advantages.empty": "Nenhuma vantagem catalogada ainda.",
   "tp.advantages.emptySearch": "Nenhuma vantagem corresponde à sua pesquisa.",
-  "tp.advantages.searchPh": "Pesquisar vantagens…",
+  "tp.advantages.searchPh": "Pesquisar vantagens...",
 
   /* ---------- Catálogo de desvantagens ---------- */
   "tp.disadvantages.empty": "Nenhuma desvantagem catalogada ainda.",
   "tp.disadvantages.emptySearch": "Nenhuma desvantagem corresponde à sua pesquisa.",
-  "tp.disadvantages.searchPh": "Pesquisar desvantagens…",
+  "tp.disadvantages.searchPh": "Pesquisar desvantagens...",
 
   /* ---------- Personagens da mesa ---------- */
   "tp.characters.active": "Ativo",
@@ -106,7 +106,7 @@ export const PT: Record<string, string> = {
   "tp.characters.npc": "NPC",
   "tp.characters.noSheet": "Sem ficha",
   "tp.characters.player": "Jogador",
-  "tp.characters.searchPh": "Pesquisar personagens…",
+  "tp.characters.searchPh": "Pesquisar personagens...",
   "tp.characters.status": "Situação",
 
   /* ---------- Livro-razão de sessões (ledger) ---------- */
@@ -148,8 +148,8 @@ export const PT: Record<string, string> = {
   "tp.count.skillsOne": "{n} perícia",
 
   /* ---------- Assentos (seats) ---------- */
-  "tp.npcs": "PNJs",
-  "tp.npcsMarked": "PNJs marcados",
+  "tp.npcs": "NPCs",
+  "tp.npcsMarked": "NPCs marcados",
   "tp.players": "Jogadores",
   "tp.seatedOf": "Sentados em {name}",
   "tp.seats.emptyBody": "Ninguém sentado ainda. Abra uma crônica para sentar os personagens.",
@@ -160,10 +160,10 @@ export const PT: Record<string, string> = {
   "tp.seat.effectsMany": "{n} efeitos",
   "tp.seat.effectsOne": "{n} efeito",
   "tp.seat.noEffects": "Sem efeitos",
-  "tp.seat.noNameNpc": "PNJ sem nome",
+  "tp.seat.noNameNpc": "NPC sem nome",
   "tp.seat.noNamePlayer": "Jogador sem nome",
   "tp.seat.noSheetYet": "Sem ficha ainda",
-  "tp.seat.npc": "PNJ",
+  "tp.seat.npc": "NPC",
   "tp.seat.player": "Jogador",
 
   /* ---------- Unidades da mesa ---------- */
@@ -210,10 +210,10 @@ export const EN: Record<string, string> = {
   "tp.countOne": "{n} location",
   "tp.roots": "{n} territory roots",
   "tp.rootOne": "{n} territory root",
-  "tp.searchPh": "Search the territory…",
+  "tp.searchPh": "Search the territory...",
   "tp.clear": "Clear",
   "tp.region": "Region",
-  "tp.loading": "Loading territory…",
+  "tp.loading": "Loading territory...",
   "tp.noResults": "No location matches your search.",
   "tp.empty": "No territory mapped yet. Create your first world.",
   "tp.manyWorlds": "Multiple worlds — open one to explore",
@@ -262,7 +262,7 @@ export const EN: Record<string, string> = {
   "tp.items.empty": "No items in the catalog yet.",
   "tp.items.emptySearch": "No item matches your search.",
   "tp.items.fitLabel": "Size",
-  "tp.items.searchPh": "Search items…",
+  "tp.items.searchPh": "Search items...",
   "tp.items.weaponShort": "Weapon",
 
   /* ---------- Item kind (badge and count on the list) ---------- */
@@ -282,17 +282,17 @@ export const EN: Record<string, string> = {
   /* ---------- Skill catalog ---------- */
   "tp.skills.empty": "No skills catalogued yet.",
   "tp.skills.emptySearch": "No skill matches your search.",
-  "tp.skills.searchPh": "Search skills…",
+  "tp.skills.searchPh": "Search skills...",
 
   /* ---------- Advantage catalog ---------- */
   "tp.advantages.empty": "No advantages catalogued yet.",
   "tp.advantages.emptySearch": "No advantage matches your search.",
-  "tp.advantages.searchPh": "Search advantages…",
+  "tp.advantages.searchPh": "Search advantages...",
 
   /* ---------- Disadvantage catalog ---------- */
   "tp.disadvantages.empty": "No disadvantages catalogued yet.",
   "tp.disadvantages.emptySearch": "No disadvantage matches your search.",
-  "tp.disadvantages.searchPh": "Search disadvantages…",
+  "tp.disadvantages.searchPh": "Search disadvantages...",
 
   /* ---------- Table characters ---------- */
   "tp.characters.active": "Active",
@@ -305,7 +305,7 @@ export const EN: Record<string, string> = {
   "tp.characters.npc": "NPC",
   "tp.characters.noSheet": "No sheet",
   "tp.characters.player": "Player",
-  "tp.characters.searchPh": "Search characters…",
+  "tp.characters.searchPh": "Search characters...",
   "tp.characters.status": "Status",
 
   /* ---------- Session ledger ---------- */
