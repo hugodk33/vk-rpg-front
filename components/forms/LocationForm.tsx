@@ -17,6 +17,8 @@ export interface LocationFormProps {
   allLocations?: Location[];
   defaultParentId?: string;
   defaultKind?: string;
+  /** Renderizar sem a moldura de cartão (usado dentro do editor). */
+  embedded?: boolean;
 }
 
 const IS_BATTLE: Array<{ value: string; label: string }> = [
@@ -37,6 +39,7 @@ export default function LocationForm({
   allLocations = [],
   defaultParentId,
   defaultKind,
+  embedded = false,
 }: LocationFormProps) {
   const router = useRouter();
   const { t } = useTranslation();
@@ -177,6 +180,7 @@ export default function LocationForm({
       title={isEdit ? t("fr.loc.editTitle") : t("fr.loc.newTitle")}
       subtitle={t("fr.loc.subtitle")}
       wide
+      embedded={embedded}
     >
       <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

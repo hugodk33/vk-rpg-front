@@ -665,6 +665,21 @@ export default function MapStudio({ location }: MapStudioProps) {
 
   const activeShape = selection != null && shapes[selection] ? shapes[selection] : null;
 
+  const toolBtn = (id: Tool, icon: string, labelKey: string) => (
+    <button
+      key={id}
+      type="button"
+      onClick={() => setTool(id)}
+      aria-pressed={tool === id}
+      className={`flex flex-col items-center gap-0.5 rounded-lg border px-1 py-1.5 transition-colors ${
+        tool === id ? "border-green-500/70 bg-green-500/10 text-green-300" : "border-zinc-700/50 bg-zinc-800/40 text-zinc-500 hover:text-zinc-300"
+      }`}
+    >
+      <span className="text-sm leading-none">{icon}</span>
+      <span className="font-mono text-[8px] uppercase tracking-widest">{t(labelKey)}</span>
+    </button>
+  );
+
   return (
     <section className="rounded-xl border border-zinc-700/40 bg-zinc-900/40 overflow-hidden">
       {/* header */}
@@ -700,80 +715,33 @@ export default function MapStudio({ location }: MapStudioProps) {
             Two rows, not two columns: the grid needs the whole width and the
             rail reads as a toolbar rather than a sidebar competing with it. */}
         <div className="flex flex-wrap items-start gap-x-8 gap-y-5 border-b border-zinc-800 p-4">
-          <div className="min-w-[196px]">
-            <p className="font-mono text-[9px] uppercase tracking-widest text-zinc-500 mb-2">{t("lc.ms.nav")}</p>
-            <div className="flex items-center gap-1.5">
-              <button
-                type="button"
-                onClick={() => setHand((v) => !v)}
-                aria-pressed={hand}
-                title={t("lc.zoom.hand")}
-                className={`flex h-8 w-8 items-center justify-center rounded-md border transition-colors ${
-                  hand ? "border-sky-500/60 bg-sky-500/15 text-sky-300" : "border-zinc-700/50 bg-zinc-800/40 text-zinc-500 hover:text-zinc-200"
-                }`}
-              >
-                <Hand className="w-4 h-4" strokeWidth={2.25} />
-              </button>
-              <span aria-hidden className="h-5 w-px bg-zinc-700/60" />
-              <button
-                type="button"
-                onClick={() => setZoom((v) => clampZoom(v - ZOOM_STEP))}
-                disabled={zoom <= ZOOM_MIN}
-                title={t("lc.zoom.out")}
-                aria-label={t("lc.zoom.out")}
-                className="flex h-8 w-8 items-center justify-center rounded-md border border-zinc-700/50 bg-zinc-800/40 text-zinc-500 hover:text-zinc-200 transition-colors disabled:opacity-35 disabled:hover:bg-zinc-800/40"
-              >
-                <Minus className="w-4 h-4" strokeWidth={2.25} />
-              </button>
-              <button
-                type="button"
-                onClick={() => setZoom(1)}
-                disabled={zoom === 1}
-                title={t("lc.zoom.resetTitle")}
-                className="h-8 min-w-[3.4rem] rounded-md border border-zinc-700/50 bg-zinc-800/40 font-mono text-[10px] tabular-nums text-zinc-300 hover:text-white transition-colors disabled:opacity-60"
-              >
-                {Math.round(zoom * 100)}%
-              </button>
-              <button
-                type="button"
-                onClick={() => setZoom((v) => clampZoom(v + ZOOM_STEP))}
-                disabled={zoom >= ZOOM_MAX}
-                title={t("lc.zoom.in")}
-                aria-label={t("lc.zoom.in")}
-                className="flex h-8 w-8 items-center justify-center rounded-md border border-zinc-700/50 bg-zinc-800/40 text-zinc-500 hover:text-zinc-200 transition-colors disabled:opacity-35 disabled:hover:bg-zinc-800/40"
-              >
-                <Plus className="w-4 h-4" strokeWidth={2.25} />
-              </button>
-            </div>
-            <p className="mt-1.5 text-[10px] leading-snug text-zinc-500">{t("lc.ms.navHint")}</p>
-          </div>
-
-          <div className="min-w-[196px]">
+          <div>
             <p className="font-mono text-[9px] uppercase tracking-widest text-zinc-500 mb-2">{t("lc.ms.tool")}</p>
-            <div className="grid grid-cols-4 gap-1.5">
-              {([
-                ["select", "✛", "lc.ms.toolSelect"],
-                ["paint", "▦", "lc.ms.toolPaint"],
-                ["erase", "⌫", "lc.ms.toolErase"],
-                ["fill", "≋", "lc.ms.toolFill"],
-                ["pen", "✎", "lc.ms.toolPen"],
-                ["line", "╱", "lc.ms.toolLine"],
-                ["rect", "▭", "lc.ms.toolRect"],
-                ["ellipse", "◯", "lc.ms.toolEllipse"],
-                ["asset", "⬒", "lc.ms.toolAsset"],
-              ] as [Tool, string, string][]).map(([toolId, icon, labelKey]) => (
-                <button
-                  key={toolId}
-                  type="button"
-                  onClick={() => setTool(toolId)}
-                  className={`flex flex-col items-center gap-0.5 rounded-lg border px-1 py-1.5 transition-colors ${
-                    tool === toolId ? "border-green-500/70 bg-green-500/10 text-green-300" : "border-zinc-700/50 bg-zinc-800/40 text-zinc-500 hover:text-zinc-300"
-                  }`}
-                >
-                  <span className="text-sm leading-none">{icon}</span>
-                  <span className="font-mono text-[8px] uppercase tracking-widest">{t(labelKey)}</span>
-                </button>
-              ))}
+            <div className="flex flex-wrap items-start gap-x-8 gap-y-4">
+              <div>
+                <p className="font-mono text-[8px] uppercase tracking-widest text-zinc-600 mb-1">{t("lc.ms.groupPick")}</p>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {toolBtn("select", "✛", "lc.ms.toolSelect")}
+                  {toolBtn("asset", "⬒", "lc.ms.toolAsset")}
+                </div>
+              </div>
+              <div>
+                <p className="font-mono text-[8px] uppercase tracking-widest text-zinc-600 mb-1">{t("lc.ms.groupCells")}</p>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {toolBtn("paint", "▦", "lc.ms.toolPaint")}
+                  {toolBtn("erase", "⌫", "lc.ms.toolErase")}
+                  {toolBtn("fill", "≋", "lc.ms.toolFill")}
+                </div>
+              </div>
+              <div>
+                <p className="font-mono text-[8px] uppercase tracking-widest text-zinc-600 mb-1">{t("lc.ms.groupShapes")}</p>
+                <div className="grid grid-cols-4 gap-1.5">
+                  {toolBtn("pen", "✎", "lc.ms.toolPen")}
+                  {toolBtn("line", "╱", "lc.ms.toolLine")}
+                  {toolBtn("rect", "▭", "lc.ms.toolRect")}
+                  {toolBtn("ellipse", "◯", "lc.ms.toolEllipse")}
+                </div>
+              </div>
             </div>
           </div>
 
@@ -1029,66 +997,86 @@ export default function MapStudio({ location }: MapStudioProps) {
               <p className="mt-1.5 text-[10px] leading-snug text-zinc-500">{t("lc.ms.indoorHint")}</p>
             ) : null}
           </div>
-
-          <div className="min-w-[240px]">
-            <p className="font-mono text-[9px] uppercase tracking-widest text-zinc-500 mb-2">{t("lc.common.grid")}</p>
-            <div className="grid grid-cols-2 gap-2">
-              <label className="block">
-                <span className="block font-mono text-[9px] uppercase tracking-widest text-zinc-600 mb-0.5">{t("lc.ms.width")}</span>
-                <input type="number" min={1} max={40} value={cols} onChange={(e) => setCols(Math.max(1, Math.min(40, Number(e.target.value) || 1)))} className="w-full bg-zinc-800/60 border border-zinc-700/50 rounded px-2 py-1 text-sm text-zinc-100" />
-              </label>
-              <label className="block">
-                <span className="block font-mono text-[9px] uppercase tracking-widest text-zinc-600 mb-0.5">{t("lc.ms.height")}</span>
-                <input type="number" min={1} max={40} value={rows} onChange={(e) => setRows(Math.max(1, Math.min(40, Number(e.target.value) || 1)))} className="w-full bg-zinc-800/60 border border-zinc-700/50 rounded px-2 py-1 text-sm text-zinc-100" />
-              </label>
-              <label className="block">
-                <span className="block font-mono text-[9px] uppercase tracking-widest text-zinc-600 mb-0.5">{t("lc.ms.hexM")}</span>
-                <input type="number" step="0.1" min="0" value={sizeM} onChange={(e) => setSizeM(e.target.value)} className="w-full bg-zinc-800/60 border border-zinc-700/50 rounded px-2 py-1 text-sm text-zinc-100" />
-              </label>
-              <label className="block">
-                <span className="block font-mono text-[9px] uppercase tracking-widest text-zinc-600 mb-0.5">{t("lc.ms.rotDeg")}</span>
-                <input type="number" step="15" value={rotationDeg} onChange={(e) => setRotationDeg(Number(e.target.value) || 0)} className="w-full bg-zinc-800/60 border border-zinc-700/50 rounded px-2 py-1 text-sm text-zinc-100" />
-              </label>
-              <label className="block col-span-2">
-                <span className="block font-mono text-[9px] uppercase tracking-widest text-zinc-600 mb-0.5">{t("lc.ms.orientation")}</span>
-                <select value={orientation} onChange={(e) => setOrientation(e.target.value)} className="w-full bg-zinc-800/60 border border-zinc-700/50 rounded px-2 py-1 text-sm text-zinc-100">
-                  <option value="flat">{t("lc.ms.orientFlat")}</option>
-                  <option value="pointy">{t("lc.ms.orientPointy")}</option>
-                  <option value="square">{t("lc.ms.orientSquare")}</option>
-                </select>
-              </label>
-            </div>
-          </div>
         </div>
 
         {/* canvas */}
         <div className="p-4">
-          <div ref={wrapRef} className="relative overflow-auto scroll-thin rounded-lg border border-zinc-700/40 bg-zinc-950/50" style={{ height: "min(76vh, 640px)" }}>
-            <div className="flex min-w-full min-h-full">
-              <div className="relative m-auto" style={{ width: `${Math.round(W * zoom)}px`, height: `${Math.round(H * zoom)}px` }}>
-                <canvas
-                  ref={canvasRef}
-                  width={W}
-                  height={H}
-                  className={`block touch-none select-none ${hand ? (grab ? "cursor-grabbing" : "cursor-grab") : grab ? "cursor-grabbing" : "cursor-crosshair"}`}
-                  style={{
-                    width: `${W}px`,
-                    height: `${H}px`,
-                    transform: `scale(${zoom})`,
-                    transformOrigin: "top left",
-                  }}
-                  onPointerDown={onPointerDown}
-                  onPointerMove={onPointerMove}
-                  onPointerUp={onPointerUp}
-                  onPointerLeave={onPointerLeave}
-                  onPointerCancel={onPointerUp}
-                  role="img"
-                  aria-label={t("lc.ms.canvasAria")}
-                />
+          <div className="relative overflow-hidden rounded-lg border border-zinc-700/40 bg-zinc-950/50">
+            <div ref={wrapRef} className="relative overflow-auto scroll-thin" style={{ height: "min(76vh, 640px)" }}>
+              <div className="flex min-w-full min-h-full">
+                <div className="relative m-auto" style={{ width: `${Math.round(W * zoom)}px`, height: `${Math.round(H * zoom)}px` }}>
+                  <canvas
+                    ref={canvasRef}
+                    width={W}
+                    height={H}
+                    className={`block touch-none select-none ${hand ? (grab ? "cursor-grabbing" : "cursor-grab") : grab ? "cursor-grabbing" : "cursor-crosshair"}`}
+                    style={{
+                      width: `${W}px`,
+                      height: `${H}px`,
+                      transform: `scale(${zoom})`,
+                      transformOrigin: "top left",
+                    }}
+                    onPointerDown={onPointerDown}
+                    onPointerMove={onPointerMove}
+                    onPointerUp={onPointerUp}
+                    onPointerLeave={onPointerLeave}
+                    onPointerCancel={onPointerUp}
+                    role="img"
+                    aria-label={t("lc.ms.canvasAria")}
+                  />
+                </div>
               </div>
             </div>
 
-            {error ? <p className="absolute inset-x-0 bottom-0 bg-red-950/90 text-red-200 text-xs px-3 py-2">{error}</p> : null}
+            {/* floating view controls — anchored to the wrapper, so they never scroll with the map */}
+            <div className="absolute bottom-3 left-3 z-10 flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={() => setHand((v) => !v)}
+                aria-pressed={hand}
+                title={`${t("lc.zoom.hand")} (H)`}
+                className={`flex h-9 w-9 items-center justify-center rounded-lg border backdrop-blur transition-colors ${
+                  hand ? "border-sky-500/60 bg-sky-500/15 text-sky-300" : "border-zinc-700/60 bg-zinc-900/80 text-zinc-300 hover:text-white"
+                }`}
+              >
+                <Hand className="w-4 h-4" strokeWidth={2.25} />
+              </button>
+              <span className="max-w-[132px] font-mono text-[8px] uppercase tracking-widest text-zinc-600 leading-snug">{t("lc.ms.navHint")}</span>
+            </div>
+
+            <div className="absolute bottom-3 right-3 z-10 flex flex-col gap-1.5 rounded-lg border border-zinc-700/60 bg-zinc-900/80 backdrop-blur p-1">
+              <button
+                type="button"
+                onClick={() => setZoom((v) => clampZoom(v + ZOOM_STEP))}
+                disabled={zoom >= ZOOM_MAX}
+                title={t("lc.zoom.in")}
+                aria-label={t("lc.zoom.in")}
+                className="flex h-8 w-8 items-center justify-center rounded-md text-zinc-300 hover:text-white hover:bg-zinc-800 transition-colors disabled:opacity-35 disabled:hover:bg-transparent"
+              >
+                <Plus className="w-4 h-4" strokeWidth={2.25} />
+              </button>
+              <button
+                type="button"
+                onClick={() => setZoom(1)}
+                disabled={zoom === 1}
+                title={t("lc.zoom.resetTitle")}
+                className="h-8 w-8 rounded-md font-mono text-[10px] tabular-nums text-zinc-300 hover:text-white hover:bg-zinc-800 transition-colors disabled:opacity-60 disabled:hover:bg-transparent"
+              >
+                {Math.round(zoom * 100)}%
+              </button>
+              <button
+                type="button"
+                onClick={() => setZoom((v) => clampZoom(v - ZOOM_STEP))}
+                disabled={zoom <= ZOOM_MIN}
+                title={t("lc.zoom.out")}
+                aria-label={t("lc.zoom.out")}
+                className="flex h-8 w-8 items-center justify-center rounded-md text-zinc-300 hover:text-white hover:bg-zinc-800 transition-colors disabled:opacity-35 disabled:hover:bg-transparent"
+              >
+                <Minus className="w-4 h-4" strokeWidth={2.25} />
+              </button>
+            </div>
+
+            {error ? <p className="absolute inset-x-0 top-0 bg-red-950/90 text-red-200 text-xs px-3 py-2">{error}</p> : null}
           </div>
 
           {/* status bar */}
@@ -1110,6 +1098,37 @@ export default function MapStudio({ location }: MapStudioProps) {
                 {(location.ancestors ?? []).map((a) => a.name).join(" › ") || "—"}
               </b>
             </span>
+          </div>
+
+          {/* grid sizing — below the canvas */}
+          <div className="mt-4 border-t border-zinc-800 pt-4">
+            <p className="font-mono text-[9px] uppercase tracking-widest text-zinc-500 mb-2">{t("lc.common.grid")}</p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 max-w-4xl">
+              <label className="block">
+                <span className="block font-mono text-[9px] uppercase tracking-widest text-zinc-600 mb-0.5">{t("lc.ms.width")}</span>
+                <input type="number" min={1} max={40} value={cols} onChange={(e) => setCols(Math.max(1, Math.min(40, Number(e.target.value) || 1)))} className="w-full bg-zinc-800/60 border border-zinc-700/50 rounded px-2 py-1 text-sm text-zinc-100" />
+              </label>
+              <label className="block">
+                <span className="block font-mono text-[9px] uppercase tracking-widest text-zinc-600 mb-0.5">{t("lc.ms.height")}</span>
+                <input type="number" min={1} max={40} value={rows} onChange={(e) => setRows(Math.max(1, Math.min(40, Number(e.target.value) || 1)))} className="w-full bg-zinc-800/60 border border-zinc-700/50 rounded px-2 py-1 text-sm text-zinc-100" />
+              </label>
+              <label className="block">
+                <span className="block font-mono text-[9px] uppercase tracking-widest text-zinc-600 mb-0.5">{t("lc.ms.hexM")}</span>
+                <input type="number" step="0.1" min="0" value={sizeM} onChange={(e) => setSizeM(e.target.value)} className="w-full bg-zinc-800/60 border border-zinc-700/50 rounded px-2 py-1 text-sm text-zinc-100" />
+              </label>
+              <label className="block">
+                <span className="block font-mono text-[9px] uppercase tracking-widest text-zinc-600 mb-0.5">{t("lc.ms.rotDeg")}</span>
+                <input type="number" step="15" value={rotationDeg} onChange={(e) => setRotationDeg(Number(e.target.value) || 0)} className="w-full bg-zinc-800/60 border border-zinc-700/50 rounded px-2 py-1 text-sm text-zinc-100" />
+              </label>
+              <label className="block sm:col-span-2 lg:col-span-2">
+                <span className="block font-mono text-[9px] uppercase tracking-widest text-zinc-600 mb-0.5">{t("lc.ms.orientation")}</span>
+                <select value={orientation} onChange={(e) => setOrientation(e.target.value)} className="w-full bg-zinc-800/60 border border-zinc-700/50 rounded px-2 py-1 text-sm text-zinc-100">
+                  <option value="flat">{t("lc.ms.orientFlat")}</option>
+                  <option value="pointy">{t("lc.ms.orientPointy")}</option>
+                  <option value="square">{t("lc.ms.orientSquare")}</option>
+                </select>
+              </label>
+            </div>
           </div>
         </div>
       </div>

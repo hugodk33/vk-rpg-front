@@ -148,39 +148,6 @@ const NARR_EXTERIOR = {
   line: "#86efac",
 };
 
-function SiteCrest({ indoor, hex, line }: { indoor: boolean; hex: string; line: string }) {
-  return (
-    <svg viewBox="0 0 96 96" className="w-[120px] h-[120px]">
-      {/* survey crosshair backdrop */}
-      {[20, 48, 76].map((y) => (
-        <line key={y} x1="8" x2="88" y1={y} y2={y} stroke={line} strokeOpacity="0.12" strokeWidth="1" />
-      ))}
-      <line x1="48" x2="48" y1="6" y2="90" stroke={line} strokeOpacity="0.12" strokeWidth="1" />
-
-      {indoor ? (
-        /* INDOOR FLOORPLAN: door + roof + enclosure */
-        <g fill="none" stroke={line} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M30 70 L30 44 L48 30 L66 44 L66 70 Z M30 44 L66 70" strokeOpacity="0.5" />
-          <path d="M42 70 L42 56 L54 56 L54 70" strokeWidth="2.6" />
-          <path d="M48 30 L42 24 M48 30 L54 24" strokeOpacity="0.7" />
-          <path d="M60 52 L68 52 M60 58 L66 58" strokeOpacity="0.5" />
-        </g>
-      ) : (
-        /* EXTERIOR FLOORPLAN: horizon + marker + contour lines */
-        <g fill="none" stroke={line} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M12 58 L84 58" />
-          <path d="M12 58 C 26 78, 40 82, 48 70 C 56 58, 70 62, 84 46" strokeOpacity="0.45" />
-          <path d="M20 46 C 30 40, 40 44, 48 40" strokeOpacity="0.4" />
-          <path d="M60 24 L66 24 L66 30 M60 24 L60 30 M66 24 L60 30" strokeOpacity="0.7" />
-        </g>
-      )}
-
-      {/* bearing dot */}
-      <circle cx={indoor ? 30 : 66} cy={indoor ? 50 : 30} r="2.6" fill={hex} />
-    </svg>
-  );
-}
-
 function SurveyRow({ label, value, emphasize, hex }: { label: string; value?: string | number | null; emphasize?: boolean; hex: string }) {
   return (
     <div className="flex items-baseline justify-between gap-4 border-b border-zinc-700/40 last:border-0 py-2">
@@ -417,7 +384,6 @@ export default function LocationPlate({ location, tableId, mode = "narrator" }: 
                 <span className="text-[15px] text-zinc-200">{indoor ? t("lc.lp.conditionIndoor") : t("lc.lp.conditionOutdoor")}</span>
               </div>
             </div>
-            <SiteCrest indoor={indoor} hex={accent} line={accent} />
           </div>
         </div>
 

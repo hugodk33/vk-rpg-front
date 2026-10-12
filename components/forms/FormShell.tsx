@@ -71,6 +71,8 @@ interface FormShellProps {
   extraCrumbs?: FormCrumb[];
   /** Campos mais largos que o padrão de leitura. */
   wide?: boolean;
+  /** Modo embutido: sem breadcrumbs/título/card — usado dentro de outra tela. */
+  embedded?: boolean;
   children: React.ReactNode;
 }
 
@@ -83,9 +85,12 @@ export default function FormShell({
   subtitle,
   extraCrumbs,
   wide,
+  embedded = false,
   children,
 }: FormShellProps) {
   const { t } = useTranslation();
+
+  if (embedded) return <>{children}</>;
 
   const crumbs: FormCrumb[] = tableId
     ? [

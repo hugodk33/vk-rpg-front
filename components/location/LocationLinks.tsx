@@ -17,6 +17,9 @@ import type { Location, LocationConnection } from "@/lib/types";
 
 const LINK_KINDS = ["door", "stairs", "trapdoor", "portal", "bridge", "elevator", "secret"] as const;
 
+/* Pontos cardeais da bússola — usados para orientar o organograma. */
+const DIRECTIONS = ["N", "NE", "L", "SE", "S", "SO", "O", "NO"] as const;
+
 interface LocationLinksProps {
   location: Location;
   allLocations?: Location[];
@@ -41,6 +44,7 @@ export default function LocationLinks({ location, allLocations = [], onChanged }
   const [kind, setKind] = useState<string>("door");
   const [label, setLabel] = useState("");
   const [description, setDescription] = useState("");
+  const [direction, setDirection] = useState("");
   const [toId, setToId] = useState("");
   const [toQ, setToQ] = useState("");
   const [toR, setToR] = useState("");
@@ -115,6 +119,7 @@ export default function LocationLinks({ location, allLocations = [], onChanged }
     setKind(link.kind ?? "door");
     setLabel(link.label ?? "");
     setDescription(link.description ?? "");
+    setDirection(link.direction ?? "");
     const to = link.to;
     setToId(to?.id ?? "");
     setToQ(to?.q != null ? String(to.q) : "");
@@ -129,6 +134,7 @@ export default function LocationLinks({ location, allLocations = [], onChanged }
     setKind("door");
     setLabel("");
     setDescription("");
+    setDirection("");
     setToId("");
     setToQ("");
     setToR("");
@@ -147,6 +153,7 @@ export default function LocationLinks({ location, allLocations = [], onChanged }
           kind,
           label: label.trim() || null,
           description: description.trim() || null,
+          direction: direction || null,
           to: { id: toId, q: toQ === "" ? null : Number(toQ), r: toR === "" ? null : Number(toR) },
           floorFrom: floorFrom === "" ? null : Number(floorFrom),
           floorTo: floorTo === "" ? null : Number(floorTo),
@@ -158,6 +165,7 @@ export default function LocationLinks({ location, allLocations = [], onChanged }
           kind,
           label: label.trim() || null,
           description: description.trim() || null,
+          direction: direction || null,
           from: {
             id: location.id,
             q: hereQ === "" ? null : Number(hereQ),
@@ -224,6 +232,7 @@ export default function LocationLinks({ location, allLocations = [], onChanged }
                   </p>
                   <p className="font-mono text-[10px] text-zinc-600 truncate">
                     {targetName}
+                    {link.direction ? ` · ${t(`lc.conn.dir.${link.direction}`)}` : ""}
                     {link.floorTo != null ? ` · ${link.floorTo}` : ""}
                     {link.bidirectional ? "" : " ·→"}
                   </p>
@@ -296,6 +305,15 @@ export default function LocationLinks({ location, allLocations = [], onChanged }
           <div>
             <label className={labelCls}>{t("lc.conn.floorFrom")}</label>
             <input type="number" value={floorFrom} onChange={(e) => setFloorFrom(e.target.value)} className={inputCls} />
+          </div>
+          <div>
+            <label className={labelCls}>{t("lc.conn.direction")}</label>
+            <select value={direction} onChange={(e) => setDirection(e.target.value)} className={inputCls}>
+              <option value="">—</option>
+              {DIRECTIONS.map((d) => (
+                <option key={d} value={d}>{t(`lc.conn.dir.${d}`)}</option>
+              ))}
+            </select>
           </div>
         </div>
         <div className="flex items-center gap-6 flex-wrap text-sm">

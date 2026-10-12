@@ -1,8 +1,8 @@
 import { notFound } from "next/navigation";
 import { api } from "@/lib/api";
 import { getLocationTableId, getNarratorSideView } from "@/lib/actor";
-import LocationPlate from "@/components/location/LocationPlate";
-import type { Location } from "@/lib/types";
+import LocationTabs from "@/components/location/LocationTabs";
+import type { GameTableLocations, Location } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -23,5 +23,23 @@ export default async function LocationDetailPage({ params }: { params: Promise<{
   }
   if (!location) notFound();
 
-  return <LocationPlate location={location} tableId={location.tableId} />;
+  /* As passagens + o catálogo alimentam o organograma da localidade. */
+  let all: GameTableLocations | null = null;
+  const ownerTable = location.tableId ?? tableId;
+  if (ownerTable) {
+    try {
+      all = await api<GameTableLocations>(`/game-table-locations/${ownerTable}${actorQs}`);
+    } catch {
+      all = null;
+    }
+  }
+
+  return (
+    <LocationTabs
+      location={location}
+      locations={all?.locations ?? []}
+      connections={all?.connections ?? []}
+      tableId={location.tableId}
+    />
+  );
 }

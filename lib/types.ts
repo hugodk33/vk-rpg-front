@@ -344,6 +344,8 @@ export interface LocationConnection {
   description?: string
   bidirectional?: boolean
   sort?: number
+  /** Ponto cardeal de saída da passagem (N|NE|L|SE|S|SO|O|NO). */
+  direction?: string
   floorFrom?: number
   floorTo?: number
   from?: { id?: string; q?: number; r?: number }
@@ -357,6 +359,8 @@ export interface LocationLink {
   description?: string
   bidirectional?: boolean
   sort?: number
+  /** Ponto cardeal de saída da passagem (N|NE|L|SE|S|SO|O|NO). */
+  direction?: string
   floorFrom?: number
   floorTo?: number
   here?: { q?: number; r?: number }

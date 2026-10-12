@@ -11,8 +11,10 @@
    (set default, open the narrator page) are omitted.
    ============================================================ */
 
+import { useEffect, useRef } from "react";
 import Link from "next/link";
 import type { Location } from "@/lib/types";
+import { drawPlateBoard, drawPlateDrawing, paintCanvas, plateCanvas } from "@/lib/canvasgrid";
 import { interpolate, useTranslation } from "@/lib/i18n";
 import { floorPlanGroup } from "@/lib/location";
 import { KindGlyph, KIND_TINT } from "@/lib/location-glyphs";
@@ -229,92 +231,142 @@ export function LocationPlate({
     ? (PLAYER_KIND_TINT[node.kind ?? ""] ?? KIND_TINT[node.kind ?? "site"] ?? "text-zinc-500")
     : (KIND_TINT[node.kind ?? "site"] ?? "text-zinc-500");
   return (
-    <div className="group relative flex h-full gap-3 rounded-xl border border-zinc-700/40 bg-zinc-800/40 px-4 py-3.5 transition-all hover:bg-zinc-800/70 hover:border-zinc-600/60">
-      <div className={`flex items-center shrink-0 ${glyphTint}`} aria-hidden>
+    <div className="group relative flex h-full flex-col items-center rounded-xl border border-zinc-700/40 bg-zinc-800/40 px-4 py-3.5 transition-all hover:bg-zinc-800/70 hover:border-zinc-600/60">
+      {onSetDefault ? (
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => onSetDefault(node.id)}
+          title={isDefault ? t("tp.loc.defaultOn") : t("tp.loc.defaultSet")}
+          className={`absolute top-2 right-2 inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 font-mono text-[9px] tracking-widest uppercase transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-600/60 disabled:opacity-40 hover:bg-white/5 ${
+            isDefault ? "text-amber-300/70" : "text-zinc-600 hover:text-amber-300/60"
+          }`}
+        >
+          <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill={isDefault ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+          </svg>
+          <span>{t("tp.loc.default")}</span>
+        </button>
+      ) : null}
+      <div className={`flex items-center justify-center shrink-0 ${glyphTint}`} aria-hidden>
         <KindGlyph
           kind={node.kind}
-          className="h-11 w-11 opacity-90 transition-all duration-300 group-hover:opacity-100 group-hover:drop-shadow-[0_0_10px_currentColor]"
+          className="h-11 w-11 opacity-90 transition-all duration-300 group-hover:opacity-100"
         />
       </div>
 
-      <div className="flex min-w-0 flex-1 flex-col">
-        <div className="flex flex-wrap items-center justify-end gap-1.5">
-          {onSetDefault ? (
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => onSetDefault(node.id)}
-              title={isDefault ? t("tp.loc.defaultOn") : t("tp.loc.defaultSet")}
-              className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 font-mono text-[9px] tracking-widest uppercase transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-600/60 disabled:opacity-40 ${
-                isDefault
-                  ? "bg-amber-400/15 text-amber-300 hover:bg-amber-400/25"
-                  : "text-zinc-600 hover:text-amber-300/80 hover:bg-amber-400/10"
-              }`}
-            >
-              <svg className="w-3 h-3" viewBox="0 0 24 24" fill={isDefault ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-              </svg>
-              <span>{t("tp.loc.default")}</span>
-            </button>
-          ) : null}
+      <div className="flex w-full min-w-0 flex-1 flex-col items-center text-center">
+        <div className="flex flex-wrap items-center justify-center gap-1.5 mt-2">
           {battle ? (
             <span className="font-mono text-[9px] tracking-widest uppercase px-1.5 py-0.5 rounded-full bg-amber-400/10 text-amber-400">
               {t("tp.loc.battle")}
             </span>
           ) : null}
-          {hasChildren ? (
-            <span className={`font-mono text-[9px] tracking-widest uppercase px-1.5 py-0.5 rounded-full ${player ? "bg-blue-400/10 text-blue-300" : "bg-teal-400/10 text-teal-300"}`}>
-              +{(node.children?.length ?? 0).toString().padStart(2, "0")}
-            </span>
-          ) : null}
         </div>
 
-        <span className="block mt-2 text-sm font-medium text-zinc-200 truncate">{node.name || t("it.unnamed")}</span>
-        <p className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 mt-0.5 truncate">
+        <span className="block mt-2 w-full max-w-full text-sm font-medium text-zinc-200 truncate px-1">{node.name || t("it.unnamed")}</span>
+        <p className="w-full max-w-full font-mono text-[10px] tracking-widest uppercase text-zinc-500 mt-0.5 truncate px-1">
           {kindLabel}
           {node.region ?? node.subRegion ? (
             <span className="text-zinc-600"> · {node.region ?? node.subRegion}</span>
           ) : null}
         </p>
-        {trail ? <div className="mt-1"><Trail chain={trail} /></div> : null}
+        {trail ? <div className="mt-1 w-full max-w-full"><Trail chain={trail} /></div> : null}
 
         <div className="mt-3 font-mono text-[10px] tracking-widest uppercase text-zinc-600">
           {formatScale(node.hex?.sizeM)}
         </div>
 
-        <div className="mt-3 flex items-center gap-2 border-t border-zinc-700/40 pt-2.5 mt-auto">
+        <div className="mt-3 flex w-full flex-col gap-2 border-t border-zinc-700/40 pt-2.5 mt-auto">
           <button
             type="button"
             onClick={() => onZoom(node.id)}
             disabled={!hasChildren}
             title={hasChildren ? t("tp.loc.openSubs") : t("tp.loc.noSubs")}
-            className={`flex-1 inline-flex items-center justify-center gap-1 rounded-md border px-2 py-1.5 font-mono text-[10px] tracking-widest uppercase transition-colors focus:outline-none focus-visible:ring-2 disabled:opacity-40 disabled:cursor-not-allowed ${
+            className={`w-full inline-flex items-center justify-center gap-1 rounded-md border px-2 py-1.5 font-mono text-[10px] tracking-widest uppercase transition-colors focus:outline-none focus-visible:ring-2 disabled:opacity-40 disabled:cursor-not-allowed ${
               player
                 ? "border-blue-400/25 bg-blue-400/5 text-blue-300/90 hover:bg-blue-400/10 hover:text-blue-200 focus-visible:ring-blue-500/60 disabled:hover:bg-blue-400/5 disabled:hover:text-blue-300/90"
                 : "border-teal-400/25 bg-teal-400/5 text-teal-300/90 hover:bg-teal-400/10 hover:text-teal-200 focus-visible:ring-teal-600/60 disabled:hover:bg-teal-400/5 disabled:hover:text-teal-300/90"
             }`}
           >
-            ◱ {t("tp.loc.sublocations")}
+            ◱ {t("tp.loc.sublocations")}{hasChildren ? <> · {node.children?.length ?? 0}</> : null}
           </button>
           {!player ? (
-            <Link
-              href={`/location/${node.id}`}
-              title={t("tp.loc.openOwn").replace("{name}", node.name || t("tp.locKind.generic"))}
-              className="flex-1 inline-flex items-center justify-center gap-1 rounded-md border border-zinc-700/50 bg-zinc-800/60 px-2 py-1.5 font-mono text-[10px] tracking-widest uppercase text-zinc-300 transition-colors hover:border-amber-700/50 hover:text-amber-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600/60"
-            >
-              {t("tp.open")} →
-            </Link>
-          ) : null}
-          {!player && copyHref ? (
-            <CopyToTableButton
-              copyHref={copyHref}
-              tableId={tableId}
-              title={t("ra.copyTitle")}
-              className="inline-flex items-center justify-center gap-1 rounded-md border border-zinc-700/50 bg-zinc-800/60 px-2 py-1.5 font-mono text-[10px] tracking-widest uppercase text-sky-300/80 transition-colors hover:border-sky-500/50 hover:text-sky-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600/60"
-            />
+            <div className="flex w-full gap-2">
+              <Link
+                href={`/location/${node.id}`}
+                title={t("tp.loc.openOwn").replace("{name}", node.name || t("tp.locKind.generic"))}
+                className="flex-1 inline-flex items-center justify-center gap-1 rounded-md border border-zinc-700/50 bg-zinc-800/60 px-2 py-1.5 font-mono text-[10px] tracking-widest uppercase text-zinc-300 transition-colors hover:border-amber-700/50 hover:text-amber-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600/60"
+              >
+                {t("tp.open")} →
+              </Link>
+              {copyHref ? (
+                <CopyToTableButton
+                  copyHref={copyHref}
+                  tableId={tableId}
+                  title={t("ra.copyTitle")}
+                  className="flex-1 inline-flex items-center justify-center gap-1 rounded-md border border-zinc-700/50 bg-zinc-800/60 px-2 py-1.5 font-mono text-[10px] tracking-widest uppercase text-sky-300/80 transition-colors hover:border-sky-500/50 hover:text-sky-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600/60"
+                />
+              ) : null}
+            </div>
           ) : null}
         </div>
       </div>
+    </div>
+  );
+}
+
+/* A coluna "estampa" do banner — o desenho (strokes + tiles) pintado no
+   MapStudio, renderizado compacto com o mesmo motor de canvas dos mapas.
+   O banner só a mostra quando a localidade tem algo pintado na placa. */
+export function AtlasMapColumn({
+  node,
+  boxW = 176,
+  boxH = 112,
+  fullWidth = false,
+  label,
+}: {
+  node: Location;
+  boxW?: number;
+  boxH?: number;
+  fullWidth?: boolean;
+  label?: string;
+}) {
+  const ref = useRef<HTMLCanvasElement | null>(null);
+
+  useEffect(() => {
+    const cv = ref.current;
+    if (!cv) return;
+    const tiles = node.tiles ?? [];
+    const drawing = node.drawing ?? [];
+    const { W, H, spec } = plateCanvas(node.hex ?? {}, 26, 34, 320, 240);
+    const scale = Math.min(boxW / W, boxH / H);
+    const dx = (boxW - W * scale) / 2;
+    const dy = (boxH - H * scale) / 2;
+    paintCanvas(
+      cv,
+      W,
+      H,
+      (ctx) => {
+        drawPlateBoard(ctx, W, H, spec, tiles, { accent: "#38bdf8" });
+        drawPlateDrawing(ctx, W, H, spec, drawing);
+      },
+      1,
+      { scale, dx, dy, boxW, boxH }
+    );
+  }, [boxW, boxH, node]);
+
+  return (
+    <div className={`overflow-hidden rounded-lg border border-zinc-700/40 bg-zinc-950/50 ${fullWidth ? "w-full" : ""}`}>
+      <canvas
+        ref={ref}
+        width={boxW}
+        height={boxH}
+        role="img"
+        aria-label={label}
+        style={fullWidth ? { width: "100%", height: "auto", display: "block" } : { width: `${boxW}px`, height: `${boxH}px` }}
+        className="block touch-none select-none"
+      />
     </div>
   );
 }
@@ -349,6 +401,10 @@ export function CurrentMapStrip({
     node.kind && KNOWN_KINDS.has(node.kind) ? t(`tp.locKind.${node.kind}`) : t("tp.locKind.generic");
   const childCount = node.children?.length ?? 0;
   const members = group && group.length > 1 ? group : null;
+  const hasPlate = (node.tiles?.length ?? 0) > 0 || (node.drawing?.length ?? 0) > 0;
+  const glyphTint = player
+    ? (PLAYER_KIND_TINT[node.kind ?? ""] ?? KIND_TINT[node.kind ?? "site"] ?? "text-zinc-500")
+    : (KIND_TINT[node.kind ?? "site"] ?? "text-zinc-500");
   return (
     <div
       className={
@@ -357,90 +413,113 @@ export function CurrentMapStrip({
           : "rounded-xl border border-teal-400/20 bg-teal-400/[0.04] px-4 py-3"
       }
     >
-      <div className="flex items-center gap-3">
-        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${player ? "bg-blue-300 shadow-[0_0_8px_rgba(96,165,250,0.6)]" : "bg-teal-300 shadow-[0_0_8px_rgba(94,234,212,0.6)]"}`} aria-hidden />
+      <div className="flex flex-col gap-3">
         <div className="min-w-0 flex-1">
-          <div className="flex items-baseline gap-2 min-w-0">
-            <span className={`font-mono text-[12px] font-bold tracking-widest uppercase truncate ${player ? "text-blue-100" : "text-teal-100"}`}>{node.name}</span>
-            <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 hidden sm:inline">
-              {kindLabel} · {formatScale(hex?.sizeM)}
-            </span>
-            {isDefault ? (
-              <span className="inline-flex items-center gap-1 font-mono text-[9px] tracking-widest uppercase px-1.5 py-0.5 rounded-full bg-amber-400/15 text-amber-300 shrink-0">
-                <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1.8">
-                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                </svg>
-                {t("tp.default")}
-              </span>
-            ) : null}
-          </div>
-          <div className="font-mono text-[10px] tracking-widest uppercase text-zinc-600 mt-0.5 truncate">
-            {node.region ?? node.subRegion ?? node.address ?? node.country ?? "—"}
-          </div>
-        </div>
-        {(node.children?.length ?? 0) > 0 ? (
-          <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 shrink-0">
-            {interpolate(t(childCount !== 1 ? "tp.divisions" : "tp.division"), { n: childCount })}
-          </span>
-        ) : !player ? (
-          <Link
-            href={`/location/${node.id}`}
-            className="font-mono text-[10px] tracking-widest uppercase text-teal-300/90 hover:text-teal-200 shrink-0 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600/60 rounded-sm"
-          >
-            {t("tp.openMap")}
-          </Link>
-        ) : null}
-      </div>
-
-      {members ? (
-        <div className="mt-3 pt-3 border-t border-zinc-700/40">
-          <div className={searchable ? "flex flex-col sm:flex-row gap-3" : ""}>
-            {searchable ? (
-              <div className="flex-1 min-w-0">
-                <div className="relative">
-                  <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
-                  <input
-                    type="text"
-                    value={searchValue}
-                    onChange={(e) => onSearchChange?.(e.target.value)}
-                    placeholder={t("tp.searchPh")}
-                    className={`w-full bg-zinc-800/80 border border-zinc-700/60 rounded-lg pl-9 pr-8 py-2 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none transition-colors ${player ? "focus:border-blue-600/70" : "focus:border-teal-700/60"}`}
-                  />
-                  {searchValue ? (
-                    <button
-                      type="button"
-                      onClick={() => onSearchChange?.("")}
-                      aria-label={t("tp.clear")}
-                      title={t("tp.clear")}
-                      className={`absolute right-2 top-1/2 -translate-y-1/2 p-1 text-zinc-400 hover:text-zinc-200 transition-colors focus:outline-none focus-visible:ring-2 rounded ${player ? "focus-visible:ring-blue-500/60" : "focus-visible:ring-teal-600/60"}`}
-                    >
-                      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                  ) : null}
-                </div>
+          <div className="flex items-center gap-3">
+            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${player ? "bg-blue-300 shadow-[0_0_8px_rgba(96,165,250,0.6)]" : "bg-teal-300 shadow-[0_0_8px_rgba(94,234,212,0.6)]"}`} aria-hidden />
+            <div className="min-w-0 flex-1">
+              <div className="flex items-baseline gap-2 min-w-0">
+                <span className={`font-mono text-[12px] font-bold tracking-widest uppercase truncate ${player ? "text-blue-100" : "text-teal-100"}`}>{node.name}</span>
+                <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 hidden sm:inline">
+                  {kindLabel} · {formatScale(hex?.sizeM)}
+                </span>
+                {isDefault ? (
+                  <span className="inline-flex items-center gap-1 font-mono text-[9px] tracking-widest uppercase px-1.5 py-0.5 rounded-full bg-amber-400/15 text-amber-300 shrink-0">
+                    <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1.8">
+                      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                    </svg>
+                    {t("tp.default")}
+                  </span>
+                ) : null}
               </div>
-            ) : null}
-            <div className={searchable ? "flex-1 min-w-0" : ""}>
-              <select
-                value={node.id}
-                onChange={(e) => onJump(e.target.value)}
-                className={`w-full bg-zinc-800/80 border border-zinc-700/60 rounded-lg px-3 py-2 text-zinc-100 text-sm focus:outline-none transition-colors ${player ? "focus:border-blue-600/70" : "focus:border-teal-700/60"}`}
+              <div className="font-mono text-[10px] tracking-widest uppercase text-zinc-600 mt-0.5 truncate">
+                {node.region ?? node.subRegion ?? node.address ?? node.country ?? "—"}
+              </div>
+            </div>
+            {(node.children?.length ?? 0) > 0 ? (
+              <span className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 shrink-0">
+                {interpolate(t(childCount !== 1 ? "tp.divisions" : "tp.division"), { n: childCount })}
+              </span>
+            ) : !player ? (
+              <Link
+                href={`/location/${node.id}`}
+                className="font-mono text-[10px] tracking-widest uppercase text-teal-300/90 hover:text-teal-200 shrink-0 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600/60 rounded-sm"
               >
-                {members.map((l) => (
-                  <option key={l.id} value={l.id} className="bg-zinc-800">
-                    {l.id === node.id ? "▸ " : ""}
-                    {l.name || t("lc.common.noName")}
-                  </option>
-                ))}
-              </select>
+                {t("tp.openMap")}
+              </Link>
+            ) : null}
+          </div>
+</div>
+
+        <div className="w-full">
+          {hasPlate ? (
+            <AtlasMapColumn node={node} label={t("lc.lmap.aria")} boxW={560} boxH={160} fullWidth />
+          ) : (
+            <div
+              className="flex w-full aspect-[7/2] items-center justify-center rounded-lg border border-zinc-700/40 bg-zinc-950/50"
+              title={t("tp.loc.pendingDraw")}
+            >
+              <span
+                className={`flex items-center justify-center rounded-full border border-dashed border-zinc-500/70 p-5 ${glyphTint}`}
+                role="img"
+                aria-label={t("tp.loc.pendingDraw")}
+              >
+                <KindGlyph kind={node.kind} className="h-9 w-9 opacity-80" />
+              </span>
+            </div>
+          )}
+        </div>
+
+        {members ? (
+          <div className="pt-3 border-t border-zinc-700/40">
+            <div className={searchable ? "flex flex-col gap-3 sm:flex-row" : ""}>
+              {searchable ? (
+                <div className="flex-1 min-w-0">
+                  <div className="relative">
+                    <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                    <input
+                      type="text"
+                      value={searchValue}
+                      onChange={(e) => onSearchChange?.(e.target.value)}
+                      placeholder={t("tp.searchPh")}
+                      className={`w-full bg-zinc-800/80 border border-zinc-700/60 rounded-lg pl-9 pr-8 py-2 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none transition-colors ${player ? "focus:border-blue-600/70" : "focus:border-teal-700/60"}`}
+                    />
+                    {searchValue ? (
+                      <button
+                        type="button"
+                        onClick={() => onSearchChange?.("")}
+                        aria-label={t("tp.clear")}
+                        title={t("tp.clear")}
+                        className={`absolute right-2 top-1/2 -translate-y-1/2 p-1 text-zinc-400 hover:text-zinc-200 transition-colors focus:outline-none focus-visible:ring-2 rounded ${player ? "focus-visible:ring-blue-500/60" : "focus-visible:ring-teal-600/60"}`}
+                      >
+                        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+              ) : null}
+              <div className={searchable ? "flex-1 min-w-0" : ""}>
+                <select
+                  value={node.id}
+                  onChange={(e) => onJump(e.target.value)}
+                  className={`w-full bg-zinc-800/80 border border-zinc-700/60 rounded-lg px-3 py-2 text-zinc-100 text-sm focus:outline-none transition-colors ${player ? "focus:border-blue-600/70" : "focus:border-teal-700/60"}`}
+                >
+                  {members.map((l) => (
+                    <option key={l.id} value={l.id} className="bg-zinc-800">
+                      {l.id === node.id ? "▸ " : ""}
+                      {l.name || t("lc.common.noName")}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
-        </div>
-      ) : null}
+        ) : null}
+      </div>
     </div>
   );
 }

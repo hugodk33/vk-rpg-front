@@ -38,10 +38,17 @@ export default function LocationEditor({
   allLocations: Location[];
   defaultTab?: EditorTab;
 }) {
-  const [tab, setTab] = useState<EditorTab>(defaultTab);
   const { t } = useTranslation();
   const baseTableId = tableId ?? location.tableId;
   const backHref = baseTableId ? `/table/${baseTableId}/locations` : "/narrator";
+
+  /* Passagens só fazem sentido na escala local: cidade (1 km/hex) para
+     baixo. Em mundo/continente/nação o tab fica escondido. */
+  const sizeM = location.hex?.sizeM;
+  const canLink = sizeM != null && sizeM <= 1000;
+  const tabs = EDITOR_TABS.filter((tabDef) => tabDef.key !== "links" || canLink);
+  const initialTab: EditorTab = defaultTab === "links" && !canLink ? "form" : defaultTab;
+  const [tab, setTab] = useState<EditorTab>(initialTab);
 
   return (
     <div className="relative max-w-5xl mx-auto">
@@ -92,7 +99,7 @@ export default function LocationEditor({
           aria-label={t("lc.editor.aria")}
           className="mt-5 flex items-center gap-1 border-b border-zinc-700/40 px-6 lg:px-8"
         >
-          {EDITOR_TABS.map((tabDef) => (
+          {tabs.map((tabDef) => (
             <button
               key={tabDef.key}
               role="tab"
@@ -115,7 +122,7 @@ export default function LocationEditor({
         {/* active panel */}
         <div className="px-6 py-8 lg:px-8" role="tabpanel">
           {tab === "form" ? (
-            <LocationForm initial={location} tableId={baseTableId} tableTitle={tableTitle} allLocations={allLocations} />
+            <LocationForm initial={location} tableId={baseTableId} tableTitle={tableTitle} allLocations={allLocations} embedded />
           ) : tab === "map" ? (
             <MapStudio location={location} />
           ) : (
