@@ -4,7 +4,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { submitJson } from "./submit";
-import { api } from "@/lib/api";
+import { api, uploadImage } from "@/lib/api";
+import { prepareUpload } from "@/lib/upload";
 import { formatKg } from "@/lib/units";
 import { interpolate, useTranslation } from "@/lib/i18n";
 import { inputCls, labelCls, submitCls } from "./formStyles";
@@ -258,6 +259,9 @@ export default function CharacterForm({ tableId, tableTitle, tables, initial, se
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [portraitUrl, setPortraitUrl] = useState<string | null>(initial?.character?.portraitUrl ?? null);
+  const [bodyUrl, setBodyUrl] = useState<string | null>(initial?.character?.bodyUrl ?? null);
+  const [imgBusy, setImgBusy] = useState<null | "portrait" | "body">(null);
   const [searchFor, setSearchFor] = useState<null | "advantages" | "disadvantages" | "skills" | "items">(null);
   const [splitAdv, setSplitAdv] = useState(false);
   const [splitDis, setSplitDis] = useState(false);
@@ -537,6 +541,21 @@ export default function CharacterForm({ tableId, tableTitle, tables, initial, se
               : 0;
   const move = basicSpeed - encumbranceValue;
 
+  async function uploadCharImage(kind: "portrait" | "body", file: File) {
+    setImgBusy(kind);
+    setError(null);
+    try {
+      const dataUrl = await prepareUpload(file, 1600);
+      const url = await uploadImage(dataUrl, "characters");
+      if (kind === "portrait") setPortraitUrl(url);
+      else setBodyUrl(url);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : t("fr.error.upload"));
+    } finally {
+      setImgBusy(null);
+    }
+  }
+
   async function doSave() {
     if (!currentTableId) {
       setError(t("fr.error.selectTable"));
@@ -572,6 +591,8 @@ export default function CharacterForm({ tableId, tableTitle, tables, initial, se
           id: initial.character.id,
           user_id: charType === "npc" ? null : userId,
           table_id: currentTableId,
+          portraitUrl,
+          bodyUrl,
         });
         router.push(`/character/${initial.character.id}`);
       } else if (charType === "npc") {
@@ -583,6 +604,8 @@ export default function CharacterForm({ tableId, tableTitle, tables, initial, se
           advantages,
           disadvantages,
           skills,
+          portraitUrl,
+          bodyUrl,
         });
         router.push(`/character/${result.character_id}`);
       } else {
@@ -593,6 +616,8 @@ export default function CharacterForm({ tableId, tableTitle, tables, initial, se
           advantages,
           disadvantages,
           skills,
+          portraitUrl,
+          bodyUrl,
           equipment: selItems.map((i) => ({
             item_id: i.id,
             quantity: 1,
@@ -824,6 +849,56 @@ export default function CharacterForm({ tableId, tableTitle, tables, initial, se
               <div>
                 <label className={label}>{t("fr.ch.backstory")}</label>
                 <textarea value={backstory} onChange={(e) => setBackstory(e.target.value)} rows={2} className={field} />
+              </div>
+            </div>
+
+            <div>
+              <h2 className="text-lg font-semibold text-zinc-100 mb-3">{t("fr.ch.images")}</h2>
+              <div className="grid grid-cols-2 gap-4">
+                {(["portrait", "body"] as const).map((kind) => {
+                  const url = kind === "portrait" ? portraitUrl : bodyUrl;
+                  const labelKey = kind === "portrait" ? "fr.ch.portrait" : "fr.ch.bodyFull";
+                  const aspect = kind === "portrait" ? "aspect-square" : "aspect-[3/4]";
+                  return (
+                    <div key={kind} className="space-y-2">
+                      <label className={label}>{t(labelKey)}</label>
+                      <div className={`relative overflow-hidden rounded-lg border border-zinc-700/60 bg-zinc-900 ${aspect}`}>
+                        {url ? (
+                          <img src={url} alt={t(labelKey)} className="h-full w-full object-cover" />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center text-xs text-zinc-600">
+                            {t("fr.ch.images")}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <label className="cursor-pointer rounded-lg border border-green-600/50 bg-green-600/10 px-3 py-1.5 text-xs font-semibold text-green-300 transition-colors hover:bg-green-600/20">
+                          {imgBusy === kind ? t("fr.ch.uploading") : t("fr.ch.uploadImage")}
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            disabled={imgBusy !== null}
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              e.target.value = "";
+                              if (file) void uploadCharImage(kind, file);
+                            }}
+                          />
+                        </label>
+                        {url ? (
+                          <button
+                            type="button"
+                            onClick={() => (kind === "portrait" ? setPortraitUrl(null) : setBodyUrl(null))}
+                            className="rounded-lg border border-zinc-700/50 px-3 py-1.5 text-xs font-semibold text-zinc-400 transition-colors hover:text-red-400"
+                          >
+                            {t("fr.ch.removeImg")}
+                          </button>
+                        ) : null}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>

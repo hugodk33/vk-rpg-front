@@ -52,6 +52,8 @@ export default function LocationsAtlas({
   const stripGroup = useMemo(() => atlasStripGroup(active?.node, flat.map((i) => i.node)), [active, flat]);
   const atFirst = !active || (firstId !== null && active.node.id === firstId);
   const inSub = !!active && !atFirst;
+  const parentLoc = active && active.chain.length >= 2 ? active.chain[active.chain.length - 2] : null;
+  const rootLoc = active && active.chain.length >= 2 ? active.chain[0] : null;
 
   /* A visão "atlas" é a raiz; qualquer chip ativo leva para o mesmo modo
      plano da busca, para o filtro valer sobre todos os territórios. */
@@ -218,6 +220,10 @@ export default function LocationsAtlas({
               isDefault={defaultId === active.node.id}
               group={stripGroup}
               onJump={zoom}
+              onBack={inSub && parentLoc ? () => zoom(parentLoc.id) : undefined}
+              backName={parentLoc?.name ?? undefined}
+              onPlanet={rootLoc ? () => zoom(rootLoc.id) : undefined}
+              planetName={rootLoc?.name ?? undefined}
               searchable={inSub}
               searchValue={search}
               onSearchChange={setSearch}

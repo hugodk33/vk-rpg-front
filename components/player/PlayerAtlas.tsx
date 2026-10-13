@@ -58,6 +58,8 @@ export default function PlayerAtlas({ tree, defaultLocationId = null, currentLoc
   const stripGroup = useMemo(() => atlasStripGroup(active?.node, flat.map((i) => i.node)), [active, flat]);
   const atFirst = !active || (firstId !== null && active.node.id === firstId);
   const inSub = !!active && !atFirst;
+  const parentLoc = active && active.chain.length >= 2 ? active.chain[active.chain.length - 2] : null;
+  const rootLoc = active && active.chain.length >= 2 ? active.chain[0] : null;
 
   /* Alvo de mapa: battlemap (com tiles/traços dos personagens ou não).
      Tiles/traços sempre chegam sem mascaramento; se um visitado ainda
@@ -161,6 +163,10 @@ export default function PlayerAtlas({ tree, defaultLocationId = null, currentLoc
               node={active.node}
               group={stripGroup}
               onJump={zoom}
+              onBack={inSub && parentLoc ? () => zoom(parentLoc.id) : undefined}
+              backName={parentLoc?.name ?? undefined}
+              onPlanet={rootLoc ? () => zoom(rootLoc.id) : undefined}
+              planetName={rootLoc?.name ?? undefined}
               player
               searchable={inSub}
               searchValue={search}

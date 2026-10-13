@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { api } from "@/lib/api";
 import type { CharacterViewer } from "@/lib/types";
 import CharacterTabs, { type SheetTab } from "@/components/character/CharacterTabs";
@@ -21,7 +22,13 @@ export default async function CharacterViewerPage({
   const { moment, tab } = await searchParams;
   const t = makeT(await getLang());
   const qs = moment ? `?moment=${moment}` : "";
-  const data = await api<CharacterViewer>(`/game-table-character/${id}${qs}`);
+  let data: CharacterViewer | undefined;
+  try {
+    data = await api<CharacterViewer>(`/game-table-character/${id}${qs}`);
+  } catch {
+    data = undefined;
+  }
+  if (!data) notFound();
   const basePath = `/character/${id}`;
   const tableId = data.table?.id;
 
@@ -38,14 +45,23 @@ export default async function CharacterViewerPage({
       ) : null}
 
       <div className="flex flex-wrap items-end justify-between gap-4 mb-5">
-        <div>
-          <p className="font-mono text-[10px] tracking-widest uppercase text-green-300/90">{t("pg.ch.eyebrow")}</p>
-          <h1 className="text-2xl md:text-3xl font-bold text-zinc-100 mt-1">
-            {data.character.sheet?.name || data.character.name || t("nav.character")}
-          </h1>
-          {data.table?.title ? (
-            <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500 mt-0.5">{data.table.title}</p>
+        <div className="flex items-center gap-4">
+          {data.character.portraitUrl ? (
+            <img
+              src={data.character.portraitUrl}
+              alt={data.character.sheet?.name || data.character.name || ""}
+              className="h-16 w-16 rounded-lg border border-zinc-700/60 object-cover"
+            />
           ) : null}
+          <div>
+            <p className="font-mono text-[10px] tracking-widest uppercase text-green-300/90">{t("pg.ch.eyebrow")}</p>
+            <h1 className="text-2xl md:text-3xl font-bold text-zinc-100 mt-1">
+              {data.character.sheet?.name || data.character.name || t("nav.character")}
+            </h1>
+            {data.table?.title ? (
+              <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500 mt-0.5">{data.table.title}</p>
+            ) : null}
+          </div>
         </div>
         {data.character.user?.username ? (
           <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-500 border border-zinc-700/50 rounded-md px-2 py-1">

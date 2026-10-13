@@ -246,7 +246,7 @@ export function tracePath(ctx: CanvasRenderingContext2D, d: string | undefined, 
 }
 
 /** Draw a single shape in grid space (no margin — matches cell space). */
-export function drawShape(ctx: CanvasRenderingContext2D, shape: DrawShape, R: number, selected = false, accent = "#38bdf8"): void {
+export function drawShape(ctx: CanvasRenderingContext2D, shape: DrawShape, R: number, selected = false, accent = "#38bdf8", images?: Map<string, HTMLImageElement | null>): void {
   if (shape.type === "asset") {
     drawAssetShape(ctx, shape, R, selected, accent);
     return;
@@ -257,6 +257,34 @@ export function drawShape(ctx: CanvasRenderingContext2D, shape: DrawShape, R: nu
   const y = (shape.y ?? 0) * k;
   const w = (shape.w ?? 0) * k;
   const h = (shape.h ?? 0) * k;
+
+  if (shape.type === "image") {
+    const img = shape.src ? images?.get(shape.src) ?? null : null;
+    ctx.save();
+    if (img) {
+      const rot = ((shape.rotationDeg ?? 0) * Math.PI) / 180;
+      ctx.save();
+      ctx.translate(x + w / 2, y + h / 2);
+      if (rot) ctx.rotate(rot);
+      ctx.drawImage(img, -w / 2, -h / 2, w, h);
+      ctx.restore();
+    } else {
+      ctx.strokeStyle = shape.color || accent;
+      ctx.lineWidth = lw;
+      ctx.setLineDash([5, 4]);
+      ctx.strokeRect(x, y, w, h);
+      ctx.setLineDash([]);
+    }
+    if (selected) {
+      ctx.strokeStyle = accent;
+      ctx.lineWidth = 1.2;
+      ctx.setLineDash([4, 3]);
+      ctx.strokeRect(x - 3, y - 3, w + 6, h + 6);
+      ctx.setLineDash([]);
+    }
+    ctx.restore();
+    return;
+  }
 
   ctx.save();
   ctx.strokeStyle = shape.color;
@@ -300,8 +328,8 @@ export function drawShape(ctx: CanvasRenderingContext2D, shape: DrawShape, R: nu
   ctx.restore();
 }
 
-export function drawShapes(ctx: CanvasRenderingContext2D, shapes: DrawShape[], R: number, selectedIndex: number | null = null, accent = "#38bdf8"): void {
-  for (let i = 0; i < shapes.length; i++) drawShape(ctx, shapes[i], R, i === selectedIndex, accent);
+export function drawShapes(ctx: CanvasRenderingContext2D, shapes: DrawShape[], R: number, selectedIndex: number | null = null, accent = "#38bdf8", images?: Map<string, HTMLImageElement | null>): void {
+  for (let i = 0; i < shapes.length; i++) drawShape(ctx, shapes[i], R, i === selectedIndex, accent, images);
 }
 
 /** Bounding box (px, grid space) of a shape, for marquee / hit region. */
@@ -353,6 +381,9 @@ function distToSegment(p: Point, a: Point, b: Point): number {
 export function hitDrawShape(shape: DrawShape, p: Point, R: number, tol = 4): boolean {
   const b = shapeTypesBounds(shape, R);
   if (shape.type === "asset") {
+    return p.x >= b.x - tol && p.x <= b.x + b.w + tol && p.y >= b.y - tol && p.y <= b.y + b.h + tol;
+  }
+  if (shape.type === "image") {
     return p.x >= b.x - tol && p.x <= b.x + b.w + tol && p.y >= b.y - tol && p.y <= b.y + b.h + tol;
   }
   if (shape.type === "rect" || shape.type === "line") {
@@ -440,6 +471,87 @@ export function shiftShape(shape: DrawShape, dx: number, dy: number): DrawShape 
 
 function round4(n: number): number {
   return Math.round(n * 10000) / 10000;
+}
+
+/** Projection of `p` onto segment a→b, clamped to the segment. */
+export function closestPointOnSegment(p: Point, a: Point, b: Point): Point {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const lenSq = dx * dx + dy * dy;
+  if (lenSq === 0) return { x: a.x, y: a.y };
+  let t = ((p.x - a.x) * dx + (p.y - a.y) * dy) / lenSq;
+  t = Math.max(0, Math.min(1, t));
+  return { x: a.x + t * dx, y: a.y + t * dy };
+}
+
+/** Absolute points of a path's `d` (M/L/H/V; Z ignored), in the path's units. */
+export function pathPoints(d: string | undefined): Point[] {
+  const pts: Point[] = [];
+  let pen: Point = { x: 0, y: 0 };
+  for (const s of parsePath(d)) {
+    const cmd = s.cmd.toLowerCase();
+    if (cmd === "z") continue;
+    const abs = s.cmd === s.cmd.toUpperCase();
+    const n = s.nums;
+    if (cmd === "m" || cmd === "l") {
+      for (let i = 0; i + 1 < n.length; i += 2) {
+        pen = { x: abs ? n[i] : pen.x + n[i], y: abs ? n[i + 1] : pen.y + n[i + 1] };
+        pts.push({ ...pen });
+      }
+    } else if (cmd === "h") {
+      pen = { x: abs ? n[0] : pen.x + n[0], y: pen.y };
+      pts.push({ ...pen });
+    } else if (cmd === "v") {
+      pen = { x: pen.x, y: abs ? n[0] : pen.y + n[0] };
+      pts.push({ ...pen });
+    }
+  }
+  return pts;
+}
+
+function pointsToPathD(points: Point[]): string {
+  return points.map((p, i) => `${i === 0 ? "M" : "L"} ${round4(p.x)} ${round4(p.y)}`).join(" ");
+}
+
+/** Split a path/line shape in two at the point nearest `p` (shape units, hexR
+    for editor shapes). Returns the two halves, or null if it can't be split. */
+export function splitShape(shape: DrawShape, p: Point, tol: number): [DrawShape, DrawShape] | null {
+  if (shape.type === "line") {
+    const a = { x: shape.x ?? 0, y: shape.y ?? 0 };
+    const b = { x: (shape.x ?? 0) + (shape.w ?? 0), y: (shape.y ?? 0) + (shape.h ?? 0) };
+    const m = closestPointOnSegment(p, a, b);
+    if (Math.hypot(p.x - m.x, p.y - m.y) > tol) return null;
+    if (Math.hypot(m.x - a.x, m.y - a.y) < 1e-4 || Math.hypot(m.x - b.x, m.y - b.y) < 1e-4) return null;
+    return [
+      { ...shape, x: a.x, y: a.y, w: m.x - a.x, h: m.y - a.y },
+      { ...shape, x: m.x, y: m.y, w: b.x - m.x, h: b.y - m.y },
+    ];
+  }
+  if (shape.type !== "path" || !shape.d) return null;
+  const pts = pathPoints(shape.d);
+  if (pts.length < 2) return null;
+
+  let seg = -1;
+  let best = Infinity;
+  let cut = pts[0];
+  for (let i = 0; i + 1 < pts.length; i++) {
+    const m = closestPointOnSegment(p, pts[i], pts[i + 1]);
+    const d = Math.hypot(p.x - m.x, p.y - m.y);
+    if (d < best) {
+      best = d;
+      seg = i;
+      cut = m;
+    }
+  }
+  if (seg < 0 || best > tol) return null;
+
+  const left = [...pts.slice(0, seg + 1), cut];
+  const right = [cut, ...pts.slice(seg + 1)];
+  if (left.length < 2 || right.length < 2) return null;
+  return [
+    { ...shape, d: pointsToPathD(left) },
+    { ...shape, d: pointsToPathD(right) },
+  ];
 }
 
 /** Normalize a legacy px-authored shape (authored at R = 24) to `unit:"hexR"`. */
@@ -1010,11 +1122,15 @@ export interface DrawPlateOptions {
   centerLabel?: { text: string | null; at?: { q: number; r: number } } | null;
   emptyFill?: string;
   emptyStroke?: string;
+  /** Backdrop image painted under the terrain cells (battlemaps). */
+  bgImage?: HTMLImageElement | null;
 }
 
 /** Terrain cells + glyphs + optional center label + mark outline. Rotated frame. */
 export function drawPlateBoard(ctx: CanvasRenderingContext2D, W: number, H: number, spec: GridSpec, tiles: HexTile[], opts: DrawPlateOptions = {}): void {
-  const { accent = "#38bdf8", mark = null, centerLabel = null, emptyFill = "#0e1015", emptyStroke = "#2b2e37" } = opts;
+  const { accent = "#38bdf8", mark = null, centerLabel = null, bgImage = null } = opts;
+  const emptyFill = opts.emptyFill ?? (bgImage ? "rgba(8,10,14,0.28)" : "#0e1015");
+  const emptyStroke = opts.emptyStroke ?? "#2b2e37";
   const tileMap = new Map<string, HexTileKind>();
   for (const t of tiles) tileMap.set(`${t.q},${t.r}`, t.t);
   const centerCol = Math.floor(spec.cols / 2);
@@ -1022,6 +1138,10 @@ export function drawPlateBoard(ctx: CanvasRenderingContext2D, W: number, H: numb
   const o = gridOffset(spec);
 
   withRotated(ctx, W, H, spec.rotationDeg, () => {
+    if (bgImage) {
+      const f = gridFrame(spec.cols, spec.rows, spec.orientation, spec.R);
+      ctx.drawImage(bgImage, o.x + f.x0, o.y + f.y0, f.w, f.h);
+    }
     for (let c = 0; c < spec.cols; c++) {
       for (let r = 0; r < spec.rows; r++) {
         const key = `${c},${r}`;
@@ -1067,12 +1187,12 @@ export function drawPlateBoard(ctx: CanvasRenderingContext2D, W: number, H: numb
 }
 
 /** The stroke layer (drawing shapes), rotated with the grid. */
-export function drawPlateDrawing(ctx: CanvasRenderingContext2D, W: number, H: number, spec: GridSpec, shapes: DrawShape[], selectedIndex: number | null = null, accent = "#38bdf8"): void {
+export function drawPlateDrawing(ctx: CanvasRenderingContext2D, W: number, H: number, spec: GridSpec, shapes: DrawShape[], selectedIndex: number | null = null, accent = "#38bdf8", images?: Map<string, HTMLImageElement | null>): void {
   withRotated(ctx, W, H, spec.rotationDeg, () => {
     const o = gridOffset(spec);
     ctx.save();
     ctx.translate(o.x, o.y);
-    drawShapes(ctx, shapes, spec.R, selectedIndex, accent);
+    drawShapes(ctx, shapes, spec.R, selectedIndex, accent, images);
     ctx.restore();
   });
 }

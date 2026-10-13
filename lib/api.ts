@@ -30,3 +30,12 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
 
   return res.json() as Promise<T>;
 }
+
+/** Send a base64 image to the backend; returns the served /uploads url. */
+export async function uploadImage(dataUrl: string, scope?: string): Promise<string> {
+  const { url } = await api<{ url: string }>("/upload", {
+    method: "POST",
+    body: JSON.stringify({ data: dataUrl, scope }),
+  });
+  return url;
+}

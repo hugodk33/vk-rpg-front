@@ -11,7 +11,6 @@ import LocationVisibility from "@/components/location/LocationVisibility";
 import LocationModifiers from "@/components/location/LocationModifiers";
 import LocationMap from "@/components/location/LocationMap";
 import LocationShop from "@/components/location/LocationShop";
-import RegionMap from "@/components/location/RegionMap";
 import { KIND_LABELS } from "@/lib/location-glyphs";
 
 /* ============================================================
@@ -67,6 +66,7 @@ interface Loc {
   children?: Loc[];
   tiles?: HexTile[];
   drawing?: DrawShape[];
+  bgImageUrl?: string | null;
 }
 
 /* The plate's views: the Survey itself, the narrator-only records
@@ -234,7 +234,6 @@ export default function LocationPlate({ location, tableId, mode = "narrator" }: 
     return false;
   });
   const activeTabLabel = tabs.find((tab) => tab.key === view)?.label ?? "lc.lp.tabSurvey";
-  const locationHref = (id: string) => (isPlayer ? `/player` : `/location/${id}`);
   const backHref = isPlayer
     ? `/player`
     : `/table/${baseTableId}/locations`;
@@ -291,6 +290,14 @@ export default function LocationPlate({ location, tableId, mode = "narrator" }: 
           <div className="flex items-center justify-between gap-4">
             <TerritoryCrumbs chain={chain} accent={accent} mode={isPlayer ? "player" : "narrator"} hoverCls={chromeHover} />
             <div className="flex items-center gap-3 shrink-0">
+              {location.id && !isPlayer ? (
+                <Link
+                  href={`/location/${location.id}/edit?tab=map`}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-green-600/60 bg-green-600/10 px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest text-green-300 transition-colors hover:bg-green-600/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-green-600/60"
+                >
+                  <span aria-hidden>✎</span> {t("lc.lp.drawMap")}
+                </Link>
+              ) : null}
               {location.id && !isPlayer ? (
                 <Link
                   href={`/location/${location.id}/edit`}
@@ -444,12 +451,6 @@ export default function LocationPlate({ location, tableId, mode = "narrator" }: 
                 <p className="text-[15px] leading-relaxed text-zinc-400">{location.other}</p>
               </Panel>
             ) : null}
-
-            {/* -------- TERRITORY (subdivisions as an SVG chart) -------- */}
-            <Panel>
-              <SectionTitle icon="◫" tint={accent} label={t("lc.lp.territory")} />
-              <RegionMap regions={children} accent={accent} hrefOf={locationHref} />
-            </Panel>
           </div>
 
           {/* -------- SURVEY COORDINATES -------- */}
@@ -514,7 +515,7 @@ export default function LocationPlate({ location, tableId, mode = "narrator" }: 
                 </Link>
               ) : null}
             </div>
-            <LocationMap hex={hex} abs={abs} accent={accent} tiles={location.tiles} drawing={location.drawing} />
+            <LocationMap hex={hex} abs={abs} accent={accent} tiles={location.tiles} drawing={location.drawing} bgImageUrl={location.bgImageUrl} />
           </div>
         ) : null}
 

@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { api } from "@/lib/api";
+import { api, uploadImage } from "@/lib/api";
 import { seatActorQuery } from "@/lib/seat";
+import { prepareUpload } from "@/lib/upload";
 import { submitJson } from "./submit";
 import { cancelCls, inputCls, labelCls, submitCls } from "./formStyles";
 import FormShell from "./FormShell";
@@ -114,6 +115,8 @@ export default function ItemForm({ initial, tableId, tableTitle, tables, default
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [imageUrl, setImageUrl] = useState<string | null>(initial?.imageUrl ?? initial?.image_url ?? null);
+  const [imgBusy, setImgBusy] = useState(false);
 
   useEffect(() => {
     if (!currentTableId) return;
@@ -162,6 +165,20 @@ export default function ItemForm({ initial, tableId, tableTitle, tables, default
 
   function removeAttack(index: number) {
     setAttacks((prev) => prev.filter((_, i) => i !== index));
+  }
+
+    async function uploadItemImage(file: File) {
+    setImgBusy(true);
+    setError(null);
+    try {
+      const dataUrl = await prepareUpload(file, 1200);
+      const url = await uploadImage(dataUrl, "items");
+      setImageUrl(url);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : t("fr.error.upload"));
+    } finally {
+      setImgBusy(false);
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -254,6 +271,7 @@ export default function ItemForm({ initial, tableId, tableTitle, tables, default
       description,
       quality,
       condition,
+      image_url: imageUrl,
       ...weaponFields,
       ...armorFields,
     };
@@ -578,6 +596,40 @@ export default function ItemForm({ initial, tableId, tableTitle, tables, default
               </div>
             </div>
           ) : null}
+
+          <div>
+            <label className={labelCls}>{t("fr.itemImage")}</label>
+            <div className="mt-1 flex items-start gap-3">
+              <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-lg border border-zinc-700/60 bg-zinc-900">
+                {imageUrl ? <img src={imageUrl} alt={name} className="h-full w-full object-cover" /> : null}
+              </div>
+              <div className="flex flex-col gap-2">
+                <label className="cursor-pointer rounded-lg border border-green-600/50 bg-green-600/10 px-3 py-1.5 text-xs font-semibold text-green-300 transition-colors hover:bg-green-600/20">
+                  {imgBusy ? t("fr.ch.uploading") : t("fr.ch.uploadImage")}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    disabled={imgBusy}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      e.target.value = "";
+                      if (file) void uploadItemImage(file);
+                    }}
+                  />
+                </label>
+                {imageUrl ? (
+                  <button
+                    type="button"
+                    onClick={() => setImageUrl(null)}
+                    className="rounded-lg border border-zinc-700/50 px-3 py-1.5 text-xs font-semibold text-zinc-400 transition-colors hover:text-red-400"
+                  >
+                    {t("fr.ch.removeImg")}
+                  </button>
+                ) : null}
+              </div>
+            </div>
+          </div>
 
           <div>
             <label className={labelCls}>{t("fr.description")}</label>

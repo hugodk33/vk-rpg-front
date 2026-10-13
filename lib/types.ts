@@ -244,6 +244,8 @@ export interface TableCharacter {
   modifiers?: Modifier[]
   active_effects?: Modifier[]
   peculiarities?: Peculiarity[]
+  portraitUrl?: string | null
+  bodyUrl?: string | null
 }
 
 export interface GameTable {
@@ -281,13 +283,17 @@ export interface HexTile {
 export type DrawAssetKind = "door" | "chest" | "table" | "chair" | "bed" | "barrel" | "crate" | "bookcase" | "brazier" | "torch" | "altar" | "statue" | "tree" | "rock" | "well" | "rug" | "stairs" | "fountain"
 
 export interface DrawShape {
-  type: "path" | "rect" | "ellipse" | "line" | "asset"
+  type: "path" | "rect" | "ellipse" | "line" | "asset" | "image"
   /**
    * "hexR" = normalized unit space: 1 unit = 1 hex radius, origin at the
    * center of hex (0,0). Legacy shapes without `unit` are authored in raw
    * pixels at R = 24 and are scaled at render time by R / 24.
    */
   unit?: "hexR"
+  /** Imagem colocada no mapa (type:"image") — url relativa em /uploads. */
+  src?: string
+  /** Rotação da imagem em graus (type:"image"). */
+  rotationDeg?: number
   d?: string
   x?: number
   y?: number
@@ -332,6 +338,7 @@ export interface Location {
   links?: LocationLink[]
   tiles?: HexTile[]
   drawing?: DrawShape[]
+  bgImageUrl?: string | null
   ancestors?: Location[]
   children?: Location[]
 }
@@ -757,6 +764,8 @@ export interface Item {
   icon_key?: string | null
   /** Future: narrator image upload. When set, the image wins over the SVG. */
   image_url?: string | null
+  /** Resolved icon url from the item_images table (role:"icon"). */
+  imageUrl?: string | null
 }
 
 export interface Advantage {

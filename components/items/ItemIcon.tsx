@@ -55,6 +55,8 @@ export interface ItemIconSource {
   name?: string | null;
   icon_key?: string | null;
   image_url?: string | null;
+  /** Resolved icon url from the item_images table (role:"icon"). */
+  imageUrl?: string | null;
 }
 
 interface IconDef {
@@ -164,11 +166,12 @@ export default function ItemIcon({
   imgClassName,
   alt,
 }: ItemIconProps) {
-  if (item.image_url) {
+  const url = item.image_url ?? item.imageUrl ?? null;
+  if (url) {
     return (
       <span className="inline-flex items-center justify-center overflow-hidden rounded-lg">
         <img
-          src={item.image_url}
+          src={url}
           alt={alt ?? item.name ?? "Item"}
           className={imgClassName ?? "w-full h-full object-cover"}
         />

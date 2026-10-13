@@ -23,6 +23,7 @@ import {
 } from "@/lib/canvasgrid";
 import { Hand, Minus, Plus } from "lucide-react";
 import { interpolate, useTranslation } from "@/lib/i18n";
+import { useImageCache } from "@/lib/imagecache";
 import type { DrawShape, HexTile } from "@/lib/types";
 
 /* Matches the previous <ZoomControls> defaults so the plate keeps the
@@ -48,12 +49,14 @@ export default function LocationMap({
   accent = "#38bdf8",
   tiles = [],
   drawing = [],
+  bgImageUrl = null,
 }: {
   hex?: MapHex | null;
   abs?: AbsoluteHex;
   accent?: string;
   tiles?: HexTile[];
   drawing?: DrawShape[];
+  bgImageUrl?: string | null;
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const wrapRef = useRef<HTMLDivElement | null>(null);
@@ -62,6 +65,12 @@ export default function LocationMap({
   const [hand, setHand] = useState(false);
   const [grab, setGrab] = useState(false);
   const { t } = useTranslation();
+
+  const imageMap = useImageCache([
+    bgImageUrl,
+    ...drawing.filter((s) => s.type === "image").map((s) => s.src ?? null),
+  ]);
+  const bgImage = bgImageUrl ? imageMap.get(bgImageUrl) ?? null : null;
 
   /* ---- hand (pan) ---- */
   /* The plate is read-only, so panning is just scrolling the wrapper.
@@ -112,11 +121,12 @@ export default function LocationMap({
     paintCanvas(cv, W, H, (ctx) => {
       drawPlateBoard(ctx, W, H, spec, tiles, {
         accent,
+        bgImage,
         centerLabel: centerLabel ? { text: centerLabel, at: { q: centerCol, r: centerRow } } : null,
       });
-      drawPlateDrawing(ctx, W, H, spec, drawing);
+      drawPlateDrawing(ctx, W, H, spec, drawing, null, accent, imageMap);
     }, zoom);
-  }, [spec, tiles, drawing, accent, centerLabel, centerCol, centerRow, W, H, zoom]);
+  }, [spec, tiles, drawing, accent, centerLabel, centerCol, centerRow, W, H, zoom, bgImage, imageMap]);
 
   return (
     <div>

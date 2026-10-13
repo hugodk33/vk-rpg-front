@@ -381,6 +381,10 @@ export function CurrentMapStrip({
   isDefault = false,
   group,
   onJump,
+  onBack,
+  backName,
+  onPlanet,
+  planetName,
   player = false,
   searchable = false,
   searchValue = "",
@@ -390,6 +394,12 @@ export function CurrentMapStrip({
   isDefault?: boolean;
   group?: Location[];
   onJump: (id: string) => void;
+  /** Retrocede um nível no zoom do atlas (retorna à localidade-mãe). */
+  onBack?: () => void;
+  backName?: string;
+  /** Salta direto para a raiz do território (a visualização do planeta). */
+  onPlanet?: () => void;
+  planetName?: string;
   player?: boolean;
   searchable?: boolean;
   searchValue?: string;
@@ -416,6 +426,40 @@ export function CurrentMapStrip({
       <div className="flex flex-col gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-3">
+            {onBack ? (
+              <button
+                type="button"
+                onClick={onBack}
+                title={backName ? t("lc.editor.backTo").replace("{name}", backName) : t("lc.editor.back")}
+                aria-label={backName ? t("lc.editor.backTo").replace("{name}", backName) : t("lc.editor.back")}
+                className={`shrink-0 inline-flex items-center gap-1 rounded-md border px-2 py-1 font-mono text-[10px] tracking-widest uppercase transition-colors focus:outline-none focus-visible:ring-2 ${
+                  player
+                    ? "border-blue-400/25 bg-blue-400/5 text-blue-300/90 hover:bg-blue-400/10 hover:text-blue-200 focus-visible:ring-blue-500/60"
+                    : "border-teal-400/25 bg-teal-400/5 text-teal-300/90 hover:bg-teal-400/10 hover:text-teal-200 focus-visible:ring-teal-600/60"
+                }`}
+              >
+                <span aria-hidden>←</span> {t("lc.editor.back")}
+              </button>
+            ) : null}
+            {onPlanet ? (
+              <button
+                type="button"
+                onClick={onPlanet}
+                title={planetName ? t("tp.loc.goTo").replace("{name}", planetName) : t("tp.loc.planet")}
+                aria-label={planetName ? t("tp.loc.goTo").replace("{name}", planetName) : t("tp.loc.planet")}
+                className={`shrink-0 inline-flex items-center gap-1 rounded-md border px-2 py-1 font-mono text-[10px] tracking-widest uppercase transition-colors focus:outline-none focus-visible:ring-2 ${
+                  player
+                    ? "border-blue-400/25 bg-blue-400/5 text-blue-300/90 hover:bg-blue-400/10 hover:text-blue-200 focus-visible:ring-blue-500/60"
+                    : "border-teal-400/25 bg-teal-400/5 text-teal-300/90 hover:bg-teal-400/10 hover:text-teal-200 focus-visible:ring-teal-600/60"
+                }`}
+              >
+                <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <circle cx="12" cy="12" r="9" />
+                  <path d="M3 12h18M12 3c2.5 2.7 2.5 15.3 0 18M12 3c-2.5 2.7-2.5 15.3 0 18" />
+                </svg>
+                {t("tp.loc.planet")}
+              </button>
+            ) : null}
             <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${player ? "bg-blue-300 shadow-[0_0_8px_rgba(96,165,250,0.6)]" : "bg-teal-300 shadow-[0_0_8px_rgba(94,234,212,0.6)]"}`} aria-hidden />
             <div className="min-w-0 flex-1">
               <div className="flex items-baseline gap-2 min-w-0">

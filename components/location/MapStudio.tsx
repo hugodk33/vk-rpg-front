@@ -1,83 +1,69 @@
 "use client";
 
 /* ============================================================
-   MapStudio — the full plate editor for a battlemap location,
-   rendered on a 2D <canvas> (lib/canvasgrid). Layers:
+   MapStudio — the drawing studio for a location.
 
-   1. HEX TILES   — paint terrain onto each cell. Stored as
-                    { q, r, t } in the plate's own grid. The
-                    Fill (≋) bucket flood-fills a contiguous
-                    region of the same floor type, Paint-style.
-   2. DRAWING     — vector strokes over the grid: pen, line, rect,
-                    ellipse, in a chosen color/weight. All shapes
-                    are stored NORMALIZED (unit:"hexR"; 1 unit =
-                    1 hex radius, origin = center of hex (0,0)) so
-                    viewers at any radius stay aligned. Legacy
-                    pixel shapes (authored at R = 24) are converted
-                    on load.
-   3. ASSETS      — a springboard catalog of vector props (door,
-                    altar, statue, tree…) stamped onto hex centers,
-                    then moved / scaled / rotated with Select.
-   4. SELECT      — click a stroke to select it, drag to move,
-                    Delete/Backspace removes it.
-   5. GRID        — footprint, orientation, scale, rotation and
-                    the center cell that seams the plate into the
-                    territory chain. Snapping (hex centers for boxes,
-                    vertices for lines) keeps strokes on the lattice.
-The toolbar sits ABOVE the canvas (two rows, not two columns) and owns
-    the hand (pan) tool and the zoom stepper. They used to live in a
-    floating ZoomControls anchored inside the scroll wrapper, which meant
-    they scrolled away with the map and were effectively unreachable. The
-    plate keeps a fixed layout size — zoom is a pure CSS transform of the
-    canvas over a sized spacer, so the backing pixel grid grows (crisp)
-    but the element box never reflows; the wrapper scrolls with thin
-    styled bars.
+   The canvas is a plain SHEET, not a hex grid: a centered
+   rectangle whose size comes from the Largura × Altura chosen
+   below (like a blank sheet of paper). The sheet is the base of
+   the map; everything is drawn on top of it.
 
-   Saving posts a partial update to PUT /api/table-location/:id.
+   1. DRAWING — vector strokes: pen (freehand), line, rect and
+                ellipse, in a chosen color/weight. Shapes are
+                stored NORMALIZED (unit:"hexR"; 1 unit = 1 hex
+                radius, origin = center of cell (0,0)) and the
+                sheet spans that frame, so old strokes stay put.
+                Legacy pixel shapes (authored at R = 24) convert
+                on load.
+   2. SELECT  — click a stroke to select it, drag to move,
+                Delete/Backspace removes it.
+   3. SPLIT   — click a stroke/line to cut it into two.
+   4. ZOOM    — the toolbar owns the hand (pan) tool and the zoom
+                stepper; zoom is a pure CSS transform over a sized
+                spacer so the backing pixel grid stays crisp.
+
+   Saving posts a PARTIAL update to PUT /api/table-location/:id —
+   only the sheet size, indoor flag and the stroke layer. The tile
+   layer and the hex metadata are left untouched.
    ============================================================ */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { submitJson } from "@/components/forms/submit";
-import { absoluteHex, formatHexScale } from "@/lib/location";
-import { centerOf, gridFrame, hexFromPoint } from "@/lib/hexgrid";
+import { gridFrame } from "@/lib/hexgrid";
 import { useTranslation } from "@/lib/i18n";
 import {
-  ASSETS,
-  ASSET_BOX,
-  drawAssetShape,
   drawShapes,
   hitDrawShapes,
   normalizeShapeToHexR,
   paintCanvas,
   screenToGrid,
   shiftShape,
-  snapNormalized,
+  splitShape,
   toNormalized,
-  traceCell,
   withRotated,
   type GridSpec,
   type Point,
 } from "@/lib/canvasgrid";
-import { Hand, Minus, Plus } from "lucide-react";
-import type { DrawAssetKind, DrawShape, HexTile, HexTileKind, Location } from "@/lib/types";
-import { TERRAIN } from "@/lib/terrain";
+import { Hand, Maximize, Minus, Plus } from "lucide-react";
+import { useImageCache } from "@/lib/imagecache";
+import { uploadImage } from "@/lib/api";
+import { prepareUpload } from "@/lib/upload";
+import type { DrawShape, Location } from "@/lib/types";
 
 const R = 30;
 const M = 48;
-const HEX_NEIGHBORS = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, -1], [-1, 1]] as const;
 
 const STROKES = ["#e4e4e7", "#38bdf8", "#fbbf24", "#f87171", "#4ade80", "#a78bfa"];
 const STROKE_WEIGHTS = [1, 1.6, 2.5, 4, 6];
-const WALL_BRIGHT = "#e4e4e7";
 
 /* Zoom limits shared by the toolbar buttons and the wheel handler. */
-const ZOOM_MIN = 0.5;
+const ZOOM_MIN = 0.1;
 const ZOOM_MAX = 4;
 const ZOOM_STEP = 0.25;
 const clampZoom = (v: number) => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, v));
 
-type Tool = "select" | "paint" | "erase" | "fill" | "pen" | "line" | "rect" | "ellipse" | "asset";
+type Tool = "select" | "pen" | "line" | "rect" | "ellipse" | "split" | "image";
 type ShapeType = "path" | "rect" | "ellipse" | "line";
 
 interface MapStudioProps {
@@ -88,85 +74,62 @@ export default function MapStudio({ location }: MapStudioProps) {
   const { t } = useTranslation();
   const router = useRouter();
   const h = location.hex;
-  const assetLabel = (kind: DrawAssetKind): string =>
-    ASSETS.includes(kind) ? t(`lc.asset.${kind}`) : t("lc.ms.assetGeneric");
 
   const [cols, setCols] = useState(Math.max(1, Math.floor(h?.width ?? 12)));
   const [rows, setRows] = useState(Math.max(1, Math.floor(h?.height ?? 9)));
-  const [orientation, setOrientation] = useState<string>(h?.orientation ?? "flat");
-  const [sizeM, setSizeM] = useState<string>(h?.sizeM != null ? String(h.sizeM) : "1");
+  const [orientation] = useState<string>(h?.orientation ?? "flat");
   const [rotationDeg, setRotationDeg] = useState<number>(h?.rotationDeg ?? 0);
-  const [centerQ, setCenterQ] = useState<number>(h?.centerQ ?? 0);
-  const [centerR, setCenterR] = useState<number>(h?.centerR ?? 0);
   const [isIndoor, setIsIndoor] = useState(!!location.isIndoor);
 
   const [tool, setTool] = useState<Tool>("select");
-  const [terrain, setTerrain] = useState<HexTileKind>("wall");
   const [strokeColor, setStrokeColor] = useState(STROKES[0]);
   const [strokeWeight, setStrokeWeight] = useState(STROKE_WEIGHTS[2]);
-  const [snap, setSnap] = useState(true);
-  const [assetKind, setAssetKind] = useState<DrawAssetKind>("door");
-  const [assetScale, setAssetScale] = useState(1);
-  const [assetRot, setAssetRot] = useState(0);
   const [zoom, setZoom] = useState(1);
   const [hand, setHand] = useState(false);
 
-  const [tiles, setTiles] = useState<Map<string, HexTileKind>>(() => {
-    const m = new Map<string, HexTileKind>();
-    for (const t of location.tiles ?? []) m.set(`${t.q},${t.r}`, t.t);
-    return m;
-  });
   const [shapes, setShapes] = useState<DrawShape[]>(() => (location.drawing ?? []).map(normalizeShapeToHexR));
   const [draft, setDraft] = useState<DrawShape | null>(null);
   const [selection, setSelection] = useState<number | null>(null);
+  const [hoverShape, setHoverShape] = useState<number | null>(null);
 
-  const [hover, setHover] = useState<{ q: number; r: number } | null>(null);
-  const [crosshair, setCrosshair] = useState<Point | null>(null);
+  const [savedAt, setSavedAt] = useState(0);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [savedAt, setSavedAt] = useState<number>(0);
+  const [canUndo, setCanUndo] = useState(false);
+  const [grab, setGrab] = useState(false);
+  const [imgBusy, setImgBusy] = useState(false);
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const fileRef = useRef<HTMLInputElement | null>(null);
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const drawingRef = useRef(false);
   const originRef = useRef<Point>({ x: 0, y: 0 });
   const dragRef = useRef<{ index: number; anchor: Point; grab: Point } | null>(null);
-  const paintCellRef = useRef<string | null>(null);
-  const snapRef = useRef<{ tiles: Map<string, HexTileKind>; shapes: DrawShape[] } | null>(null);
+  const snapRef = useRef<DrawShape[] | null>(null);
   const zoomRef = useRef(zoom);
   const spaceRef = useRef(false);
   const panRef = useRef<{ x: number; y: number; sl: number; st: number } | null>(null);
-  const [canUndo, setCanUndo] = useState(false);
-  const [grab, setGrab] = useState(false);
 
   useEffect(() => {
     zoomRef.current = zoom;
   }, [zoom]);
 
-  const sizeNum = sizeM === "" ? null : Number(sizeM);
-  const abs = useMemo(
-    () =>
-      absoluteHex({
-        id: location.id,
-        name: location.name,
-        hex: { sizeM: sizeNum, centerQ, centerR, orientation },
-        ancestors: location.ancestors,
-      }),
-    [location.id, location.name, location.ancestors, sizeNum, centerQ, centerR, orientation]
-  );
-
+  /* The sheet is the frame the strokes were authored against: a rectangle
+     covering the cols×rows mesh. Drawing it (instead of the cells) keeps the
+     old normalized strokes aligned while reading as a blank sheet. */
   const g = gridFrame(cols, rows, orientation, R);
   const W = g.w + M * 2;
   const H = g.h + M * 2;
   const offX = M - g.x0;
   const offY = M - g.y0;
-  const centerCol = Math.floor(cols / 2);
-  const centerRow = Math.floor(rows / 2);
 
   const spec: GridSpec = useMemo(
     () => ({ cols, rows, orientation, R, M, rotationDeg, ox: g.x0, oy: g.y0 }),
     [cols, rows, orientation, rotationDeg, g]
   );
+
+  /* Decoded <img> elements for every image shape on the sheet. */
+  const imageMap = useImageCache(shapes.filter((s) => s.type === "image").map((s) => s.src ?? null));
 
   /* ---------- helpers ---------- */
 
@@ -175,79 +138,15 @@ export default function MapStudio({ location }: MapStudioProps) {
       const cv = canvasRef.current;
       if (!cv) return { x: 0, y: 0 };
       const rect = cv.getBoundingClientRect();
-      const p = screenToGrid(e.clientX, e.clientY, rect, W, H, spec);
-      return { x: p.x, y: p.y };
+      return screenToGrid(e.clientX, e.clientY, rect, W, H, spec);
     },
     [W, H, spec]
   );
 
-  const cellAt = useCallback(
-    (p: Point): { q: number; r: number } | null => {
-      const cell = hexFromPoint(p.x, p.y, orientation, R);
-      if (cell.q < 0 || cell.q >= cols || cell.r < 0 || cell.r >= rows) return null;
-      return cell;
-    },
-    [orientation, cols, rows]
-  );
-
-  /** Normalized point (hexR units) with optional lattice snap for shape tools. */
-  const shapePoint = useCallback(
-    (e: React.PointerEvent): Point => {
-      const p = toGridPoint(e);
-      const n = toNormalized(p, R);
-      if (!snap) return n;
-      if (tool === "line") return snapNormalized(n, spec, "vertex");
-      if (tool === "rect" || tool === "ellipse") return snapNormalized(n, spec, "center");
-      return n;
-    },
-    [toGridPoint, snap, tool, spec]
-  );
-
-  const stamp = useCallback(
-    (cell: { q: number; r: number }) => {
-      const key = `${cell.q},${cell.r}`;
-      if (paintCellRef.current === key) return;
-      paintCellRef.current = key;
-      setTiles((prev) => {
-        const next = new Map(prev);
-        if (tool === "erase") next.delete(key);
-        else next.set(key, terrain);
-        return next;
-      });
-    },
-    [tool, terrain]
-  );
-
   const takeSnapshot = useCallback(() => {
-    snapRef.current = { tiles: new Map(tiles), shapes };
+    snapRef.current = shapes;
     setCanUndo(true);
-  }, [tiles, shapes]);
-
-  /** Paint-style flood fill: replace a contiguous region of one floor type. */
-  const floodCell = useCallback(
-    (start: { q: number; r: number }) => {
-      const startKey = `${start.q},${start.r}`;
-      const base = tiles.get(startKey) ?? "open";
-      if (base === terrain) return;
-      const queue = [start];
-      const seen = new Set<string>([startKey]);
-      const next = new Map(tiles);
-      while (queue.length) {
-        const cur = queue.pop()!;
-        next.set(`${cur.q},${cur.r}`, terrain);
-        for (const [dq, dr] of HEX_NEIGHBORS) {
-          const q2 = cur.q + dq;
-          const r2 = cur.r + dr;
-          const k2 = `${q2},${r2}`;
-          if (q2 < 0 || q2 >= cols || r2 < 0 || r2 >= rows || seen.has(k2)) continue;
-          seen.add(k2);
-          if ((tiles.get(k2) ?? "open") === base) queue.push({ q: q2, r: r2 });
-        }
-      }
-      setTiles(next);
-    },
-    [tiles, terrain, cols, rows]
-  );
+  }, [shapes]);
 
   /* ---------- pointer handlers ---------- */
 
@@ -268,44 +167,21 @@ export default function MapStudio({ location }: MapStudioProps) {
     canvasRef.current?.setPointerCapture(e.pointerId);
     drawingRef.current = true;
     originRef.current = n;
-    paintCellRef.current = null;
 
-    if (tool === "paint" || tool === "erase") {
-      const cell = cellAt(p);
-      if (cell) {
-        takeSnapshot();
-        stamp(cell);
-      }
-      return;
-    }
-
-    if (tool === "fill") {
-      const cell = cellAt(p);
-      if (cell) {
-        takeSnapshot();
-        floodCell(cell);
-      }
-      return;
-    }
-
-    if (tool === "asset") {
-      const cell = cellAt(p);
-      if (cell) {
-        takeSnapshot();
-        const cn = centerOf(cell.q, cell.r, orientation, 1);
-        const shape: DrawShape = {
-          type: "asset",
-          kind: assetKind,
-          x: cn.x,
-          y: cn.y,
-          s: assetScale,
-          rot: assetRot,
-          size: 1,
-          color: strokeColor,
-          unit: "hexR",
-        };
-        setShapes((prev) => [...prev, shape]);
-        setSelection(shapes.length);
+    if (tool === "split") {
+      const idx = hitDrawShapes(shapes, n, 1, 8 / R);
+      if (idx != null) {
+        const parts = splitShape(shapes[idx], n, 8 / R);
+        if (parts) {
+          takeSnapshot();
+          setShapes((prev) => {
+            const next = prev.slice();
+            next.splice(idx, 1, parts[0], parts[1]);
+            return next;
+          });
+          setHoverShape(null);
+          setSelection(null);
+        }
       }
       return;
     }
@@ -331,13 +207,16 @@ export default function MapStudio({ location }: MapStudioProps) {
       return;
     }
 
+    if (tool === "image") {
+      setSelection(null);
+      return;
+    }
+
     takeSnapshot();
     if (tool === "pen") {
       setDraft({ type: "path", d: `M ${n.x.toFixed(3)} ${n.y.toFixed(3)}`, size: strokeWeight, color: strokeColor, unit: "hexR" });
     } else {
-      const s = shapePoint(e);
-      originRef.current = s;
-      setDraft({ type: tool as ShapeType, x: s.x, y: s.y, w: 0, h: 0, size: strokeWeight, color: strokeColor, unit: "hexR" });
+      setDraft({ type: tool as ShapeType, x: n.x, y: n.y, w: 0, h: 0, size: strokeWeight, color: strokeColor, unit: "hexR" });
     }
   }
 
@@ -353,12 +232,6 @@ export default function MapStudio({ location }: MapStudioProps) {
     }
 
     const p = toGridPoint(e);
-    setCrosshair(p);
-
-    if (drawingRef.current && (tool === "paint" || tool === "erase")) {
-      const cell = cellAt(p);
-      if (cell) stamp(cell);
-    }
 
     if (drawingRef.current && dragRef.current && tool === "select") {
       const n = toNormalized(p, R);
@@ -383,7 +256,7 @@ export default function MapStudio({ location }: MapStudioProps) {
         const n = toNormalized(p, R);
         setDraft({ ...draft, d: `${draft.d ?? ""} L ${n.x.toFixed(3)} ${n.y.toFixed(3)}` });
       } else {
-        const s = shapePoint(e);
+        const s = toNormalized(p, R);
         const x = Math.min(o.x, s.x);
         const y = Math.min(o.y, s.y);
         const w = Math.abs(s.x - o.x);
@@ -403,8 +276,7 @@ export default function MapStudio({ location }: MapStudioProps) {
       return;
     }
 
-    const cell = cellAt(p);
-    setHover(cell);
+    if (tool === "split") setHoverShape(hitDrawShapes(shapes, toNormalized(p, R), 1, 8 / R));
   }
 
   function onPointerUp() {
@@ -414,7 +286,6 @@ export default function MapStudio({ location }: MapStudioProps) {
       return;
     }
     drawingRef.current = false;
-    paintCellRef.current = null;
     dragRef.current = null;
     if (draft) {
       setShapes((prev) => [...prev, draft]);
@@ -425,8 +296,7 @@ export default function MapStudio({ location }: MapStudioProps) {
 
   function onPointerLeave() {
     if (panRef.current) return;
-    setHover(null);
-    setCrosshair(null);
+    setHoverShape(null);
   }
 
   /* ---------- keyboard shortcuts (delete selection) ---------- */
@@ -486,18 +356,19 @@ export default function MapStudio({ location }: MapStudioProps) {
       if (ratio === 1) return;
 
       const rect = cv.getBoundingClientRect();
-      const oldSl = wrap.scrollLeft;
-      const oldSt = wrap.scrollTop;
+      const ccx = (e.clientX - rect.left) / zold;
+      const ccy = (e.clientY - rect.top) / zold;
 
       zoomRef.current = znew;
       setZoom(znew);
 
-      /* keep the grid point under the cursor: classic scrollLeft += mx*(ratio-1) */
+      /* keep the point under the cursor fixed once the spacer reflows */
       requestAnimationFrame(() => {
-        const wrap2 = wrapRef.current;
-        if (!wrap2) return;
-        wrap2.scrollLeft = oldSl + (e.clientX - rect.left) * (ratio - 1);
-        wrap2.scrollTop = oldSt + (e.clientY - rect.top) * (ratio - 1);
+        const w = wrapRef.current;
+        if (!w) return;
+        const wr = w.getBoundingClientRect();
+        w.scrollLeft = Math.max(0, ccx * znew - (e.clientX - wr.left));
+        w.scrollTop = Math.max(0, ccy * znew - (e.clientY - wr.top));
       });
     }
     wrap.addEventListener("wheel", onWheel, { passive: false });
@@ -506,10 +377,25 @@ export default function MapStudio({ location }: MapStudioProps) {
 
   /* ---------- actions ---------- */
 
+  /* Shrink the zoom so the whole sheet fits the viewport, then centre it. */
+  function fitToView() {
+    const wrap = wrapRef.current;
+    if (!wrap) return;
+    const fit = Math.min((wrap.clientWidth - 32) / W, (wrap.clientHeight - 32) / H);
+    const z = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, fit));
+    zoomRef.current = z;
+    setZoom(z);
+    requestAnimationFrame(() => {
+      const w = wrapRef.current;
+      if (!w) return;
+      w.scrollLeft = Math.max(0, (w.scrollWidth - w.clientWidth) / 2);
+      w.scrollTop = Math.max(0, (w.scrollHeight - w.clientHeight) / 2);
+    });
+  }
+
   function undo() {
     if (!snapRef.current) return;
-    setTiles(snapRef.current.tiles);
-    setShapes(snapRef.current.shapes);
+    setShapes(snapRef.current);
     snapRef.current = null;
     setCanUndo(false);
     setSelection(null);
@@ -523,40 +409,56 @@ export default function MapStudio({ location }: MapStudioProps) {
     });
   }
 
-  function clearTiles() {
-    takeSnapshot();
-    setTiles(new Map());
-  }
-
   function clearStrokes() {
     takeSnapshot();
     setShapes([]);
     setSelection(null);
   }
 
+  async function onPickImage(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setImgBusy(true);
+    setError(null);
+    try {
+      const dataUrl = await prepareUpload(file, 1600);
+      const url = await uploadImage(dataUrl, "maps");
+      takeSnapshot();
+      const side = 6;
+      const cx = (g.x0 + g.w / 2) / R;
+      const cy = (g.y0 + g.h / 2) / R;
+      const r3 = (v: number) => Math.round(v * 1000) / 1000;
+      const shape: DrawShape = {
+        type: "image",
+        src: url,
+        x: r3(cx - side / 2),
+        y: r3(cy - side / 2),
+        w: side,
+        h: side,
+        size: strokeWeight,
+        color: strokeColor,
+        unit: "hexR",
+        rotationDeg: 0,
+      };
+      setShapes((prev) => [...prev, shape]);
+      setSelection(shapes.length);
+      setTool("select");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : t("lc.ms.error"));
+    } finally {
+      setImgBusy(false);
+    }
+  }
+
   async function save() {
     setSaving(true);
     setError(null);
-    const outTiles: HexTile[] = [];
-    for (const [key, t] of tiles) {
-      const [q, r] = key.split(",").map(Number);
-      if (q < 0 || q >= cols || r < 0 || r >= rows) continue;
-      outTiles.push({ q, r, t });
-    }
     try {
       await submitJson(`/api/table-location/${location.id}`, "PUT", {
         id: location.id,
-        hex: {
-          sizeM: sizeNum,
-          width: cols,
-          height: rows,
-          centerQ,
-          centerR,
-          orientation,
-          rotationDeg,
-        },
+        hex: { width: cols, height: rows, rotationDeg },
         is_indoor: isIndoor ? 1 : 0,
-        tiles: outTiles,
         drawing: shapes,
       });
       setSavedAt(Date.now());
@@ -574,94 +476,45 @@ export default function MapStudio({ location }: MapStudioProps) {
     const cv = canvasRef.current;
     if (!cv) return;
     paintCanvas(cv, W, H, (ctx) => {
-      const tileMap = tiles;
+      /* desk backdrop so the sheet reads as a page on a table */
+      ctx.fillStyle = "#08090d";
+      ctx.fillRect(0, 0, W, H);
 
       withRotated(ctx, W, H, rotationDeg, () => {
         ctx.save();
         ctx.translate(offX, offY);
-        /* cells */
-        for (let c = 0; c < cols; c++) {
-          for (let r = 0; r < rows; r++) {
-            const key = `${c},${r}`;
-            const pt = centerOf(c, r, orientation, R);
-            const cx = pt.x;
-            const cy = pt.y;
-            const meta = TERRAIN[tileMap.get(key) ?? "open"];
-            const isCenter = c === centerCol && r === centerRow;
-            const isHover = hover?.q === c && hover?.r === r;
-            traceCell(ctx, cx, cy, R, orientation);
-            ctx.fillStyle = isHover ? `${STROKES[0]}14` : meta.fill;
-            ctx.fill();
-            ctx.strokeStyle = isHover ? STROKES[0] : isCenter ? TERRAIN.door.stroke : meta.stroke;
-            ctx.lineWidth = isHover || isCenter ? 1.8 : 1;
-            ctx.stroke();
 
-            if (meta.glyph) {
-              ctx.fillStyle = meta.stroke;
-              ctx.font = `bold ${Math.max(9, R * 0.46)}px "Geist Mono", monospace`;
-              ctx.textAlign = "center";
-              ctx.textBaseline = "middle";
-              ctx.fillText(meta.glyph, cx, cy);
-            }
-            if (isCenter) {
-              ctx.fillStyle = "#8b93a5";
-              ctx.font = `${Math.max(8, R * 0.375)}px "Geist Mono", monospace`;
-              ctx.textAlign = "center";
-              ctx.textBaseline = "middle";
-              ctx.fillText(`q${centerQ} r${centerR}`, cx, cy + (meta.glyph ? R * 0.42 : 0));
-            }
-          }
-        }
+        /* the sheet (paper) — base of the map */
+        ctx.save();
+        ctx.shadowColor = "rgba(0,0,0,0.55)";
+        ctx.shadowBlur = 18;
+        ctx.shadowOffsetY = 6;
+        ctx.fillStyle = "#1b202a";
+        ctx.beginPath();
+        ctx.rect(g.x0, g.y0, g.w, g.h);
+        ctx.fill();
+        ctx.restore();
+        ctx.strokeStyle = "#454f63";
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(g.x0, g.y0, g.w, g.h);
+        /* faint inner margin */
+        ctx.strokeStyle = "#2a3140";
+        ctx.lineWidth = 1;
+        ctx.setLineDash([7, 7]);
+        ctx.strokeRect(g.x0 + 18, g.y0 + 18, g.w - 36, g.h - 36);
+        ctx.setLineDash([]);
 
         /* strokes + draft + selection */
-        drawShapes(ctx, shapes, R, selection, "#38bdf8");
-        if (draft) drawShapes(ctx, [draft], R, null);
+        const accent = tool === "split" ? "#f472b6" : "#38bdf8";
+        drawShapes(ctx, shapes, R, tool === "split" ? hoverShape : selection, accent, imageMap);
+        if (draft) drawShapes(ctx, [draft], R, null, "#38bdf8", imageMap);
 
-        /* brush highlight on hovered cell */
-        if ((tool === "paint" || tool === "erase" || tool === "fill") && hover) {
-          const pt = centerOf(hover.q, hover.r, orientation, R);
-          traceCell(ctx, pt.x, pt.y, R, orientation);
-          ctx.strokeStyle = tool === "erase" ? "#f87171" : TERRAIN[terrain].stroke;
-          ctx.lineWidth = 2;
-          ctx.setLineDash([4, 3]);
-          ctx.stroke();
-          ctx.setLineDash([]);
-        }
-
-        /* asset drop target + ghost on hovered cell */
-        if (tool === "asset" && hover) {
-          const pt = centerOf(hover.q, hover.r, orientation, R);
-          traceCell(ctx, pt.x, pt.y, R, orientation);
-          ctx.strokeStyle = "#fbbf24";
-          ctx.lineWidth = 2;
-          ctx.setLineDash([4, 3]);
-          ctx.stroke();
-          ctx.setLineDash([]);
-          drawAssetShape(ctx, { type: "asset", kind: assetKind, x: pt.x, y: pt.y, s: assetScale, rot: assetRot, size: 1, color: strokeColor, unit: "hexR" }, R);
-        }
-
-        /* snap crosshair while drawing box/line tools */
-        if (drawingRef.current && (tool === "line" || tool === "rect" || tool === "ellipse") && crosshair) {
-          const n = snapNormalized(toNormalized(crosshair, R), spec, tool === "line" ? "vertex" : "center");
-          const sx = n.x * R;
-          const sy = n.y * R;
-          ctx.strokeStyle = strokeColor;
-          ctx.lineWidth = 1;
-          ctx.beginPath();
-          ctx.arc(sx, sy, 5, 0, Math.PI * 2);
-          ctx.stroke();
-        }
         ctx.restore();
       });
     }, zoom);
-  }, [shapes, tiles, draft, selection, hover, crosshair, tool, terrain, strokeColor, rotationDeg, W, H, cols, rows, centerCol, centerRow, centerQ, centerR, orientation, spec, snap, zoom, assetKind, assetScale, assetRot, offX, offY]);
+  }, [shapes, draft, selection, hoverShape, tool, strokeColor, rotationDeg, W, H, g, offX, offY, zoom, imageMap]);
 
   /* ---------- derived UI ---------- */
-
-  const hoverCell = hover;
-  const hoverAbs = hoverCell
-    ? { q: Math.round((abs.q + (hoverCell.q - centerCol)) * 100) / 100, r: Math.round((abs.r + (hoverCell.r - centerRow)) * 100) / 100 }
-    : null;
 
   const activeShape = selection != null && shapes[selection] ? shapes[selection] : null;
 
@@ -688,7 +541,7 @@ export default function MapStudio({ location }: MapStudioProps) {
           <span aria-hidden className="font-mono text-base leading-none text-green-300">◉</span>
           <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-zinc-400">{t("lc.ms.title")}</span>
           <span className="font-mono text-[9px] uppercase tracking-widest text-zinc-600 hidden sm:inline">
-            {cols}×{rows} · {orientation} · {formatHexScale(sizeNum)}
+            {cols}×{rows}
           </span>
         </div>
         <div className="flex items-center gap-2">
@@ -697,9 +550,6 @@ export default function MapStudio({ location }: MapStudioProps) {
           ) : null}
           <button type="button" onClick={undo} disabled={!canUndo} className="font-mono text-[9px] uppercase tracking-widest px-2 py-1.5 rounded border border-zinc-700/50 text-zinc-400 hover:text-zinc-200 transition-colors disabled:opacity-40">
             {t("lc.ms.undo")}
-          </button>
-          <button type="button" onClick={clearTiles} className="font-mono text-[9px] uppercase tracking-widest px-2 py-1.5 rounded border border-zinc-700/50 text-zinc-400 hover:text-red-300 transition-colors">
-            {t("lc.ms.clearCells")}
           </button>
           <button type="button" onClick={clearStrokes} className="font-mono text-[9px] uppercase tracking-widest px-2 py-1.5 rounded border border-zinc-700/50 text-zinc-400 hover:text-red-300 transition-colors">
             {t("lc.ms.clearStrokes")}
@@ -711,35 +561,26 @@ export default function MapStudio({ location }: MapStudioProps) {
       </div>
 
       <div className="flex flex-col">
-        {/* control rail — a full-width band on top, canvas below.
-            Two rows, not two columns: the grid needs the whole width and the
-            rail reads as a toolbar rather than a sidebar competing with it. */}
+        {/* control rail — a full-width band on top, canvas below. */}
         <div className="flex flex-wrap items-start gap-x-8 gap-y-5 border-b border-zinc-800 p-4">
           <div>
             <p className="font-mono text-[9px] uppercase tracking-widest text-zinc-500 mb-2">{t("lc.ms.tool")}</p>
-            <div className="flex flex-wrap items-start gap-x-8 gap-y-4">
+            <div className="flex flex-wrap items-start gap-x-8 gap-y-5">
               <div>
                 <p className="font-mono text-[8px] uppercase tracking-widest text-zinc-600 mb-1">{t("lc.ms.groupPick")}</p>
-                <div className="grid grid-cols-2 gap-1.5">
-                  {toolBtn("select", "✛", "lc.ms.toolSelect")}
-                  {toolBtn("asset", "⬒", "lc.ms.toolAsset")}
-                </div>
-              </div>
-              <div>
-                <p className="font-mono text-[8px] uppercase tracking-widest text-zinc-600 mb-1">{t("lc.ms.groupCells")}</p>
-                <div className="grid grid-cols-3 gap-1.5">
-                  {toolBtn("paint", "▦", "lc.ms.toolPaint")}
-                  {toolBtn("erase", "⌫", "lc.ms.toolErase")}
-                  {toolBtn("fill", "≋", "lc.ms.toolFill")}
+                <div className="grid grid-cols-1 gap-1.5">
+                  {toolBtn("select", "⬚", "lc.ms.toolSelect")}
                 </div>
               </div>
               <div>
                 <p className="font-mono text-[8px] uppercase tracking-widest text-zinc-600 mb-1">{t("lc.ms.groupShapes")}</p>
-                <div className="grid grid-cols-4 gap-1.5">
+                <div className="grid grid-cols-6 gap-1.5">
                   {toolBtn("pen", "✎", "lc.ms.toolPen")}
                   {toolBtn("line", "╱", "lc.ms.toolLine")}
                   {toolBtn("rect", "▭", "lc.ms.toolRect")}
                   {toolBtn("ellipse", "◯", "lc.ms.toolEllipse")}
+                  {toolBtn("split", "✂", "lc.ms.toolSplit")}
+                  {toolBtn("image", "🖼", "lc.ms.toolImage")}
                 </div>
               </div>
             </div>
@@ -752,7 +593,7 @@ export default function MapStudio({ location }: MapStudioProps) {
                 <p className="text-[10px] leading-snug text-zinc-500">
                   {activeShape ? (
                     <>
-                      <b className="text-zinc-300">{activeShape.type === "asset" ? assetLabel(activeShape.kind ?? "crate") : activeShape.type}</b> {t("lc.ms.selDrag")},{" "}
+                      <b className="text-zinc-300">{activeShape.type}</b> {t("lc.ms.selDrag")},{" "}
                       <b className="text-red-300">Del</b> {t("lc.ms.selRemove")}.
                     </>
                   ) : (
@@ -762,165 +603,27 @@ export default function MapStudio({ location }: MapStudioProps) {
 
                 {activeShape ? (
                   <div className="grid grid-cols-2 gap-1.5">
-                    {activeShape.type === "asset" ? (
-                      <>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            updateSelected({ s: Math.max(0.4, Math.round(((activeShape.s ?? 1) - 0.15) * 100) / 100) })
-                          }
-                          className="font-mono text-[9px] uppercase tracking-widest px-2 py-1 rounded border border-zinc-700/50 text-zinc-400 hover:text-zinc-200 transition-colors"
-                        >
-                          {t("lc.ms.sizeDown")}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            updateSelected({ s: Math.min(3, Math.round(((activeShape.s ?? 1) + 0.15) * 100) / 100) })
-                          }
-                          className="font-mono text-[9px] uppercase tracking-widest px-2 py-1 rounded border border-zinc-700/50 text-zinc-400 hover:text-zinc-200 transition-colors"
-                        >
-                          + {t("lc.ms.sizeUp")}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => updateSelected({ rot: ((activeShape.rot ?? 0) - 15 + 360) % 360 })}
-                          className="font-mono text-[9px] uppercase tracking-widest px-2 py-1 rounded border border-zinc-700/50 text-zinc-400 hover:text-zinc-200 transition-colors"
-                        >
-                          {t("lc.ms.rotateCcw")}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => updateSelected({ rot: ((activeShape.rot ?? 0) + 15) % 360 })}
-                          className="font-mono text-[9px] uppercase tracking-widest px-2 py-1 rounded border border-zinc-700/50 text-zinc-400 hover:text-zinc-200 transition-colors"
-                        >
-                          {t("lc.ms.rotateCw")}
-                        </button>
-                      </>
-                    ) : null}
                     <button
                       type="button"
-                      onClick={() =>
-                        updateSelected({
-                          color:
-                            activeShape.type === "asset"
-                              ? STROKES[(STROKES.indexOf(activeShape.color) + 1) % STROKES.length] ?? STROKES[0]
-                              : activeShape.color === WALL_BRIGHT
-                              ? "#fbbf24"
-                              : activeShape.color === "#fbbf24"
-                              ? "#f87171"
-                              : WALL_BRIGHT,
-                        })
-                      }
+                      onClick={() => {
+                        const i = STROKES.indexOf(activeShape.color);
+                        updateSelected({ color: STROKES[(i + 1) % STROKES.length] });
+                      }}
                       className="font-mono text-[9px] uppercase tracking-widest px-2 py-1 rounded border border-zinc-700/50 text-zinc-400 hover:text-zinc-200 transition-colors"
                     >
                       {t("lc.ms.recolor")}
                     </button>
+                    {activeShape.type === "image" ? (
+                      <button
+                        type="button"
+                        onClick={() => updateSelected({ rotationDeg: ((activeShape.rotationDeg ?? 0) + 90) % 360 })}
+                        className="font-mono text-[9px] uppercase tracking-widest px-2 py-1 rounded border border-zinc-700/50 text-zinc-400 hover:text-zinc-200 transition-colors"
+                      >
+                        {t("lc.ms.rotate")}
+                      </button>
+                    ) : null}
                   </div>
                 ) : null}
-              </div>
-            </div>
-          ) : null}
-
-          {tool === "asset" ? (
-            <div className="min-w-[260px] space-y-4">
-              <div>
-                <p className="font-mono text-[9px] uppercase tracking-widest text-zinc-500 mb-2">{t("lc.ms.assetCatalog")}</p>
-                <div className="grid grid-cols-3 gap-1.5">
-                  {ASSETS.map((k) => (
-                    <button
-                      key={k}
-                      type="button"
-                      onClick={() => setAssetKind(k)}
-                      title={assetLabel(k)}
-                      className={`flex flex-col items-center gap-0.5 rounded-md border px-1 py-1 transition-colors ${
-                        assetKind === k ? "border-green-500/70 bg-green-500/10" : "border-zinc-700/40 hover:border-zinc-600"
-                      }`}
-                    >
-                      <AssetPreview kind={k} dim={assetKind !== k} />
-                      <span className="font-mono text-[8px] uppercase tracking-widest text-zinc-500 truncate w-full text-center">{assetLabel(k)}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <p className="font-mono text-[9px] uppercase tracking-widest text-zinc-500 mb-2">{t("lc.ms.stroke")}</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {STROKES.map((c) => (
-                    <button
-                      key={c}
-                      type="button"
-                      onClick={() => setStrokeColor(c)}
-                      className={`h-6 w-6 rounded-full border transition-transform ${strokeColor === c ? "scale-110 border-zinc-200" : "border-zinc-700"}`}
-                      style={{ backgroundColor: c }}
-                      title={c}
-                    />
-                  ))}
-                </div>
-              </div>
-              <div>
-                <p className="font-mono text-[9px] uppercase tracking-widest text-zinc-500 mb-2">{t("lc.common.scale")} · {assetScale.toFixed(2)}×</p>
-                <input
-                  type="range"
-                  min={0.4}
-                  max={2.5}
-                  step={0.1}
-                  value={assetScale}
-                  onChange={(e) => setAssetScale(Number(e.target.value))}
-                  className="w-full accent-green-500"
-                />
-              </div>
-              <div>
-                <p className="font-mono text-[9px] uppercase tracking-widest text-zinc-500 mb-2">{t("lc.common.rotation")} · {((assetRot % 360) + 360) % 360}°</p>
-                <div className="grid grid-cols-3 gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => setAssetRot((assetRot - 15 + 360) % 360)}
-                    className="rounded-md border border-zinc-700/40 px-2 py-1 font-mono text-[9px] uppercase tracking-widest text-zinc-400 hover:text-zinc-200 transition-colors"
-                  >
-                    ↺ 15°
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setAssetRot((assetRot + 15) % 360)}
-                    className="rounded-md border border-zinc-700/40 px-2 py-1 font-mono text-[9px] uppercase tracking-widest text-zinc-400 hover:text-zinc-200 transition-colors"
-                  >
-                    15° ↻
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setAssetRot(0)}
-                    className="rounded-md border border-zinc-700/40 px-2 py-1 font-mono text-[9px] uppercase tracking-widest text-zinc-400 hover:text-zinc-200 transition-colors"
-                  >
-                    0°
-                  </button>
-                </div>
-                <p className="mt-1.5 text-[10px] leading-snug text-zinc-500">{t("lc.ms.assetHint")}</p>
-              </div>
-            </div>
-          ) : null}
-
-          {tool === "paint" ? (
-            <div className="min-w-[196px]">
-              <p className="font-mono text-[9px] uppercase tracking-widest text-zinc-500 mb-2">{t("lc.ms.terrain")}</p>
-              <div className="grid grid-cols-2 gap-1.5">
-                {Object.entries(TERRAIN).map(([k, meta]) => (
-                  <button
-                    key={k}
-                    type="button"
-                    onClick={() => setTerrain(k as HexTileKind)}
-                    title={t(`lc.ms.terrain.${k}`)}
-                    className={`flex items-center gap-1.5 rounded-md border px-1.5 py-1 transition-colors ${
-                      terrain === k ? "border-green-500/70 bg-green-500/10" : "border-zinc-700/40 hover:border-zinc-600"
-                    }`}
-                  >
-                    <span
-                      className="block h-3.5 w-3.5 rounded-sm border shrink-0"
-                      style={{ backgroundColor: meta.fill, borderColor: meta.stroke }}
-                    />
-                    <span className="font-mono text-[9px] uppercase tracking-widest text-zinc-400 truncate">{t(`lc.ms.terrain.${k}`)}</span>
-                  </button>
-                ))}
               </div>
             </div>
           ) : null}
@@ -960,18 +663,27 @@ export default function MapStudio({ location }: MapStudioProps) {
                   ))}
                 </div>
               </div>
-              <div>
-                <button
-                  type="button"
-                  onClick={() => setSnap((s) => !s)}
-                  className={`w-full rounded-md border px-2 py-1 text-[10px] uppercase tracking-widest font-mono transition-colors ${
-                    snap ? "border-green-500/70 bg-green-500/10 text-green-300" : "border-zinc-700/40 text-zinc-500"
-                  }`}
-                >
-                  {snap ? t("lc.ms.snapOn") : t("lc.ms.snapOff")}
-                </button>
-                <p className="mt-1.5 text-[10px] leading-snug text-zinc-500">{t("lc.ms.snapHint")}</p>
-              </div>
+            </div>
+          ) : null}
+
+          {tool === "split" ? (
+            <div className="min-w-[196px]">
+              <p className="font-mono text-[9px] uppercase tracking-widest text-zinc-500 mb-2">{t("lc.ms.splitHint")}</p>
+            </div>
+          ) : null}
+
+          {tool === "image" ? (
+            <div className="min-w-[196px] space-y-3">
+              <p className="font-mono text-[9px] uppercase tracking-widest text-zinc-500">{t("lc.ms.imageHint")}</p>
+              <button
+                type="button"
+                onClick={() => fileRef.current?.click()}
+                disabled={imgBusy}
+                className="w-full rounded-md border border-green-500/60 bg-green-500/10 px-3 py-2 font-mono text-[10px] uppercase tracking-widest text-green-300 transition-colors hover:bg-green-500/20 disabled:opacity-50"
+              >
+                {imgBusy ? t("lc.common.saving") : t("lc.ms.imageAdd")}
+              </button>
+              <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onPickImage} />
             </div>
           ) : null}
 
@@ -1047,6 +759,15 @@ export default function MapStudio({ location }: MapStudioProps) {
             <div className="absolute bottom-3 right-3 z-10 flex flex-col gap-1.5 rounded-lg border border-zinc-700/60 bg-zinc-900/80 backdrop-blur p-1">
               <button
                 type="button"
+                onClick={fitToView}
+                title={t("lc.zoom.fit")}
+                aria-label={t("lc.zoom.fit")}
+                className="flex h-8 w-8 items-center justify-center rounded-md text-zinc-300 hover:text-white hover:bg-zinc-800 transition-colors"
+              >
+                <Maximize className="w-4 h-4" strokeWidth={2.25} />
+              </button>
+              <button
+                type="button"
                 onClick={() => setZoom((v) => clampZoom(v + ZOOM_STEP))}
                 disabled={zoom >= ZOOM_MAX}
                 title={t("lc.zoom.in")}
@@ -1082,15 +803,6 @@ export default function MapStudio({ location }: MapStudioProps) {
           {/* status bar */}
           <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-[10px] uppercase tracking-widest text-zinc-500">
             <span>
-              {t("lc.ms.cell")} <b className="text-zinc-300">{hoverCell ? `q${hoverCell.q} r${hoverCell.r}` : "—"}</b>
-            </span>
-            <span>
-              {t("lc.ms.abs")} <b className="text-zinc-300">{hoverAbs ? `q${hoverAbs.q} r${hoverAbs.r}` : `q${abs.q} r${abs.r}`}</b>
-            </span>
-            <span>
-              {t("lc.common.scale")} <b className="text-zinc-300">{formatHexScale(sizeNum)}</b>
-            </span>
-            <span>
               {t("lc.ms.strokes")} <b className="text-zinc-300">{shapes.length}</b>
             </span>
             <span>
@@ -1100,33 +812,21 @@ export default function MapStudio({ location }: MapStudioProps) {
             </span>
           </div>
 
-          {/* grid sizing — below the canvas */}
+          {/* sheet sizing — below the canvas */}
           <div className="mt-4 border-t border-zinc-800 pt-4">
-            <p className="font-mono text-[9px] uppercase tracking-widest text-zinc-500 mb-2">{t("lc.common.grid")}</p>
+            <p className="font-mono text-[9px] uppercase tracking-widest text-zinc-500 mb-2">{t("lc.ms.sheet")}</p>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 max-w-4xl">
               <label className="block">
-                <span className="block font-mono text-[9px] uppercase tracking-widest text-zinc-600 mb-0.5">{t("lc.ms.width")}</span>
-                <input type="number" min={1} max={40} value={cols} onChange={(e) => setCols(Math.max(1, Math.min(40, Number(e.target.value) || 1)))} className="w-full bg-zinc-800/60 border border-zinc-700/50 rounded px-2 py-1 text-sm text-zinc-100" />
+                <span className="font-mono text-[9px] uppercase tracking-widest text-zinc-600 mb-0.5 block">{t("lc.ms.width")}</span>
+                <input type="number" min={1} value={cols} onChange={(e) => setCols(Math.max(1, Math.floor(Number(e.target.value)) || 1))} className="w-full bg-zinc-800/60 border border-zinc-700/50 rounded px-2 py-1 text-sm text-zinc-100" />
               </label>
               <label className="block">
-                <span className="block font-mono text-[9px] uppercase tracking-widest text-zinc-600 mb-0.5">{t("lc.ms.height")}</span>
-                <input type="number" min={1} max={40} value={rows} onChange={(e) => setRows(Math.max(1, Math.min(40, Number(e.target.value) || 1)))} className="w-full bg-zinc-800/60 border border-zinc-700/50 rounded px-2 py-1 text-sm text-zinc-100" />
+                <span className="font-mono text-[9px] uppercase tracking-widest text-zinc-600 mb-0.5 block">{t("lc.ms.height")}</span>
+                <input type="number" min={1} value={rows} onChange={(e) => setRows(Math.max(1, Math.floor(Number(e.target.value)) || 1))} className="w-full bg-zinc-800/60 border border-zinc-700/50 rounded px-2 py-1 text-sm text-zinc-100" />
               </label>
               <label className="block">
-                <span className="block font-mono text-[9px] uppercase tracking-widest text-zinc-600 mb-0.5">{t("lc.ms.hexM")}</span>
-                <input type="number" step="0.1" min="0" value={sizeM} onChange={(e) => setSizeM(e.target.value)} className="w-full bg-zinc-800/60 border border-zinc-700/50 rounded px-2 py-1 text-sm text-zinc-100" />
-              </label>
-              <label className="block">
-                <span className="block font-mono text-[9px] uppercase tracking-widest text-zinc-600 mb-0.5">{t("lc.ms.rotDeg")}</span>
+                <span className="font-mono text-[9px] uppercase tracking-widest text-zinc-600 mb-0.5 block">{t("lc.ms.rotDeg")}</span>
                 <input type="number" step="15" value={rotationDeg} onChange={(e) => setRotationDeg(Number(e.target.value) || 0)} className="w-full bg-zinc-800/60 border border-zinc-700/50 rounded px-2 py-1 text-sm text-zinc-100" />
-              </label>
-              <label className="block sm:col-span-2 lg:col-span-2">
-                <span className="block font-mono text-[9px] uppercase tracking-widest text-zinc-600 mb-0.5">{t("lc.ms.orientation")}</span>
-                <select value={orientation} onChange={(e) => setOrientation(e.target.value)} className="w-full bg-zinc-800/60 border border-zinc-700/50 rounded px-2 py-1 text-sm text-zinc-100">
-                  <option value="flat">{t("lc.ms.orientFlat")}</option>
-                  <option value="pointy">{t("lc.ms.orientPointy")}</option>
-                  <option value="square">{t("lc.ms.orientSquare")}</option>
-                </select>
               </label>
             </div>
           </div>
@@ -1136,29 +836,11 @@ export default function MapStudio({ location }: MapStudioProps) {
   );
 }
 
-/** Initial anchor of a path shape (its first vertex), for Select-drag. */
+/** Anchor of a path when dragging with Select (its first vertex). */
 function shapeAnchor(shapes: DrawShape[], idx: number, fallback: Point): Point {
-  const s = shapes[idx];
-  if (s.type === "path") {
-    const segs = s.d?.match(/-?\d*\.?\d+(?:[eE][+-]?\d+)?/g);
-    if (segs && segs.length >= 2) return { x: Number(segs[0]), y: Number(segs[1]) };
-  }
-  return fallback;
-}
-
-/* ---------- asset preview ---------- */
-
-/** Tiny live vector preview of an asset stamp. */
-function AssetPreview({ kind, dim = false }: { kind: DrawAssetKind; dim?: boolean }) {
-  const ref = useRef<HTMLCanvasElement | null>(null);
-  useEffect(() => {
-    const cv = ref.current;
-    if (!cv) return;
-    const meta = ASSET_BOX[kind];
-    const k = Math.max(6, 28 / Math.max(meta.w, meta.h));
-    paintCanvas(cv, 40, 40, (ctx) => {
-      drawAssetShape(ctx, { type: "asset", kind, x: 0, y: 0, s: 1, rot: 0, size: 1, color: "#d4d4d8", unit: "hexR" }, k);
-    });
-  }, [kind]);
-  return <canvas ref={ref} width={40} height={40} className={`block w-10 h-10 ${dim ? "opacity-45" : ""}`} aria-hidden />;
+  const target = shapes[idx];
+  if (target?.type !== "path") return fallback;
+  const start = (target.d ?? "").match(/-?\d*\.?\d+(?:[eE][+-]?\d+)?/g);
+  if (!start || start.length < 2) return fallback;
+  return { x: Number(start[0]), y: Number(start[1]) };
 }
