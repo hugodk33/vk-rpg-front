@@ -117,6 +117,7 @@ export default function ItemExhibit({ item, tableId }: { item: Item; tableId?: s
 
   const primary = item.weapon?.attacks?.[0];
   const isStSourced = !!primary && primary.damage_source !== "fixed";
+  const itemImage = item.image_url ?? item.imageUrl ?? null;
   const windowStart = item.weapon?.min_st ?? 10;
   const stWindow = GURPS_DAMAGE_TABLE.filter((r) => r.st >= windowStart && r.st <= windowStart + 5);
   const displaySt = 10;
@@ -147,9 +148,18 @@ export default function ItemExhibit({ item, tableId }: { item: Item; tableId?: s
           <div className="min-w-0 flex flex-col gap-5">
             {/* Name + description */}
             <Panel>
-              <h1 className="text-[clamp(26px,5vw,40px)] leading-none font-bold tracking-tight text-amber-100">
-                {item.name || t("itm.item")}
-              </h1>
+              <div className="flex items-center gap-4">
+                {itemImage ? (
+                  <img
+                    src={itemImage}
+                    alt={item.name || t("itm.item")}
+                    className="h-16 w-16 rounded-lg border border-zinc-700/60 object-cover shrink-0"
+                  />
+                ) : null}
+                <h1 className="text-[clamp(26px,5vw,40px)] leading-none font-bold tracking-tight text-amber-100">
+                  {item.name || t("itm.item")}
+                </h1>
+              </div>
               <div className="mt-3 border-t border-zinc-700/60 pt-3">
                 {item.description ? (
                   <p className="text-[15px] leading-relaxed text-zinc-400 max-w-2xl">{item.description}</p>
@@ -159,6 +169,30 @@ export default function ItemExhibit({ item, tableId }: { item: Item; tableId?: s
               </div>
             </Panel>
 
+            {/* -------- GALLERY -------- */}
+            {item.images?.length ? (
+              <Panel>
+                <SectionTitle icon="▦" tint={tint} label={t("fr.gallery")} />
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                  {item.images.map((url, i) => (
+                    <a
+                      key={`${url}-${i}`}
+                      href={url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="group block aspect-square overflow-hidden rounded-lg border border-zinc-700/50 bg-zinc-800/40"
+                    >
+                      <img
+                        src={url}
+                        alt={`${item.name || t("itm.item")} ${i + 1}`}
+                        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                      />
+                    </a>
+                  ))}
+                </div>
+              </Panel>
+            ) : null}
+
             {/* -------- MAKER'S PLATE (signature) -------- */}
             <aside className="exhibit-reveal">
               <div className="flex flex-wrap items-center gap-x-6 gap-y-4 bg-zinc-800/40 rounded-lg border border-zinc-700/50 px-4 py-4">
@@ -167,7 +201,7 @@ export default function ItemExhibit({ item, tableId }: { item: Item; tableId?: s
                     className="w-14 h-14 grid place-items-center rounded-full border border-dashed"
                     style={{ borderColor: `${tint}66`, background: "radial-gradient(circle at 50% 40%, #27272a, #18181b)" }}
                   >
-                    <ItemIcon item={item} className="w-7 h-7" imgClassName="w-10 h-10 object-cover rounded-full" />
+                    <ItemIcon item={item} preferIcon className="w-7 h-7" />
                   </div>
                   <span className="font-mono text-[10px] tracking-widest uppercase" style={{ color: tint }}>
                     {t(GROUP_UI[group].label)}

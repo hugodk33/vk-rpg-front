@@ -240,7 +240,7 @@ export default function LocationPlate({ location, tableId, mode = "narrator" }: 
 
   return (
     <div className="relative max-w-5xl mx-auto">
-      <div className="bg-zinc-900/90 border border-zinc-700/50 shadow-2xl overflow-hidden">
+      <div>
         {/* top strip */}
         <div className="exhibit-reveal flex items-center justify-between px-6 pt-6 lg:px-8">
           {baseTableId ? (

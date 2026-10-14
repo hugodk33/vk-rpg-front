@@ -9,6 +9,7 @@ import { fitLabel } from "@/lib/fit";
 import { formatKg } from "@/lib/units";
 import { useTranslation } from "@/lib/i18n";
 import ItemIcon from "@/components/items/ItemIcon";
+import ItemDetailModal from "@/components/item/ItemDetailModal";
 
 type T = (key: string) => string;
 
@@ -118,6 +119,7 @@ export default function GearPanel({ data, historic }: GearPanelProps) {
   const [busy, setBusy] = useState<Record<string, boolean>>({});
   const [error, setError] = useState<string | null>(null);
   const [compare, setCompare] = useState<Array<string | null>>([null, null]);
+  const [viewItemId, setViewItemId] = useState<string | null>(null);
 
   const owned = useMemo(() => ch.items ?? [], [ch.items]);
 
@@ -317,6 +319,20 @@ export default function GearPanel({ data, historic }: GearPanelProps) {
                   className="mt-2.5 flex items-center justify-center gap-1.5 border-t border-zinc-800/80 pt-2.5"
                   onClick={(e) => e.stopPropagation()}
                 >
+                  {keyOf(i) ? (
+                    <button
+                      type="button"
+                      title={t("cs.gear.view")}
+                      aria-label={t("cs.gear.view")}
+                      onClick={() => setViewItemId(keyOf(i))}
+                      className="inline-flex items-center justify-center w-7 h-7 rounded-md text-zinc-400 border border-zinc-700/50 hover:text-amber-300 hover:border-amber-600/50 hover:bg-zinc-700/40 transition-colors"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z" />
+                        <circle cx="12" cy="12" r="3" />
+                      </svg>
+                    </button>
+                  ) : null}
                   {stt === "in_inventory" ? (
                     <>
                       {isWeaponish ? (
@@ -385,6 +401,10 @@ export default function GearPanel({ data, historic }: GearPanelProps) {
             ))}
           </div>
         </div>
+      ) : null}
+
+      {viewItemId ? (
+        <ItemDetailModal key={viewItemId} itemId={viewItemId} onClose={() => setViewItemId(null)} />
       ) : null}
     </div>
   );

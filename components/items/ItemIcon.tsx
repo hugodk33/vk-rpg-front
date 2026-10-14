@@ -158,6 +158,8 @@ interface ItemIconProps {
   /** Class for the image variant — when the narrator uploads art later. */
   imgClassName?: string;
   alt?: string;
+  /** Force the derived SVG icon even when an image url is present. */
+  preferIcon?: boolean;
 }
 
 export default function ItemIcon({
@@ -165,9 +167,10 @@ export default function ItemIcon({
   className = "w-8 h-8",
   imgClassName,
   alt,
+  preferIcon = false,
 }: ItemIconProps) {
   const url = item.image_url ?? item.imageUrl ?? null;
-  if (url) {
+  if (url && !preferIcon) {
     return (
       <span className="inline-flex items-center justify-center overflow-hidden rounded-lg">
         <img

@@ -2,18 +2,16 @@
 
 /* ============================================================
    LocationTabs — a rota individual de uma localidade (/location/:id)
-   ganha dois modos de visualização: a PLACA (survey plate, default)
-   e o ORGANOGRAMA das passagens das áreas abaixo dela. O tab do
-   organograma só aparece quando alguma subárea está interligada.
+   mostra a PLACA (survey plate). Um botão flutuante, sempre visível,
+   leva à TELA DEDICADA do organograma (/location/:id/organogram)
+   — o "controlador de dungeon": nela o narrador percorre as salas e
+   vê como elas se conectam.
    ============================================================ */
 
-import { useState } from "react";
+import Link from "next/link";
 import LocationPlate from "@/components/location/LocationPlate";
-import LocationOrganogram from "@/components/location/LocationOrganogram";
 import { useTranslation } from "@/lib/i18n";
 import type { Location, LocationConnection } from "@/lib/types";
-
-type ViewMode = "plate" | "organogram";
 
 export default function LocationTabs({
   location,
@@ -29,68 +27,25 @@ export default function LocationTabs({
   mode?: "narrator" | "player";
 }) {
   const { t } = useTranslation();
-  const [view, setView] = useState<ViewMode>("plate");
-
-  const subtree = new Set<string>();
-  const stack = [location.id];
-  while (stack.length) {
-    const id = stack.pop() as string;
-    if (subtree.has(id)) continue;
-    subtree.add(id);
-    for (const loc of locations) {
-      if (loc.parentId === id) stack.push(loc.id);
-    }
-  }
-  const hasLinks = connections.some(
-    (c) => subtree.has(c.from?.id ?? "") || subtree.has(c.to?.id ?? "")
-  );
-
-  if (!hasLinks) {
-    return <LocationPlate location={location} tableId={tableId} mode={mode} />;
-  }
-
-  const tabs: Array<{ key: ViewMode; label: string }> = [
-    { key: "plate", label: "lc.view.tab.plate" },
-    { key: "organogram", label: "lc.view.tab.organogram" },
-  ];
 
   return (
-    <div className="space-y-4">
-      <div
-        role="tablist"
-        aria-label={t("lc.view.tab.plate")}
-        className="max-w-5xl mx-auto flex items-center gap-1"
-      >
-        {tabs.map((tabDef) => (
-          <button
-            key={tabDef.key}
-            role="tab"
-            type="button"
-            aria-selected={view === tabDef.key}
-            onClick={() => setView(tabDef.key)}
-            className={`relative px-3 py-2 font-mono text-[10px] uppercase tracking-widest transition-colors focus:outline-none focus-visible:ring-2 rounded-md ${
-              view === tabDef.key ? "text-zinc-100" : "text-zinc-500 hover:text-zinc-300"
-            }`}
-          >
-            {t(tabDef.label)}
-            {view === tabDef.key ? (
-              <span
-                aria-hidden
-                className="absolute inset-x-2 bottom-0 h-0.5 rounded-full"
-                style={{ background: "#4ade80" }}
-              />
-            ) : null}
-          </button>
-        ))}
-      </div>
+    <>
+      <LocationPlate location={location} tableId={tableId} mode={mode} />
 
-      {view === "organogram" ? (
-        <div className="max-w-7xl mx-auto rounded-2xl bg-zinc-900/90 border border-zinc-700/50 shadow-2xl p-6 lg:p-8">
-          <LocationOrganogram root={location} locations={locations} connections={connections} />
-        </div>
-      ) : (
-        <LocationPlate location={location} tableId={tableId} mode={mode} />
-      )}
-    </div>
+      <Link
+        href={`/location/${location.id}/organogram`}
+        title={t("lc.org.title")}
+        aria-label={t("lc.org.title")}
+        className="fixed bottom-5 right-5 z-40 inline-flex items-center gap-2 rounded-full border border-green-600/60 bg-zinc-900/95 px-4 py-3 font-mono text-[10px] uppercase tracking-widest text-green-300 shadow-2xl backdrop-blur-sm transition-colors hover:bg-green-600/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-green-600/60"
+      >
+        <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+          <rect x="9" y="2.5" width="6" height="5" rx="1" />
+          <rect x="2.5" y="16.5" width="6" height="5" rx="1" />
+          <rect x="15.5" y="16.5" width="6" height="5" rx="1" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 7.5V12M5.5 16.5V12h13v4.5" />
+        </svg>
+        {t("lc.view.tab.organogram")}
+      </Link>
+    </>
   );
 }

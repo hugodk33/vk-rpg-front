@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { submitJson } from "./submit";
 import { cancelCls, inputCls, labelCls, submitCls } from "./formStyles";
 import FormShell from "./FormShell";
+import ImageGalleryField from "./ImageGalleryField";
 import { LOCATION_KINDS, absoluteHex, formatHexScale } from "@/lib/location";
 import { useTranslation } from "@/lib/i18n";
 import type { Location } from "@/lib/types";
@@ -74,6 +75,7 @@ export default function LocationForm({
   const [kindEdited, setKindEdited] = useState(isEdit);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [gallery, setGallery] = useState<string[]>(initial?.images ?? []);
 
   const sizeNum = sizeM === "" ? null : Number(sizeM);
 
@@ -151,6 +153,7 @@ export default function LocationForm({
         orientation,
         rotationDeg: Number(rotationDeg || 0),
       },
+      images: gallery,
     };
 
     try {
@@ -343,6 +346,10 @@ export default function LocationForm({
               <label className={labelCls}>{t("fr.loc.notes")}</label>
               <textarea value={other} onChange={(e) => setOther(e.target.value)} rows={2} className={inputCls} />
             </div>
+          </div>
+
+          <div className="border-t border-zinc-700/40 pt-5">
+            <ImageGalleryField images={gallery} onChange={setGallery} scope="locations" />
           </div>
 
           {error && <p className="text-red-400 text-sm">{error}</p>}

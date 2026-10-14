@@ -246,6 +246,8 @@ export interface TableCharacter {
   peculiarities?: Peculiarity[]
   portraitUrl?: string | null
   bodyUrl?: string | null
+  /** Galeria de imagens extra (ordem de exibição). */
+  images?: string[]
 }
 
 export interface GameTable {
@@ -339,6 +341,8 @@ export interface Location {
   tiles?: HexTile[]
   drawing?: DrawShape[]
   bgImageUrl?: string | null
+  /** Galeria de imagens do local (ordem de exibição). */
+  images?: string[]
   ancestors?: Location[]
   children?: Location[]
 }
@@ -766,6 +770,8 @@ export interface Item {
   image_url?: string | null
   /** Resolved icon url from the item_images table (role:"icon"). */
   imageUrl?: string | null
+  /** Galeria de imagens extra (ordem de exibição). */
+  images?: string[]
 }
 
 export interface Advantage {

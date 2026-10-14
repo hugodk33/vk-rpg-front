@@ -10,6 +10,7 @@ import { submitJson } from "./submit";
 import { cancelCls, inputCls, labelCls, submitCls } from "./formStyles";
 import FormShell from "./FormShell";
 import CategoryField from "./CategoryField";
+import ImageGalleryField from "./ImageGalleryField";
 import { FIT_OPTIONS } from "@/lib/fit";
 import { DAMAGE_SOURCE_LABELS, DAMAGE_TYPES } from "@/lib/damage";
 import { kgToLb, lbToKg } from "@/lib/units";
@@ -117,6 +118,7 @@ export default function ItemForm({ initial, tableId, tableTitle, tables, default
   const [error, setError] = useState<string | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(initial?.imageUrl ?? initial?.image_url ?? null);
   const [imgBusy, setImgBusy] = useState(false);
+  const [gallery, setGallery] = useState<string[]>(initial?.images ?? []);
 
   useEffect(() => {
     if (!currentTableId) return;
@@ -272,6 +274,7 @@ export default function ItemForm({ initial, tableId, tableTitle, tables, default
       quality,
       condition,
       image_url: imageUrl,
+      images: gallery,
       ...weaponFields,
       ...armorFields,
     };
@@ -630,6 +633,8 @@ export default function ItemForm({ initial, tableId, tableTitle, tables, default
               </div>
             </div>
           </div>
+
+          <ImageGalleryField images={gallery} onChange={setGallery} scope="items" />
 
           <div>
             <label className={labelCls}>{t("fr.description")}</label>

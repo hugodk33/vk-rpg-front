@@ -71,6 +71,26 @@ export default async function CharacterViewerPage({
       </div>
 
       <CharacterTabs basePath={basePath} active={activeTab} moment={momentNum} />
+
+      {data.character.images?.length ? (
+        <div className="mb-5 flex flex-wrap gap-3">
+          {data.character.images.map((url, i) => (
+            <a
+              key={`${url}-${i}`}
+              href={url}
+              target="_blank"
+              rel="noreferrer"
+              className="block h-24 w-24 overflow-hidden rounded-lg border border-zinc-700/60 bg-zinc-900"
+            >
+              <img
+                src={url}
+                alt={`${data.character.sheet?.name || data.character.name || ""} ${i + 1}`}
+                className="h-full w-full object-cover"
+              />
+            </a>
+          ))}
+        </div>
+      ) : null}
       {activeTab === "inventory" ? (
         <GearPanel data={data} historic={!!moment} />
       ) : activeTab === "journey" ? (

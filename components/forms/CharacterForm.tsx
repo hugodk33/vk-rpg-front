@@ -13,6 +13,7 @@ import TableTabs from "@/components/TableTabs";
 import { FormBreadcrumbs } from "./FormShell";
 import SearchModal from "./SearchModal";
 import InfoTooltip from "./InfoTooltip";
+import ImageGalleryField from "./ImageGalleryField";
 import SplitToggle from "./SplitToggle";
 import ChipFilters, { countValues } from "@/components/table/ChipFilters";
 import { categoryLabel } from "@/lib/categories";
@@ -261,6 +262,7 @@ export default function CharacterForm({ tableId, tableTitle, tables, initial, se
   const [error, setError] = useState<string | null>(null);
   const [portraitUrl, setPortraitUrl] = useState<string | null>(initial?.character?.portraitUrl ?? null);
   const [bodyUrl, setBodyUrl] = useState<string | null>(initial?.character?.bodyUrl ?? null);
+  const [gallery, setGallery] = useState<string[]>(initial?.character?.images ?? []);
   const [imgBusy, setImgBusy] = useState<null | "portrait" | "body">(null);
   const [searchFor, setSearchFor] = useState<null | "advantages" | "disadvantages" | "skills" | "items">(null);
   const [splitAdv, setSplitAdv] = useState(false);
@@ -593,6 +595,7 @@ export default function CharacterForm({ tableId, tableTitle, tables, initial, se
           table_id: currentTableId,
           portraitUrl,
           bodyUrl,
+          images: gallery,
         });
         router.push(`/character/${initial.character.id}`);
       } else if (charType === "npc") {
@@ -606,6 +609,7 @@ export default function CharacterForm({ tableId, tableTitle, tables, initial, se
           skills,
           portraitUrl,
           bodyUrl,
+          images: gallery,
         });
         router.push(`/character/${result.character_id}`);
       } else {
@@ -618,6 +622,7 @@ export default function CharacterForm({ tableId, tableTitle, tables, initial, se
           skills,
           portraitUrl,
           bodyUrl,
+          images: gallery,
           equipment: selItems.map((i) => ({
             item_id: i.id,
             quantity: 1,
@@ -899,6 +904,9 @@ export default function CharacterForm({ tableId, tableTitle, tables, initial, se
                     </div>
                   );
                 })}
+              </div>
+              <div className="mt-4 border-t border-zinc-700/40 pt-4">
+                <ImageGalleryField images={gallery} onChange={setGallery} scope="characters" />
               </div>
             </div>
           </div>
