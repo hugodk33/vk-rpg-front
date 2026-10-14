@@ -4,7 +4,6 @@ import { api } from "@/lib/api";
 import { getLocationTableId, getNarratorSideView } from "@/lib/actor";
 import LocationOrganogram from "@/components/location/LocationOrganogram";
 import type { GameTableLocations, Location } from "@/lib/types";
-import { interpolate } from "@/lib/i18n";
 import { getLang, makeT } from "@/lib/i18n-server";
 
 export const dynamic = "force-dynamic";
