@@ -298,7 +298,7 @@ export default function LocationPlate({ location, tableId, mode = "narrator" }: 
                   <span aria-hidden>▧</span> {t("lc.lp.drawMap")}
                 </Link>
               ) : null}
-              {location.id && !isPlayer ? (
+              {location.id ? (
                 <Link
                   href={`/location/${location.id}/organogram`}
                   className="inline-flex items-center gap-1.5 rounded-lg border border-slate-400/60 bg-slate-400/10 px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest text-slate-300 transition-colors hover:bg-slate-400/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60"
