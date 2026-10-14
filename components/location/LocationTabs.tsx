@@ -15,14 +15,12 @@ import type { Location, LocationConnection } from "@/lib/types";
 
 export default function LocationTabs({
   location,
-  locations,
-  connections,
   tableId,
   mode = "narrator",
 }: {
   location: Location;
-  locations: Location[];
-  connections: LocationConnection[];
+  locations?: Location[];
+  connections?: LocationConnection[];
   tableId?: string;
   mode?: "narrator" | "player";
 }) {
