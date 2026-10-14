@@ -64,7 +64,7 @@ export default async function LocationOrganogramPage({ params }: { params: Promi
               className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-700/50 bg-zinc-900/80 px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest text-zinc-300 transition-colors hover:bg-zinc-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-green-600/60"
             >
               {t("lc.editor.backTo").replace("{name}", location.name ?? "")}
-              <span aria-hidden>→</span>
+              <span aria-hidden>➜</span>
             </Link>
           </div>
         </div>
