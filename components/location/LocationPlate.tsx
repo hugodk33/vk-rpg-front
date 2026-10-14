@@ -295,7 +295,15 @@ export default function LocationPlate({ location, tableId, mode = "narrator" }: 
                   href={`/location/${location.id}/edit?tab=map`}
                   className="inline-flex items-center gap-1.5 rounded-lg border border-green-600/60 bg-green-600/10 px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest text-green-300 transition-colors hover:bg-green-600/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-green-600/60"
                 >
-                  <span aria-hidden>✎</span> {t("lc.lp.drawMap")}
+                  <span aria-hidden>▧</span> {t("lc.lp.drawMap")}
+                </Link>
+              ) : null}
+              {location.id && !isPlayer ? (
+                <Link
+                  href={`/location/${location.id}/organogram`}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-slate-400/60 bg-slate-400/10 px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest text-slate-300 transition-colors hover:bg-slate-400/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60"
+                >
+                  <span aria-hidden>▣</span> Estrutura
                 </Link>
               ) : null}
               {location.id && !isPlayer ? (
