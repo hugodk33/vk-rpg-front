@@ -12,6 +12,7 @@
    ============================================================ */
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { interpolate, useTranslation } from "@/lib/i18n";
 import { absoluteHex } from "@/lib/location";
 import type { Location } from "@/lib/types";
@@ -174,6 +175,22 @@ export default function PlayerAtlas({ tree, defaultLocationId = null, currentLoc
             />
           ) : null}
           {active ? <ZoomRuler chain={active.chain} onJump={zoom} player minZoomId={defaultLocationId} /> : null}
+          {active ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <Link
+                href={`/player/location/${active.node.id}`}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-blue-400/40 bg-blue-400/10 px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest text-blue-200 transition-colors hover:bg-blue-400/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60"
+              >
+                {t("tp.openMap")}
+              </Link>
+              <Link
+                href={`/player/location/${active.node.id}/organogram`}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-400/50 bg-slate-400/10 px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest text-slate-200 transition-colors hover:bg-slate-400/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60"
+              >
+                <span aria-hidden>▣</span> {t("lc.view.tab.organogram")}
+              </Link>
+            </div>
+          ) : null}
           {canShowMap && activeAbs ? (
             <LocationMap
               hex={active.node.hex ?? null}

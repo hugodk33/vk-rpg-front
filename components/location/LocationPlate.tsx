@@ -169,7 +169,8 @@ function SurveyRow({ label, value, emphasize, hex }: { label: string; value?: st
 function TerritoryCrumbs({ chain, accent, mode, hoverCls }: { chain: Loc[]; accent: string; mode: "narrator" | "player"; hoverCls: string }) {
   const { t } = useTranslation();
   if (chain.length <= 1) return null;
-  const hrefOf = (id?: string) => (mode === "player" ? `/player` : `/location/${id}`);
+  const hrefOf = (id?: string) =>
+    mode === "player" ? `/player/location/${id}` : `/location/${id}`;
   return (
     <nav aria-label={t("lc.lp.ariaChain")} className="exhibit-reveal flex items-center flex-wrap gap-1.5">
       {chain.map((loc, i) => {
@@ -300,7 +301,11 @@ export default function LocationPlate({ location, tableId, mode = "narrator" }: 
               ) : null}
               {location.id ? (
                 <Link
-                  href={`/location/${location.id}/organogram`}
+                  href={
+                    isPlayer
+                      ? `/player/location/${location.id}/organogram`
+                      : `/location/${location.id}/organogram`
+                  }
                   className="inline-flex items-center gap-1.5 rounded-lg border border-slate-400/60 bg-slate-400/10 px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest text-slate-300 transition-colors hover:bg-slate-400/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60"
                 >
                   <span aria-hidden>▣</span> Estrutura

@@ -25,13 +25,17 @@ export default function LocationTabs({
   mode?: "narrator" | "player";
 }) {
   const { t } = useTranslation();
+  const organogramHref =
+    mode === "player"
+      ? `/player/location/${location.id}/organogram`
+      : `/location/${location.id}/organogram`;
 
   return (
     <>
       <LocationPlate location={location} tableId={tableId} mode={mode} />
 
       <Link
-        href={`/location/${location.id}/organogram`}
+        href={organogramHref}
         title={t("lc.org.title")}
         aria-label={t("lc.org.title")}
         className="fixed bottom-5 right-5 z-40 inline-flex items-center gap-2 rounded-full border border-green-600/60 bg-zinc-900/95 px-4 py-3 font-mono text-[10px] uppercase tracking-widest text-green-300 shadow-2xl backdrop-blur-sm transition-colors hover:bg-green-600/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-green-600/60"
