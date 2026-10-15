@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -308,7 +308,7 @@ export default function LocationPlate({ location, tableId, mode = "narrator" }: 
                   }
                   className="inline-flex items-center gap-1.5 rounded-lg border border-slate-400/60 bg-slate-400/10 px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest text-slate-300 transition-colors hover:bg-slate-400/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60"
                 >
-                  <span aria-hidden>▣</span> Estrutura
+                  <span aria-hidden>▣</span> {t("lc.org.structure")}
                 </Link>
               ) : null}
               {location.id && !isPlayer ? (
@@ -317,14 +317,6 @@ export default function LocationPlate({ location, tableId, mode = "narrator" }: 
                   className={`font-mono text-[10px] tracking-widest uppercase text-zinc-500 ${chromeHover} transition-colors`}
                 >
                   {t("lc.common.edit")}
-                </Link>
-              ) : null}
-              {location.id && !isPlayer ? (
-                <Link
-                  href={`/location/${location.id}/edit?tab=links`}
-                  className={`font-mono text-[10px] tracking-widest uppercase text-zinc-500 ${chromeHover} transition-colors`}
-                >
-                  {t("lc.conn.title")}
                 </Link>
               ) : null}
               {baseTableId && location.id && !isPlayer ? (

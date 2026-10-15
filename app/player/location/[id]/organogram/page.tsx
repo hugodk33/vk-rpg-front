@@ -49,7 +49,7 @@ export default async function PlayerLocationOrganogramPage({
       <div className="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
           <div className="min-w-0">
-            <h1 className="text-xl sm:text-2xl font-bold text-zinc-100">Estrutura</h1>
+            <h1 className="text-xl sm:text-2xl font-bold text-zinc-100">{t("lc.org.structure")}</h1>
             {location.name ? (
               <p className="truncate text-[11px] sm:text-xs text-zinc-500">{location.name}</p>
             ) : null}

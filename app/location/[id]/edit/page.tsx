@@ -15,7 +15,7 @@ export default async function EditLocationPage({
 }) {
   const { id } = await params;
   const sp = await searchParams;
-  const defaultTab = sp.tab === "map" ? "map" : sp.tab === "links" ? "links" : "form";
+  const defaultTab = sp.tab === "map" ? "map" : "form";
 
   /* O `actor` é obrigatório nas leituras de location: sem ele o backend
      recusa (401) em vez de devolver o catálogo inteiro. A mesa do local vem

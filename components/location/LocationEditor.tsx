@@ -4,7 +4,6 @@ import { useState } from "react";
 import Link from "next/link";
 import LocationForm from "@/components/forms/LocationForm";
 import MapStudio from "@/components/location/MapStudio";
-import LocationLinks from "@/components/location/LocationLinks";
 import { interpolate, useTranslation } from "@/lib/i18n";
 import type { Location } from "@/lib/types";
 
@@ -14,15 +13,15 @@ import type { Location } from "@/lib/types";
    two tabs, with the same back chrome used across the narrator
    flow ("← Back to locations") and a shortcut back to the plate
    itself (previous screen). Container keeps the default width
-   (max-w-5xl) used by the survey plates.
+   (max-w-5xl) used by the survey plates. Passagens agora vivem na
+   tela da Estrutura (/location/[id]/organogram), junto do organograma.
    ============================================================ */
 
-type EditorTab = "form" | "map" | "links";
+type EditorTab = "form" | "map";
 
 const EDITOR_TABS: Array<{ key: EditorTab; label: string; hint: string }> = [
   { key: "form", label: "lc.editor.tab.form", hint: "lc.editor.hint.form" },
   { key: "map", label: "lc.editor.tab.map", hint: "lc.editor.hint.map" },
-  { key: "links", label: "lc.editor.tab.links", hint: "lc.editor.hint.links" },
 ];
 
 export default function LocationEditor({
@@ -42,13 +41,7 @@ export default function LocationEditor({
   const baseTableId = tableId ?? location.tableId;
   const backHref = baseTableId ? `/table/${baseTableId}/locations` : "/narrator";
 
-  /* Passagens só fazem sentido na escala local: cidade (1 km/hex) para
-     baixo. Em mundo/continente/nação o tab fica escondido. */
-  const sizeM = location.hex?.sizeM;
-  const canLink = sizeM != null && sizeM <= 1000;
-  const tabs = EDITOR_TABS.filter((tabDef) => tabDef.key !== "links" || canLink);
-  const initialTab: EditorTab = defaultTab === "links" && !canLink ? "form" : defaultTab;
-  const [tab, setTab] = useState<EditorTab>(initialTab);
+  const [tab, setTab] = useState<EditorTab>(defaultTab);
 
   return (
     <div className="relative max-w-5xl mx-auto">
@@ -79,7 +72,7 @@ export default function LocationEditor({
               {location.name || t("lc.common.unmapped")}
             </h1>
             <p className="mt-1.5 font-mono text-[10px] uppercase tracking-widest text-zinc-600">
-              {tab === "map" ? t("lc.editor.subMap") : tab === "links" ? t("lc.editor.subLinks") : t("lc.editor.subForm")}
+              {tab === "map" ? t("lc.editor.subMap") : t("lc.editor.subForm")}
             </p>
           </div>
           <Link
@@ -99,7 +92,7 @@ export default function LocationEditor({
           aria-label={t("lc.editor.aria")}
           className="mt-5 flex items-center gap-1 border-b border-zinc-700/40 px-6 lg:px-8"
         >
-          {tabs.map((tabDef) => (
+          {EDITOR_TABS.map((tabDef) => (
             <button
               key={tabDef.key}
               role="tab"
@@ -123,10 +116,8 @@ export default function LocationEditor({
         <div className="px-6 py-8 lg:px-8" role="tabpanel">
           {tab === "form" ? (
             <LocationForm initial={location} tableId={baseTableId} tableTitle={tableTitle} allLocations={allLocations} embedded />
-          ) : tab === "map" ? (
-            <MapStudio location={location} />
           ) : (
-            <LocationLinks location={location} allLocations={allLocations} />
+            <MapStudio location={location} />
           )}
         </div>
       </div>

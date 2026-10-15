@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { getLocationTableId, getNarratorSideView } from "@/lib/actor";
-import LocationOrganogram from "@/components/location/LocationOrganogram";
+import LocationStructure from "@/components/location/LocationStructure";
 import type { GameTableLocations, Location } from "@/lib/types";
 import { getLang, makeT } from "@/lib/i18n-server";
 
@@ -39,43 +39,53 @@ export default async function LocationOrganogramPage({ params }: { params: Promi
   const baseTableId = location.tableId ?? ownerTable ?? tableId ?? "";
 
   return (
-    <div className="min-h-screen bg-zinc-950">
-      <div className="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
-          <div className="min-w-0">
-            <h1 className="text-xl sm:text-2xl font-bold text-zinc-100">
-              Estrutura
-            </h1>
-            {location.name ? (
-              <p className="truncate text-[11px] sm:text-xs text-zinc-500">{location.name}</p>
-            ) : null}
-          </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            {baseTableId ? (
-              <Link
-                href={`/table/${baseTableId}/locations`}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-700/50 bg-zinc-900/80 px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest text-zinc-300 transition-colors hover:bg-zinc-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-green-600/60"
-              >
-                <span aria-hidden>←</span> {t("lc.lp.backToLocations")}
-              </Link>
-            ) : null}
-            <Link
-              href={`/location/${location.id}`}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-700/50 bg-zinc-900/80 px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest text-zinc-300 transition-colors hover:bg-zinc-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-green-600/60"
-            >
-              {t("lc.editor.backTo").replace("{name}", location.name ?? "")}
-              <span aria-hidden>➜</span>
-            </Link>
-          </div>
+    <div className="relative max-w-5xl mx-auto">
+      {/* top strip — mesmo chrome da placa (primeira tela) */}
+      <div className="exhibit-reveal flex items-center justify-between px-6 pt-6 lg:px-8">
+        {baseTableId ? (
+          <Link
+            href={`/table/${baseTableId}/locations`}
+            className="inline-flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-widest text-zinc-500 hover:text-green-400 transition-colors"
+          >
+            <span aria-hidden>←</span> {t("lc.lp.backToLocations")}
+          </Link>
+        ) : (
+          <span />
+        )}
+        <div className="flex items-center gap-3 text-[10px] font-mono uppercase tracking-widest text-zinc-500">
+          {all?.table?.title ? <span className="hidden sm:inline">{all.table.title}</span> : null}
+          <span className="hidden sm:inline text-zinc-700">/</span>
+          <span className="text-green-300">{t("lc.org.structure")}</span>
         </div>
+      </div>
 
-        <div className="rounded-2xl border border-zinc-700/50 bg-zinc-900/90 p-3 shadow-2xl sm:p-6 overflow-auto">
-          <LocationOrganogram
-            root={location}
-            locations={all?.locations ?? []}
-            connections={all?.connections ?? []}
-          />
+      {/* title + back to the plate */}
+      <div className="px-6 lg:px-8 mt-5 flex items-end justify-between gap-4 flex-wrap">
+        <div className="min-w-0">
+          <h1 className="text-[clamp(24px,4vw,34px)] leading-none font-bold tracking-tight text-green-100">
+            {t("lc.org.structure")}
+          </h1>
+          <p className="mt-1.5 font-mono text-[10px] uppercase tracking-widest text-zinc-600">
+            {location.name || t("lc.common.unmapped")}
+          </p>
         </div>
+        <Link
+          href={`/location/${location.id}`}
+          className="inline-flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-widest text-zinc-500 hover:text-green-400 transition-colors"
+        >
+          <span aria-hidden>←</span>{" "}
+          {t("lc.editor.backTo").replace("{name}", location.name || t("lc.editor.localWord"))}
+        </Link>
+      </div>
+
+      <div className="px-6 py-8 lg:px-8">
+        <LocationStructure
+          root={location}
+          locations={all?.locations ?? []}
+          connections={all?.connections ?? []}
+          tableId={ownerTable ?? baseTableId}
+          actorQuery={actorQs}
+        />
       </div>
     </div>
   );
