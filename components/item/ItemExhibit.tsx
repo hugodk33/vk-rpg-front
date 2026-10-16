@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Item, WeaponAttack } from "@/lib/types";
 import { DAMAGE_TYPES, GURPS_DAMAGE_TABLE, resolveAttack } from "@/lib/damage";
 import { interpolate, useTranslation } from "@/lib/i18n";
@@ -107,6 +107,7 @@ function AttackRow({ atk, st, ratedSt, tint }: { atk: WeaponAttack; st: number; 
 
 export default function ItemExhibit({ item, tableId }: { item: Item; tableId?: string }) {
   const { lang, t } = useTranslation();
+  const [tab, setTab] = useState<"sheet" | "images">("sheet");
   const group = classify(item);
   const tint = GROUP_UI[group].hex;
   const isArmorish = group === "armor" || group === "shield";
@@ -143,9 +144,57 @@ export default function ItemExhibit({ item, tableId }: { item: Item; tableId?: s
           </div>
         </div>
 
+        {/* tabs: sheet | images */}
+        <div className="flex gap-1 border-b border-zinc-800 px-6 lg:px-8">
+          {([
+            ["sheet", t("itm.sheet")],
+            ["images", t("fr.ch.images")],
+          ] as const).map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setTab(id)}
+              aria-current={tab === id ? "page" : undefined}
+              className={`relative px-4 py-2.5 font-mono text-[11px] uppercase tracking-[0.14em] transition-colors border-b-2 -mb-px ${
+                tab === id ? "border-amber-500/70 text-amber-300" : "border-transparent text-zinc-500 hover:text-zinc-200"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
         <div className="flex flex-col gap-6 px-6 py-8 lg:px-8">
           {/* -------- MAIN SPECS -------- */}
           <div className="min-w-0 flex flex-col gap-5">
+            {tab === "images" ? (
+              <Panel>
+                <SectionTitle icon="▦" tint={tint} label={t("fr.gallery")} />
+                {item.images?.length ? (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                    {item.images.map((url, i) => (
+                      <a
+                        key={`${url}-${i}`}
+                        href={url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="group block aspect-square overflow-hidden rounded-lg border border-zinc-700/50 bg-zinc-800/40"
+                      >
+                        <img
+                          src={url}
+                          alt={`${item.name || t("itm.item")} ${i + 1}`}
+                          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                        />
+                      </a>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="font-mono text-xs text-zinc-500 italic">{t("fr.gallery.empty")}</p>
+                )}
+              </Panel>
+            ) : null}
+            {tab === "sheet" ? (
+            <>
             {/* Name + description */}
             <Panel>
               <div className="flex items-center gap-4">
@@ -168,30 +217,6 @@ export default function ItemExhibit({ item, tableId }: { item: Item; tableId?: s
                 )}
               </div>
             </Panel>
-
-            {/* -------- GALLERY -------- */}
-            {item.images?.length ? (
-              <Panel>
-                <SectionTitle icon="▦" tint={tint} label={t("fr.gallery")} />
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                  {item.images.map((url, i) => (
-                    <a
-                      key={`${url}-${i}`}
-                      href={url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="group block aspect-square overflow-hidden rounded-lg border border-zinc-700/50 bg-zinc-800/40"
-                    >
-                      <img
-                        src={url}
-                        alt={`${item.name || t("itm.item")} ${i + 1}`}
-                        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                      />
-                    </a>
-                  ))}
-                </div>
-              </Panel>
-            ) : null}
 
             {/* -------- MAKER'S PLATE (signature) -------- */}
             <aside className="exhibit-reveal">
@@ -305,11 +330,13 @@ export default function ItemExhibit({ item, tableId }: { item: Item; tableId?: s
                 </div>
               </Panel>
             ) : null}
+            </>
+            ) : null}
           </div>
         </div>
 
         {/* -------- WEAR / CONDITION LEDGER (state) -------- */}
-        {cs.notches >= 0 ? (
+        {tab === "sheet" && cs.notches >= 0 ? (
           <div className="exhibit-reveal px-6 pb-8 lg:px-8">
             <div className="bg-zinc-800/40 rounded-lg border border-zinc-700/50 p-4 flex flex-wrap items-center justify-between gap-5">
               <div className="flex items-center gap-4">
@@ -337,7 +364,7 @@ export default function ItemExhibit({ item, tableId }: { item: Item; tableId?: s
 ) : null}
         </div>
 
-        {tableId ? (
+        {tab === "sheet" && tableId ? (
           <div className="flex justify-end px-6 pb-6 lg:px-8">
             <ModifiersModal ownerField="item_id" ownerId={item.id} tableId={tableId} />
           </div>

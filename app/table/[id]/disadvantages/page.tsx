@@ -1,15 +1,17 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import { use, useState } from "react";
 import Link from "next/link";
 import type { Disadvantage, GameTableDisadvantages } from "@/lib/types";
 import TableTabs from "@/components/TableTabs";
 import RowActions from "@/components/table/RowActions";
+import Pagination from "@/components/table/Pagination";
 import ChipFilters, { countValues } from "@/components/table/ChipFilters";
 import { categoryLabel } from "@/lib/categories";
-import { api } from "@/lib/api";
 import { submitJson } from "@/components/forms/submit";
 import { interpolate, useTranslation } from "@/lib/i18n";
+import { useCatalog } from "@/lib/useCatalog";
+import { usePagination } from "@/lib/usePagination";
 
 const COLORS: Record<string, { bg: string; border: string; badge: string }> = {
   Mental: { bg: "#1e1b4b", border: "#4338ca", badge: "bg-purple-600/80 text-purple-200" },
@@ -23,14 +25,12 @@ const FALLBACK = { bg: "#27272a", border: "#52525b", badge: "bg-zinc-600/80 text
 export default function TableDisadvantagesPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { t } = useTranslation();
-  const [data, setData] = useState<GameTableDisadvantages | null>(null);
   const [search, setSearch] = useState("");
   const [cat, setCat] = useState("");
   const [sub, setSub] = useState("");
 
-  useEffect(() => {
-    api<GameTableDisadvantages>(`/game-table-disadvantages/${id}`).then(setData).catch(() => setData({ table: null, disadvantages: [] }));
-  }, [id]);
+  const filtering = Boolean(search || cat || sub);
+  const data = useCatalog<GameTableDisadvantages>(`/game-table-disadvantages/${id}`);
 
   const allDisadvantages = data?.disadvantages ?? [];
 
@@ -65,7 +65,8 @@ export default function TableDisadvantagesPage({ params }: { params: Promise<{ i
       || (d.category ?? "").toLowerCase().includes(q);
   });
 
-  const filtering = Boolean(search || cat || sub);
+  const shownCount = disadvantages.length;
+  const pager = usePagination(disadvantages, `${search}|${cat}|${sub}`);
 
   return (
     <div className="max-w-5xl mx-auto p-6">
@@ -78,7 +79,7 @@ export default function TableDisadvantagesPage({ params }: { params: Promise<{ i
 
       <div className="flex items-center justify-between gap-6 mb-6">
         <div className="flex items-center gap-3 text-xs text-zinc-500">
-          <span>{interpolate(t(disadvantages.length !== 1 ? "tp.count.disadvantagesMany" : "tp.count.disadvantagesOne"), { n: disadvantages.length })}</span>
+          <span>{interpolate(t(shownCount !== 1 ? "tp.count.disadvantagesMany" : "tp.count.disadvantagesOne"), { n: shownCount })}</span>
         </div>
         <Link
           href={`/disadvantage/new?table_id=${id}`}
@@ -130,7 +131,7 @@ export default function TableDisadvantagesPage({ params }: { params: Promise<{ i
         </div>
       ) : (
         <div className="space-y-2">
-          {disadvantages.map((d: Disadvantage) => {
+          {pager.slice.map((d: Disadvantage) => {
             const colors = COLORS[d.category ?? ""] ?? FALLBACK;
             return (
               <div
@@ -186,6 +187,8 @@ export default function TableDisadvantagesPage({ params }: { params: Promise<{ i
           })}
         </div>
       )}
+
+      <Pagination page={pager.page} pageCount={pager.pageCount} from={pager.from} to={pager.to} total={pager.total} onPageChange={pager.setPage} accent="green" />
     </div>
   );
 }

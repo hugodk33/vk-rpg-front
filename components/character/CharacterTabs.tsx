@@ -7,7 +7,7 @@ import { getLang, makeT } from "@/lib/i18n-server";
    selection (mental state) stays applied everywhere.
    ============================================================ */
 
-export type SheetTab = "sheet" | "inventory" | "journey";
+export type SheetTab = "sheet" | "inventory" | "journey" | "images";
 
 export function characterTabHref(
   basePath: string,
@@ -35,6 +35,11 @@ const TABS: Array<{ id: SheetTab; labelKey: string; icon: string }> = [
     id: "journey",
     labelKey: "cs.tab.journey",
     icon: "M12 6V4m0 16v-2m0-4V8M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M4 12H2m20 0h-2m-1.07-7.07l-1.41 1.41M6.34 17.66l-1.41 1.41M12 16a4 4 0 100-8 4 4 0 000 8z",
+  },
+  {
+    id: "images",
+    labelKey: "cs.tab.images",
+    icon: "M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z",
   },
 ];
 

@@ -81,6 +81,12 @@ export const PT: Record<string, string> = {
   "tp.kindCount.armorMany": "{n} armaduras",
   "tp.kindCount.equipmentOne": "{n} equipamento",
   "tp.kindCount.equipmentMany": "{n} equipamentos",
+  "tp.loadMore": "Carregar mais",
+  "tp.showingOf": "Mostrando {n} de {total}",
+  "tp.page.prev": "Anterior",
+  "tp.page.next": "Próxima",
+  "tp.page.label": "Paginação",
+  "tp.page.range": "Mostrando {from}–{to} de {total}",
 
   /* ---------- Catálogo de perícias ---------- */
   "tp.skills.empty": "Nenhuma perícia catalogada ainda.",
@@ -282,6 +288,12 @@ export const EN: Record<string, string> = {
   "tp.kindCount.armorMany": "{n} armor",
   "tp.kindCount.equipmentOne": "{n} equipment",
   "tp.kindCount.equipmentMany": "{n} equipment",
+  "tp.loadMore": "Load more",
+  "tp.showingOf": "Showing {n} of {total}",
+  "tp.page.prev": "Previous",
+  "tp.page.next": "Next",
+  "tp.page.label": "Pagination",
+  "tp.page.range": "Showing {from}–{to} of {total}",
 
   /* ---------- Skill catalog ---------- */
   "tp.skills.empty": "No skills catalogued yet.",

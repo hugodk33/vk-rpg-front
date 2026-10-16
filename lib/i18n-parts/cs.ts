@@ -69,6 +69,8 @@ export const PT: Record<string, string> = {
   "cs.hpBase": "PV máx. {v}",
   "cs.inv.empty": "Nenhum item no inventário.",
   "cs.journey": "Jornada",
+  "cs.loadEarlier": "Carregar mais antigos",
+  "cs.showingRecent": "Mostrando os {n} mais recentes de {total}",
   "cs.loadingEvents": "Carregando eventos…",
   "cs.loadingFull": "Carregando a ficha completa…",
   "cs.moment": "Momento {n}",
@@ -111,6 +113,7 @@ export const PT: Record<string, string> = {
   "cs.tab.inventory": "Inventário",
   "cs.tab.journey": "Jornada",
   "cs.tab.sheet": "Ficha",
+  "cs.tab.images": "Imagens",
 };
 
 export const EN: Record<string, string> = {
@@ -184,6 +187,8 @@ export const EN: Record<string, string> = {
   "cs.hpBase": "Max HP {v}",
   "cs.inv.empty": "No items in the inventory.",
   "cs.journey": "Journey",
+  "cs.loadEarlier": "Load earlier",
+  "cs.showingRecent": "Showing the {n} most recent of {total}",
   "cs.loadingEvents": "Loading events…",
   "cs.loadingFull": "Loading the full sheet…",
   "cs.moment": "Moment {n}",
@@ -226,4 +231,5 @@ export const EN: Record<string, string> = {
   "cs.tab.inventory": "Inventory",
   "cs.tab.journey": "Journey",
   "cs.tab.sheet": "Sheet",
+  "cs.tab.images": "Images",
 };

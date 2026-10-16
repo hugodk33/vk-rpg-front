@@ -341,6 +341,8 @@ export interface Location {
   tiles?: HexTile[]
   drawing?: DrawShape[]
   bgImageUrl?: string | null
+  /** Imagem de banner/capa do local (independente do fundo do mapa). */
+  bannerUrl?: string | null
   /** Galeria de imagens do local (ordem de exibição). */
   images?: string[]
   ancestors?: Location[]
@@ -473,6 +475,10 @@ export interface CharacterHistory {
   }
   table?: GameTable | null
   baseline?: CharacterHistoryBaseline
+  /** Total de eventos antes do teto `limit` (o backend calcula o estado sobre todos). */
+  total?: number
+  /** true quando `events` foi cortado pelo teto. */
+  limited?: boolean
   events: CharacterHistoryEvent[]
 }
 
@@ -541,6 +547,7 @@ export interface Scene {
   chapter?: number
   moment?: number
   title: string
+  imageUrl?: string | null
   narrations: Narration[]
 }
 
@@ -549,7 +556,16 @@ export interface GameTableScenes {
   scenes: Scene[]
 }
 
-export interface GameTableCharacters {
+/** Metadado de paginação devolvido pelos endpoints de catálogo. Presente
+    apenas quando o cliente envia `?limit=`; sem ele, o array vem completo. */
+export interface PaginationMeta {
+  total?: number
+  limit?: number | null
+  offset?: number
+  hasMore?: boolean
+}
+
+export interface GameTableCharacters extends PaginationMeta {
   table: GameTable | null
   characters: TableCharacter[]
 }
@@ -562,22 +578,22 @@ export interface TableNpc {
   status?: string
 }
 
-export interface GameTableItems {
+export interface GameTableItems extends PaginationMeta {
   table: GameTable | null
   items: Item[]
 }
 
-export interface GameTableSkills {
+export interface GameTableSkills extends PaginationMeta {
   table: GameTable | null
   skills: SkillItem[]
 }
 
-export interface GameTableAdvantages {
+export interface GameTableAdvantages extends PaginationMeta {
   table: GameTable | null
   advantages: Advantage[]
 }
 
-export interface GameTableDisadvantages {
+export interface GameTableDisadvantages extends PaginationMeta {
   table: GameTable | null
   disadvantages: Disadvantage[]
 }
@@ -590,7 +606,7 @@ export interface GameTableLocations {
   defaultLocationId?: string | null
 }
 
-export interface GameTableNpcs {
+export interface GameTableNpcs extends PaginationMeta {
   table: GameTable | null
   npcs: TableNpc[]
 }

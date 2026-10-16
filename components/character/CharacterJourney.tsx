@@ -402,12 +402,13 @@ export default function CharacterJourney({
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [cmpA, setCmpA] = useState<string | null>(null);
   const [cmpB, setCmpB] = useState<string | null>(null);
+  const [limit, setLimit] = useState(300);
   const { t } = useTranslation();
 
   useEffect(() => {
     let alive = true;
     const q = viewerId ? `?viewer=${encodeURIComponent(viewerId)}` : "";
-    api<CharacterHistory>(`/game-table-character/${characterId}/history`)
+    api<CharacterHistory>(`/game-table-character/${characterId}/history?limit=${limit}`)
       .then((d) => {
         if (alive) setData(d);
       })
@@ -424,7 +425,7 @@ export default function CharacterJourney({
     return () => {
       alive = false;
     };
-  }, [characterId, viewerId]);
+  }, [characterId, viewerId, limit]);
 
   if (error) {
     return <p className="text-xs text-zinc-600 italic">{t("cs.err.chronicle")}</p>;
@@ -518,6 +519,16 @@ export default function CharacterJourney({
         <span className="text-[10px] uppercase tracking-widest text-zinc-600">
           {interpolate(events.length === 1 ? t("cs.eventCount") : t("cs.eventsCount"), { n: events.length })}
         </span>
+        {data.limited && data.total ? (
+          <button
+            type="button"
+            onClick={() => setLimit((l) => l + 300)}
+            title={interpolate(t("cs.showingRecent"), { n: events.length, total: data.total })}
+            className="text-[10px] uppercase tracking-widest text-blue-400/80 hover:text-blue-300 transition-colors"
+          >
+            ↑ {t("cs.loadEarlier")}
+          </button>
+        ) : null}
         <span aria-hidden className="flex-1 h-px" style={{ background: "linear-gradient(90deg, rgba(96,165,250,.35), transparent)" }} />
       </div>
 

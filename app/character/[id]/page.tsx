@@ -33,7 +33,7 @@ export default async function CharacterViewerPage({
   const tableId = data.table?.id;
 
   const activeTab: SheetTab =
-    tab === "inventory" || tab === "journey" ? tab : "sheet";
+    tab === "inventory" || tab === "journey" || tab === "images" ? tab : "sheet";
   const momentNum = moment ? Number(moment) : null;
 
   return (
@@ -72,26 +72,14 @@ export default async function CharacterViewerPage({
 
       <CharacterTabs basePath={basePath} active={activeTab} moment={momentNum} />
 
-      {data.character.images?.length ? (
-        <div className="mb-5 flex flex-wrap gap-3">
-          {data.character.images.map((url, i) => (
-            <a
-              key={`${url}-${i}`}
-              href={url}
-              target="_blank"
-              rel="noreferrer"
-              className="block h-24 w-24 overflow-hidden rounded-lg border border-zinc-700/60 bg-zinc-900"
-            >
-              <img
-                src={url}
-                alt={`${data.character.sheet?.name || data.character.name || ""} ${i + 1}`}
-                className="h-full w-full object-cover"
-              />
-            </a>
-          ))}
-        </div>
-      ) : null}
-      {activeTab === "inventory" ? (
+      {activeTab === "images" ? (
+        <CharacterImages
+          name={data.character.sheet?.name || data.character.name || ""}
+          portraitUrl={data.character.portraitUrl}
+          bodyUrl={data.character.bodyUrl}
+          images={data.character.images ?? []}
+        />
+      ) : activeTab === "inventory" ? (
         <GearPanel data={data} historic={!!moment} />
       ) : activeTab === "journey" ? (
         <CharacterJourneyView
@@ -107,6 +95,48 @@ export default async function CharacterViewerPage({
           <CharacterVisibilityDrawer tableId={tableId} targetId={data.character.id} />
         </>
       )}
+    </div>
+  );
+}
+
+/* Aba "Imagens": reúne retrato, corpo inteiro e a galeria do personagem. */
+function CharacterImages({
+  name,
+  portraitUrl,
+  bodyUrl,
+  images,
+}: {
+  name: string;
+  portraitUrl?: string | null;
+  bodyUrl?: string | null;
+  images: string[];
+}) {
+  const entries: Array<{ url: string; aspect: string }> = [];
+  if (portraitUrl) entries.push({ url: portraitUrl, aspect: "aspect-square" });
+  if (bodyUrl) entries.push({ url: bodyUrl, aspect: "aspect-[3/4]" });
+  for (const url of images) entries.push({ url, aspect: "aspect-square" });
+
+  if (!entries.length) {
+    return null;
+  }
+
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+      {entries.map((entry, i) => (
+        <a
+          key={`${entry.url}-${i}`}
+          href={entry.url}
+          target="_blank"
+          rel="noreferrer"
+          className={`block overflow-hidden rounded-lg border border-zinc-700/60 bg-zinc-900 ${entry.aspect}`}
+        >
+          <img
+            src={entry.url}
+            alt={`${name} ${i + 1}`}
+            className="h-full w-full object-cover transition-transform duration-300 hover:scale-105"
+          />
+        </a>
+      ))}
     </div>
   );
 }

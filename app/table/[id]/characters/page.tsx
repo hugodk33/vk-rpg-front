@@ -6,25 +6,31 @@ import type { GameTableCharacters, GameTableNpcs, TableCharacter } from "@/lib/t
 import TableTabs from "@/components/TableTabs";
 import RadarChart from "@/components/RadarChart";
 import RowActions from "@/components/table/RowActions";
+import Pagination from "@/components/table/Pagination";
 import ChipFilters, { countValues } from "@/components/table/ChipFilters";
 import { api } from "@/lib/api";
 import { submitJson } from "@/components/forms/submit";
 import { interpolate, useTranslation } from "@/lib/i18n";
+import { useCatalog } from "@/lib/useCatalog";
+import { usePagination } from "@/lib/usePagination";
 
 export default function TableCharactersPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { t } = useTranslation();
-  const [data, setData] = useState<GameTableCharacters | null>(null);
   const [npcs, setNpcs] = useState<GameTableNpcs | null>(null);
   const [search, setSearch] = useState("");
   const [typeF, setTypeF] = useState("");
   const [bondF, setBondF] = useState("");
   const [statusF, setStatusF] = useState("");
 
+  /* NPCs são poucos e servem de lookup (status/aliado + id de edição): vêm
+     completos. Os personagens e NPCs vêm completos e paginam no cliente. */
   useEffect(() => {
-    api<GameTableCharacters>(`/game-table-characters/${id}`).then(setData).catch(() => setData({ table: null, characters: [] }));
     api<GameTableNpcs>(`/game-table-npcs/${id}`).then(setNpcs).catch(() => setNpcs({ table: null, npcs: [] }));
   }, [id]);
+
+  const filtering = Boolean(search || typeF || bondF || statusF);
+  const data = useCatalog<GameTableCharacters>(`/game-table-characters/${id}`);
 
   const npcStatusById = new Map((npcs?.npcs ?? []).map((n) => [n.character_id, n.status]));
   const npcIdByCharacter = new Map((npcs?.npcs ?? []).map((n) => [n.character_id, n.id]));
@@ -55,7 +61,8 @@ export default function TableCharactersPage({ params }: { params: Promise<{ id: 
       || (ch.user?.username ?? "").toLowerCase().includes(q);
   });
 
-  const filtering = Boolean(search || typeF || bondF || statusF);
+  const shownCount = characters.length;
+  const pager = usePagination(characters, `${search}|${typeF}|${bondF}|${statusF}`);
 
   return (
     <div className="max-w-5xl mx-auto p-6">
@@ -68,7 +75,7 @@ export default function TableCharactersPage({ params }: { params: Promise<{ id: 
 
       <div className="flex items-center justify-between gap-6 mb-6">
         <div className="flex items-center gap-3 text-xs text-zinc-500">
-          <span>{interpolate(t(characters.length !== 1 ? "tp.count.charactersMany" : "tp.count.charactersOne"), { n: characters.length })}</span>
+          <span>{interpolate(t(shownCount !== 1 ? "tp.count.charactersMany" : "tp.count.charactersOne"), { n: shownCount })}</span>
         </div>
         <Link
           href={`/character/new?table_id=${id}`}
@@ -122,7 +129,7 @@ export default function TableCharactersPage({ params }: { params: Promise<{ id: 
         </div>
       ) : (
         <div className="space-y-2">
-          {characters.map((ch) => {
+          {pager.slice.map((ch) => {
             const s = ch.sheet;
             if (isNpc(ch)) {
               const ally = isAlly(ch);
@@ -237,6 +244,8 @@ export default function TableCharactersPage({ params }: { params: Promise<{ id: 
           })}
         </div>
       )}
+
+      <Pagination page={pager.page} pageCount={pager.pageCount} from={pager.from} to={pager.to} total={pager.total} onPageChange={pager.setPage} accent="violet" />
     </div>
   );
 }

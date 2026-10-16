@@ -5,6 +5,8 @@ import Link from "next/link";
 import type { GameTableLocations } from "@/lib/types";
 import TableTabs from "@/components/TableTabs";
 import ChipFilters, { countValues } from "@/components/table/ChipFilters";
+import Pagination from "@/components/table/Pagination";
+import { usePagination } from "@/lib/usePagination";
 import { submitJson } from "@/components/forms/submit";
 import { interpolate, useTranslation } from "@/lib/i18n";
 import {
@@ -83,6 +85,11 @@ export default function LocationsAtlas({
           || (n.address ?? "").toLowerCase().includes(query)
       )
     : children;
+
+  /* Regra dos 30: a lista plana da busca e as divisões de um território
+     paginam no cliente, reusando a página ao trocar filtro/zoom. */
+  const filteredPager = usePagination(filtered ?? [], `${textQuery}|${kindF}|${regionF}`);
+  const platesPager = usePagination(plates, `${activeId ?? "root"}|${query}`);
 
   const zoom = (nodeId: string) => {
     if (index.get(nodeId)?.node.parentId) setSearch("");
@@ -185,21 +192,24 @@ export default function LocationsAtlas({
             <p className="text-zinc-500 text-sm">{search ? t("tp.noResults") : t("tp.filter.none")}</p>
           </div>
         ) : (
-          <div ref={platesRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3" aria-live="polite">
-            {filtered.map(({ node, chain }) => (
-              <LocationPlate
-                key={node.id}
-                node={node}
-                onZoom={zoom}
-                onSetDefault={toggleDefault}
-                trail={chain.slice(0, -1)}
-                isDefault={defaultId === node.id}
-                busy={settingDefault}
-                copyHref={`/api/table-location/${node.id}/copy`}
-                tableId={tableId}
-              />
-            ))}
-          </div>
+          <>
+            <div ref={platesRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3" aria-live="polite">
+              {filteredPager.slice.map(({ node, chain }) => (
+                <LocationPlate
+                  key={node.id}
+                  node={node}
+                  onZoom={zoom}
+                  onSetDefault={toggleDefault}
+                  trail={chain.slice(0, -1)}
+                  isDefault={defaultId === node.id}
+                  busy={settingDefault}
+                  copyHref={`/api/table-location/${node.id}/copy`}
+                  tableId={tableId}
+                />
+              ))}
+            </div>
+            <Pagination page={filteredPager.page} pageCount={filteredPager.pageCount} from={filteredPager.from} to={filteredPager.to} total={filteredPager.total} onPageChange={filteredPager.setPage} accent="teal" />
+          </>
         )
       ) : !active && (data.tree?.length ?? 0) > 1 ? (
         <div>
@@ -207,10 +217,11 @@ export default function LocationsAtlas({
             {t("tp.manyWorlds")}
           </p>
           <div ref={platesRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {plates.map((node) => (
+            {platesPager.slice.map((node) => (
               <LocationPlate key={node.id} node={node} onZoom={zoom} onSetDefault={toggleDefault} isDefault={defaultId === node.id} busy={settingDefault} copyHref={`/api/table-location/${node.id}/copy`} tableId={tableId} />
             ))}
           </div>
+          <Pagination page={platesPager.page} pageCount={platesPager.pageCount} from={platesPager.from} to={platesPager.to} total={platesPager.total} onPageChange={platesPager.setPage} accent="teal" />
         </div>
       ) : (
         <div ref={platesRef} className="space-y-4">
@@ -239,11 +250,14 @@ export default function LocationsAtlas({
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {plates.map((node) => (
-                <LocationPlate key={node.id} node={node} onZoom={zoom} onSetDefault={toggleDefault} isDefault={defaultId === node.id} busy={settingDefault} copyHref={`/api/table-location/${node.id}/copy`} tableId={tableId} />
-              ))}
-            </div>
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {platesPager.slice.map((node) => (
+                  <LocationPlate key={node.id} node={node} onZoom={zoom} onSetDefault={toggleDefault} isDefault={defaultId === node.id} busy={settingDefault} copyHref={`/api/table-location/${node.id}/copy`} tableId={tableId} />
+                ))}
+              </div>
+              <Pagination page={platesPager.page} pageCount={platesPager.pageCount} from={platesPager.from} to={platesPager.to} total={platesPager.total} onPageChange={platesPager.setPage} accent="teal" />
+            </>
           )}
         </div>
       )}

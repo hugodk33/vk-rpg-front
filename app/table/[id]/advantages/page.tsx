@@ -1,27 +1,27 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import { use, useState } from "react";
 import Link from "next/link";
 import type { Advantage, GameTableAdvantages } from "@/lib/types";
 import TableTabs from "@/components/TableTabs";
 import RowActions from "@/components/table/RowActions";
+import Pagination from "@/components/table/Pagination";
 import ChipFilters, { countValues } from "@/components/table/ChipFilters";
 import { categoryLabel } from "@/lib/categories";
-import { api } from "@/lib/api";
 import { submitJson } from "@/components/forms/submit";
 import { interpolate, useTranslation } from "@/lib/i18n";
+import { useCatalog } from "@/lib/useCatalog";
+import { usePagination } from "@/lib/usePagination";
 
 export default function TableAdvantagesPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { t } = useTranslation();
-  const [data, setData] = useState<GameTableAdvantages | null>(null);
   const [search, setSearch] = useState("");
   const [cat, setCat] = useState("");
   const [sub, setSub] = useState("");
 
-  useEffect(() => {
-    api<GameTableAdvantages>(`/game-table-advantages/${id}`).then(setData).catch(() => setData({ table: null, advantages: [] }));
-  }, [id]);
+  const filtering = Boolean(search || cat || sub);
+  const data = useCatalog<GameTableAdvantages>(`/game-table-advantages/${id}`);
 
   const allAdvantages = data?.advantages ?? [];
 
@@ -55,7 +55,8 @@ export default function TableAdvantagesPage({ params }: { params: Promise<{ id: 
       || (a.category ?? "").toLowerCase().includes(q);
   });
 
-  const filtering = Boolean(search || cat || sub);
+  const shownCount = advantages.length;
+  const pager = usePagination(advantages, `${search}|${cat}|${sub}`);
 
   return (
     <div className="max-w-5xl mx-auto p-6">
@@ -68,7 +69,7 @@ export default function TableAdvantagesPage({ params }: { params: Promise<{ id: 
 
       <div className="flex items-center justify-between gap-6 mb-6">
         <div className="flex items-center gap-3 text-xs text-zinc-500">
-          <span>{interpolate(t(advantages.length !== 1 ? "tp.count.advantagesMany" : "tp.count.advantagesOne"), { n: advantages.length })}</span>
+          <span>{interpolate(t(shownCount !== 1 ? "tp.count.advantagesMany" : "tp.count.advantagesOne"), { n: shownCount })}</span>
         </div>
         <Link
           href={`/advantage/new?table_id=${id}`}
@@ -120,7 +121,7 @@ export default function TableAdvantagesPage({ params }: { params: Promise<{ id: 
         </div>
       ) : (
         <div className="space-y-2">
-          {advantages.map((a: Advantage) => (
+          {pager.slice.map((a: Advantage) => (
             <div
               key={a.id}
               className="group relative block bg-zinc-800/40 hover:bg-zinc-800/70 border border-zinc-700/40 hover:border-zinc-600/60 rounded-lg border-l-[3px] border-l-emerald-400/70 pr-3 transition-all"
@@ -167,6 +168,8 @@ export default function TableAdvantagesPage({ params }: { params: Promise<{ id: 
           ))}
         </div>
       )}
+
+      <Pagination page={pager.page} pageCount={pager.pageCount} from={pager.from} to={pager.to} total={pager.total} onPageChange={pager.setPage} accent="emerald" />
     </div>
   );
 }

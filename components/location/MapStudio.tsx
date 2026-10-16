@@ -80,6 +80,7 @@ export default function MapStudio({ location }: MapStudioProps) {
   const [orientation] = useState<string>(h?.orientation ?? "flat");
   const [rotationDeg, setRotationDeg] = useState<number>(h?.rotationDeg ?? 0);
   const [isIndoor, setIsIndoor] = useState(!!location.isIndoor);
+  const [bgImageUrl, setBgImageUrl] = useState<string | null>(location.bgImageUrl ?? null);
 
   const [tool, setTool] = useState<Tool>("select");
   const [strokeColor, setStrokeColor] = useState(STROKES[0]);
@@ -98,9 +99,11 @@ export default function MapStudio({ location }: MapStudioProps) {
   const [canUndo, setCanUndo] = useState(false);
   const [grab, setGrab] = useState(false);
   const [imgBusy, setImgBusy] = useState(false);
+  const [bgBusy, setBgBusy] = useState(false);
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
+  const bgFileRef = useRef<HTMLInputElement | null>(null);
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const drawingRef = useRef(false);
   const originRef = useRef<Point>({ x: 0, y: 0 });
@@ -130,6 +133,10 @@ export default function MapStudio({ location }: MapStudioProps) {
 
   /* Decoded <img> elements for every image shape on the sheet. */
   const imageMap = useImageCache(shapes.filter((s) => s.type === "image").map((s) => s.src ?? null));
+
+  /* Backdrop image painted under the sheet (behind the grid/strokes). */
+  const bgMap = useImageCache([bgImageUrl]);
+  const bgImage = bgImageUrl ? bgMap.get(bgImageUrl) ?? null : null;
 
   /* ---------- helpers ---------- */
 
@@ -451,6 +458,23 @@ export default function MapStudio({ location }: MapStudioProps) {
     }
   }
 
+  async function onPickBg(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setBgBusy(true);
+    setError(null);
+    try {
+      const dataUrl = await prepareUpload(file, 1600);
+      const url = await uploadImage(dataUrl, "maps");
+      setBgImageUrl(url);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : t("lc.ms.error"));
+    } finally {
+      setBgBusy(false);
+    }
+  }
+
   async function save() {
     setSaving(true);
     setError(null);
@@ -460,6 +484,7 @@ export default function MapStudio({ location }: MapStudioProps) {
         hex: { width: cols, height: rows, rotationDeg },
         is_indoor: isIndoor ? 1 : 0,
         drawing: shapes,
+        bgImageUrl,
       });
       setSavedAt(Date.now());
       router.refresh();
@@ -494,6 +519,17 @@ export default function MapStudio({ location }: MapStudioProps) {
         ctx.rect(g.x0, g.y0, g.w, g.h);
         ctx.fill();
         ctx.restore();
+
+        /* backdrop image — behind the grid/strokes, clipped to the sheet */
+        if (bgImage) {
+          ctx.save();
+          ctx.beginPath();
+          ctx.rect(g.x0, g.y0, g.w, g.h);
+          ctx.clip();
+          ctx.drawImage(bgImage, g.x0, g.y0, g.w, g.h);
+          ctx.restore();
+        }
+
         ctx.strokeStyle = "#454f63";
         ctx.lineWidth = 1.5;
         ctx.strokeRect(g.x0, g.y0, g.w, g.h);
@@ -512,7 +548,7 @@ export default function MapStudio({ location }: MapStudioProps) {
         ctx.restore();
       });
     }, zoom);
-  }, [shapes, draft, selection, hoverShape, tool, strokeColor, rotationDeg, W, H, g, offX, offY, zoom, imageMap]);
+  }, [shapes, draft, selection, hoverShape, tool, strokeColor, rotationDeg, W, H, g, offX, offY, zoom, imageMap, bgImage]);
 
   /* ---------- derived UI ---------- */
 
@@ -708,6 +744,36 @@ export default function MapStudio({ location }: MapStudioProps) {
             {isIndoor ? (
               <p className="mt-1.5 text-[10px] leading-snug text-zinc-500">{t("lc.ms.indoorHint")}</p>
             ) : null}
+          </div>
+
+          <div className="min-w-[196px]">
+            <p className="font-mono text-[9px] uppercase tracking-widest text-zinc-500 mb-2">{t("lc.ms.bgImage")}</p>
+            <div className="flex items-start gap-3">
+              <div className="relative aspect-video w-24 shrink-0 overflow-hidden rounded-md border border-zinc-700/60 bg-zinc-900/60">
+                {bgImageUrl ? <img src={bgImageUrl} alt="" className="h-full w-full object-cover" /> : null}
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => bgFileRef.current?.click()}
+                  disabled={bgBusy}
+                  className="rounded-md border border-green-500/60 bg-green-500/10 px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest text-green-300 transition-colors hover:bg-green-500/20 disabled:opacity-50"
+                >
+                  {bgBusy ? t("lc.common.saving") : t("lc.ms.bgAdd")}
+                </button>
+                {bgImageUrl ? (
+                  <button
+                    type="button"
+                    onClick={() => setBgImageUrl(null)}
+                    className="rounded-md border border-zinc-700/50 px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest text-zinc-400 transition-colors hover:text-red-400"
+                  >
+                    {t("lc.ms.bgRemove")}
+                  </button>
+                ) : null}
+              </div>
+            </div>
+            <p className="mt-1.5 max-w-[196px] text-[10px] leading-snug text-zinc-500">{t("lc.ms.bgHint")}</p>
+            <input ref={bgFileRef} type="file" accept="image/*" className="hidden" onChange={onPickBg} />
           </div>
         </div>
 

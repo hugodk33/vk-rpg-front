@@ -4,6 +4,8 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { submitJson } from "./submit";
+import { uploadImage } from "@/lib/api";
+import { prepareUpload } from "@/lib/upload";
 import { cancelCls, inputCls, labelCls, submitCls } from "./formStyles";
 import FormShell from "./FormShell";
 import ImageGalleryField from "./ImageGalleryField";
@@ -75,6 +77,8 @@ export default function LocationForm({
   const [kindEdited, setKindEdited] = useState(isEdit);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [bannerUrl, setBannerUrl] = useState<string | null>(initial?.bannerUrl ?? null);
+  const [bannerBusy, setBannerBusy] = useState(false);
   const [gallery, setGallery] = useState<string[]>(initial?.images ?? []);
 
   const sizeNum = sizeM === "" ? null : Number(sizeM);
@@ -112,6 +116,20 @@ export default function LocationForm({
       }),
     [locId, name, sizeNum, centerQ, centerR, orientation, initial]
   );
+
+  async function uploadBanner(file: File) {
+    setBannerBusy(true);
+    setError(null);
+    try {
+      const dataUrl = await prepareUpload(file, 1600);
+      const url = await uploadImage(dataUrl, "locations");
+      setBannerUrl(url);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : t("fr.error.upload"));
+    } finally {
+      setBannerBusy(false);
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -154,6 +172,7 @@ export default function LocationForm({
         rotationDeg: Number(rotationDeg || 0),
       },
       images: gallery,
+      bannerUrl,
     };
 
     try {
@@ -348,7 +367,41 @@ export default function LocationForm({
             </div>
           </div>
 
-          <div className="border-t border-zinc-700/40 pt-5">
+          <div className="space-y-6 border-t border-zinc-700/40 pt-5">
+            <div>
+              <label className={labelCls}>{t("fr.loc.banner")}</label>
+              <p className="text-[11px] text-zinc-600">{t("fr.loc.bannerHint")}</p>
+              <div className="mt-2 flex items-start gap-3">
+                <div className="relative aspect-[16/9] w-40 shrink-0 overflow-hidden rounded-lg border border-zinc-700/60 bg-zinc-900">
+                  {bannerUrl ? <img src={bannerUrl} alt={name} className="h-full w-full object-cover" /> : null}
+                </div>
+                <div className="flex flex-col gap-2">
+                  <label className="cursor-pointer rounded-lg border border-green-600/50 bg-green-600/10 px-3 py-1.5 text-xs font-semibold text-green-300 transition-colors hover:bg-green-600/20">
+                    {bannerBusy ? t("fr.ch.uploading") : t("fr.ch.uploadImage")}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      disabled={bannerBusy}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        e.target.value = "";
+                        if (file) void uploadBanner(file);
+                      }}
+                    />
+                  </label>
+                  {bannerUrl ? (
+                    <button
+                      type="button"
+                      onClick={() => setBannerUrl(null)}
+                      className="rounded-lg border border-zinc-700/50 px-3 py-1.5 text-xs font-semibold text-zinc-400 transition-colors hover:text-red-400"
+                    >
+                      {t("fr.ch.removeImg")}
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+            </div>
             <ImageGalleryField images={gallery} onChange={setGallery} scope="locations" />
           </div>
 

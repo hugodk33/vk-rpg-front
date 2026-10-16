@@ -1,18 +1,20 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import { use, useState } from "react";
 import Link from "next/link";
 import type { GameTableItems, Item } from "@/lib/types";
 import TableTabs from "@/components/TableTabs";
 import RowActions from "@/components/table/RowActions";
+import Pagination from "@/components/table/Pagination";
 import ChipFilters, { countValues } from "@/components/table/ChipFilters";
 import { categoryLabel } from "@/lib/categories";
 import { formatKg } from "@/lib/units";
-import { api } from "@/lib/api";
 import { submitJson } from "@/components/forms/submit";
 import { interpolate, useTranslation } from "@/lib/i18n";
 import { fitLabel } from "@/lib/fit";
 import ItemIcon from "@/components/items/ItemIcon";
+import { useCatalog } from "@/lib/useCatalog";
+import { usePagination } from "@/lib/usePagination";
 
 const KIND_BADGES: Record<string, { label: string; class: string }> = {
   weapon: { label: "tp.kind.weapon", class: "bg-red-400/10 text-red-400 border border-red-400/20" },
@@ -24,14 +26,12 @@ const KIND_BADGES: Record<string, { label: string; class: string }> = {
 export default function TableItemsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { lang, t } = useTranslation();
-  const [data, setData] = useState<GameTableItems | null>(null);
   const [search, setSearch] = useState("");
   const [cat, setCat] = useState("");
   const [kindF, setKindF] = useState("");
 
-  useEffect(() => {
-    api<GameTableItems>(`/game-table-items/${id}`).then(setData).catch(() => setData({ table: null, items: [] }));
-  }, [id]);
+  const filtering = Boolean(search || cat || kindF);
+  const data = useCatalog<GameTableItems>(`/game-table-items/${id}`);
 
   const allItems = data?.items ?? [];
 
@@ -49,8 +49,9 @@ export default function TableItemsPage({ params }: { params: Promise<{ id: strin
       || ((i.kind ?? "") as string).toLowerCase().includes(q);
   });
 
-  const filtering = Boolean(search || cat || kindF);
   const kindLabel = (v: string) => (KIND_BADGES[v] ? t(KIND_BADGES[v].label) : v);
+  const shownCount = items.length;
+  const pager = usePagination(items, `${search}|${cat}|${kindF}`);
 
   return (
     <div className="max-w-5xl mx-auto p-6">
@@ -63,7 +64,7 @@ export default function TableItemsPage({ params }: { params: Promise<{ id: strin
 
       <div className="flex items-center justify-between gap-6 mb-6">
         <div className="flex items-center gap-3 text-xs text-zinc-500">
-          <span>{interpolate(t(items.length !== 1 ? "tp.count.itemsMany" : "tp.count.itemsOne"), { n: items.length })}</span>
+          <span>{interpolate(t(shownCount !== 1 ? "tp.count.itemsMany" : "tp.count.itemsOne"), { n: shownCount })}</span>
         </div>
         <Link
           href={`/item/new?table_id=${id}`}
@@ -115,7 +116,7 @@ export default function TableItemsPage({ params }: { params: Promise<{ id: strin
         </div>
       ) : (
         <div className="space-y-2">
-          {items.map((i: Item) => {
+          {pager.slice.map((i: Item) => {
             const kindBadge = i.kind ? KIND_BADGES[i.kind] : null;
             return (
               <div
@@ -191,6 +192,8 @@ export default function TableItemsPage({ params }: { params: Promise<{ id: strin
           })}
         </div>
       )}
+
+      <Pagination page={pager.page} pageCount={pager.pageCount} from={pager.from} to={pager.to} total={pager.total} onPageChange={pager.setPage} accent="rose" />
     </div>
   );
 }

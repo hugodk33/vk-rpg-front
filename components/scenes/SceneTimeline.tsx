@@ -10,6 +10,10 @@ import { useTableLive } from "@/lib/useTableLive";
 import { interpolate, useTranslation } from "@/lib/i18n";
 import { formatKg } from "@/lib/units";
 import ChipFilters, { countValues } from "@/components/table/ChipFilters";
+import Pagination from "@/components/table/Pagination";
+import SceneImage from "@/components/scenes/SceneImage";
+import { submitJson } from "@/components/forms/submit";
+import { usePagination } from "@/lib/usePagination";
 import TacticalPlate from "@/components/tactical/TacticalPlate";
 
 /* ============================================================
@@ -301,7 +305,7 @@ function Beat({ n, viewerId, mask, rules }: { n: { narration: string; title?: st
 
 /* ---------- scene ---------- */
 
-function SceneCard({ scene, showEdit, badgeCls, viewerId, mask, rules }: { scene: Scene; showEdit: boolean; badgeCls: string; viewerId?: string; mask: (id: string, real: string) => string; rules?: VisibilityRule[] }) {
+function SceneCard({ scene, showEdit, canEdit, badgeCls, viewerId, mask, rules, onImageChange }: { scene: Scene; showEdit: boolean; canEdit: boolean; badgeCls: string; viewerId?: string; mask: (id: string, real: string) => string; rules?: VisibilityRule[]; onImageChange: (url: string | null) => Promise<void> | void }) {
   const { t } = useTranslation();
   const sceneNum = scene.moment != null ? scene.moment + 1 : "—";
   return (
@@ -317,6 +321,7 @@ function SceneCard({ scene, showEdit, badgeCls, viewerId, mask, rules }: { scene
           <span className="ml-auto font-mono text-[10px] text-zinc-600 uppercase tracking-widest hidden sm:inline">{t("vs.tl.open")}</span>
         ) : null}
       </div>
+      <SceneImage url={scene.imageUrl ?? null} canEdit={canEdit} onChange={onImageChange} />
       <div className="pl-[18px] border-l border-zinc-700/40">
         {scene.narrations.length === 0 ? (
           <p className="text-sm text-zinc-600 italic font-mono">{t("vs.tl.noRecords")}</p>
@@ -356,19 +361,34 @@ export default function SceneTimeline({ table, scenes, showEditButtons = true, r
     ? (id, real) => maskedTargetName(rules, id, real)
     : (id, real) => real;
   const [chapterF, setChapterF] = useState("");
+
+  /* Cenas (narrativas) são a unidade da crônica: filtramos por capítulo e
+     depois paginamos em blocos de 30 CENAS — independentemente de quantas
+     narrativas cada cena tem. Agrupamos por capítulo só a página atual. */
+  const filteredScenes = chapterF
+    ? scenes.filter((s) => String(s.chapter || 1) === chapterF)
+    : scenes;
+  const pager = usePagination(filteredScenes, chapterF);
+
+  const chapterOptions = countValues(scenes.map((s) => String(s.chapter || 1)));
   const chapters = new Map<number, Scene[]>();
-  for (const scene of scenes) {
+  for (const scene of pager.slice) {
     const ch = scene.chapter || 1;
     if (!chapters.has(ch)) chapters.set(ch, []);
     chapters.get(ch)!.push(scene);
   }
-  const chapterOptions = countValues(scenes.map((s) => String(s.chapter || 1)));
-  const chapterEntries = [...chapters.entries()].filter(
-    ([ch]) => !chapterF || String(ch) === chapterF
-  );
+  const chapterEntries = [...chapters.entries()];
+  const totalChapters = new Set(scenes.map((s) => s.chapter || 1)).size;
 
   /* tempo real: a crônica cresce sem recarregar a página */
   useTableLive(table?.id ?? null, () => router.refresh());
+
+  /* Narrador pode anexar/trocar/remover a imagem única da cena. */
+  const canEdit = showEditButtons && !isPlayer;
+  async function setSceneImage(sceneId: string, url: string | null) {
+    await submitJson(`/api/game-table-scene/${sceneId}`, "PUT", { imageUrl: url });
+    router.refresh();
+  }
 
   return (
     <div className="max-w-5xl mx-auto px-6 py-8">
@@ -381,7 +401,7 @@ export default function SceneTimeline({ table, scenes, showEditButtons = true, r
           <p className="text-zinc-400 mt-4 max-w-2xl leading-relaxed border-l-2 border-zinc-700 pl-4">{table.intro}</p>
         ) : null}
         <div className="mt-6 flex items-center gap-2 font-mono text-[11px] text-zinc-500">
-          <span className="w-1.5 h-1.5 rounded-full bg-blue-400" /> {chapters.size} {chapters.size !== 1 ? t("vs.tl.chapterMany") : t("vs.tl.chapterOne")}
+          <span className="w-1.5 h-1.5 rounded-full bg-blue-400" /> {totalChapters} {totalChapters !== 1 ? t("vs.tl.chapterMany") : t("vs.tl.chapterOne")}
           <span className="text-zinc-700">·</span> {scenes.length} {scenes.length !== 1 ? t("vs.tl.sceneMany") : t("vs.tl.sceneOne")}
           <span className="text-zinc-700">·</span> {scenes.reduce((a, s) => a + s.narrations.length, 0)} {t("vs.tl.records")}
         </div>
@@ -408,27 +428,30 @@ export default function SceneTimeline({ table, scenes, showEditButtons = true, r
           </svg>
           <p className="text-zinc-500 text-sm">{t("vs.tl.empty")}</p>
         </div>
-      ) : chapterEntries.length === 0 ? (
+      ) : filteredScenes.length === 0 ? (
         <div className="text-center py-20">
           <p className="text-zinc-500 text-sm">{t("tp.filter.none")}</p>
         </div>
       ) : (
-        chapterEntries.map(([chapter, chapterScenes]) => (
-          <Panel key={chapter} className="mt-12">
-            <div className="flex items-center gap-4 mb-8">
-              <div className="min-w-0">
-                <div className="font-mono text-[15px] tracking-[0.3em] uppercase text-zinc-500">{t("vs.tl.chapter")}</div>
+        <>
+          {chapterEntries.map(([chapter, chapterScenes]) => (
+            <Panel key={chapter} className="mt-12">
+              <div className="flex items-center gap-4 mb-8">
+                <div className="min-w-0">
+                  <div className="font-mono text-[15px] tracking-[0.3em] uppercase text-zinc-500">{t("vs.tl.chapter")}</div>
+                </div>
+                <span className="select-none font-bold leading-none text-[24px] text-zinc-800 font-mono">{roman(chapter)}</span>
+                <div className="flex-1 h-px bg-zinc-700/50" />
+                <span className="font-mono text-[11px] text-zinc-500">{chapterScenes.length} {chapterScenes.length !== 1 ? t("vs.tl.sceneMany") : t("vs.tl.sceneOne")}</span>
               </div>
-              <span className="select-none font-bold leading-none text-[24px] text-zinc-800 font-mono">{roman(chapter)}</span>
-              <div className="flex-1 h-px bg-zinc-700/50" />
-              <span className="font-mono text-[11px] text-zinc-500">{chapterScenes.length} {chapterScenes.length !== 1 ? t("vs.tl.sceneMany") : t("vs.tl.sceneOne")}</span>
-            </div>
 
-            {chapterScenes.map((scene) => (
-              <SceneCard key={scene.id} scene={scene} showEdit={showEditButtons} badgeCls={badgeCls} viewerId={viewerId} mask={mask} rules={rules} />
-            ))}
-          </Panel>
-        ))
+              {chapterScenes.map((scene) => (
+                <SceneCard key={scene.id} scene={scene} showEdit={showEditButtons} canEdit={canEdit} badgeCls={badgeCls} viewerId={viewerId} mask={mask} rules={rules} onImageChange={(url) => setSceneImage(scene.id, url)} />
+              ))}
+            </Panel>
+          ))}
+          <Pagination page={pager.page} pageCount={pager.pageCount} from={pager.from} to={pager.to} total={pager.total} onPageChange={pager.setPage} accent={isPlayer ? "blue" : "green"} />
+        </>
       )}
     </div>
   );

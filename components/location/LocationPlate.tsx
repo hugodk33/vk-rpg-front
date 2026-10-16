@@ -67,6 +67,7 @@ interface Loc {
   tiles?: HexTile[];
   drawing?: DrawShape[];
   bgImageUrl?: string | null;
+  bannerUrl?: string | null;
 }
 
 /* The plate's views: the Survey itself, the narrator-only records
@@ -221,6 +222,9 @@ export default function LocationPlate({ location, tableId, mode = "narrator" }: 
   const kind = location.kind ?? "site";
   const kindLabel = KIND_LABELS[kind] ?? kind;
   const isBattlemap = !!location.isBattlemap || (hex?.sizeM != null && hex.sizeM <= 2);
+  /* Um local comum também pode ter mapa (fundo e/ou traços) além do
+     battlemap — nesse caso a aba do mapa também aparece. */
+  const showMap = isBattlemap || !!location.bgImageUrl || (location.drawing?.length ?? 0) > 0;
   const chain = [...(location.ancestors ?? []), location];
   const children = location.children ?? [];
   const abs = absoluteHex(location);
@@ -230,7 +234,7 @@ export default function LocationPlate({ location, tableId, mode = "narrator" }: 
   const tabs = PLATE_TABS.filter((tab) => {
     if (tab.key === "survey") return true;
     if (tab.key === "knowledge" || tab.key === "conditions") return !isPlayer;
-    if (tab.key === "map") return isBattlemap;
+    if (tab.key === "map") return showMap;
     if (tab.key === "shop") return isShop;
     return false;
   });
@@ -365,36 +369,39 @@ export default function LocationPlate({ location, tableId, mode = "narrator" }: 
           ) : null}
         </div>
 
-        {/* -------- ATMOSPHERIC FIELD (signature) -------- */}
-        <div
-          className="exhibit-reveal relative mx-6 lg:mx-8 mt-5 rounded-lg overflow-hidden border border-zinc-700/40"
-          style={{ background: `linear-gradient(180deg, ${env.sky[0]}, ${env.sky[1]})` }}
-        >
-          <div className="absolute inset-x-0 top-0 h-full pointer-events-none" aria-hidden>
-            {!indoor ? (
-              <>
-                <div className="absolute inset-x-0 bottom-0 h-24 opacity-60" style={{ background: "linear-gradient(180deg, transparent, rgba(2,6,23,.9))" }} />
-                <div className="absolute left-6 right-6 bottom-10 h-px" style={{ background: `linear-gradient(90deg, transparent, ${accent}55, transparent)` }} />
-                <div className="absolute right-10 top-8 w-1.5 h-1.5 rounded-full" style={{ background: "#fde68a", boxShadow: "0 0 8px #fde68a88" }} />
-              </>
-            ) : (
-              <>
-                <div className="absolute inset-x-0 bottom-0 h-16 opacity-50" style={{ background: "linear-gradient(180deg, transparent, rgba(15,12,8,.85))" }} />
-                <div className="absolute left-8 bottom-8 w-10 h-1" style={{ background: "#f59e0b44", filter: "blur(4px)" }} />
-              </>
-            )}
+        {/* -------- ATMOSPHERIC FIELD / BANNER (signature) -------- */}
+        <div className="exhibit-reveal mx-6 lg:mx-8 mt-5">
+          <div
+            className="relative aspect-[16/6] min-h-[170px] overflow-hidden rounded-lg border border-zinc-700/40"
+            style={{ background: `linear-gradient(180deg, ${env.sky[0]}, ${env.sky[1]})` }}
+          >
+            {location.bannerUrl ? (
+              <img src={location.bannerUrl} alt={location.name ?? ""} className="absolute inset-0 h-full w-full object-cover" />
+            ) : null}
+            <div className="absolute inset-x-0 top-0 h-full pointer-events-none" aria-hidden>
+              {!indoor ? (
+                <>
+                  <div className="absolute inset-x-0 bottom-0 h-24 opacity-60" style={{ background: "linear-gradient(180deg, transparent, rgba(2,6,23,.9))" }} />
+                  <div className="absolute left-6 right-6 bottom-10 h-px" style={{ background: `linear-gradient(90deg, transparent, ${accent}55, transparent)` }} />
+                  <div className="absolute right-10 top-8 w-1.5 h-1.5 rounded-full" style={{ background: "#fde68a", boxShadow: "0 0 8px #fde68a88" }} />
+                </>
+              ) : (
+                <>
+                  <div className="absolute inset-x-0 bottom-0 h-16 opacity-50" style={{ background: "linear-gradient(180deg, transparent, rgba(15,12,8,.85))" }} />
+                  <div className="absolute left-8 bottom-8 w-10 h-1" style={{ background: "#f59e0b44", filter: "blur(4px)" }} />
+                </>
+              )}
+            </div>
           </div>
-          <div className="relative flex items-end justify-between p-5">
-            <div>
-              <div className="inline-flex items-center gap-2 rounded-full px-2.5 py-1 border bg-black/30"
-                style={{ borderColor: `${accent}55` }}>
-                <span className="w-1.5 h-1.5 rounded-full" style={{ background: accent, boxShadow: `0 0 6px ${accent}` }} />
-                <span className="font-mono text-[10px] tracking-widest uppercase" style={{ color: accent }}>{envLabel}</span>
-              </div>
-              <div className="mt-3">
-                <span className="font-mono text-[11px] tracking-widest uppercase text-zinc-400 block">{t("lc.lp.conditions")}</span>
-                <span className="text-[15px] text-zinc-200">{indoor ? t("lc.lp.conditionIndoor") : t("lc.lp.conditionOutdoor")}</span>
-              </div>
+          <div className="mt-3 flex items-center justify-between gap-4 flex-wrap">
+            <div className="inline-flex items-center gap-2 rounded-full px-2.5 py-1 border bg-black/30"
+              style={{ borderColor: `${accent}55` }}>
+              <span className="w-1.5 h-1.5 rounded-full" style={{ background: accent, boxShadow: `0 0 6px ${accent}` }} />
+              <span className="font-mono text-[10px] tracking-widest uppercase" style={{ color: accent }}>{envLabel}</span>
+            </div>
+            <div className="text-right">
+              <span className="font-mono text-[11px] tracking-widest uppercase text-zinc-400 block">{t("lc.lp.conditions")}</span>
+              <span className="text-[15px] text-zinc-200">{indoor ? t("lc.lp.conditionIndoor") : t("lc.lp.conditionOutdoor")}</span>
             </div>
           </div>
         </div>
@@ -502,7 +509,7 @@ export default function LocationPlate({ location, tableId, mode = "narrator" }: 
           </div>
         ) : null}
 
-        {view === "map" && isBattlemap ? (
+        {view === "map" && showMap ? (
           <div className="px-6 py-8 lg:px-8" role="tabpanel">
             <div className="flex items-center justify-between gap-3 mb-4">
               <div>

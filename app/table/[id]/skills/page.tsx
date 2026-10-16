@@ -1,15 +1,17 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import { use, useState } from "react";
 import Link from "next/link";
 import type { GameTableSkills, SkillItem } from "@/lib/types";
 import TableTabs from "@/components/TableTabs";
 import RowActions from "@/components/table/RowActions";
+import Pagination from "@/components/table/Pagination";
 import ChipFilters, { countValues } from "@/components/table/ChipFilters";
 import { categoryLabel } from "@/lib/categories";
-import { api } from "@/lib/api";
 import { submitJson } from "@/components/forms/submit";
 import { interpolate, useTranslation } from "@/lib/i18n";
+import { useCatalog } from "@/lib/useCatalog";
+import { usePagination } from "@/lib/usePagination";
 
 const TYPE_ICON: Record<string, { color: string; path: string }> = {
   Physical: { color: "text-amber-400", path: "M6.5 6.5v11M3.5 9v6M17.5 6.5v11M20.5 9v6M6.5 12h11" },
@@ -24,7 +26,6 @@ const KNOWN_TYPES = new Set(["Physical", "Mental", "Social"]);
 export default function TableSkillsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { t } = useTranslation();
-  const [data, setData] = useState<GameTableSkills | null>(null);
   const [search, setSearch] = useState("");
   const [cat, setCat] = useState("");
   const [sub, setSub] = useState("");
@@ -34,9 +35,8 @@ export default function TableSkillsPage({ params }: { params: Promise<{ id: stri
   const typeName = (raw?: string) =>
     raw && KNOWN_TYPES.has(raw) ? t(`sk.type.${raw}`) : raw ?? "";
 
-  useEffect(() => {
-    api<GameTableSkills>(`/game-table-skills/${id}`).then(setData).catch(() => setData({ table: null, skills: [] }));
-  }, [id]);
+  const filtering = Boolean(search || cat || sub || typeF || diffF);
+  const data = useCatalog<GameTableSkills>(`/game-table-skills/${id}`);
 
   const allSkills = data?.skills ?? [];
 
@@ -75,8 +75,6 @@ export default function TableSkillsPage({ params }: { params: Promise<{ id: stri
       || (s.category ?? "").toLowerCase().includes(q);
   });
 
-  const filtering = Boolean(search || cat || sub || typeF || diffF);
-
   /* Pré-definição numa linha só, cobrindo as duas formas que o banco tem:
      fórmula de atributo ("iq - 6") e nível padrão em outra skill. */
   const predefParts = (s: SkillItem): string[] =>
@@ -92,6 +90,9 @@ export default function TableSkillsPage({ params }: { params: Promise<{ id: stri
       })
       .filter(Boolean);
 
+  const shownCount = skills.length;
+  const pager = usePagination(skills, `${search}|${cat}|${sub}|${typeF}|${diffF}`);
+
   return (
     <div className="max-w-5xl mx-auto p-6">
       <TableTabs tableId={id} />
@@ -103,7 +104,7 @@ export default function TableSkillsPage({ params }: { params: Promise<{ id: stri
 
       <div className="flex items-center justify-between gap-3 mb-6">
         <div className="flex items-center gap-3 text-xs text-zinc-500">
-          <span>{interpolate(t(skills.length !== 1 ? "tp.count.skillsMany" : "tp.count.skillsOne"), { n: skills.length })}</span>
+          <span>{interpolate(t(shownCount !== 1 ? "tp.count.skillsMany" : "tp.count.skillsOne"), { n: shownCount })}</span>
         </div>
         <Link
           href={`/skill/new?table_id=${id}`}
@@ -159,7 +160,7 @@ export default function TableSkillsPage({ params }: { params: Promise<{ id: stri
         </div>
       ) : (
         <div className="space-y-2">
-          {skills.map((s: SkillItem) => {
+          {pager.slice.map((s: SkillItem) => {
             const icon = TYPE_ICON[s.predefinition_type ?? ""] ?? FALLBACK_ICON;
             const dots = DIFF_DOTS[s.predefinition_difficulty ?? ""] ?? 0;
             const parts = predefParts(s);
@@ -236,6 +237,8 @@ export default function TableSkillsPage({ params }: { params: Promise<{ id: stri
           })}
         </div>
       )}
+
+      <Pagination page={pager.page} pageCount={pager.pageCount} from={pager.from} to={pager.to} total={pager.total} onPageChange={pager.setPage} accent="green" />
     </div>
   );
 }
