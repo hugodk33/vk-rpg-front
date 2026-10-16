@@ -59,6 +59,8 @@ export default function ItemListCard({ item }: { item: Item }) {
               {t(GROUP_UI[group].label)}
             </span>
             {item.category ? <span className="text-[11px] text-zinc-500">{item.category}</span> : null}
+            {/* tech level (Nível Tecnológico GURPS) */}
+            {item.tech_level ? <SpecChip label={t("itm.techLevel")} value={item.tech_level} tint="#a78bfa" /> : null}
             {/* quality */}
             {item.quality ? (
               <span

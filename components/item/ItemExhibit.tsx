@@ -246,6 +246,7 @@ export default function ItemExhibit({ item, tableId }: { item: Item; tableId?: s
                   <LedgerCell label={t("itm.weight")} value={item.weight_lb != null ? formatKg(item.weight_lb) : "—"} tint={tint} />
                   <LedgerCell label={t("itm.cost")} value={item.cost != null ? `$${item.cost}` : "—"} tint="#fbbf24" />
                   <LedgerCell label={t("itm.size")} value={item.dimensions || "—"} />
+                  <LedgerCell label={t("itm.techLevel")} value={item.tech_level || "—"} tint="#a78bfa" />
                   {item.category ? (
                     <div className="min-w-0">
                       <div className="font-mono text-[10px] tracking-widest uppercase text-zinc-500">{t("itm.class")}</div>

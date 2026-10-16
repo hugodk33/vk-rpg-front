@@ -102,6 +102,7 @@ export interface CharacterItem {
   condition?: string
   kind?: string
   description?: string
+  tech_level?: string | null
   weapon?: Weapon | null
   armor?: ArmorData | null
   equipment_id?: string
@@ -778,6 +779,8 @@ export interface Item {
   description?: string
   quality?: string
   condition?: string
+  /** Nível Tecnológico GURPS da peça (ex: 'TL3', 'TL8'). */
+  tech_level?: string | null
   weapon?: Weapon | null
   armor?: ArmorData | null
   /** Optional curated icon override (lucide name or image). */

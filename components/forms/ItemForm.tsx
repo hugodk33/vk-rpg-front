@@ -34,6 +34,7 @@ const KINDS: Array<{ value: string; label: string; desc: string }> = [
 
 const QUALITIES = ["", "ruim", "boa", "excelente", "master"];
 const CONDITIONS = ["", "danificado", "quebrado", "gasto"];
+const TL_OPTIONS = ["", "TL0", "TL1", "TL2", "TL3", "TL4", "TL5", "TL6", "TL7", "TL8", "TL9"];
 const HANDEDNESS = [
   { value: 1, label: "it.hands.1" },
   { value: 2, label: "it.hands.2" },
@@ -86,6 +87,7 @@ export default function ItemForm({ initial, tableId, tableTitle, tables, default
   const [dimensions, setDimensions] = useState(initial?.dimensions ?? "");
   const [quality, setQuality] = useState(initial?.quality ?? "");
   const [condition, setCondition] = useState(initial?.condition ?? "");
+  const [techLevel, setTechLevel] = useState(initial?.tech_level ?? "");
   const [description, setDescription] = useState(initial?.description ?? "");
 
   // Arma / escudo
@@ -273,6 +275,7 @@ export default function ItemForm({ initial, tableId, tableTitle, tables, default
       description,
       quality,
       condition,
+      tech_level: techLevel || null,
       image_url: imageUrl,
       images: gallery,
       ...weaponFields,
@@ -398,6 +401,14 @@ export default function ItemForm({ initial, tableId, tableTitle, tables, default
             <div>
               <label className={labelCls}>{t("fr.item.dimensions")}</label>
               <input value={dimensions} onChange={(e) => setDimensions(e.target.value)} className={inputCls} placeholder={t("fr.item.dimensionsPh")} />
+            </div>
+            <div>
+              <label className={labelCls}>{t("itm.techLevel")}</label>
+              <select value={techLevel} onChange={(e) => setTechLevel(e.target.value)} className={inputCls}>
+                {TL_OPTIONS.map((tl) => (
+                  <option key={tl} value={tl}>{tl || "—"}</option>
+                ))}
+              </select>
             </div>
             <div>
               <label className={labelCls}>{t("fr.quality")}</label>
