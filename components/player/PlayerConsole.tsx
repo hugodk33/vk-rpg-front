@@ -23,6 +23,7 @@ import SceneTimeline from "@/components/scenes/SceneTimeline";
 import MapLog from "@/components/map/MapLog";
 import CharacterSheet from "@/components/character/CharacterSheet";
 import CharacterJourney from "@/components/character/CharacterJourney";
+import CharacterGallery from "@/components/gallery/CharacterGallery";
 import TableResources, { RESOURCE_TABS, type ResourceTab } from "@/components/player/TableResources";
 import PlayerInventory from "@/components/player/PlayerInventory";
 import { getSessionState } from "@/lib/session";
@@ -448,6 +449,21 @@ export default function PlayerConsole({
             </p>
           </div>
           <PlayerInventory items={character.items ?? []} characterId={character.id} roster={roster} targets={presentTargets} />
+        </div>
+      ) : null}
+
+      {tab === "sheet" && viewer && character?.id ? (
+        <div className="mb-6">
+          <p className="font-mono text-[10px] tracking-widest uppercase text-blue-300/90">{t("fr.ch.images")}</p>
+          <div className="mt-2">
+            <CharacterGallery
+              characterId={character.id}
+              name={viewer.character.sheet?.name || viewer.character.name || ""}
+              portraitUrl={viewer.character.portraitUrl}
+              bodyUrl={viewer.character.bodyUrl}
+              images={viewer.character.images ?? []}
+            />
+          </div>
         </div>
       ) : null}
 

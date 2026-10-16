@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { api } from "@/lib/api";
 import { getLocationTableId, getNarratorSideView } from "@/lib/actor";
 import LocationTabs from "@/components/location/LocationTabs";
+import LocationGallery from "@/components/gallery/LocationGallery";
 import type { GameTableLocations, Location } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -36,21 +37,9 @@ export default async function LocationDetailPage({ params }: { params: Promise<{
 
   return (
     <>
-      {location.images?.length ? (
-        <div className="max-w-5xl mx-auto px-6 pt-6 flex flex-wrap gap-3">
-          {location.images.map((url, i) => (
-            <a
-              key={`${url}-${i}`}
-              href={url}
-              target="_blank"
-              rel="noreferrer"
-              className="block h-28 w-28 overflow-hidden rounded-lg border border-zinc-700/60 bg-zinc-900"
-            >
-              <img src={url} alt={`${location.name} ${i + 1}`} className="h-full w-full object-cover" />
-            </a>
-          ))}
-        </div>
-      ) : null}
+      <div className="max-w-5xl mx-auto px-6 pt-6">
+        <LocationGallery locationId={id} name={location.name} images={location.images ?? []} />
+      </div>
       <LocationTabs
         location={location}
         locations={all?.locations ?? []}
