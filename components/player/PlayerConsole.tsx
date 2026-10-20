@@ -455,9 +455,7 @@ export default function PlayerConsole({
       ) : null}
 
       {tab === "gear" && character?.id && viewer ? (
-        <div className="flex flex-col gap-4">
-          <GearPanel data={viewer} />
-        </div>
+        <GearPanel data={viewer} />
       ) : null}
 
       {tab === "sheet" && viewer && character?.id ? (
