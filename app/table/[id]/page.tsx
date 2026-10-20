@@ -113,18 +113,51 @@ function SeatRow({ s, hue, t }: { s: Seat; hue?: (typeof PALETTE)[number]; t: (k
   const maxN = Math.max(s.base ?? 0, s.current ?? 0);
   const dot = hue ?? hueFor(s.name);
   return (
-    <Link
-      href={linkable ? `/character/${s.id}` : "#"}
-      aria-disabled={!linkable}
-      className="group flex flex-col w-full rounded-lg border border-zinc-700/40 bg-zinc-900/60 px-3.5 py-2.5 min-w-[15rem] hover:border-green-800/50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-green-800/60"
-    >
-      <span className="flex items-center gap-2">
-        <span className="w-2 h-2 rounded-full shrink-0" style={{ background: dot.dot, boxShadow: `0 0 6px ${dot.ring}` }} />
-        <span className="block text-sm font-medium text-zinc-200 leading-tight break-words">{s.name}</span>
-      </span>
-      <span className="block font-mono text-[9px] uppercase tracking-widest text-zinc-500 mt-0.5 ml-4 break-words">
-        {s.owner}
-      </span>
+    <div className="group relative flex flex-col w-full rounded-lg border border-zinc-700/40 bg-zinc-900/60 px-3.5 py-2.5 min-w-[15rem] hover:border-green-800/50 transition-colors">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <span className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full shrink-0" style={{ background: dot.dot, boxShadow: `0 0 6px ${dot.ring}` }} />
+            <span className="block text-sm font-medium text-zinc-200 leading-tight break-words">{s.name}</span>
+          </span>
+          <span className="block font-mono text-[9px] uppercase tracking-widest text-zinc-500 mt-0.5 ml-4 break-words">
+            {s.owner}
+          </span>
+        </div>
+        {linkable ? (
+          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity relative z-10">
+            <Link
+              href={`/character/${s.id}`}
+              title={t("tp.open")}
+              className="inline-flex items-center justify-center w-6 h-6 rounded-md border border-zinc-700/50 text-zinc-400 hover:text-zinc-200 hover:border-zinc-600/60"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              </svg>
+            </Link>
+            <Link
+              href={`/character/${s.id}/edit`}
+              title={t("tp.edit")}
+              className="inline-flex items-center justify-center w-6 h-6 rounded-md border border-zinc-700/50 text-zinc-400 hover:text-zinc-200 hover:border-zinc-600/60"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+            </Link>
+            <Link
+              href={`/character/${s.id}?tab=table`}
+              title={t("nav.visibility")}
+              className="inline-flex items-center justify-center w-6 h-6 rounded-md border border-zinc-700/50 text-zinc-400 hover:text-zinc-200 hover:border-zinc-600/60"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              </svg>
+            </Link>
+          </div>
+        ) : null}
+      </div>
 
       {s.hasSheet ? (
         <span className="grid grid-cols-3 items-center gap-2 mt-2.5 pt-2.5 border-t border-zinc-700/40">
@@ -160,7 +193,7 @@ function SeatRow({ s, hue, t }: { s: Seat; hue?: (typeof PALETTE)[number]; t: (k
           {t("tp.seat.noSheetYet")}
         </span>
       )}
-    </Link>
+    </div>
   );
 }
 
