@@ -99,6 +99,168 @@ The client reaches the API through a same-origin `/api` proxy:
 | `/player/character/:id/view` | Read-only sheet through a viewer's visibility |
 | `/player/character/:id/session` | Live session |
 
+## API endpoints
+
+The client talks to the VK-RPG API over `lib/api.ts` (`api<T>()`) and a few raw `fetch()` / `EventSource` calls. In the browser every path below is prefixed with `/api` (rewritten by `next.config.ts`); Server Components hit the same paths against `API_URL`. Paths are relative to the API base.
+
+`id` parameters are table / entity ids. A few write routes carry the id in the **body** instead of the path (noted below).
+
+### Users
+
+| Method | Path | Used by |
+|--------|------|---------|
+| `POST` | `/create-user` | Guest narrators panel (create a type-3 user) |
+| `GET` | `/users` | Table wizard, character form, player character creation |
+| `GET` | `/users/:id` | User profile page |
+
+### Game tables & chronicle
+
+| Method | Path | Used by |
+|--------|------|---------|
+| `POST` | `/create-game-table` | Table wizard, table form |
+| `GET` | `/game-tables` | Narrator desk, player console, create forms |
+| `GET` | `/game-table/:id` | Table ledger, join landing |
+| `PUT` | `/game-table/edit/:id` | Table form |
+| `GET` | `/game-table-scenes/:id` | Ledger, scenes, map, sessions, visibility, modifiers, player |
+| `POST` | `/game-table-scene` | Session client |
+| `PUT` | `/game-table-scene/:id` | Scene timeline (set image) |
+| `POST` | `/game-table-narration` | Session client |
+| `POST` | `/game-table-action` | Session client, player session |
+| `PUT` | `/game-table-action/:id` | Session client |
+| `DELETE` | `/game-table-action/:id` | Session client |
+| `POST` | `/game-table-action/:id/copy` | Session client |
+| `GET` | `/content-modules` | Table wizard |
+
+### Join (pre-approval) & access
+
+| Method | Path | Used by |
+|--------|------|---------|
+| `GET` | `/game-table/:id/join` | `lib/join.ts` — request status |
+| `POST` | `/game-table/:id/join` | `lib/join.ts` — submit request |
+| `DELETE` | `/game-table/:id/join/:userId` | `lib/join.ts` — cancel request |
+| `GET` | `/game-table/:id/join/candidates` | `lib/join.ts` |
+| `GET` | `/game-table/:id/join-requests` | `lib/join.ts`, join requests panel |
+| `POST` | `/game-table/:id/join-requests/:userId` | `lib/join.ts` — approve / reject |
+| `GET` | `/game-table/:id/members` | `lib/join.ts`, `TableMembersPanel` — roster (owner only) |
+| `PUT` | `/game-table/:id/members/:userId/mute` | `lib/join.ts`, `TableMembersPanel` — mute / unmute a player |
+| `DELETE` | `/game-table/:id/members/:userId` | `lib/join.ts`, `TableMembersPanel` — remove a player |
+| `POST` | `/game-table/:id/leave` | `lib/join.ts`, `TableLobby` — a player leaves the table |
+| `GET` | `/game-table/:id/membership` | `lib/player.ts` — is the viewer a player? muted? |
+| `GET` | `/game-table/:id/access` | Guest narrators panel |
+| `POST` | `/game-table/:id/access` | Guest narrators panel (grant) |
+| `PUT` | `/game-table/:id/access` | Guest narrators panel (update) |
+| `DELETE` | `/game-table/:id/access/:userId` | Guest narrators panel (revoke) |
+
+### Characters & NPCs
+
+| Method | Path | Used by |
+|--------|------|---------|
+| `GET` | `/game-table-characters/:id` | Catalogs, player console, visibility |
+| `GET` | `/game-table-character/:id` | Sheet, edit form, viewer |
+| `POST` | `/game-table-character` | Character form, player first sheet |
+| `PUT` | `/game-table-character` | Character form (**id in body**) |
+| `PUT` | `/game-table-character/:id/images` | Character gallery |
+| `DELETE` | `/game-table-character/:id` | Characters page |
+| `POST` | `/game-table-character/:id/copy` | Characters page |
+| `GET` | `/game-table-character/:id/history` | Character journey |
+| `POST` | `/game-table-character/points` | Table quick actions (award XP) |
+| `POST` | `/game-table-character/modifier` | Character sheet (toggle rule) |
+| `GET` | `/game-table-npcs/:id` | NPC catalogs, location shop |
+| `GET` | `/game-table-npc/:id` | NPC edit form |
+| `POST` | `/game-table-npc` | Character / NPC forms |
+| `PUT` | `/game-table-npc` | NPC form (**id in body**) |
+| `DELETE` | `/game-table-npc/:id` | Characters page |
+| `POST` | `/game-table-npc/:id/copy` | Characters page |
+
+### Equipment & inventory
+
+| Method | Path | Used by |
+|--------|------|---------|
+| `PUT` | `/game-table-character-equipment` | Gear panel, player inventory |
+| `DELETE` | `/game-table-character-equipment` | Player inventory (drop) |
+| `POST` | `/game-table-character-equipment/transfer` | Player inventory (trade) |
+| `POST` | `/game-table-character-equipment/sell` | Player inventory (sell) |
+
+### Items, skills, advantages & disadvantages
+
+| Method | Path | Used by |
+|--------|------|---------|
+| `GET` | `/game-table-items/:id` | Item catalogs, forms |
+| `GET` | `/game-table-item/:id` | Item detail / edit |
+| `POST` | `/game-table-item` | Item form |
+| `PUT` | `/game-table-item` | Item form (**id in body**) |
+| `DELETE` | `/game-table-item/:id` | Items page |
+| `POST` | `/game-table-item/:id/copy` | Items page |
+| `POST` | `/game-table-item/grant` | Table quick actions |
+| `GET` | `/game-table-skills/:id` | Skill catalogs, forms |
+| `GET` | `/game-table-skill/:id` | Skill detail / edit |
+| `POST` | `/game-table-skill` | Skill form |
+| `PUT` | `/game-table-skill/:id` | Skill form |
+| `DELETE` | `/game-table-skill/:id` | Skills page |
+| `POST` | `/game-table-skill/:id/copy` | Skills page |
+| `POST` | `/game-table-skill-relation/:kind` | Skill relations |
+| `PUT` | `/game-table-skill-relation/:kind/:id` | Skill relations |
+| `DELETE` | `/game-table-skill-relation/:kind/:id` | Skill relations |
+| `GET` | `/game-table-advantages/:id` | Advantage catalogs |
+| `GET` | `/game-table-advantage/:id` | Advantage detail |
+| `POST` | `/game-table-advantage` | Advantage form |
+| `PUT` | `/game-table-advantage/:id` | Advantage form |
+| `DELETE` | `/game-table-advantage/:id` | Advantages page |
+| `POST` | `/game-table-advantage/:id/copy` | Advantages page |
+| `GET` | `/game-table-disadvantages/:id` | Disadvantage catalogs |
+| `GET` | `/game-table-disadvantage/:id` | Disadvantage detail |
+| `POST` | `/game-table-disadvantage` | Disadvantage form |
+| `PUT` | `/game-table-disadvantage/:id` | Disadvantage form |
+| `DELETE` | `/game-table-disadvantage/:id` | Disadvantages page |
+| `POST` | `/game-table-disadvantage/:id/copy` | Disadvantages page |
+
+### Locations
+
+| Method | Path | Used by |
+|--------|------|---------|
+| `GET` | `/game-table-locations/:id` | Location pages, forms, player atlas |
+| `GET` | `/table-location/:id` | Location detail / edit |
+| `GET` | `/table-location/:id/table` | `lib/actor.ts` (resolve owner table) |
+| `POST` | `/table-location` | Location form |
+| `PUT` | `/table-location/:id` | Location form, map studio |
+| `DELETE` | `/table-location/:id` | Location plate |
+| `PUT` | `/table-location/:id/images` | Location gallery |
+| `POST` | `/game-table-locations/default` | Locations atlas (set default) |
+| `GET` | `/table-location/:id/links` | Location links |
+| `POST` | `/table-location/:id/link` | Location links |
+| `PUT` | `/table-location-link/:id` | Location links |
+| `DELETE` | `/table-location-link/:id` | Location links |
+| `POST` | `/table-location/:id/copy` | Locations atlas |
+
+### Modifiers, visibility, queue & settings
+
+| Method | Path | Used by |
+|--------|------|---------|
+| `GET` | `/game-table-modifiers/:id` | Modifiers panel, entity / location modifiers |
+| `POST` | `/game-table-modifier` | Modifiers panel, quick actions, forms |
+| `PUT` | `/game-table-modifier` | Modifiers panel, entity / location modifiers |
+| `DELETE` | `/game-table-modifier/:id` | Entity modifiers |
+| `GET` | `/game-table-visibility/:id` | Visibility panel, location visibility, player |
+| `POST` | `/game-table-visibility` | Visibility panels |
+| `PUT` | `/game-table-visibility` | Visibility panels |
+| `GET` | `/game-table-queue/:id` | Sessions page, player |
+| `POST` | `/game-table-queue` | Session client |
+| `PUT` | `/game-table-queue` | Session client |
+| `GET` | `/game-table-settings/:id` | Settings page, character forms, sessions |
+| `PUT` | `/game-table-settings` | Settings panel, table wizard |
+| `POST` | `/game-table-end-turn` | Player session (end turn) |
+| `POST` | `/game-table-roll-effect` | Player session, session client |
+
+### Live updates & uploads
+
+| Method | Path | Used by |
+|--------|------|---------|
+| `GET` (SSE) | `/realtime/events/:tableId` | `lib/useTableLive.ts` (live table events) |
+| `POST` | `/upload` | `lib/api.ts` `uploadImage()` (base64 → `/uploads` URL) |
+| `GET` | `/uploads/*` | Static images (portrait, map, scene) |
+
+> Backend endpoints the front does **not** consume: `GET /users/search/:searchTerm`, `PUT /users/edit/:id`, `GET /table-access/resources`, `GET /table-join/roles`, the `/game-table-peculiarit*` routes, `GET /game-table-queue-item/:id`, `GET /game-table-visibility-item/:id`, and `POST|DELETE /game-table-character/trait`.
+
 ## Project structure
 
 ```

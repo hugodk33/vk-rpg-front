@@ -6,6 +6,7 @@ import type { GameTableCharacters, GameTableNpcs, TableCharacter } from "@/lib/t
 import TableTabs from "@/components/TableTabs";
 import RadarChart from "@/components/RadarChart";
 import RowActions from "@/components/table/RowActions";
+import EditFlagToggle from "@/components/table/EditFlagToggle";
 import Pagination from "@/components/table/Pagination";
 import ChipFilters, { countValues } from "@/components/table/ChipFilters";
 import { api } from "@/lib/api";
@@ -231,7 +232,8 @@ export default function TableCharactersPage({ params }: { params: Promise<{ id: 
                     <span className="text-[11px] text-zinc-600 italic shrink-0">{t("tp.characters.noSheet")}</span>
                   )}
                 </div>
-                <div className="flex justify-end mt-2">
+                <div className="flex items-center justify-end gap-2 mt-2">
+                  <EditFlagToggle characterId={ch.id} enabled={!!ch.edit_enabled} />
                   <RowActions
                     editHref={`/character/${ch.id}/edit?table_id=${id}`}
                     onDelete={() => submitJson(`/api/game-table-character/${ch.id}`, "DELETE")}

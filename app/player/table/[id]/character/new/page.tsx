@@ -1,16 +1,11 @@
 import { api } from "@/lib/api";
 import type { TableSettings } from "@/lib/types";
-import PlayerFirstSheet from "@/components/player/PlayerFirstSheet";
+import CharacterForm from "@/components/forms/CharacterForm";
 
 export const dynamic = "force-dynamic";
 
-interface UserRow {
-  id: string;
-  username?: string;
-  email?: string;
-  type?: number;
-}
-
+/* Primeira ficha do jogador: o mesmo CharacterForm do narrador em modo
+   player — mesa fixa, sempre PC, moedas iniciais e orçamento da mesa. */
 export default async function PlayerFirstSheetPage({
   params,
 }: {
@@ -18,18 +13,10 @@ export default async function PlayerFirstSheetPage({
 }) {
   const { id } = await params;
 
-  const [settings, users, table] = await Promise.all([
+  const [settings, table] = await Promise.all([
     api<TableSettings>(`/game-table-settings/${id}`).catch(() => null),
-    api<UserRow[]>(`/users`).catch(() => [] as UserRow[]),
     api<{ id?: string; title?: string }>(`/game-table/${id}`).catch(() => null),
   ]);
 
-  return (
-    <PlayerFirstSheet
-      tableId={id}
-      tableTitle={table?.title}
-      initialSettings={settings}
-      users={Array.isArray(users) ? users : []}
-    />
-  );
+  return <CharacterForm tableId={id} tableTitle={table?.title} settings={settings} player />;
 }

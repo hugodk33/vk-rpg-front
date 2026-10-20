@@ -19,8 +19,3 @@ export const disabledSubmitCls =
   "bg-zinc-700 text-zinc-500 font-semibold px-6 py-2.5 rounded-lg cursor-not-allowed";
 
 export const cancelCls = "text-zinc-400 hover:text-zinc-300 text-sm transition-colors";
-
-/* Moldura padrão do cartão de formulário. */
-export const cardCls = "bg-zinc-800/80 border border-zinc-700/50 rounded-xl p-6";
-
-export const formTitleCls = "text-2xl font-bold text-green-100";

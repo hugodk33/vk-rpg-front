@@ -25,9 +25,10 @@ import CharacterSheet from "@/components/character/CharacterSheet";
 import CharacterJourney from "@/components/character/CharacterJourney";
 import CharacterGallery from "@/components/gallery/CharacterGallery";
 import TableResources, { RESOURCE_TABS, type ResourceTab } from "@/components/player/TableResources";
-import PlayerInventory from "@/components/player/PlayerInventory";
+import GearPanel from "@/components/character/GearPanel";
 import { getSessionState } from "@/lib/session";
 import { useTableLive } from "@/lib/useTableLive";
+import { canEditSheet } from "@/lib/points";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "@/lib/i18n";
 
@@ -42,9 +43,12 @@ import { useTranslation } from "@/lib/i18n";
 · CHARACTERS / ITEMS / SKILLS / ADVANTAGES / DISADVANTAGES /
      LOCATIONS — the table's sandbox inline; each resource own
      its own button in the trail (read-only, through the player's eyes).
-     · GEAR     — the player's own inventory: equip, store,
-                  discard, sell and trade items.
-     · SHEET    — the player's own sheet, visibility-aware.
+      · GEAR     — the player's own inventory in the narrator's
+                   GearPanel layout.
+      · SHEET    — the player's own sheet, visibility-aware, with
+                   the gallery below it and an edit button while
+                   unspent points remain (or the master released
+                   editing).
    The narrator sees a full desk; the player sees a ritual built
    around waiting for their moment.
    ============================================================ */
@@ -82,6 +86,8 @@ interface PlayerConsoleProps {
   locationTree: Location[];
   defaultLocationId: string | null;
   npcs: TableNpc[];
+  /** O mestre silenciou este jogador: esconde/desabilita as ações da sessão. */
+  isMuted?: boolean;
   basePath: string;
   initialTab?: PlayerTab;
 }
@@ -138,6 +144,7 @@ export default function PlayerConsole({
   locationTree,
   defaultLocationId,
   npcs,
+  isMuted = false,
   basePath,
   initialTab = "sheet",
 }: PlayerConsoleProps) {
@@ -376,6 +383,7 @@ export default function PlayerConsole({
           locations={locations}
           latestBeat={latestBeat}
           visibility={visibility}
+          muted={isMuted}
         />
       ) : null}
 
@@ -439,36 +447,41 @@ export default function PlayerConsole({
         </div>
       ) : null}
 
-      {tab === "gear" && character?.id ? (
+      {tab === "gear" && character?.id && viewer ? (
         <div className="flex flex-col gap-4">
-          <div className="flex flex-col gap-1">
-            <p className="font-mono text-[10px] tracking-widest uppercase text-blue-300/90">{t("pl.console.gearEyebrow")}</p>
-            <h2 className="text-lg font-bold text-zinc-100">{t("pl.console.gearTitle")}</h2>
-            <p className="text-sm text-zinc-400 max-w-xl">
-              {t("pl.console.gearDesc")}
-            </p>
-          </div>
-          <PlayerInventory items={character.items ?? []} characterId={character.id} roster={roster} targets={presentTargets} />
+          <GearPanel data={viewer} />
         </div>
       ) : null}
 
       {tab === "sheet" && viewer && character?.id ? (
-        <div className="mb-6">
-          <p className="font-mono text-[10px] tracking-widest uppercase text-blue-300/90">{t("fr.ch.images")}</p>
-          <div className="mt-2">
-            <CharacterGallery
-              characterId={character.id}
-              name={viewer.character.sheet?.name || viewer.character.name || ""}
-              portraitUrl={viewer.character.portraitUrl}
-              bodyUrl={viewer.character.bodyUrl}
-              images={viewer.character.images ?? []}
-            />
+        <div className="flex flex-col gap-6">
+          <CharacterSheet data={viewer} basePath={basePath} visibility={null} showName={false} />
+
+          {canEditSheet(viewer) ? (
+            <div className="flex items-center">
+              <Link
+                href={`${basePath}/edit`}
+                className="inline-flex items-center gap-2 rounded-lg border border-blue-400/40 bg-blue-400/10 px-4 py-2 font-mono text-[12px] uppercase tracking-[0.12em] text-blue-300 transition-colors hover:bg-blue-400/20"
+              >
+                {icon("M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z", "w-4 h-4")}
+                {t("pl.sheet.edit")}
+              </Link>
+            </div>
+          ) : null}
+
+          <div>
+            <p className="font-mono text-[10px] tracking-widest uppercase text-blue-300/90">{t("fr.ch.images")}</p>
+            <div className="mt-2">
+              <CharacterGallery
+                characterId={character.id}
+                name={viewer.character.sheet?.name || viewer.character.name || ""}
+                portraitUrl={viewer.character.portraitUrl}
+                bodyUrl={viewer.character.bodyUrl}
+                images={viewer.character.images ?? []}
+              />
+            </div>
           </div>
         </div>
-      ) : null}
-
-      {tab === "sheet" && viewer ? (
-        <CharacterSheet data={viewer} basePath={basePath} visibility={null} showName={false} />
       ) : null}
     </div>
   );

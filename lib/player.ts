@@ -71,6 +71,20 @@ export interface PlayerConsoleData {
    * to preview a PC, which is the whole point of the perspective switch.
    */
   mayView: boolean;
+  /**
+   * O jogador desta mesa está silenciado? O mestre congela as ações dele na
+   * sessão e o backend RECUSA, mas a UI também esconde/desabilita os botões
+   * para não oferecer uma ação que vai falhar.
+   */
+  isMuted: boolean;
+}
+
+/** Resposta do vínculo do jogador com a mesa (leitura barata, sem privilégio). */
+interface TableMembership {
+  tableId: string;
+  userId: string | null;
+  isPlayer: boolean;
+  isMuted: boolean;
 }
 
 export async function loadPlayerConsole(characterId: string): Promise<PlayerConsoleData> {
@@ -91,7 +105,7 @@ export async function loadPlayerConsole(characterId: string): Promise<PlayerCons
     ? `?actor=${encodeURIComponent(requesterId)}&asCharacter=${encodeURIComponent(characterId)}`
     : "";
 
-  const [scenesData, queue, charsData, itemsData, skillsData, advData, disData, locData, npcsData, visibilityData] =
+  const [scenesData, queue, charsData, itemsData, skillsData, advData, disData, locData, npcsData, visibilityData, membership] =
     await Promise.all([
       tableId
         ? api<GameTableScenes>(`/game-table-scenes/${tableId}`).catch(() => ({ table: null, scenes: [] }))
@@ -123,6 +137,9 @@ export async function loadPlayerConsole(characterId: string): Promise<PlayerCons
       characterId
         ? api<VisibilityRule[]>(`/game-table-visibility/${encodeURIComponent(characterId)}`).catch(() => [])
         : Promise.resolve([]) as Promise<VisibilityRule[]>,
+      tableId && requesterId
+        ? api<TableMembership>(`/game-table/${tableId}/membership?user=${encodeURIComponent(requesterId)}`).catch(() => null as TableMembership | null)
+        : Promise.resolve(null) as Promise<TableMembership | null>,
     ]);
 
   const state = getSessionState(scenesData.scenes);
@@ -146,6 +163,7 @@ export async function loadPlayerConsole(characterId: string): Promise<PlayerCons
     character: viewer?.character ?? null,
     viewer,
     mayView,
+    isMuted: Boolean(membership?.isMuted),
     roster: (charsData?.characters ?? []).filter((c) => c.is_active !== false),
     table: scenesData.table ?? viewer?.table ?? null,
     scenes: scenesData.scenes ?? [],

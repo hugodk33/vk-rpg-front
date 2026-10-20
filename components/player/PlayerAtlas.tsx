@@ -166,8 +166,6 @@ export default function PlayerAtlas({ tree, defaultLocationId = null, currentLoc
               onJump={zoom}
               onBack={inSub && parentLoc ? () => zoom(parentLoc.id) : undefined}
               backName={parentLoc?.name ?? undefined}
-              onPlanet={rootLoc ? () => zoom(rootLoc.id) : undefined}
-              planetName={rootLoc?.name ?? undefined}
               player
               searchable={inSub}
               searchValue={search}

@@ -111,9 +111,11 @@ export const PT: Record<string, string> = {
   "tp.characters.emptySearch": "Nenhum personagem corresponde à sua pesquisa.",
   "tp.characters.enemy": "Inimigo",
   "tp.characters.inactive": "Inativos",
+  "tp.characters.lockEdit": "Bloquear edição da ficha",
   "tp.characters.npc": "NPC",
   "tp.characters.noSheet": "Sem ficha",
   "tp.characters.player": "Jogador",
+  "tp.characters.releaseEdit": "Liberar edição da ficha",
   "tp.characters.searchPh": "Pesquisar personagens...",
   "tp.characters.status": "Situação",
 
@@ -318,9 +320,11 @@ export const EN: Record<string, string> = {
   "tp.characters.emptySearch": "No character matches your search.",
   "tp.characters.enemy": "Enemy",
   "tp.characters.inactive": "Inactive",
+  "tp.characters.lockEdit": "Lock sheet editing",
   "tp.characters.npc": "NPC",
   "tp.characters.noSheet": "No sheet",
   "tp.characters.player": "Player",
+  "tp.characters.releaseEdit": "Release sheet editing",
   "tp.characters.searchPh": "Search characters...",
   "tp.characters.status": "Status",
 

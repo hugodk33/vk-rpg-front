@@ -18,6 +18,7 @@ import SplitToggle from "./SplitToggle";
 import ChipFilters, { countValues } from "@/components/table/ChipFilters";
 import { categoryLabel } from "@/lib/categories";
 import { DAMAGE_TYPES, resolveAttack } from "@/lib/damage";
+import { readSeat } from "@/lib/seat";
 import type { Advantage, CharacterViewer, Disadvantage, GameTableAdvantages, GameTableDisadvantages, GameTableItems, GameTableModifiers, GameTableSkills, Item, Modifier, SkillItem, TableSettings } from "@/lib/types";
 
 /* Rótulo e campo do formulário. Usa os mesmos tokens das demais telas de
@@ -41,6 +42,11 @@ export interface CharacterFormProps {
   initial?: CharacterViewer;
   /** Regras da mesa — o orçamento de pontos vem daqui, não de um valor fixo. */
   settings?: TableSettings | null;
+  /**
+   * Modo jogador: sem TableTabs/narrativa de topo, mesa fixa, sempre PC.
+   * Usado na criação da primeira ficha e na edição liberada pelo mestre.
+   */
+  player?: boolean;
 }
 
 interface Selection {
@@ -229,10 +235,11 @@ function skillPredefLabel(sk: { predefinition?: SkillItem["predefinition"] }): s
     .join(" / ");
 }
 
-export default function CharacterForm({ tableId, tableTitle, tables, initial, settings }: CharacterFormProps) {
+export default function CharacterForm({ tableId, tableTitle, tables, initial, settings, player }: CharacterFormProps) {
   const router = useRouter();
   const { t } = useTranslation();
   const isEdit = !!initial;
+  const isPlayer = !!player;
 
   const [currentTableId, setCurrentTableId] = useState(tableId ?? (initial ? initial.table?.id ?? "" : ""));
   const [charType, setCharType] = useState<"pc" | "npc">(
@@ -241,7 +248,13 @@ export default function CharacterForm({ tableId, tableTitle, tables, initial, se
   const [name, setName] = useState(initial?.character?.name ?? "");
   const [bio, setBio] = useState(initial?.character?.sheet?.bio ?? "");
   const [backstory, setBackstory] = useState(initial?.character?.sheet?.backstory ?? "");
-  const [userId, setUserId] = useState(initial?.character?.userId ?? "");
+  const [userId, setUserId] = useState(() => {
+    const ownerId = initial?.character?.user?.id ?? initial?.character?.userId ?? "";
+    if (ownerId) return ownerId;
+    // No modo jogador quem senta na mesa é o dono da ficha.
+    if (player) return readSeat().userId ?? "";
+    return "";
+  });
   // O orçamento vem das regras da mesa, mas o mestre pode ajustá-lo nesta
   // ficha. 0 (ou ausente) = sem sistema de pontos: sem barra e sem limite,
   // porque aí os itens vêm do mestre ou de moeda.
@@ -249,12 +262,15 @@ export default function CharacterForm({ tableId, tableTitle, tables, initial, se
   const [budget, setBudget] = useState<number>(initial?.character?.sheet?.points ?? tableBudget);
   const totalPoints = budget;
   const hasBudget = totalPoints > 0;
+  /* Atributos base (sem modificadores ativos): editar a ficha grava o valor
+     base, então sem isto os modificadores seriam "assados" na ficha. */
   const [attrs, setAttrs] = useState<Record<"st" | "dx" | "iq" | "ht", number>>({
-    st: initial?.character?.sheet?.st ?? 10,
-    dx: initial?.character?.sheet?.dx ?? 10,
-    iq: initial?.character?.sheet?.iq ?? 10,
-    ht: initial?.character?.sheet?.ht ?? 10,
+    st: initial?.character?.sheet?.base_st ?? initial?.character?.sheet?.st ?? 10,
+    dx: initial?.character?.sheet?.base_dx ?? initial?.character?.sheet?.dx ?? 10,
+    iq: initial?.character?.sheet?.base_iq ?? initial?.character?.sheet?.iq ?? 10,
+    ht: initial?.character?.sheet?.base_ht ?? initial?.character?.sheet?.ht ?? 10,
   });
+  const baseFatigue = initial?.character?.sheet?.base_fatigue ?? initial?.character?.sheet?.fatigue ?? 10;
   const [quirks, setQuirks] = useState<Array<{ name: string }>>(
     (initial?.peculiarities ?? []).map((p) => ({ name: p.name || "" }))
   );
@@ -270,7 +286,9 @@ export default function CharacterForm({ tableId, tableTitle, tables, initial, se
   const [splitSkills, setSplitSkills] = useState(false);
   const [splitItems, setSplitItems] = useState(false);
   const [itemCat, setItemCat] = useState("");
-  const [activeTab, setActiveTab] = useState<"setup" | "bio" | "sheet" | "items">(isEdit ? "bio" : "setup");
+  const [activeTab, setActiveTab] = useState<"setup" | "bio" | "sheet" | "items">(
+    isEdit || isPlayer ? "bio" : "setup"
+  );
   const [equipped, setEquipped] = useState<Record<string, { status?: string; location?: string }>>({});
 
   const [users, setUsers] = useState<UserOption[]>([]);
@@ -580,7 +598,7 @@ export default function CharacterForm({ tableId, tableTitle, tables, initial, se
       dx: attrs.dx,
       iq: attrs.iq,
       ht: attrs.ht,
-      fatigue: initial?.character?.sheet?.fatigue ?? 10,
+      fatigue: baseFatigue,
       encumbrance: initial?.character?.sheet?.encumbrance ?? "None",
     };
     const advantages = selAdv.map((a) => ({ advantage_id: a.id, name: a.name, cost_points: a.cost_points, effect: "" }));
@@ -593,11 +611,23 @@ export default function CharacterForm({ tableId, tableTitle, tables, initial, se
           id: initial.character.id,
           user_id: charType === "npc" ? null : userId,
           table_id: currentTableId,
+          // A ficha e os traços são a fonte da verdade no payload: o backend
+          // só grava o que vier definido (o toggle do mestre manda {id,
+          // edit_enabled} sozinho e não mexe nestes campos).
+          sheet,
+          advantages,
+          disadvantages,
+          skills,
+          peculiarities,
           portraitUrl,
           bodyUrl,
           images: gallery,
         });
-        router.push(`/character/${initial.character.id}`);
+        router.push(
+          isPlayer
+            ? `/player/character/${initial.character.id}?tab=sheet`
+            : `/character/${initial.character.id}`
+        );
       } else if (charType === "npc") {
         const result = await submitJson<{ character_id: string }>("/api/game-table-npc", "POST", {
           table_id: currentTableId,
@@ -613,6 +643,17 @@ export default function CharacterForm({ tableId, tableTitle, tables, initial, se
         });
         router.push(`/character/${result.character_id}`);
       } else {
+        // As moedas vêm do mestre; some uma moeda também escolhida à mão.
+        const grantedCurrencies = isPlayer
+          ? (settings?.currencies ?? [])
+              .filter((c) => c.starting_amount > 0 && c.item_id && c.name && !selItems.some((i) => i.id === c.item_id))
+              .map((c) => ({
+                item_id: c.item_id as string,
+                quantity: c.starting_amount,
+                status: "in_inventory",
+                location: "none",
+              }))
+          : [];
         const result = await submitJson<{ character_id: string }>("/api/game-table-character", "POST", {
           table_id: currentTableId,
           user_id: userId,
@@ -623,18 +664,25 @@ export default function CharacterForm({ tableId, tableTitle, tables, initial, se
           portraitUrl,
           bodyUrl,
           images: gallery,
-          equipment: selItems.map((i) => ({
-            item_id: i.id,
-            quantity: 1,
-            status: equipped[i.id]?.status || "in_inventory",
-            location:
-              equipped[i.id]?.status && equipped[i.id].status !== "in_inventory"
-                ? equipped[i.id].location || "none"
-                : "none",
-          })),
+          equipment: [
+            ...selItems.map((i) => ({
+              item_id: i.id,
+              quantity: 1,
+              status: equipped[i.id]?.status || "in_inventory",
+              location:
+                equipped[i.id]?.status && equipped[i.id].status !== "in_inventory"
+                  ? equipped[i.id].location || "none"
+                  : "none",
+            })),
+            ...grantedCurrencies,
+          ],
           peculiarities,
+          // A primeira ficha do jogador respeita o orçamento da mesa.
+          ...(isPlayer ? { respect_budget: hasBudget } : {}),
         });
-        router.push(`/character/${result.character_id}`);
+        router.push(
+          isPlayer ? `/player/character/${result.character_id}?tab=sheet` : `/character/${result.character_id}`
+        );
       }
       router.refresh();
     } catch (err: unknown) {
@@ -646,8 +694,9 @@ export default function CharacterForm({ tableId, tableTitle, tables, initial, se
   const budgetPct = totalPoints > 0 ? Math.min(100, (spent / totalPoints) * 100) : 0;
 
   // A barra só aparece onde os pontos são gastos — ficha e itens — e só
-  // depois de o mestre definir a quantidade.
-  const showPoints = !isEdit && (activeTab === "sheet" || activeTab === "items") && hasBudget;
+  // depois de o mestre definir a quantidade. Na edição também: é ali que o
+  // jogador gasta o XP recém-concedido.
+  const showPoints = (activeTab === "sheet" || activeTab === "items") && hasBudget;
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -658,7 +707,7 @@ export default function CharacterForm({ tableId, tableTitle, tables, initial, se
   const contextTableTitle =
     tableTitle ?? initial?.table?.title ?? tables?.find((entry) => entry.id === contextTableId)?.title;
 
-  const tabs: Array<[typeof activeTab, string]> = !isEdit
+  const tabs: Array<[typeof activeTab, string]> = !isEdit && !isPlayer
     ? [
         ["setup", t("fr.ch.tabSetup")],
         ["bio", t("fr.ch.tabBio")],
@@ -671,37 +720,65 @@ export default function CharacterForm({ tableId, tableTitle, tables, initial, se
         ["items", t("fr.ch.tabItems")],
       ];
 
+  const playerBackHref = isEdit ? `/player/character/${initial?.character.id ?? ""}` : "/player";
+
   return (
     <div className="max-w-5xl mx-auto p-6">
-      {contextTableId ? <TableTabs tableId={contextTableId} /> : null}
+      {contextTableId && !isPlayer ? <TableTabs tableId={contextTableId} /> : null}
 
-      <FormBreadcrumbs
-        crumbs={
-          contextTableId
-            ? [
-                { label: t("nav.tables"), href: "/narrator" },
-                { label: contextTableTitle || t("nav.table"), href: `/table/${contextTableId}` },
-                { label: t("nav.characters"), href: `/table/${contextTableId}/characters` },
-                { label: isEdit ? t("fr.ch.editTitle") : t("fr.ch.newTitle") },
-              ]
-            : [
-                { label: t("nav.tables"), href: "/narrator" },
-                { label: isEdit ? t("fr.ch.editTitle") : t("fr.ch.newTitle") },
-              ]
-        }
-      />
+      {isPlayer ? (
+        <nav className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.14em] text-zinc-500">
+          <Link
+            href={playerBackHref}
+            className="inline-flex items-center gap-1.5 transition-colors hover:text-zinc-200"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+            </svg>{" "}
+            {t("pl.form.back")}
+          </Link>
+        </nav>
+      ) : (
+        <FormBreadcrumbs
+          crumbs={
+            contextTableId
+              ? [
+                  { label: t("nav.tables"), href: "/narrator" },
+                  { label: contextTableTitle || t("nav.table"), href: `/table/${contextTableId}` },
+                  { label: t("nav.characters"), href: `/table/${contextTableId}/characters` },
+                  { label: isEdit ? t("fr.ch.editTitle") : t("fr.ch.newTitle") },
+                ]
+              : [
+                  { label: t("nav.tables"), href: "/narrator" },
+                  { label: isEdit ? t("fr.ch.editTitle") : t("fr.ch.newTitle") },
+                ]
+          }
+        />
+      )}
 
       <header className="mt-8 border-l-2 border-green-600 pl-5">
         <div className="flex items-center justify-between gap-4">
           <div>
             <p className="font-mono uppercase tracking-[0.14em] text-[11px] text-green-400">
-              {t("fr.ch.eyebrow")}
+              {isPlayer ? t("pl.form.eyebrow") : t("fr.ch.eyebrow")}
             </p>
             <h1 className="mt-2 text-3xl font-bold tracking-tight text-zinc-100">
-              {isEdit ? t("fr.ch.editTitle") : t("fr.ch.newTitle")}
+              {isPlayer
+                ? isEdit
+                  ? t("pl.sheet.edit")
+                  : t("pl.form.newTitle")
+                : isEdit
+                  ? t("fr.ch.editTitle")
+                  : t("fr.ch.newTitle")}
             </h1>
             <p className="mt-1 text-sm text-zinc-500">
-              {isEdit ? t("fr.ch.subEdit") : t("fr.ch.subNew")}
+              {isPlayer
+                ? isEdit
+                  ? t("pl.form.subEdit")
+                  : t("pl.form.subNew")
+                : isEdit
+                  ? t("fr.ch.subEdit")
+                  : t("fr.ch.subNew")}
             </p>
           </div>
           {isEdit ? (
@@ -993,7 +1070,7 @@ export default function CharacterForm({ tableId, tableTitle, tables, initial, se
               {([
                 { label: "fr.ch.dodge", value: String(Math.floor(basicSpeed + 3)), color: "text-zinc-400", d: "M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" },
                 { label: "fr.hp", value: String(attrs.ht + modTotals.hp), color: "text-red-400", d: "M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" },
-                { label: "fr.fp", value: String((initial?.character?.sheet?.fatigue ?? 10) + modTotals.fp), color: "text-green-500", d: "M13 10V3L4 14h7v7l9-11h-7z" },
+                { label: "fr.fp", value: String(baseFatigue + modTotals.fp), color: "text-green-500", d: "M13 10V3L4 14h7v7l9-11h-7z" },
                 { label: "fr.ch.basicSpeed", value: basicSpeed.toFixed(2), suffix: "km/h", color: "text-zinc-400", d: "M13 5l7 7-7 7M5 5l7 7-7 7" },
                 { label: "fr.ch.move", value: String(move), color: "text-blue-400", d: "M5 12h14M12 5l7 7-7 7" },
                 { label: "fr.ch.encumbrance", value: t(ENCUMBRANCE_LABELS[encumbranceValue]), sub: formatKg(itemsWeight), color: "text-purple-400", d: "M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" },
@@ -1654,7 +1731,7 @@ export default function CharacterForm({ tableId, tableTitle, tables, initial, se
                 {([
                   { label: "fr.ch.dodge", value: String(Math.floor(basicSpeed + 3)), color: "text-zinc-400", d: "M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" },
                   { label: "fr.hp", value: String(attrs.ht), color: "text-red-400", d: "M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" },
-                  { label: "fr.fp", value: String(initial?.character?.sheet?.fatigue ?? 10), color: "text-green-500", d: "M13 10V3L4 14h7v7l9-11h-7z" },
+                  { label: "fr.fp", value: String(baseFatigue), color: "text-green-500", d: "M13 10V3L4 14h7v7l9-11h-7z" },
                   { label: "fr.ch.basicSpeed", value: basicSpeed.toFixed(2), suffix: "km/h", color: "text-zinc-400", d: "M13 5l7 7-7 7M5 5l7 7-7 7" },
                   { label: "fr.ch.move", value: String(move), color: "text-blue-400", d: "M5 12h14M12 5l7 7-7 7" },
                   { label: "fr.ch.encumbrance", value: t(ENCUMBRANCE_LABELS[encumbranceValue]), sub: formatKg(itemsWeight), color: "text-purple-400", d: "M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" },
@@ -1805,7 +1882,7 @@ export default function CharacterForm({ tableId, tableTitle, tables, initial, se
               {saving ? t("fr.saving") : t("fr.ch.create")}
             </button>
             <Link
-              href={currentTableId ? `/table/${currentTableId}/characters` : "/narrator"}
+              href={isPlayer ? "/player" : currentTableId ? `/table/${currentTableId}/characters` : "/narrator"}
               className="text-zinc-400 hover:text-zinc-100 text-sm transition-colors"
             >
               {t("fr.cancel")}

@@ -3,7 +3,6 @@
 import Link from "next/link";
 import TableTabs from "@/components/TableTabs";
 import { useTranslation } from "@/lib/i18n";
-import { cardCls, formTitleCls } from "./formStyles";
 
 /* ============================================================
    Moldura única das telas de criar/editar do Narrador.
@@ -115,15 +114,20 @@ export default function FormShell({
 
       {tableId ? <TableTabs tableId={tableId} hideBreadcrumb /> : null}
 
-      <div className="flex items-baseline gap-3 mb-1">
-        <h1 className={formTitleCls}>{title}</h1>
-        {tableTitle ? <span className="text-sm text-zinc-500">{tableTitle}</span> : null}
-      </div>
-      {subtitle ? <p className="text-sm text-zinc-500 mb-6">{subtitle}</p> : <div className="mb-6" />}
+      {/* Mesma moldura do formulário de personagem: cabeçalho com filete
+         verde, sem o cartão envolvendo os campos. */}
+      <header className="mt-8 border-l-2 border-green-600 pl-5">
+        <p className="font-mono uppercase tracking-[0.14em] text-[11px] text-green-400">
+          {t(resourceLabel)}
+        </p>
+        <div className="mt-2 flex items-baseline gap-3 flex-wrap">
+          <h1 className="text-3xl font-bold tracking-tight text-zinc-100">{title}</h1>
+          {tableTitle ? <span className="text-sm text-zinc-500">{tableTitle}</span> : null}
+        </div>
+        {subtitle ? <p className="mt-1 text-sm text-zinc-500">{subtitle}</p> : null}
+      </header>
 
-      <div className={wide ? "" : "max-w-2xl"}>
-        <div className={cardCls}>{children}</div>
-      </div>
+      <div className={wide ? "mt-6" : "mt-6 max-w-2xl"}>{children}</div>
     </div>
   );
 }

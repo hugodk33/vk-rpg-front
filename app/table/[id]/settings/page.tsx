@@ -4,6 +4,7 @@ import type { GameTable, GameTableItems, TableSettings } from "@/lib/types";
 import TableTabs from "@/components/TableTabs";
 import TableSettingsPanel from "@/components/settings/TableSettingsPanel";
 import GuestNarratorsPanel from "@/components/settings/GuestNarratorsPanel";
+import TableMembersPanel from "@/components/settings/TableMembersPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -36,7 +37,8 @@ export default async function TableSettingsPage({
       <TableSettingsPanel tableId={id} initialSettings={settings} items={items?.items ?? []} />
 
       {table?.narrator?.userId ? (
-        <div className="mt-4">
+        <div className="mt-4 space-y-4">
+          <TableMembersPanel tableId={id} actorId={table.narrator.userId} />
           <GuestNarratorsPanel tableId={id} actorId={table.narrator.userId} />
         </div>
       ) : null}

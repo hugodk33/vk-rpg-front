@@ -233,6 +233,8 @@ export interface TableCharacter {
   isNpc?: boolean
   /** Se `false`, o personagem permanece na mesa mas está fora de jogo. */
   is_active?: boolean
+  /** O mestre liberou a edição da ficha para o jogador. */
+  edit_enabled?: boolean
   known?: boolean
   user?: CharacterUser
   sheet?: Sheet | null

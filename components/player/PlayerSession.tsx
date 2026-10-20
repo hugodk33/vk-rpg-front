@@ -34,6 +34,8 @@ interface TurnPanelProps {
   locations: Location[];
   latestBeat?: Narration | null;
   visibility?: VisibilityRule[] | null;
+  /** O mestre silenciou este jogador: esconde/desabilita as ações do turno. */
+  muted?: boolean;
 }
 
 const queuePos = (e: QueueEntry): number => {
@@ -98,6 +100,7 @@ export default function TurnPanel({
   locations,
   latestBeat = null,
   visibility = null,
+  muted = false,
 }: TurnPanelProps) {
   const { t } = useTranslation();
   const pendingQueue = [...queue]
@@ -106,6 +109,9 @@ export default function TurnPanel({
 
   const myIndex = pendingQueue.findIndex((e) => e.character_id === myId);
   const isMyTurn = myIndex === 0;
+  /* Silenciado: é a vez dele, mas o mestre congelou as ações. Mantemos a
+     "vez" para os indicadores, mas todo affordance de agir passa por canAct. */
+  const canAct = isMyTurn && !muted;
   const notInQueue = myIndex === -1;
 
   const charName = (id?: string | null): string => {
@@ -191,7 +197,7 @@ export default function TurnPanel({
   const target = skillMode ? (skillLevelVal ?? 10) : attrib();
   const modValue = skillMode ? testMod : Math.floor((Number(attrib()) - 10) / 2) + testMod;
   const attrHex = skillMode ? "#fbbf24" : (attrMeta[actAttr]?.hex ?? "#3b82f6");
-  const rollDisabled = () => !isMyTurn || !myId || committed;
+  const rollDisabled = () => !canAct || !myId || committed;
 
   function performRoll(): { r: number[]; tot: number } {
     const die = parseInt(testDie, 10);
@@ -214,7 +220,7 @@ export default function TurnPanel({
     `${testCount}d${testDie} [ ${rolls.join(" , ")} ]`;
 
   async function commitAction() {
-    if (!isMyTurn || !myEntry || rolls.length === 0 || total === null || !judgment) return;
+    if (!canAct || !myEntry || rolls.length === 0 || total === null || !judgment) return;
     setSubmitting(true);
     setCommitError(null);
     /* posição da próxima action = append na sequência da narração atual */
@@ -356,7 +362,7 @@ export default function TurnPanel({
   const fullTokens = mergeTokens(boardFull.tokens);
   const fromCurrent = tokenAt(fullTokens, myId);
   const previewMove: TrailMove | null =
-    isMyTurn && !committed && moveTarget && fromCurrent
+    canAct && !committed && moveTarget && fromCurrent
       ? { id: myId, from: fromCurrent, to: moveTarget }
       : null;
   const frozen = lastShownId !== null && !previewMove;
@@ -407,7 +413,7 @@ export default function TurnPanel({
   ]; /* NW N NE / W AUTO E / SW S SE */
 
   function handleMapClick(q: number, r: number) {
-    if (!isMyTurn || committed) return;
+    if (!canAct || committed) return;
     const target = { q, r };
     if (myMove != null && from) {
       const d = hexDist(from, target);
@@ -421,14 +427,14 @@ export default function TurnPanel({
   }
 
   function pickFacing(v: number | "auto") {
-    if (!isMyTurn || committed || moving) return;
+    if (!canAct || committed || moving) return;
     setFacingChoice(v);
     setMoveWarn(null);
   }
 
   /** Move (ou giro, quando sem destino) + encerra o turno num único POST. */
   async function logMove() {
-    if (!isMyTurn || committed || moving || !mapLocation?.id || !myEntry) return;
+    if (!canAct || committed || moving || !mapLocation?.id || !myEntry) return;
     const target = moveTarget;
     const facing = facingChoice === "auto" ? (target && from ? hexDir(from, target) : me?.facing ?? 0) : facingChoice;
     let q = from?.q ?? null;
@@ -513,12 +519,26 @@ export default function TurnPanel({
           </div>
           <span
             className={`inline-flex items-center gap-2 font-mono text-[11px] uppercase tracking-widest px-3 py-1.5 rounded-full border ${
-              isMyTurn ? "border-blue-500/50 text-blue-300" : "border-zinc-700/50 text-zinc-500"
+              isMyTurn && muted
+                ? "border-amber-500/50 text-amber-300"
+                : isMyTurn
+                ? "border-blue-500/50 text-blue-300"
+                : "border-zinc-700/50 text-zinc-500"
             }`}
           >
-            <span className={`w-2 h-2 rounded-full ${isMyTurn ? "bg-blue-400 beacon" : "bg-zinc-600"}`}
-              style={isMyTurn ? { boxShadow: "0 0 8px rgba(59,130,246,.7)" } : undefined} />
-            {isMyTurn ? t("pl.seat.yourTurn") : notInQueue ? t("pl.seat.outOfQueue") : t("pl.seat.waiting")}
+            <span
+              className={`w-2 h-2 rounded-full ${
+                isMyTurn && muted ? "bg-amber-400" : isMyTurn ? "bg-blue-400 beacon" : "bg-zinc-600"
+              }`}
+              style={isMyTurn && !muted ? { boxShadow: "0 0 8px rgba(59,130,246,.7)" } : undefined}
+            />
+            {isMyTurn && muted
+              ? t("pl.session.muted.pill")
+              : isMyTurn
+              ? t("pl.seat.yourTurn")
+              : notInQueue
+              ? t("pl.seat.outOfQueue")
+              : t("pl.seat.waiting")}
           </span>
         </div>
         {latestNarration ? (
@@ -585,7 +605,7 @@ export default function TurnPanel({
             accent="#3b82f6"
             R={22}
             M={12}
-            onHexClick={isMyTurn && !committed ? handleMapClick : undefined}
+            onHexClick={canAct && !committed ? handleMapClick : undefined}
           />
         ) : mapLocation ? (
           <div className="p-10 text-center">
@@ -975,7 +995,7 @@ export default function TurnPanel({
                   onClick={performRoll}
                   disabled={rollDisabled()}
                   className={`${
-                    isMyTurn && !committed
+                    canAct && !committed
                       ? "bg-blue-600 hover:bg-blue-500 text-blue-950 shadow-lg shadow-blue-900/30"
                       : "bg-zinc-800 text-zinc-500 cursor-not-allowed"
                   } text-sm font-bold px-6 py-2.5 rounded-lg transition-colors`}
@@ -984,7 +1004,7 @@ export default function TurnPanel({
                 </button>
               </div>
 
-              {rolls.length > 0 && isMyTurn && !committed ? (
+              {rolls.length > 0 && canAct && !committed ? (
                 <div className="mt-2">
                   <div className="flex items-center gap-2 mb-3">
                     <span className="w-2.5 h-2.5 rounded-full bg-blue-400 shrink-0" />
@@ -1051,19 +1071,25 @@ export default function TurnPanel({
           </div>
           </div>
 
-          {!isMyTurn ? (
+          {!canAct ? (
             <div className="pointer-events-none absolute inset-0 bg-zinc-950/55 backdrop-blur-[1px] flex items-center justify-center">
               <div className="text-center px-6">
-                <div className={`mx-auto mb-3 flex items-center justify-center w-12 h-12 rounded-full border-2 ${notInQueue ? "border-zinc-600" : "border-blue-600/50"}`}>
-                  {icon(notInQueue ? "M12 8v8m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" : "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z", "w-6 h-6")}
+                <div className={`mx-auto mb-3 flex items-center justify-center w-12 h-12 rounded-full border-2 ${muted ? "border-amber-600/60" : notInQueue ? "border-zinc-600" : "border-blue-600/50"}`}>
+                  {icon(muted ? "M18.364 5.636l-3.536 3.536M9 9l-6-6m9 9a3 3 0 100-6m-3 6a3 3 0 01-3-3m0 0V5m3 10l6 6" : notInQueue ? "M12 8v8m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" : "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z", "w-6 h-6")}
                 </div>
-                <p className="font-mono text-[11px] uppercase tracking-widest text-zinc-500">
-                  {notInQueue
+                <p className={`font-mono text-[11px] uppercase tracking-widest ${muted ? "text-amber-400" : "text-zinc-500"}`}>
+                  {muted
+                    ? t("pl.session.muted.pill")
+                    : notInQueue
                     ? t("pl.seat.outOfQueue")
                     : interpolate(myIndex === 1 ? t("pl.seat.aheadOne") : t("pl.seat.aheadMany"), { n: myIndex })}
                 </p>
                 <p className="text-[13px] text-zinc-500 mt-1 max-w-xs mx-auto">
-                  {notInQueue ? t("pl.seat.sealedScene") : t("pl.seat.sealedOther")}
+                  {muted
+                    ? t("pl.session.muted.body")
+                    : notInQueue
+                    ? t("pl.seat.sealedScene")
+                    : t("pl.seat.sealedOther")}
                 </p>
               </div>
             </div>

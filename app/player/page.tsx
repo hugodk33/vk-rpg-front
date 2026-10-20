@@ -1,5 +1,7 @@
 import Link from "next/link";
+import { UserRound } from "lucide-react";
 import { api } from "@/lib/api";
+import { getSeatedUserId } from "@/lib/actor";
 import type { GameTable, GameTableCharacters, GameTableNpcs, Sheet, TableCharacter, TableNpc } from "@/lib/types";
 import SeatPicker, { type SeatOption } from "@/components/player/SeatPicker";
 import { getLang, makeT } from "@/lib/i18n-server";
@@ -126,12 +128,22 @@ function signed(n: number): string {
   return `${n >= 0 ? "+" : ""}${n}`;
 }
 
-function seatOptionsFrom(entries: PlayerEntry[]): SeatOption[] {
+/* Opções de assento: donos de ficha + membros aprovados que ainda não têm
+   ficha (ex.: a seed Rafael Silva) — sem isto quem não criou personagem
+   nem aparece no seletor para sentar. */
+function seatOptionsFrom(entries: PlayerEntry[], tables: GameTable[]): SeatOption[] {
   const seen = new Map<string, SeatOption>();
   for (const { ch } of entries) {
     const uid = ch.user?.id ?? ch.userId;
     if (uid && !seen.has(uid)) {
       seen.set(uid, { userId: uid, username: ch.user?.username ?? uid });
+    }
+  }
+  for (const table of tables) {
+    for (const p of table.players ?? []) {
+      if (p.userId && !seen.has(p.userId)) {
+        seen.set(p.userId, { userId: p.userId, username: p.username ?? p.userId });
+      }
     }
   }
   return Array.from(seen.values());
@@ -145,7 +157,20 @@ export default async function PlayerDashboard({
   const { seat } = await searchParams;
   const t = makeT(await getLang());
   const { entries, tables } = await loadPlayerEntries();
-  const seatOptions = seatOptionsFrom(entries);
+  const seatOptions = seatOptionsFrom(entries, tables);
+  /* Quem é o assento: o parâmetro da URL manda; sem ele, o cookie do
+     servidor (mesma identidade que a tela de boas-vindas lê). */
+  const identity = seat ?? (await getSeatedUserId());
+
+  /* Mesas em que o assento é membro aprovado mas ainda não tem ficha
+     ativa — o estado do Rafael Silva nas duas crônicas. */
+  const pendingTables = identity
+    ? tables.filter(
+        (table) =>
+          (table.players ?? []).some((p) => p.userId === identity) &&
+          !entries.some((e) => e.table?.id === table.id && (e.ch.user?.id ?? e.ch.userId) === identity)
+      )
+    : [];
 
   // With a seat picked, "your company" = your own characters plus the
   // rest of the party at the same tables. Companions open their sheet
@@ -166,11 +191,14 @@ export default async function PlayerDashboard({
   const mine = (ch: TableCharacter) => seat ? mySeats.has(ch.id) : false;
 
   // A trilha de criação do jogador é por mesa. Prioriza a mesa em que o
-  // jogador já tem personagem e cai na primeira mesa disponível.
+  // jogador já tem personagem, depois a mesa em que é membro aprovado
+  // (sem ficha ainda) e cai na primeira mesa disponível.
   const firstTableId =
     (seat
       ? entries.find((e) => (e.ch.user?.id ?? e.ch.userId) === seat && e.table?.id)?.table?.id
-      : undefined) ?? tables[0]?.id;
+      : undefined) ??
+    (identity ? tables.find((table) => (table.players ?? []).some((p) => p.userId === identity))?.id : undefined) ??
+    tables[0]?.id;
   const firstTable = firstTableId ? tables.find((tb) => tb.id === firstTableId) : undefined;
 
   return (
@@ -217,7 +245,37 @@ export default async function PlayerDashboard({
         </div>
       </div>
 
-      {/* ---- company (characters only) ---- */}
+      {pendingTables.length > 0 ? (
+        <section className="rounded-2xl border border-amber-600/40 bg-amber-900/10 mb-8">
+          <div className="p-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="font-mono text-[10px] tracking-widest uppercase text-amber-400">
+                {t("pg.player.pendingEyebrow")}
+              </p>
+              <p className="text-sm text-zinc-400 mt-1 max-w-prose">{t("pg.player.pendingHint")}</p>
+            </div>
+          </div>
+          <div className="divide-y divide-amber-700/30">
+            {pendingTables.map((table) => (
+              <div
+                key={table.id}
+                className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div>
+                  <p className="text-sm font-semibold text-zinc-100">{table.title || t("pg.noTitle")}</p>
+                </div>
+                <Link
+                  href={`/player/table/${table.id}${identity ? `?user=${encodeURIComponent(identity)}` : ""}`}
+                  className="inline-flex items-center gap-2 font-mono text-[11px] font-semibold uppercase tracking-widest px-4 py-2 rounded-md border border-amber-500/40 text-amber-200 hover:text-amber-100 hover:border-amber-400/60 transition-colors"
+                >
+                  <UserRound className="w-4 h-4" />
+                  {t("jn.lobby.create")}
+                </Link>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
       {shown.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-blue-700/40 text-center py-20 bg-zinc-900/40">
           <div className="font-mono text-[10px] tracking-widest uppercase text-blue-400/60">{t("pg.player.emptyEyebrow")}</div>
