@@ -185,20 +185,17 @@ export default function GearPanel({ data, historic }: GearPanelProps) {
         </p>
       ) : null}
 
-      <div className="bg-zinc-900/90 border border-zinc-700/50 rounded-xl overflow-hidden">
-        <div className="flex items-center gap-2 border-b border-zinc-700/50 px-4 py-3">
-          <svg className="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-          </svg>
+      <div>
+        <div className="flex items-center justify-between mb-2 px-1">
           <h2 className="text-sm font-bold uppercase tracking-wider text-zinc-300">{t("cs.equipment")}</h2>
-          <span className="ml-auto text-xs text-zinc-500">
+          <span className="text-xs text-zinc-500">
             {owned.length === 1
               ? t("cs.gear.itemCount")
               : t("cs.gear.itemsCount").replace("{n}", String(owned.length))}
           </span>
         </div>
 
-        <div className="p-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {owned.length === 0 ? (
             <p className="text-zinc-600 text-sm italic col-span-full px-1 py-2">{t("cs.inv.empty")}</p>
           ) : null}
