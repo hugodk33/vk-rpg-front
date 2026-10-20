@@ -316,7 +316,7 @@ export default function GearPanel({ data, historic }: GearPanelProps) {
                 ) : null}
 
                 <div
-                  className="mt-2.5 flex items-center justify-center gap-1.5 border-t border-zinc-800/80 pt-2.5"
+                  className="mt-2.5 flex flex-wrap items-center justify-center gap-1.5 border-t border-zinc-800/80 pt-2.5"
                   onClick={(e) => e.stopPropagation()}
                 >
                   {keyOf(i) ? (
@@ -336,14 +336,32 @@ export default function GearPanel({ data, historic }: GearPanelProps) {
                   {stt === "in_inventory" ? (
                     <>
                       {isWeaponish ? (
-                        <button
-                          type="button"
-                          disabled={busy[keyOf(i)]}
-                          onClick={() => mutate(keyOf(i), "wielded", "right_hand")}
-                          className="text-[11px] px-2.5 py-1 rounded-md bg-amber-600/50 hover:bg-amber-600 text-amber-100 transition-colors disabled:opacity-50"
-                        >
-                          {t("cs.gear.wield")}
-                        </button>
+                        <>
+                          <button
+                            type="button"
+                            disabled={busy[keyOf(i)]}
+                            onClick={() => mutate(keyOf(i), "wielded", "right_hand")}
+                            className="text-[11px] px-2 py-1 rounded-md bg-amber-600/40 hover:bg-amber-600/70 text-amber-100 transition-colors disabled:opacity-50"
+                          >
+                            {t("cs.gear.wieldRight") || t("cs.gear.wield")}
+                          </button>
+                          <button
+                            type="button"
+                            disabled={busy[keyOf(i)]}
+                            onClick={() => mutate(keyOf(i), "wielded", "left_hand")}
+                            className="text-[11px] px-2 py-1 rounded-md bg-amber-600/40 hover:bg-amber-600/70 text-amber-100 transition-colors disabled:opacity-50"
+                          >
+                            {t("cs.gear.wieldLeft") || "Mão esquerda"}
+                          </button>
+                          <button
+                            type="button"
+                            disabled={busy[keyOf(i)]}
+                            onClick={() => mutate(keyOf(i), "wielded", "both_hands")}
+                            className="text-[11px] px-2 py-1 rounded-md bg-amber-700/50 hover:bg-amber-700 text-amber-50 transition-colors disabled:opacity-50"
+                          >
+                            {t("cs.gear.wieldBoth") || "Duas mãos"}
+                          </button>
+                        </>
                       ) : null}
                       <button
                         type="button"
