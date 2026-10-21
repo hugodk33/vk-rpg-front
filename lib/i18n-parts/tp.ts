@@ -161,11 +161,12 @@ export const PT: Record<string, string> = {
   "tp.npcs": "NPCs",
   "tp.npcsMarked": "NPCs marcados",
   "tp.players": "Jogadores",
-  "tp.seatedOf": "Sentados em {name}",
+  "tp.seatedOf": "Sentados {a} de {b}",
   "tp.seats.emptyBody": "Ninguém sentado ainda. Abra uma crônica para sentar os personagens.",
   "tp.seats.emptyTitle": "Nenhum assento ocupado",
 
   /* ---------- Linha de assento ---------- */
+  "tp.edit": "Editar",
   "tp.seat.effectsApplied": "Efeitos aplicados",
   "tp.seat.effectsMany": "{n} efeitos",
   "tp.seat.effectsOne": "{n} efeito",
@@ -174,6 +175,9 @@ export const PT: Record<string, string> = {
   "tp.seat.noNamePlayer": "Jogador sem nome",
   "tp.seat.noSheetYet": "Sem ficha ainda",
   "tp.seat.npc": "NPC",
+  "tp.seat.openSheet": "Abrir ficha",
+  "tp.seat.editSheet": "Editar ficha",
+  "tp.seat.visibility": "Visibilidade",
   "tp.seat.player": "Jogador",
 
   /* ---------- Unidades da mesa ---------- */
@@ -370,11 +374,12 @@ export const EN: Record<string, string> = {
   "tp.npcs": "NPCs",
   "tp.npcsMarked": "Marked NPCs",
   "tp.players": "Players",
-  "tp.seatedOf": "Seated at {name}",
+  "tp.seatedOf": "Seated {a} of {b}",
   "tp.seats.emptyBody": "Nobody seated yet. Open a chronicle to seat the characters.",
   "tp.seats.emptyTitle": "No seat filled",
 
   /* ---------- Seat row ---------- */
+  "tp.edit": "Edit",
   "tp.seat.effectsApplied": "Applied effects",
   "tp.seat.effectsMany": "{n} effects",
   "tp.seat.effectsOne": "{n} effect",
@@ -383,6 +388,9 @@ export const EN: Record<string, string> = {
   "tp.seat.noNamePlayer": "Unnamed player",
   "tp.seat.noSheetYet": "No sheet yet",
   "tp.seat.npc": "NPC",
+  "tp.seat.openSheet": "Open sheet",
+  "tp.seat.editSheet": "Edit sheet",
+  "tp.seat.visibility": "Visibility",
   "tp.seat.player": "Player",
 
   /* ---------- Table units ---------- */

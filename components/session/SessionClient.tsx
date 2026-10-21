@@ -15,6 +15,7 @@ import { floorPlanGroup } from "@/lib/location";
 import TacticalPlate from "@/components/tactical/TacticalPlate";
 import QueueProcession from "@/components/session/QueueProcession";
 import DiceMystery from "@/components/session/DiceMystery";
+import NarrationCharPicker from "@/components/session/NarrationCharPicker";
 
 /* ============================================================
    Session Console
@@ -1774,49 +1775,32 @@ export default function SessionClient({
                   </div>
                   <div>
                     <label className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">{t("ss.sceneChars")}</label>
-                    <div className="space-y-1.5 max-h-40 overflow-y-auto border border-zinc-700/50 rounded-lg p-2">
-                      {characters.map((c) => {
-                        const checked = narrationChars.includes(c.id);
-                        return (
-                          <label key={c.id} className="flex items-center gap-2 text-sm cursor-pointer select-none">
-                            <input
-                              type="checkbox"
-                              checked={checked}
-                              onChange={() => {
-                                setNarrationChars((prev) =>
-                                  checked ? prev.filter((id) => id !== c.id) : [...prev, c.id]
-                                );
-                                if (!checked) setNarrationConsc((prev) => ({ ...prev, [c.id]: true }));
-                              }}
-                              className={T.accent}
-                            />
-                            <span className={checked ? "text-zinc-100" : "text-zinc-400"}>
-                              {c.name || c.username || t("ss.unknown")}
-                              {npcIds.includes(c.id) ? " — NPC" : ""}
-                            </span>
-                            <input
-                              type="checkbox"
-                              title={t("ss.consciousTitle")}
-                              checked={checked ? (narrationConsc[c.id] !== false) : true}
-                              disabled={!checked}
-                              onChange={() =>
-                                setNarrationConsc((prev) => ({
-                                  ...prev,
-                                  [c.id]: prev[c.id] !== false ? false : true,
-                                }))
-                              }
-                              className={T.accent}
-                            />
-                            <span className={`text-[10px] uppercase tracking-wider ${checked ? (narrationConsc[c.id] !== false ? "text-emerald-400/80" : "text-red-400/80") : "text-zinc-600"}`}>
-                              {checked ? (narrationConsc[c.id] !== false ? t("ss.conscious") : t("ss.unconscious")) : "—"}
-                            </span>
-                          </label>
-                        );
-                      })}
-                      {characters.length === 0 ? (
-                        <p className="text-zinc-600 text-sm font-mono italic">{t("ss.noCharsHere")}</p>
-                      ) : null}
-                    </div>
+                    <NarrationCharPicker
+                      characters={characters}
+                      npcIds={npcIds}
+                      selected={narrationChars}
+                      conscious={narrationConsc}
+                      onToggle={(id) => {
+                        if (narrationChars.includes(id)) {
+                          /* saiu da cena: limpa o estado de consciência */
+                          setNarrationChars((prev) => prev.filter((x) => x !== id));
+                          setNarrationConsc((c) => {
+                            const next = { ...c };
+                            delete next[id];
+                            return next;
+                          });
+                        } else {
+                          setNarrationChars((prev) => [...prev, id]);
+                          setNarrationConsc((c) => ({ ...c, [id]: c[id] !== false }));
+                        }
+                      }}
+                      onToggleConscious={(id) =>
+                        setNarrationConsc((prev) => ({
+                          ...prev,
+                          [id]: prev[id] !== false ? false : true,
+                        }))
+                      }
+                    />
                   </div>
                   <div>
                     <label className="font-mono text-[10px] tracking-widest uppercase text-zinc-500 block mb-1">{t("ss.narrationLabel")}</label>

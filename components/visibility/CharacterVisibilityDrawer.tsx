@@ -40,12 +40,15 @@ interface DrawerData {
 export default function CharacterVisibilityDrawer({
   tableId,
   targetId,
+  defaultOpen = false,
 }: {
   tableId?: string;
   targetId: string;
+  /** Abre o painel já aberto — usado pelo link `?visibility=1` do painel do narrador. */
+  defaultOpen?: boolean;
 }) {
   const { t } = useTranslation();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(defaultOpen);
   const [data, setData] = useState<DrawerData | null>(null);
 
   useEffect(() => {

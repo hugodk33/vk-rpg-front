@@ -13,11 +13,13 @@ import type {
   GameTableNpcs,
   GameTableScenes,
   GameTableSkills,
-  Modifier,
 } from "@/lib/types";
 import { getSessionState } from "@/lib/session";
 import TableTabs from "@/components/TableTabs";
 import StoryRail from "@/components/scenes/StoryRail";
+import SeatGrid from "@/components/table/SeatGrid";
+import type { SeatData } from "@/components/table/SeatCard";
+import { hueFor } from "@/lib/hue";
 import TableQuickActions, {
   type QuickItem,
   type QuickTarget,
@@ -49,21 +51,6 @@ function sigilLetters(title: string): string {
   return words.slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("");
 }
 
-const PALETTE = [
-  { dot: "#fbbf24", ring: "#fbbf2455" },
-  { dot: "#34d399", ring: "#34d39955" },
-  { dot: "#38bdf8", ring: "#38bdf855" },
-  { dot: "#f472b6", ring: "#f472b655" },
-  { dot: "#a78bfa", ring: "#a78bfa55" },
-  { dot: "#fb923c", ring: "#fb923c55" },
-];
-
-function hueFor(name: string): (typeof PALETTE)[number] {
-  let sum = 0;
-  for (let i = 0; i < name.length; i++) sum += name.charCodeAt(i);
-  return PALETTE[sum % PALETTE.length];
-}
-
 function Sigil({ title, name }: { title: string; name: string }) {
   const hue = hueFor(title || name);
   return (
@@ -87,112 +74,6 @@ function Sigil({ title, name }: { title: string; name: string }) {
       >
         {sigilLetters(title)}
       </span>
-    </div>
-  );
-}
-
-/* ---------- seating ---------- */
-
-interface Seat {
-  id: string;
-  name: string;
-  owner: string;
-  points?: number;
-  base?: number;
-  current?: number;
-  effects: Modifier[];
-  hasSheet: boolean;
-}
-
-function hpPct(current: number, base: number): number {
-  return base ? Math.max(0, Math.min(100, (current / base) * 100)) : 0;
-}
-
-function SeatRow({ s, hue, t }: { s: Seat; hue?: (typeof PALETTE)[number]; t: (key: string) => string }) {
-  const linkable = s.id.length > 0;
-  const maxN = Math.max(s.base ?? 0, s.current ?? 0);
-  const dot = hue ?? hueFor(s.name);
-  return (
-    <div className="group relative flex flex-col w-full rounded-lg border border-zinc-700/40 bg-zinc-900/60 px-3.5 py-2.5 min-w-[15rem] hover:border-green-800/50 transition-colors">
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <span className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full shrink-0" style={{ background: dot.dot, boxShadow: `0 0 6px ${dot.ring}` }} />
-            <span className="block text-sm font-medium text-zinc-200 leading-tight break-words">{s.name}</span>
-          </span>
-          <span className="block font-mono text-[9px] uppercase tracking-widest text-zinc-500 mt-0.5 ml-4 break-words">
-            {s.owner}
-          </span>
-        </div>
-        {linkable ? (
-          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity relative z-10">
-            <Link
-              href={`/character/${s.id}`}
-              title={t("tp.open")}
-              className="inline-flex items-center justify-center w-6 h-6 rounded-md border border-zinc-700/50 text-zinc-400 hover:text-zinc-200 hover:border-zinc-600/60"
-            >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-              </svg>
-            </Link>
-            <Link
-              href={`/character/${s.id}/edit`}
-              title={t("tp.edit")}
-              className="inline-flex items-center justify-center w-6 h-6 rounded-md border border-zinc-700/50 text-zinc-400 hover:text-zinc-200 hover:border-zinc-600/60"
-            >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-              </svg>
-            </Link>
-            <Link
-              href={`/character/${s.id}?tab=table`}
-              title={t("nav.visibility")}
-              className="inline-flex items-center justify-center w-6 h-6 rounded-md border border-zinc-700/50 text-zinc-400 hover:text-zinc-200 hover:border-zinc-600/60"
-            >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-              </svg>
-            </Link>
-          </div>
-        ) : null}
-      </div>
-
-      {s.hasSheet ? (
-        <span className="grid grid-cols-3 items-center gap-2 mt-2.5 pt-2.5 border-t border-zinc-700/40">
-          <span className="font-mono text-[9px] uppercase tracking-widest text-green-500/80 whitespace-nowrap">
-            Pts {s.points ?? "–"}
-          </span>
-          <span className="flex items-center gap-1.5 min-w-0" title={`${s.current ?? s.base}/${s.base} HP`}>
-            <span className="flex-1 w-14 h-1.5 rounded-full bg-zinc-700/70 overflow-hidden">
-              <span
-                className="block h-full rounded-full bg-red-400/90"
-                style={{ width: `${hpPct(s.current ?? s.base ?? 0, maxN)}%` }}
-              />
-            </span>
-            <span className="font-mono text-[10px] text-zinc-400 tabular-nums whitespace-nowrap">
-              {s.current ?? s.base}/{s.base}
-            </span>
-          </span>
-          <span className="flex justify-end">
-            {s.effects.length > 0 ? (
-              <span
-                title={s.effects.map((e) => e.name).filter(Boolean).join(", ") || t("tp.seat.effectsApplied")}
-                className="font-mono text-[9px] uppercase tracking-widest text-rose-300/90 bg-rose-500/10 border border-rose-500/30 rounded px-1.5 py-0.5 whitespace-nowrap"
-              >
-                {s.effects.length === 1 ? t("tp.seat.effectsOne").replace("{n}", String(s.effects.length)) : t("tp.seat.effectsMany").replace("{n}", String(s.effects.length))}
-              </span>
-            ) : (
-              <span className="font-mono text-[9px] uppercase tracking-widest text-zinc-600 whitespace-nowrap">{t("tp.seat.noEffects")}</span>
-            )}
-          </span>
-        </span>
-      ) : (
-        <span className="block font-mono text-[9px] uppercase tracking-widest text-zinc-500 mt-2.5 pt-2.5 border-t border-zinc-700/40">
-          {t("tp.seat.noSheetYet")}
-        </span>
-      )}
     </div>
   );
 }
@@ -288,11 +169,11 @@ export default async function TableOverviewPage({ params }: { params: Promise<{ 
   const hasChronicle = scenes.length > 0;
 
   /* live seats — per-character effect state for HP reading */
-  const seats: Seat[] = (
+  const seats: SeatData[] = (
     await Promise.all(
-      (table?.players ?? []).map(async (p): Promise<Seat> => {
+      (table?.players ?? []).map(async (p): Promise<SeatData> => {
         const c = p.character;
-        const base: Seat = {
+        const base: SeatData = {
           id: c?.id ?? "",
           name: c?.name || p.username || t("tp.seat.noNamePlayer"),
           owner: p.username ?? t("tp.seat.player"),
@@ -320,9 +201,9 @@ export default async function TableOverviewPage({ params }: { params: Promise<{ 
 
   /* npc seats — same per-character effect state as players */
   const npcs = npcsRes?.npcs ?? [];
-  const npcSeats: Seat[] = await Promise.all(
-    npcs.map(async (n): Promise<Seat> => {
-      const base: Seat = {
+  const npcSeats: SeatData[] = await Promise.all(
+    npcs.map(async (n): Promise<SeatData> => {
+      const base: SeatData = {
         id: n.character_id ?? "",
         name: n.name || n.status || t("tp.seat.noNameNpc"),
         owner: n.status || t("tp.seat.npc"),
@@ -502,11 +383,7 @@ export default async function TableOverviewPage({ params }: { params: Promise<{ 
             </Link>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-            {seats.map((s) => (
-              <SeatRow key={s.id || s.name} s={s} t={t} />
-            ))}
-          </div>
+          <SeatGrid seats={seats} resetKey="players" pageSize={12} accent="green" />
         )}
       </section>
 
@@ -514,11 +391,7 @@ export default async function TableOverviewPage({ params }: { params: Promise<{ 
       {npcs.length > 0 ? (
         <section className="mt-8">
           <LedgerHeader title={t("tp.npcs")} meta={t("tp.npcsMarked").replace("{n}", String(npcs.length))} />
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-            {npcSeats.map((s) => (
-              <SeatRow key={s.id || s.name} s={s} hue={{ dot: "#38bdf8", ring: "#38bdf855" }} t={t} />
-            ))}
-          </div>
+          <SeatGrid seats={npcSeats} hue={{ dot: "#38bdf8", ring: "#38bdf855" }} resetKey="npcs" pageSize={12} accent="teal" />
         </section>
       ) : null}
 

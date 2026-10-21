@@ -17,10 +17,10 @@ export default async function CharacterViewerPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ moment?: string; tab?: string }>;
+  searchParams: Promise<{ moment?: string; tab?: string; visibility?: string }>;
 }) {
   const { id } = await params;
-  const { moment, tab } = await searchParams;
+  const { moment, tab, visibility } = await searchParams;
   const t = makeT(await getLang());
   const qs = moment ? `?moment=${moment}` : "";
   let data: CharacterViewer | undefined;
@@ -32,6 +32,7 @@ export default async function CharacterViewerPage({
   if (!data) notFound();
   const basePath = `/character/${id}`;
   const tableId = data.table?.id;
+  const openVisibility = visibility === "1";
 
   const activeTab: SheetTab =
     tab === "inventory" || tab === "journey" || tab === "images" ? tab : "sheet";
@@ -94,7 +95,7 @@ export default async function CharacterViewerPage({
       ) : (
         <>
           <CharacterSheet data={data} basePath={basePath} showName={false} managePassive />
-          <CharacterVisibilityDrawer tableId={tableId} targetId={data.character.id} />
+          <CharacterVisibilityDrawer tableId={tableId} targetId={data.character.id} defaultOpen={openVisibility} />
         </>
       )}
     </div>
