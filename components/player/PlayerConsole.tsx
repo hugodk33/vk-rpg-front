@@ -26,6 +26,7 @@ import CharacterJourney from "@/components/character/CharacterJourney";
 import CharacterGallery from "@/components/gallery/CharacterGallery";
 import TableResources, { RESOURCE_TABS, type ResourceTab } from "@/components/player/TableResources";
 import GearPanel from "@/components/character/GearPanel";
+import TradePanel from "@/components/player/TradePanel";
 import { getSessionState } from "@/lib/session";
 import { useTableLive } from "@/lib/useTableLive";
 import { canEditSheet } from "@/lib/points";
@@ -60,6 +61,7 @@ export type PlayerTab =
   | "map"
   | ResourceTab
   | "gear"
+  | "trade"
   | "sheet";
 
 interface PlayerConsoleProps {
@@ -88,6 +90,10 @@ interface PlayerConsoleProps {
   npcs: TableNpc[];
   /** O mestre silenciou este jogador: esconde/desabilita as ações da sessão. */
   isMuted?: boolean;
+  /** Quem está ASKING (o dono do assento) — o `actor` das chamadas de troca. */
+  actorId?: string | null;
+  /** O dono do personagem negocia? (o narrador que espia não negocia.) */
+  canTrade?: boolean;
   basePath: string;
   initialTab?: PlayerTab;
 }
@@ -115,9 +121,7 @@ const TABS: Array<{ key: PlayerTab; labelKey: string; icon: string }> = [
   { key: "journey", labelKey: "pl.tab.journey", icon: "M3 3v18h18M7 14l4-5 3 3 5-8" },
   { key: "chronicle", labelKey: "pl.tab.chronicle", icon: "M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" },
   { key: "map", labelKey: "pl.tab.map", icon: "M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" },
-  ...RESOURCE_TABS.map((r) => ({ key: r.key as PlayerTab, labelKey: r.labelKey, icon: RESOURCE_ICONS[r.key] })),
-  { key: "gear", labelKey: "pl.tab.gear", icon: "M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" },
-  { key: "sheet", labelKey: "pl.tab.sheet", icon: "M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 16a3.001 3.001 0 00-2.83-2M15 11a2 2 0 11-4 0 2 2 0 014 0z" },
+  { key: "trade", labelKey: "tr.eyebrow", icon: "M8 7h8m-4 0v10m-4-6h8M5 21h14a2 2 0 002-2V7l-4-4H5a2 2 0 00-2 2v12a2 2 0 002 2z" },
 ];
 
 export default function PlayerConsole({
@@ -145,6 +149,8 @@ export default function PlayerConsole({
   defaultLocationId,
   npcs,
   isMuted = false,
+  actorId = null,
+  canTrade = false,
   basePath,
   initialTab = "sheet",
 }: PlayerConsoleProps) {
@@ -154,8 +160,15 @@ export default function PlayerConsole({
   const tableRef = useRef<HTMLDivElement>(null);
   const [chronOpen, setChronOpen] = useState(false);
   const chronRef = useRef<HTMLDivElement>(null);
+  const [tradePreset, setTradePreset] = useState<string | null>(null);
   const router = useRouter();
   const name = character?.sheet?.name || character?.name || t("pl.console.yourCharacter");
+
+  /* Trocar de aba descarta o item pré-selecionado da negociação. */
+  const selectTab = (next: PlayerTab) => {
+    if (next !== "trade") setTradePreset(null);
+    setTab(next);
+  };
 
   /* tempo real: a mesa muda (narração/fila/mapa) sem recarregar a página */
   useTableLive(tableId, () => router.refresh());
@@ -217,6 +230,7 @@ export default function PlayerConsole({
 
   const resourceActive = RESOURCE_TABS.some((r) => r.key === tab);
   const chronActive = tab === "chronicle" || tab === "map";
+  const isPlayerRoute = basePath?.startsWith("/player");
 
   return (
     <div className="max-w-5xl mx-auto px-6 py-8">
@@ -238,139 +252,306 @@ export default function PlayerConsole({
       </div>
 
       {/* unified tab bar */}
-      <div role="tablist" aria-label={t("pl.console.tablist")} className="inline-flex bg-zinc-800/50 border border-zinc-700/40 rounded-lg p-0.5 mb-6">
-        {TABS.filter((r) => ["turn", "journey"].includes(r.key)).map((r) => (
-          <button
-            key={r.key}
-            role="tab"
-            aria-selected={tab === r.key}
-            onClick={() => setTab(r.key)}
-            className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-md font-mono text-[12px] uppercase tracking-[0.12em] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 ${
-              tab === r.key ? "bg-zinc-700 text-blue-300" : "text-zinc-500 hover:text-zinc-200"
-            }`}
-          >
-            {icon(r.icon, "w-3.5 h-3.5")} {t(r.labelKey)}
-          </button>
-        ))}
-
-        {/* chronicle dropdown: timeline + map */}
-        <div className="relative" ref={chronRef}>
-          <button
-            role="tab"
-            aria-selected={chronActive}
-            aria-haspopup="menu"
-            aria-expanded={chronOpen}
-            onClick={() => setChronOpen((o) => !o)}
-            className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-md font-mono text-[12px] uppercase tracking-[0.12em] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 ${
-              chronActive ? "bg-zinc-700 text-blue-300" : "text-zinc-500 hover:text-zinc-200"
-            }`}
-          >
-            {icon(CHRONICLE_ICON, "w-3.5 h-3.5")} {t("pl.console.chronicle")}
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={chronOpen ? "M5 15l7-7 7 7" : "M19 9l-7 7-7-7"} />
-            </svg>
-          </button>
-
-          {chronOpen ? (
-            <div
-              role="menu"
-              aria-label={t("pl.console.chronicleViews")}
-              className="absolute left-0 top-full mt-1 z-20 min-w-[12rem] rounded-lg border border-zinc-700/50 bg-zinc-900 p-1 shadow-xl shadow-black/40"
+      <div role="tablist" aria-label={t("pl.console.tablist")} className="flex items-center flex-wrap w-full bg-zinc-800/50 border border-zinc-700/40 rounded-lg p-0.5 mb-6 gap-0.5">
+        {isPlayerRoute ? (
+          <>
+            <button
+              role="tab"
+              aria-selected={tab === "sheet"}
+              onClick={() => selectTab("sheet")}
+              className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-md font-mono text-[12px] uppercase tracking-[0.12em] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 ${
+                tab === "sheet" ? "bg-zinc-700 text-blue-300" : "text-zinc-500 hover:text-zinc-200"
+              }`}
             >
+              {icon("M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z", "w-3.5 h-3.5")} {t("pl.tab.sheet")}
+            </button>
+            <button
+              role="tab"
+              aria-selected={tab === "gear"}
+              onClick={() => selectTab("gear")}
+              className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-md font-mono text-[12px] uppercase tracking-[0.12em] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 ${
+                tab === "gear" ? "bg-zinc-700 text-blue-300" : "text-zinc-500 hover:text-zinc-200"
+              }`}
+            >
+              {icon("M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4", "w-3.5 h-3.5")} {t("pl.tab.gear")}
+            </button>
+
+            {TABS.filter((r) => ["turn", "journey"].includes(r.key)).map((r) => (
               <button
-                role="menuitemradio"
-                aria-checked={tab === "map"}
-                onClick={() => {
-                  setTab("map");
-                  setChronOpen(false);
-                }}
-                className={`w-full flex items-center gap-2 px-3 py-2 rounded-md font-mono text-[11px] uppercase tracking-[0.12em] transition-colors text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 ${
-                  tab === "map" ? "bg-zinc-800 text-blue-300" : "text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/60"
+                key={r.key}
+                role="tab"
+                aria-selected={tab === r.key}
+                onClick={() => selectTab(r.key)}
+                className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-md font-mono text-[12px] uppercase tracking-[0.12em] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 ${
+                  tab === r.key ? "bg-zinc-700 text-blue-300" : "text-zinc-500 hover:text-zinc-200"
                 }`}
               >
-                {icon(MAP_ICON, "w-3.5 h-3.5")} {t("pl.console.map")}
+                {icon(r.icon, "w-3.5 h-3.5")} {t(r.labelKey)}
               </button>
+            ))}
+
+            {/* chronicle dropdown: timeline + map */}
+            <div className="relative" ref={chronRef}>
               <button
-                role="menuitemradio"
-                aria-checked={tab === "chronicle"}
-                onClick={() => {
-                  setTab("chronicle");
-                  setChronOpen(false);
-                }}
-                className={`w-full flex items-center gap-2 px-3 py-2 rounded-md font-mono text-[11px] uppercase tracking-[0.12em] transition-colors text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 ${
-                  tab === "chronicle" ? "bg-zinc-800 text-blue-300" : "text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/60"
+                role="tab"
+                aria-selected={chronActive}
+                aria-haspopup="menu"
+                aria-expanded={chronOpen}
+                onClick={() => setChronOpen((o) => !o)}
+                className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-md font-mono text-[12px] uppercase tracking-[0.12em] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 ${
+                  chronActive ? "bg-zinc-700 text-blue-300" : "text-zinc-500 hover:text-zinc-200"
                 }`}
               >
-                {icon(CHRONICLE_ICON, "w-3.5 h-3.5")} {t("pl.console.timeline")}
+                {icon(CHRONICLE_ICON, "w-3.5 h-3.5")} {t("pl.console.chronicle")}
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={chronOpen ? "M5 15l7-7 7 7" : "M19 9l-7 7-7-7"} />
+                </svg>
               </button>
-            </div>
-          ) : null}
-        </div>
 
-        {/* table resources dropdown */}
-        <div className="relative" ref={tableRef}>
-          <button
-            role="tab"
-            aria-selected={resourceActive}
-            aria-haspopup="menu"
-            aria-expanded={tableOpen}
-            onClick={() => setTableOpen((o) => !o)}
-            className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-md font-mono text-[12px] uppercase tracking-[0.12em] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 ${
-              resourceActive ? "bg-zinc-700 text-blue-300" : "text-zinc-500 hover:text-zinc-200"
-            }`}
-          >
-            {icon(RESOURCE_ICONS.characters, "w-3.5 h-3.5")} {t("pl.console.table")}
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={tableOpen ? "M5 15l7-7 7 7" : "M19 9l-7 7-7-7"} />
-            </svg>
-          </button>
-
-          {tableOpen ? (
-            <div
-              role="menu"
-              aria-label={t("pl.console.tableResources")}
-              className="absolute left-0 top-full mt-1 z-20 min-w-[13rem] rounded-lg border border-zinc-700/50 bg-zinc-900 p-1 shadow-xl shadow-black/40"
-            >
-              {RESOURCE_TABS.map((r) => (
-                <button
-                  key={r.key}
-                  role="menuitemradio"
-                  aria-checked={tab === r.key}
-                  onClick={() => {
-                    setTab(r.key);
-                    setTableOpen(false);
-                  }}
-                  className={`w-full flex items-center gap-2 px-3 py-2 rounded-md font-mono text-[11px] uppercase tracking-[0.12em] transition-colors text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 ${
-                    tab === r.key ? "bg-zinc-800 text-blue-300" : "text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/60"
-                  }`}
+              {chronOpen ? (
+                <div
+                  role="menu"
+                  aria-label={t("pl.console.chronicleViews")}
+                  className="absolute left-0 top-full mt-1 z-20 min-w-[12rem] rounded-lg border border-zinc-700/50 bg-zinc-900 p-1 shadow-xl shadow-black/40"
                 >
-                  {icon(RESOURCE_ICONS[r.key], "w-3.5 h-3.5")} {t(r.labelKey)}
-                </button>
-              ))}
+                  <button
+                    role="menuitemradio"
+                    aria-checked={tab === "map"}
+                    onClick={() => {
+                      selectTab("map");
+                      setChronOpen(false);
+                    }}
+                    className={`w-full flex items-center gap-2 px-3 py-2 rounded-md font-mono text-[11px] uppercase tracking-[0.12em] transition-colors text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 ${
+                      tab === "map" ? "bg-zinc-800 text-blue-300" : "text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/60"
+                    }`}
+                  >
+                    {icon(MAP_ICON, "w-3.5 h-3.5")} {t("pl.console.map")}
+                  </button>
+                  <button
+                    role="menuitemradio"
+                    aria-checked={tab === "chronicle"}
+                    onClick={() => {
+                      selectTab("chronicle");
+                      setChronOpen(false);
+                    }}
+                    className={`w-full flex items-center gap-2 px-3 py-2 rounded-md font-mono text-[11px] uppercase tracking-[0.12em] transition-colors text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 ${
+                      tab === "chronicle" ? "bg-zinc-800 text-blue-300" : "text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/60"
+                    }`}
+                  >
+                    {icon(CHRONICLE_ICON, "w-3.5 h-3.5")} {t("pl.console.timeline")}
+                  </button>
+                </div>
+              ) : null}
             </div>
-          ) : null}
-        </div>
 
-        {TABS.filter((r) => ["gear", "sheet"].includes(r.key)).map((r) => (
-          <button
-            key={r.key}
-            role="tab"
-            aria-selected={tab === r.key}
-            onClick={() => setTab(r.key)}
-            className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-md font-mono text-[12px] uppercase tracking-[0.12em] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 ${
-              tab === r.key ? "bg-zinc-700 text-blue-300" : "text-zinc-500 hover:text-zinc-200"
-            }`}
-          >
-            {icon(r.icon, "w-3.5 h-3.5")} {t(r.labelKey)}
-          </button>
-        ))}
-        <Link
-          href="/player/settings"
-          className="inline-flex items-center gap-2 px-4 py-1.5 rounded-md font-mono text-[12px] uppercase tracking-[0.12em] text-zinc-500 hover:text-zinc-200 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60"
-        >
-          {icon("M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z", "w-3.5 h-3.5")}
-          Configurações
-        </Link>
+            {/* table resources dropdown */}
+            <div className="relative" ref={tableRef}>
+              <button
+                role="tab"
+                aria-selected={resourceActive}
+                aria-haspopup="menu"
+                aria-expanded={tableOpen}
+                onClick={() => setTableOpen((o) => !o)}
+                className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-md font-mono text-[12px] uppercase tracking-[0.12em] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 ${
+                  resourceActive ? "bg-zinc-700 text-blue-300" : "text-zinc-500 hover:text-zinc-200"
+                }`}
+              >
+                {icon(RESOURCE_ICONS.characters, "w-3.5 h-3.5")} {t("pl.console.table")}
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={tableOpen ? "M5 15l7-7 7 7" : "M19 9l-7 7-7-7"} />
+                </svg>
+              </button>
+
+              {tableOpen ? (
+                <div
+                  role="menu"
+                  aria-label={t("pl.console.tableResources")}
+                  className="absolute left-0 top-full mt-1 z-20 min-w-[13rem] rounded-lg border border-zinc-700/50 bg-zinc-900 p-1 shadow-xl shadow-black/40"
+                >
+                  {RESOURCE_TABS.map((r) => (
+                    <button
+                      key={r.key}
+                      role="menuitemradio"
+                      aria-checked={tab === r.key}
+                      onClick={() => {
+                        selectTab(r.key);
+                        setTableOpen(false);
+                      }}
+                      className={`w-full flex items-center gap-2 px-3 py-2 rounded-md font-mono text-[11px] uppercase tracking-[0.12em] transition-colors text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 ${
+                        tab === r.key ? "bg-zinc-800 text-blue-300" : "text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/60"
+                      }`}
+                    >
+                      {icon(RESOURCE_ICONS[r.key], "w-3.5 h-3.5")} {t(r.labelKey)}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+
+            {false && TABS.filter(
+              (r) =>
+                ["trade"].includes(r.key) && (r.key !== "trade" || canTrade)
+            ).map((r) => (
+              <button
+                key={r.key}
+                role="tab"
+                aria-selected={tab === r.key}
+                onClick={() => selectTab(r.key)}
+                className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-md font-mono text-[12px] uppercase tracking-[0.12em] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 ${
+                  tab === r.key ? "bg-zinc-700 text-blue-300" : "text-zinc-500 hover:text-zinc-200"
+                }`}
+              >
+                {icon(r.icon, "w-3.5 h-3.5")} {t(r.labelKey)}
+              </button>
+            ))}
+
+            <Link
+              href="/player/settings"
+              className="inline-flex items-center gap-2 px-4 py-1.5 rounded-md font-mono text-[12px] uppercase tracking-[0.12em] text-zinc-500 hover:text-zinc-200 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60"
+            >
+              {icon("M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z", "w-3.5 h-3.5")}
+              Configurações
+            </Link>
+          </>
+        ) : (
+          <>
+            {TABS.filter((r) => ["turn", "journey"].includes(r.key)).map((r) => (
+              <button
+                key={r.key}
+                role="tab"
+                aria-selected={tab === r.key}
+                onClick={() => selectTab(r.key)}
+                className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-md font-mono text-[12px] uppercase tracking-[0.12em] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 ${
+                  tab === r.key ? "bg-zinc-700 text-blue-300" : "text-zinc-500 hover:text-zinc-200"
+                }`}
+              >
+                {icon(r.icon, "w-3.5 h-3.5")} {t(r.labelKey)}
+              </button>
+            ))}
+
+            {/* chronicle dropdown: timeline + map */}
+            <div className="relative" ref={chronRef}>
+              <button
+                role="tab"
+                aria-selected={chronActive}
+                aria-haspopup="menu"
+                aria-expanded={chronOpen}
+                onClick={() => setChronOpen((o) => !o)}
+                className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-md font-mono text-[12px] uppercase tracking-[0.12em] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 ${
+                  chronActive ? "bg-zinc-700 text-blue-300" : "text-zinc-500 hover:text-zinc-200"
+                }`}
+              >
+                {icon(CHRONICLE_ICON, "w-3.5 h-3.5")} {t("pl.console.chronicle")}
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={chronOpen ? "M5 15l7-7 7 7" : "M19 9l-7 7-7-7"} />
+                </svg>
+              </button>
+
+              {chronOpen ? (
+                <div
+                  role="menu"
+                  aria-label={t("pl.console.chronicleViews")}
+                  className="absolute left-0 top-full mt-1 z-20 min-w-[12rem] rounded-lg border border-zinc-700/50 bg-zinc-900 p-1 shadow-xl shadow-black/40"
+                >
+                  <button
+                    role="menuitemradio"
+                    aria-checked={tab === "map"}
+                    onClick={() => {
+                      selectTab("map");
+                      setChronOpen(false);
+                    }}
+                    className={`w-full flex items-center gap-2 px-3 py-2 rounded-md font-mono text-[11px] uppercase tracking-[0.12em] transition-colors text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 ${
+                      tab === "map" ? "bg-zinc-800 text-blue-300" : "text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/60"
+                    }`}
+                  >
+                    {icon(MAP_ICON, "w-3.5 h-3.5")} {t("pl.console.map")}
+                  </button>
+                  <button
+                    role="menuitemradio"
+                    aria-checked={tab === "chronicle"}
+                    onClick={() => {
+                      selectTab("chronicle");
+                      setChronOpen(false);
+                    }}
+                    className={`w-full flex items-center gap-2 px-3 py-2 rounded-md font-mono text-[11px] uppercase tracking-[0.12em] transition-colors text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 ${
+                      tab === "chronicle" ? "bg-zinc-800 text-blue-300" : "text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/60"
+                    }`}
+                  >
+                    {icon(CHRONICLE_ICON, "w-3.5 h-3.5")} {t("pl.console.timeline")}
+                  </button>
+                </div>
+              ) : null}
+            </div>
+
+            {/* table resources dropdown */}
+            <div className="relative" ref={tableRef}>
+              <button
+                role="tab"
+                aria-selected={resourceActive}
+                aria-haspopup="menu"
+                aria-expanded={tableOpen}
+                onClick={() => setTableOpen((o) => !o)}
+                className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-md font-mono text-[12px] uppercase tracking-[0.12em] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 ${
+                  resourceActive ? "bg-zinc-700 text-blue-300" : "text-zinc-500 hover:text-zinc-200"
+                }`}
+              >
+                {icon(RESOURCE_ICONS.characters, "w-3.5 h-3.5")} {t("pl.console.table")}
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={tableOpen ? "M5 15l7-7 7 7" : "M19 9l-7 7-7-7"} />
+                </svg>
+              </button>
+
+              {tableOpen ? (
+                <div
+                  role="menu"
+                  aria-label={t("pl.console.tableResources")}
+                  className="absolute left-0 top-full mt-1 z-20 min-w-[13rem] rounded-lg border border-zinc-700/50 bg-zinc-900 p-1 shadow-xl shadow-black/40"
+                >
+                  {RESOURCE_TABS.map((r) => (
+                    <button
+                      key={r.key}
+                      role="menuitemradio"
+                      aria-checked={tab === r.key}
+                      onClick={() => {
+                        selectTab(r.key);
+                        setTableOpen(false);
+                      }}
+                      className={`w-full flex items-center gap-2 px-3 py-2 rounded-md font-mono text-[11px] uppercase tracking-[0.12em] transition-colors text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 ${
+                        tab === r.key ? "bg-zinc-800 text-blue-300" : "text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/60"
+                      }`}
+                    >
+                      {icon(RESOURCE_ICONS[r.key], "w-3.5 h-3.5")} {t(r.labelKey)}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+
+            {TABS.filter(
+              (r) =>
+                ["gear", "trade", "sheet"].includes(r.key) && (r.key !== "trade" || canTrade)
+            ).map((r) => (
+              <button
+                key={r.key}
+                role="tab"
+                aria-selected={tab === r.key}
+                onClick={() => selectTab(r.key)}
+                className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-md font-mono text-[12px] uppercase tracking-[0.12em] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 ${
+                  tab === r.key ? "bg-zinc-700 text-blue-300" : "text-zinc-500 hover:text-zinc-200"
+                }`}
+              >
+                {icon(r.icon, "w-3.5 h-3.5")} {t(r.labelKey)}
+              </button>
+            ))}
+            <Link
+              href="/player/settings"
+              className="inline-flex items-center gap-2 px-4 py-1.5 rounded-md font-mono text-[12px] uppercase tracking-[0.12em] text-zinc-500 hover:text-zinc-200 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60"
+            >
+              {icon("M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z", "w-3.5 h-3.5")}
+              Configurações
+            </Link>
+          </>
+        )}
       </div>
 
       {tab === "turn" ? (
@@ -455,7 +636,25 @@ export default function PlayerConsole({
       ) : null}
 
       {tab === "gear" && character?.id && viewer ? (
-        <GearPanel data={viewer} />
+        <GearPanel
+          data={viewer}
+          onTrade={canTrade ? (itemId) => { setTradePreset(itemId); setTab("trade"); } : undefined}
+        />
+      ) : null}
+
+      {tab === "trade" && character?.id && viewer && actorId && canTrade ? (
+        <TradePanel
+          key={tradePreset ?? "trade"}
+          actorId={actorId}
+          characterId={character.id}
+          characterName={name}
+          tableId={tableId}
+          roster={roster}
+          myItems={viewer.character.items ?? []}
+          presetItemId={tradePreset}
+          onClose={() => selectTab("gear")}
+          presence={presence}
+        />
       ) : null}
 
       {tab === "sheet" && viewer && character?.id ? (

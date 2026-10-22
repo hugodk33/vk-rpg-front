@@ -586,6 +586,30 @@ export interface GameTableItems extends PaginationMeta {
   items: Item[]
 }
 
+/** Uma prateleira da loja: o item do catálogo + o que a loja define sobre ele. */
+export interface LocationShopLine {
+  /** O item do catálogo. */
+  item: Item
+  /** Entrada em location_shop_items (null = item ligado à loja sem preço/estoque próprios). */
+  entry_id: string | null
+  /** Preço praticado na loja (null = vale o custo do item). */
+  price?: number | null
+  /** Quantidade em estoque (-1 = ilimitado, 0 = esgotado). */
+  stock: number
+  notes?: string | null
+}
+
+/** A loja de um local, com o estoque inteiro. */
+export interface LocationShop {
+  location_id: string
+  table_id: string | null
+  /** Nome da loja (shop_name do local). */
+  name: string | null
+  description: string | null
+  lang: string
+  lines: LocationShopLine[]
+}
+
 export interface GameTableSkills extends PaginationMeta {
   table: GameTable | null
   skills: SkillItem[]
@@ -814,4 +838,64 @@ export interface Disadvantage {
   cost_points?: number
   effect?: string
   description?: string
+}
+
+/* ============================================================
+   TROCA ENTRE JOGADORES
+   Uma oferta tem DUAS mãos: `from` (o que o proponente dá) e `to`
+   (o que o destinatário dá). A forma da mão é o que define a
+   operação: transferência (to vazio), venda/compra (moeda de um
+   lado) ou troca (item dos dois lados).
+   ============================================================ */
+
+export type TradeStatus = "pending" | "completed" | "rejected" | "cancelled"
+export type TradeSide = "from" | "to"
+export type TradeRole = "proposer" | "recipient"
+
+export interface TradeOfferItem {
+  id: string
+  offer_id: string
+  side: TradeSide
+  item_id: string
+  item_name: string | null
+  quantity: number
+}
+
+export interface TradeOffer {
+  id: string
+  table_id: string
+  proposer_character_id: string
+  recipient_character_id: string
+  status: TradeStatus
+  proposer_confirmed: boolean
+  recipient_confirmed: boolean
+  message: string | null
+  created_at: string | null
+  updated_at: string | null
+  resolved_at: string | null
+  items: TradeOfferItem[]
+  /** A mão do proponente (o que ele dá). */
+  from: TradeOfferItem[]
+  /** A mão do destinatário (o que ele dá). */
+  to: TradeOfferItem[]
+  proposer_name: string | null
+  recipient_name: string | null
+}
+
+/** Oferta vista por um ator: o papel dele e o que ele pode fazer. */
+export interface TradeOfferContext {
+  offer: TradeOffer
+  role: TradeRole | null
+  canConfirm: boolean
+  canEditFrom: boolean
+  canEditTo: boolean
+  canReject: boolean
+  canCancel: boolean
+  /** A troca foi executada agora? (só no confirm) */
+  executed?: boolean
+}
+
+export interface TradeItemInput {
+  item_id: string
+  quantity: number
 }

@@ -433,6 +433,12 @@ export default async function PlayerDashboard({
                         >
                           {t("nav.table")}
                         </Link>
+                        <Link
+                          href={`/player/character/${ch.id}?tab=trade`}
+                          className="text-zinc-500 hover:text-blue-300 transition-colors"
+                        >
+                          {t("tr.eyebrow")}
+                        </Link>
                         <Link href={sheetUrl} className="text-zinc-500 hover:text-blue-300 transition-colors">
                           {t("pg.sheet")}
                         </Link>

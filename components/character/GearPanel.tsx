@@ -95,6 +95,8 @@ function partFor(item: CharacterItem): BodyPart | null {
 interface GearPanelProps {
   data: CharacterViewer;
   historic?: boolean;
+  /** Abre a negociação com este item já na mão (null = oferta em branco). */
+  onTrade?: (itemId: string | null) => void;
 }
 
 function kindOf(i: CharacterItem): string {
@@ -109,7 +111,7 @@ function keyOf(i: CharacterItem): string {
   return i.item_id ?? i.id ?? "";
 }
 
-export default function GearPanel({ data, historic }: GearPanelProps) {
+export default function GearPanel({ data, historic, onTrade }: GearPanelProps) {
   const router = useRouter();
   const { lang, t } = useTranslation();
   const ch = data.character;
@@ -188,11 +190,26 @@ export default function GearPanel({ data, historic }: GearPanelProps) {
       <div>
         <div className="flex items-center justify-between mb-2 px-1">
           <h2 className="text-sm font-bold uppercase tracking-wider text-zinc-300">{t("cs.equipment")}</h2>
-          <span className="text-xs text-zinc-500">
-            {owned.length === 1
-              ? t("cs.gear.itemCount")
-              : t("cs.gear.itemsCount").replace("{n}", String(owned.length))}
-          </span>
+          <div className="flex items-center gap-3">
+            {onTrade ? (
+              <button
+                type="button"
+                onClick={() => onTrade(null)}
+                title={t("tr.newOffer")}
+                className="inline-flex items-center gap-1.5 rounded-md border border-blue-500/40 bg-blue-500/10 px-2.5 py-1 font-mono text-[10px] uppercase tracking-widest text-blue-300 hover:bg-blue-500/20 transition-colors"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M8 7h8m-4 0v10m-4-6h8M5 21h14a2 2 0 002-2V7l-4-4H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                {t("pl.inv.trade")}
+              </button>
+            ) : null}
+            <span className="text-xs text-zinc-500">
+              {owned.length === 1
+                ? t("cs.gear.itemCount")
+                : t("cs.gear.itemsCount").replace("{n}", String(owned.length))}
+            </span>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -327,6 +344,19 @@ export default function GearPanel({ data, historic }: GearPanelProps) {
                       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z" />
                         <circle cx="12" cy="12" r="3" />
+                      </svg>
+                    </button>
+                  ) : null}
+                  {onTrade && keyOf(i) ? (
+                    <button
+                      type="button"
+                      title={t("pl.inv.trade")}
+                      aria-label={t("pl.inv.trade")}
+                      onClick={() => onTrade(keyOf(i))}
+                      className="inline-flex items-center justify-center w-7 h-7 rounded-md text-zinc-400 border border-zinc-700/50 hover:text-blue-300 hover:border-blue-600/50 hover:bg-zinc-700/40 transition-colors"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M8 7h8m-4 0v10m-4-6h8M5 21h14a2 2 0 002-2V7l-4-4H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                       </svg>
                     </button>
                   ) : null}

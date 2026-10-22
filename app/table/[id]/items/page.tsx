@@ -66,12 +66,20 @@ export default function TableItemsPage({ params }: { params: Promise<{ id: strin
         <div className="flex items-center gap-3 text-xs text-zinc-500">
           <span>{interpolate(t(shownCount !== 1 ? "tp.count.itemsMany" : "tp.count.itemsOne"), { n: shownCount })}</span>
         </div>
-        <Link
-          href={`/item/new?table_id=${id}`}
-          className="bg-green-800/70 hover:bg-green-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors"
-        >
-          + {t("tp.add.item")}
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href={`/table/${id}/trades`}
+            className="inline-flex items-center gap-1.5 border border-blue-500/40 text-blue-300 hover:bg-blue-500/10 text-sm font-semibold px-3 py-2 rounded-lg transition-colors"
+          >
+            {t("tr.offers")}
+          </Link>
+          <Link
+            href={`/item/new?table_id=${id}`}
+            className="bg-green-800/70 hover:bg-green-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors"
+          >
+            + {t("tp.add.item")}
+          </Link>
+        </div>
       </div>
 
       <div className="flex gap-2 mb-6">

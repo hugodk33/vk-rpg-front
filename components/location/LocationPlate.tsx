@@ -538,6 +538,7 @@ export default function LocationPlate({ location, tableId, mode = "narrator" }: 
               tableId={baseTableId}
               shopName={location.shopName ?? location.shop_name}
               accent={accent}
+              mode={mode}
             />
           </div>
         ) : null}

@@ -77,6 +77,18 @@ export interface PlayerConsoleData {
    * para não oferecer uma ação que vai falhar.
    */
   isMuted: boolean;
+  /**
+   * Quem está ASKING (o dono do assento). É o `actor` que o backend espera
+   * nas chamadas de troca — e é o dono do personagem, não o narrador que
+   * está espiando a ficha.
+   */
+  actorId: string | null;
+  /**
+   * O jogador do assento é o DONO deste personagem? Só aí a troca faz sentido:
+   * o backend recusa propostas feitas com um personagem que não é seu, e o
+   * narrador que pré-visualiza a ficha de outro jogador não negocia por ele.
+   */
+  canTrade: boolean;
 }
 
 /** Resposta do vínculo do jogador com a mesa (leitura barata, sem privilégio). */
@@ -157,6 +169,9 @@ export async function loadPlayerConsole(characterId: string): Promise<PlayerCons
     !!requesterId &&
     !!characterOwnerId &&
     (requesterId === characterOwnerId || requesterId === tableOwnerId);
+  /* A troca é entre JOGADORES: só o dono do personagem negocia. O narrador
+     que espia a ficha de outro jogador vê a tela, mas ela não fica viva. */
+  const canTrade = !!requesterId && !!characterOwnerId && requesterId === characterOwnerId;
 
   return {
     tableId,
@@ -164,6 +179,8 @@ export async function loadPlayerConsole(characterId: string): Promise<PlayerCons
     viewer,
     mayView,
     isMuted: Boolean(membership?.isMuted),
+    actorId: requesterId,
+    canTrade,
     roster: (charsData?.characters ?? []).filter((c) => c.is_active !== false),
     table: scenesData.table ?? viewer?.table ?? null,
     scenes: scenesData.scenes ?? [],
